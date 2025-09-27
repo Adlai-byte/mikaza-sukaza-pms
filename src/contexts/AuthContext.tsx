@@ -163,6 +163,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signOut = async () => {
     if (!AUTH_ENABLED) {
+      // For disabled auth mode, redirect to login page
+      window.location.href = '/auth';
       return;
     }
 
@@ -170,7 +172,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user || !AUTH_ENABLED) return;
+    if (!AUTH_ENABLED) {
+      // For disabled auth mode, update the mock profile
+      setProfile(current => current ? { ...current, ...updates } : current);
+      return;
+    }
+
+    if (!user) return;
 
     const { error } = await supabase
       .from('profiles')
