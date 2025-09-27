@@ -1,236 +1,179 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Search, 
-  Plus, 
-  MapPin, 
-  Home, 
-  Eye, 
-  Edit, 
-  Calendar,
-  DollarSign,
-  Users
-} from "lucide-react";
-
-const properties = [
-  {
-    id: "10334",
-    name: "Jade Signature 901",
-    address: "16901 Collins Avenue, Sunny Isles Beach, Florida - 33160",
-    owner: "Adriana de Bortoli",
-    company: "Casa & Concierge",
-    status: "Active",
-    units: 1,
-    occupancy: "Occupied",
-    revenue: "$4,500/mo",
-    image: null,
-  },
-  {
-    id: "10329",
-    name: "Aria unit 311",
-    address: "488 Northeast 18th Street unit 311, Miami, Florida - 33132",
-    owner: "Alessandro Marques da Silva",
-    company: "Casa & Concierge",
-    status: "Active",
-    units: 1,
-    occupancy: "Vacant",
-    revenue: "$3,200/mo",
-    image: null,
-  },
-  {
-    id: "5",
-    name: "RTL - Trump Tower III #2602",
-    address: "15811 Collins Avenue #2602, Sunny Isles Beach, Florida - 33160",
-    owner: "Alexandre Melhado",
-    company: "Casa & Concierge",
-    status: "Active",
-    units: 1,
-    occupancy: "Occupied",
-    revenue: "$5,800/mo",
-    image: "/api/placeholder/200/150",
-  },
-  {
-    id: "10322",
-    name: "Marina Palms #1001",
-    address: "17111 Biscayne Boulevard Unit 1001, North Miami Beach, Florida - 33160",
-    owner: "Ana Maria /Eliezer Schnitman",
-    company: "Casa & Concierge",
-    status: "Active",
-    units: 1,
-    occupancy: "Check-out Pending",
-    revenue: "$4,100/mo",
-    image: null,
-  },
-];
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Home, Building2, MapPin, Users } from "lucide-react";
+import { useProperties } from "@/hooks/useProperties";
+import { useActivityLogs } from "@/hooks/useActivityLogs";
+import { PropertyTable } from "@/components/PropertyManagement/PropertyTable";
+import { PropertyForm } from "@/components/PropertyManagement/PropertyForm";
+import { PropertyDetailsDialog } from "@/components/PropertyManagement/PropertyDetailsDialog";
+import { PropertyImageDialog } from "@/components/PropertyManagement/PropertyImageDialog";
+import { Property, PropertyInsert } from "@/lib/schemas";
 
 export default function Properties() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("");
+  const { properties, loading, amenities, rules, createProperty, updateProperty, deleteProperty } = useProperties();
+  const { logActivity } = useActivityLogs();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [viewingProperty, setViewingProperty] = useState<Property | null>(null);
+  const [imageDialogProperty, setImageDialogProperty] = useState<Property | null>(null);
 
-  const filteredProperties = properties.filter(
-    (property) =>
-      property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.owner.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleCreateProperty = async (propertyData: PropertyInsert & any) => {
+    await createProperty(propertyData);
+    await logActivity('PROPERTY_CREATED', { 
+      propertyType: propertyData.property_type,
+      ownerId: propertyData.owner_id
+    }, undefined, 'Admin');
+  };
 
-  const getOccupancyBadge = (occupancy: string) => {
-    switch (occupancy) {
-      case "Occupied":
-        return <Badge className="bg-accent text-accent-foreground">Occupied</Badge>;
-      case "Vacant":
-        return <Badge variant="outline" className="border-orange-500 text-orange-500">Vacant</Badge>;
-      case "Check-out Pending":
-        return <Badge variant="outline" className="border-blue-500 text-blue-500">Check-out Pending</Badge>;
-      default:
-        return <Badge variant="secondary">{occupancy}</Badge>;
+  const handleUpdateProperty = async (propertyData: PropertyInsert & any) => {
+    if (editingProperty?.property_id) {
+      await updateProperty(editingProperty.property_id, propertyData);
+      await logActivity('PROPERTY_UPDATED', { 
+        propertyId: editingProperty.property_id,
+        propertyType: propertyData.property_type 
+      }, undefined, 'Admin');
+      setEditingProperty(null);
     }
   };
 
+  const handleEditProperty = (property: Property) => {
+    setEditingProperty(property);
+    setIsFormOpen(true);
+  };
+
+  const handleDeleteProperty = async (propertyId: string) => {
+    const property = properties.find(p => p.property_id === propertyId);
+    await deleteProperty(propertyId);
+    if (property) {
+      await logActivity('PROPERTY_DELETED', { 
+        propertyId,
+        propertyType: property.property_type 
+      }, undefined, 'Admin');
+    }
+  };
+
+  const handleViewDetails = (property: Property) => {
+    setViewingProperty(property);
+  };
+
+  const handleViewImages = (property: Property) => {
+    setImageDialogProperty(property);
+  };
+
+  const handleFormClose = () => {
+    setIsFormOpen(false);
+    setEditingProperty(null);
+  };
+
+  const activeProperties = properties.filter(property => property.is_active).length;
+  const bookingProperties = properties.filter(property => property.is_booking).length;
+  const petFriendlyProperties = properties.filter(property => property.is_pets_allowed).length;
+
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Properties</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Property Management</h1>
           <p className="text-muted-foreground">
-            Manage your property portfolio and units
+            Manage properties, locations, and amenities
           </p>
         </div>
-        <Button className="bg-gradient-primary hover:bg-gradient-secondary">
-          <Plus className="h-4 w-4 mr-2" />
-          Register New Property
+        <Button onClick={() => setIsFormOpen(true)}>
+          <Home className="mr-2 h-4 w-4" />
+          Add Property
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Properties</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{properties.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Properties</CardTitle>
+            <Home className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeProperties}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Booking Available</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{bookingProperties}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pet Friendly</CardTitle>
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{petFriendlyProperties}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Properties Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Find a Property</CardTitle>
+          <CardTitle>Properties</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Property Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Enter property name or address"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-muted-foreground">Loading properties...</div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Property Owner</label>
-              <Input
-                placeholder="Enter the owner's name"
-                value={ownerFilter}
-                onChange={(e) => setOwnerFilter(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end space-x-2">
-              <Button className="bg-primary hover:bg-primary-hover">Search</Button>
-              <Button className="bg-accent hover:bg-accent-hover">Register New Unit</Button>
-            </div>
-          </div>
+          ) : (
+            <PropertyTable
+              properties={properties}
+              onEditProperty={handleEditProperty}
+              onDeleteProperty={handleDeleteProperty}
+              onViewDetails={handleViewDetails}
+              onViewImages={handleViewImages}
+            />
+          )}
         </CardContent>
       </Card>
 
-      {/* Properties List */}
-      <div className="space-y-4">
-        <div className="text-sm text-muted-foreground">
-          Showing records 1 to {filteredProperties.length} of {properties.length}
-        </div>
+      {/* Property Form Modal */}
+      <PropertyForm
+        open={isFormOpen}
+        onOpenChange={handleFormClose}
+        property={editingProperty}
+        onSubmit={editingProperty ? handleUpdateProperty : handleCreateProperty}
+        amenities={amenities}
+        rules={rules}
+      />
 
-        {filteredProperties.map((property) => (
-          <Card key={property.id} className="hover:shadow-card transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-start space-x-4">
-                {/* Property Image */}
-                <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                  {property.image ? (
-                    <img 
-                      src={property.image} 
-                      alt={property.name}
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                  ) : (
-                    <div className="text-center">
-                      <Home className="h-6 w-6 text-muted-foreground mx-auto" />
-                      <span className="text-xs text-muted-foreground block mt-1">
-                        No picture found for this property
-                      </span>
-                    </div>
-                  )}
-                </div>
+      {/* Property Details Dialog */}
+      {viewingProperty && (
+        <PropertyDetailsDialog
+          open={!!viewingProperty}
+          onOpenChange={(open) => !open && setViewingProperty(null)}
+          property={viewingProperty}
+        />
+      )}
 
-                {/* Property Details */}
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-foreground mb-1">
-                        {property.owner}
-                      </h3>
-                      <p className="text-sm text-primary font-medium mb-1">
-                        Property {property.id} - {property.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground flex items-center">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        Address: {property.address}
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      {getOccupancyBadge(property.occupancy)}
-                      <Badge variant="outline">{property.status}</Badge>
-                    </div>
-                  </div>
-
-                  {/* Property Stats */}
-                  <div className="flex items-center space-x-6 mt-3 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                      <Home className="h-4 w-4 mr-1" />
-                      {property.units} Unit{property.units !== 1 ? 's' : ''}
-                    </div>
-                    <div className="flex items-center">
-                      <DollarSign className="h-4 w-4 mr-1" />
-                      {property.revenue}
-                    </div>
-                    <div className="flex items-center">
-                      <Users className="h-4 w-4 mr-1" />
-                      {property.company}
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center space-x-2 mt-4">
-                    <Button size="sm" className="bg-blue-500 hover:bg-blue-600">
-                      Booking
-                    </Button>
-                    <Button size="sm" variant="secondary">
-                      Check Lists
-                    </Button>
-                    <Button size="sm" variant="secondary">
-                      Property Info
-                    </Button>
-                    <Button size="sm" variant="secondary">
-                      Financial Entries
-                    </Button>
-                    <Button size="sm" variant="destructive">
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Property Image Dialog */}
+      {imageDialogProperty && (
+        <PropertyImageDialog
+          open={!!imageDialogProperty}
+          onOpenChange={(open) => !open && setImageDialogProperty(null)}
+          property={imageDialogProperty}
+        />
+      )}
     </div>
   );
 }
