@@ -174,6 +174,7 @@ export type Database = {
           num_wcs: number | null
           owner_id: string
           property_id: string
+          property_name: string | null
           property_type: string
           size_sqf: number | null
           updated_at: string
@@ -193,6 +194,7 @@ export type Database = {
           num_wcs?: number | null
           owner_id: string
           property_id?: string
+          property_name?: string | null
           property_type: string
           size_sqf?: number | null
           updated_at?: string
@@ -212,6 +214,7 @@ export type Database = {
           num_wcs?: number | null
           owner_id?: string
           property_id?: string
+          property_name?: string | null
           property_type?: string
           size_sqf?: number | null
           updated_at?: string
@@ -258,7 +261,7 @@ export type Database = {
           {
             foreignKeyName: "property_access_property_id_fkey"
             columns: ["property_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "properties"
             referencedColumns: ["property_id"]
           },
@@ -329,7 +332,7 @@ export type Database = {
           {
             foreignKeyName: "property_communication_property_id_fkey"
             columns: ["property_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "properties"
             referencedColumns: ["property_id"]
           },
@@ -376,7 +379,7 @@ export type Database = {
           {
             foreignKeyName: "property_extras_property_id_fkey"
             columns: ["property_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "properties"
             referencedColumns: ["property_id"]
           },
@@ -461,7 +464,7 @@ export type Database = {
           {
             foreignKeyName: "property_location_property_id_fkey"
             columns: ["property_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "properties"
             referencedColumns: ["property_id"]
           },

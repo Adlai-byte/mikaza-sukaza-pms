@@ -56,6 +56,7 @@ export const activityLogSchema = z.object({
 // Property schemas
 export const propertySchema = z.object({
   owner_id: z.string().min(1, "Owner is required"),
+  property_name: z.string().min(1, "Property name is required"),
   is_active: z.boolean().default(true),
   is_booking: z.boolean().default(false),
   is_pets_allowed: z.boolean().default(false),
@@ -162,6 +163,7 @@ export type ActivityLog = z.infer<typeof activityLogSchema> & {
 export type Property = {
   property_id?: string;
   owner_id: string;
+  property_name?: string;
   is_active: boolean;
   is_booking: boolean;
   is_pets_allowed: boolean;

@@ -71,25 +71,26 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
   const { logActivity } = useActivityLogs();
   const { toast } = useToast();
   
-  const form = useForm<PropertyInsert>({
-    resolver: zodResolver(propertySchema),
-    defaultValues: {
-      owner_id: "",
-      is_active: true,
-      is_booking: false,
-      is_pets_allowed: false,
-      property_type: "",
-      size_sqf: undefined,
-      capacity: undefined,
-      max_capacity: undefined,
-      num_bedrooms: undefined,
-      num_bathrooms: undefined,
-      num_half_bath: undefined,
-      num_wcs: undefined,
-      num_kitchens: undefined,
-      num_living_rooms: undefined,
-    },
-  });
+const form = useForm<PropertyInsert>({
+  resolver: zodResolver(propertySchema),
+  defaultValues: {
+    owner_id: "",
+    property_name: "",
+    is_active: true,
+    is_booking: false,
+    is_pets_allowed: false,
+    property_type: "",
+    size_sqf: undefined,
+    capacity: undefined,
+    max_capacity: undefined,
+    num_bedrooms: undefined,
+    num_bathrooms: undefined,
+    num_half_bath: undefined,
+    num_wcs: undefined,
+    num_kitchens: undefined,
+    num_living_rooms: undefined,
+  },
+});
 
   // Additional form states for related data
   const [locationData, setLocationData] = useState({
@@ -130,22 +131,23 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
     if (open) {
       if (property) {
         // Edit mode - populate with existing data
-        form.reset({
-          owner_id: property.owner_id,
-          is_active: property.is_active,
-          is_booking: property.is_booking,
-          is_pets_allowed: property.is_pets_allowed,
-          property_type: property.property_type,
-          size_sqf: property.size_sqf || undefined,
-          capacity: property.capacity || undefined,
-          max_capacity: property.max_capacity || undefined,
-          num_bedrooms: property.num_bedrooms || undefined,
-          num_bathrooms: property.num_bathrooms || undefined,
-          num_half_bath: property.num_half_bath || undefined,
-          num_wcs: property.num_wcs || undefined,
-          num_kitchens: property.num_kitchens || undefined,
-          num_living_rooms: property.num_living_rooms || undefined,
-        });
+form.reset({
+  owner_id: property.owner_id,
+  property_name: property.property_name || "",
+  is_active: property.is_active,
+  is_booking: property.is_booking,
+  is_pets_allowed: property.is_pets_allowed,
+  property_type: property.property_type,
+  size_sqf: property.size_sqf || undefined,
+  capacity: property.capacity || undefined,
+  max_capacity: property.max_capacity || undefined,
+  num_bedrooms: property.num_bedrooms || undefined,
+  num_bathrooms: property.num_bathrooms || undefined,
+  num_half_bath: property.num_half_bath || undefined,
+  num_wcs: property.num_wcs || undefined,
+  num_kitchens: property.num_kitchens || undefined,
+  num_living_rooms: property.num_living_rooms || undefined,
+});
 
         // Populate related data
         if (property.location) {
@@ -398,6 +400,20 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
                       )}
                     />
                   </div>
+
+                  <FormField
+                    control={form.control}
+                    name="property_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Property Name *</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter property name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <div className="grid grid-cols-3 gap-4">
                     <FormField

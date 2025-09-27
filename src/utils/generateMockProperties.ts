@@ -166,6 +166,7 @@ export async function generateMockProperties(count: number = 100) {
             .insert([{
               owner_id: propertyData.owner_id,
               property_type: propertyData.property_type,
+              property_name: propertyData.propertyName,
               is_active: propertyData.is_active,
               is_booking: propertyData.is_booking,
               is_pets_allowed: propertyData.is_pets_allowed,
