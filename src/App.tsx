@@ -11,6 +11,7 @@ import Properties from "./pages/Properties";
 import Jobs from "./pages/Jobs";
 import UserManagement from "./pages/UserManagement";
 import Auth from "./pages/Auth";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/properties" element={<Properties />} />
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/users" element={<UserManagement />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/calendar" element={<div className="p-8 text-center text-muted-foreground">Calendar - Coming Soon</div>} />
               <Route path="/issues" element={<div className="p-8 text-center text-muted-foreground">Issues & Photos - Coming Soon</div>} />
               <Route path="/documents/*" element={<div className="p-8 text-center text-muted-foreground">Documents - Coming Soon</div>} />

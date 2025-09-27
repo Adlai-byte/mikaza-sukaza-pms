@@ -1,8 +1,8 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Button } from "./ui/button";
-import { Bell, User, LogOut } from "lucide-react";
+import { Bell, User, LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -13,12 +13,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function MainLayout() {
   const { profile, signOut, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const getInitials = (firstName?: string | null, lastName?: string | null) => {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || 'U';
   };
 
   return (
@@ -48,7 +54,12 @@ export function MainLayout() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center space-x-2 h-8 sm:h-10 px-2 sm:px-3">
-                      <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
+                        <AvatarImage src={profile?.photo_url} alt={profile?.first_name || 'User'} />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
+                          {getInitials(profile?.first_name, profile?.last_name)}
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="hidden xs:inline text-xs sm:text-sm">
                         {profile?.first_name || 'User'}
                       </span>
@@ -67,6 +78,10 @@ export function MainLayout() {
                       <p className="text-xs">Role: {profile?.user_type}</p>
                     </div>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/profile')}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Profile Settings
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleSignOut}>
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign Out

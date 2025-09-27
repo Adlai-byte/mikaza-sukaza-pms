@@ -10,6 +10,9 @@ interface Profile {
   last_name: string | null;
   user_type: 'admin' | 'ops';
   is_active: boolean;
+  photo_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface AuthContextType {
@@ -56,6 +59,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     last_name: 'User',
     user_type: 'admin',
     is_active: true,
+    photo_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   const isAdmin = profile?.user_type === 'admin';
