@@ -40,6 +40,9 @@ export function CreditCardDialog({ open, onOpenChange, user }: CreditCardDialogP
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingCard, setEditingCard] = useState<CreditCard | null>(null);
+  const [viewingCard, setViewingCard] = useState<CreditCard | null>(null);
   const { toast } = useToast();
   const { logActivity } = useActivityLogs();
 
@@ -108,6 +111,63 @@ export function CreditCardDialog({ open, onOpenChange, user }: CreditCardDialogP
         variant: "destructive",
       });
     }
+  };
+
+  const handleEditCreditCard = async (data: any) => {
+    try {
+      if (!editingCard?.credit_card_id) return;
+
+      const { error } = await supabase
+        .from('credit_cards')
+        .update(data)
+        .eq('credit_card_id', editingCard.credit_card_id);
+
+      if (error) throw error;
+
+      await logActivity(
+        'CREDIT_CARD_UPDATED',
+        { cardType: data.card_type, cardNumber: `****${data.card_number.slice(-4)}` },
+        user.user_id,
+        'Admin'
+      );
+
+      toast({
+        title: "Success",
+        description: "Credit card updated successfully",
+      });
+
+      form.reset();
+      setIsEditing(false);
+      setEditingCard(null);
+      await fetchCreditCards();
+    } catch (error) {
+      console.error('Error updating credit card:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update credit card",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const startEdit = (card: CreditCard) => {
+    setEditingCard(card);
+    setIsEditing(true);
+    form.reset({
+      user_id: card.user_id || "",
+      card_type: card.card_type as any,
+      cardholder_name: card.cardholder_name || "",
+      card_number: card.card_number || "",
+      due_date: card.due_date || "",
+      security_code: card.security_code || "",
+    });
+  };
+
+  const handleFormClose = () => {
+    setIsAdding(false);
+    setIsEditing(false);
+    setEditingCard(null);
+    form.reset();
   };
 
   const handleDeleteCreditCard = async (cardId: string) => {
@@ -183,30 +243,48 @@ export function CreditCardDialog({ open, onOpenChange, user }: CreditCardDialogP
                   key={card.credit_card_id}
                   className="flex items-center justify-between p-3 border rounded-lg"
                 >
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium">{card.cardholder_name}</p>
                     <p className="text-sm text-muted-foreground">
                       {card.card_type.toUpperCase()} ****{card.card_number.slice(-4)}
                     </p>
                     <p className="text-sm text-muted-foreground">Expires: {card.due_date}</p>
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteCreditCard(card.credit_card_id!)}
-                  >
-                    Delete
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setViewingCard(card)}
+                    >
+                      View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startEdit(card)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteCreditCard(card.credit_card_id!)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
 
-          {isAdding && (
+          {(isAdding || isEditing) && (
             <div className="border-t pt-4">
-              <h4 className="font-medium mb-4">Add New Credit Card</h4>
+              <h4 className="font-medium mb-4">
+                {isEditing ? "Edit Credit Card" : "Add New Credit Card"}
+              </h4>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleAddCreditCard)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(isEditing ? handleEditCreditCard : handleAddCreditCard)} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -295,17 +373,55 @@ export function CreditCardDialog({ open, onOpenChange, user }: CreditCardDialogP
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setIsAdding(false)}
+                      onClick={handleFormClose}
                     >
                       Cancel
                     </Button>
-                    <Button type="submit">Add Credit Card</Button>
+                    <Button type="submit">
+                      {isEditing ? "Update Credit Card" : "Add Credit Card"}
+                    </Button>
                   </div>
                 </form>
               </Form>
             </div>
           )}
         </div>
+
+        {/* View Card Dialog */}
+        {viewingCard && (
+          <Dialog open={!!viewingCard} onOpenChange={() => setViewingCard(null)}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Credit Card Details</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Card Type</label>
+                  <p className="text-sm text-muted-foreground">{viewingCard.card_type.toUpperCase()}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Cardholder Name</label>
+                  <p className="text-sm text-muted-foreground">{viewingCard.cardholder_name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Card Number</label>
+                  <p className="text-sm text-muted-foreground">****{viewingCard.card_number.slice(-4)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Expiry Date</label>
+                  <p className="text-sm text-muted-foreground">{viewingCard.due_date}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">CVV</label>
+                  <p className="text-sm text-muted-foreground">***</p>
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={() => setViewingCard(null)}>Close</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </DialogContent>
     </Dialog>
   );

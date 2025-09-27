@@ -34,6 +34,9 @@ export function BankAccountDialog({ open, onOpenChange, user }: BankAccountDialo
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
+  const [viewingAccount, setViewingAccount] = useState<BankAccount | null>(null);
   const { toast } = useToast();
   const { logActivity } = useActivityLogs();
 
@@ -103,6 +106,64 @@ export function BankAccountDialog({ open, onOpenChange, user }: BankAccountDialo
         variant: "destructive",
       });
     }
+  };
+
+  const handleEditBankAccount = async (data: any) => {
+    try {
+      if (!editingAccount?.bank_account_id) return;
+
+      const { error } = await supabase
+        .from('bank_accounts')
+        .update(data)
+        .eq('bank_account_id', editingAccount.bank_account_id);
+
+      if (error) throw error;
+
+      await logActivity(
+        'BANK_ACCOUNT_UPDATED',
+        { bankName: data.bank_name, accountNumber: `****${data.account_number.slice(-4)}` },
+        user.user_id,
+        'Admin'
+      );
+
+      toast({
+        title: "Success",
+        description: "Bank account updated successfully",
+      });
+
+      form.reset();
+      setIsEditing(false);
+      setEditingAccount(null);
+      await fetchBankAccounts();
+    } catch (error) {
+      console.error('Error updating bank account:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update bank account",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const startEdit = (account: BankAccount) => {
+    setEditingAccount(account);
+    setIsEditing(true);
+    form.reset({
+      user_id: account.user_id || "",
+      account_holder: account.account_holder || "",
+      bank_name: account.bank_name || "",
+      routing_number: account.routing_number || "",
+      account_number: account.account_number || "",
+      ein: account.ein || "",
+      observations: account.observations || "",
+    });
+  };
+
+  const handleFormClose = () => {
+    setIsAdding(false);
+    setIsEditing(false);
+    setEditingAccount(null);
+    form.reset();
   };
 
   const handleDeleteBankAccount = async (accountId: string) => {
@@ -178,7 +239,7 @@ export function BankAccountDialog({ open, onOpenChange, user }: BankAccountDialo
                   key={account.bank_account_id}
                   className="flex items-center justify-between p-3 border rounded-lg"
                 >
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium">{account.bank_name}</p>
                     <p className="text-sm text-muted-foreground">
                       Account Holder: {account.account_holder}
@@ -190,24 +251,45 @@ export function BankAccountDialog({ open, onOpenChange, user }: BankAccountDialo
                     {account.ein && (
                       <p className="text-sm text-muted-foreground">EIN: {account.ein}</p>
                     )}
+                    {account.observations && (
+                      <p className="text-sm text-muted-foreground">Notes: {account.observations}</p>
+                    )}
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteBankAccount(account.bank_account_id!)}
-                  >
-                    Delete
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setViewingAccount(account)}
+                    >
+                      View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startEdit(account)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteBankAccount(account.bank_account_id!)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
 
-          {isAdding && (
+          {(isAdding || isEditing) && (
             <div className="border-t pt-4">
-              <h4 className="font-medium mb-4">Add New Bank Account</h4>
+              <h4 className="font-medium mb-4">
+                {isEditing ? "Edit Bank Account" : "Add New Bank Account"}
+              </h4>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleAddBankAccount)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(isEditing ? handleEditBankAccount : handleAddBankAccount)} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -300,17 +382,63 @@ export function BankAccountDialog({ open, onOpenChange, user }: BankAccountDialo
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setIsAdding(false)}
+                      onClick={handleFormClose}
                     >
                       Cancel
                     </Button>
-                    <Button type="submit">Add Bank Account</Button>
+                    <Button type="submit">
+                      {isEditing ? "Update Bank Account" : "Add Bank Account"}
+                    </Button>
                   </div>
                 </form>
               </Form>
             </div>
           )}
         </div>
+
+        {/* View Account Dialog */}
+        {viewingAccount && (
+          <Dialog open={!!viewingAccount} onOpenChange={() => setViewingAccount(null)}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Bank Account Details</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Bank Name</label>
+                  <p className="text-sm text-muted-foreground">{viewingAccount.bank_name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Account Holder</label>
+                  <p className="text-sm text-muted-foreground">{viewingAccount.account_holder}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Account Number</label>
+                  <p className="text-sm text-muted-foreground">****{viewingAccount.account_number.slice(-4)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Routing Number</label>
+                  <p className="text-sm text-muted-foreground">{viewingAccount.routing_number}</p>
+                </div>
+                {viewingAccount.ein && (
+                  <div>
+                    <label className="text-sm font-medium">EIN</label>
+                    <p className="text-sm text-muted-foreground">{viewingAccount.ein}</p>
+                  </div>
+                )}
+                {viewingAccount.observations && (
+                  <div>
+                    <label className="text-sm font-medium">Observations</label>
+                    <p className="text-sm text-muted-foreground">{viewingAccount.observations}</p>
+                  </div>
+                )}
+                <div className="flex justify-end">
+                  <Button onClick={() => setViewingAccount(null)}>Close</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </DialogContent>
     </Dialog>
   );
