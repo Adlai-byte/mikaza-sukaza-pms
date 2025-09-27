@@ -29,8 +29,9 @@ export default function Auth() {
   });
 
   useEffect(() => {
-    // Redirect if already logged in
-    if (user) {
+    // Only redirect if auth is enabled and user is actually logged in
+    const AUTH_ENABLED = false; // This should match the value in AuthContext
+    if (AUTH_ENABLED && user) {
       navigate('/');
     }
     
@@ -85,6 +86,7 @@ export default function Auth() {
         localStorage.removeItem('rememberMe');
       }
 
+      console.log('Login successful, navigating to dashboard');
       toast({
         title: "Welcome back!",
         description: "You have successfully signed in.",

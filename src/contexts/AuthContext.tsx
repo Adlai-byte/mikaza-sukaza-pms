@@ -130,6 +130,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signIn = async (email: string, password: string) => {
     if (!AUTH_ENABLED) {
+      console.log('Mock login attempt with:', { email, password });
+      // Mock validation - always succeed for any email/password
       return { error: null };
     }
 
