@@ -27,8 +27,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, X } from "lucide-react";
-import { useState } from "react";
+import { Upload, X, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface UserFormProps {
   open: boolean;
@@ -39,33 +39,64 @@ interface UserFormProps {
 
 export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(user?.photo_url || null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { logActivity } = useActivityLogs();
   
   const form = useForm<UserInsert>({
     resolver: zodResolver(userSchema),
     defaultValues: {
-      email: user?.email || "",
-      password: user ? "" : "", // Don't show existing password
-      user_type: user?.user_type || "ops",
-      is_active: user?.is_active ?? true,
-      first_name: user?.first_name || "",
-      last_name: user?.last_name || "",
-      date_of_birth: user?.date_of_birth || "",
-      company: user?.company || "",
-      cellphone_primary: user?.cellphone_primary || "",
-      cellphone_usa: user?.cellphone_usa || "",
-      whatsapp: user?.whatsapp || "",
-      address: user?.address || "",
-      city: user?.city || "",
-      state: user?.state || "",
-      zip: user?.zip || "",
-      country: user?.country || "USA",
-      photo_url: user?.photo_url || "",
+      email: "",
+      password: "",
+      user_type: "ops",
+      is_active: true,
+      first_name: "",
+      last_name: "",
+      date_of_birth: "",
+      company: "",
+      cellphone_primary: "",
+      cellphone_usa: "",
+      whatsapp: "",
+      address: "",
+      city: "",
+      state: "",
+      zip: "",
+      country: "USA",
+      photo_url: "",
     },
   });
 
+  // Reset form when user changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      const formData = {
+        email: user?.email || "",
+        password: user ? "" : "", // Don't show existing password
+        user_type: user?.user_type || "ops",
+        is_active: user?.is_active ?? true,
+        first_name: user?.first_name || "",
+        last_name: user?.last_name || "",
+        date_of_birth: user?.date_of_birth || "",
+        company: user?.company || "",
+        cellphone_primary: user?.cellphone_primary || "",
+        cellphone_usa: user?.cellphone_usa || "",
+        whatsapp: user?.whatsapp || "",
+        address: user?.address || "",
+        city: user?.city || "",
+        state: user?.state || "",
+        zip: user?.zip || "",
+        country: user?.country || "USA",
+        photo_url: user?.photo_url || "",
+      };
+      
+      form.reset(formData);
+      setPhotoPreview(user?.photo_url || null);
+    }
+  }, [user, open, form]);
+
   const handleSubmit = async (data: UserInsert) => {
     try {
+      setIsSubmitting(true);
+      
       // Include photo URL in submission data
       const submissionData = { ...data, photo_url: photoPreview || undefined };
       
@@ -91,6 +122,8 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
       onOpenChange(false);
     } catch (error) {
       // Error is handled in the parent component
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -120,14 +153,17 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{user ? "Edit User" : "Add New User"}</DialogTitle>
+          <DialogTitle className="animate-fade-in">
+            {user ? "Edit User" : "Add New User"}
+          </DialogTitle>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            {/* Photo Upload Section */}
-            <div className="flex flex-col items-center space-y-4">
-              <div className="flex items-center space-x-4">
+        <div className="animate-fade-in">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              {/* Photo Upload Section */}
+              <div className="flex flex-col items-center space-y-4 animate-scale-in">
+                <div className="flex items-center space-x-4">
                 <Avatar className="h-20 w-20">
                   <AvatarImage src={photoPreview || undefined} />
                   <AvatarFallback className="text-lg">
@@ -168,7 +204,7 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 animate-fade-in">
               <FormField
                 control={form.control}
                 name="first_name"
@@ -202,7 +238,7 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
               control={form.control}
               name="email"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="animate-fade-in">
                   <FormLabel>Email *</FormLabel>
                   <FormControl>
                     <Input type="email" {...field} />
@@ -230,7 +266,7 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 animate-fade-in">
               <FormField
                 control={form.control}
                 name="user_type"
@@ -421,20 +457,29 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
               />
             </div>
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">
-                {user ? "Update User" : "Create User"}
-              </Button>
-            </div>
-          </form>
-        </Form>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting} className="hover-scale">
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {user ? "Updating..." : "Creating..."}
+                    </>
+                  ) : (
+                    user ? "Update User" : "Create User"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );
