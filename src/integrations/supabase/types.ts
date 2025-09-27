@@ -14,7 +14,163 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bank_accounts: {
+        Row: {
+          account_holder: string
+          account_number: string
+          bank_account_id: string
+          bank_name: string
+          created_at: string | null
+          ein: string | null
+          observations: string | null
+          routing_number: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_holder: string
+          account_number: string
+          bank_account_id?: string
+          bank_name: string
+          created_at?: string | null
+          ein?: string | null
+          observations?: string | null
+          routing_number: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_holder?: string
+          account_number?: string
+          bank_account_id?: string
+          bank_name?: string
+          created_at?: string | null
+          ein?: string | null
+          observations?: string | null
+          routing_number?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      credit_cards: {
+        Row: {
+          card_number: string
+          card_type: string
+          cardholder_name: string
+          created_at: string | null
+          credit_card_id: string
+          due_date: string
+          security_code: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          card_number: string
+          card_type: string
+          cardholder_name: string
+          created_at?: string | null
+          credit_card_id?: string
+          due_date: string
+          security_code: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          card_number?: string
+          card_type?: string
+          cardholder_name?: string
+          created_at?: string | null
+          credit_card_id?: string
+          due_date?: string
+          security_code?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_cards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          address: string | null
+          cellphone_primary: string | null
+          cellphone_usa: string | null
+          city: string | null
+          company: string | null
+          country: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          email: string
+          first_name: string
+          is_active: boolean | null
+          last_name: string
+          password: string
+          state: string | null
+          updated_at: string | null
+          user_id: string
+          user_type: string
+          whatsapp: string | null
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          cellphone_primary?: string | null
+          cellphone_usa?: string | null
+          city?: string | null
+          company?: string | null
+          country?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          email: string
+          first_name: string
+          is_active?: boolean | null
+          last_name: string
+          password: string
+          state?: string | null
+          updated_at?: string | null
+          user_id?: string
+          user_type: string
+          whatsapp?: string | null
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          cellphone_primary?: string | null
+          cellphone_usa?: string | null
+          city?: string | null
+          company?: string | null
+          country?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          email?: string
+          first_name?: string
+          is_active?: boolean | null
+          last_name?: string
+          password?: string
+          state?: string | null
+          updated_at?: string | null
+          user_id?: string
+          user_type?: string
+          whatsapp?: string | null
+          zip?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
