@@ -87,11 +87,18 @@ export default function Profile() {
     setIsChangingPassword(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: passwordForm.newPassword
-      });
-
-      if (error) throw error;
+      // Check if auth is enabled by looking at the session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const { error } = await supabase.auth.updateUser({
+          password: passwordForm.newPassword
+        });
+        if (error) throw error;
+      } else {
+        // Mock update for disabled auth
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
 
       toast({
         title: "Password updated",
@@ -120,33 +127,61 @@ export default function Profile() {
     if (!file || !profile) return;
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.user_id}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      // Create a local URL for preview when auth is disabled
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const photoUrl = e.target?.result as string;
+        
+        try {
+          // Check if we have a real session for storage upload
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session) {
+            // Real upload to Supabase
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${profile.user_id}.${fileExt}`;
+            const filePath = `avatars/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('property-images')
-        .upload(filePath, file, { upsert: true });
+            const { error: uploadError } = await supabase.storage
+              .from('property-images')
+              .upload(filePath, file, { upsert: true });
 
-      if (uploadError) throw uploadError;
+            if (uploadError) throw uploadError;
 
-      const { data } = supabase.storage
-        .from('property-images')
-        .getPublicUrl(filePath);
+            const { data } = supabase.storage
+              .from('property-images')
+              .getPublicUrl(filePath);
 
-      await updateProfile({
-        photo_url: data.publicUrl,
-      });
+            await updateProfile({
+              photo_url: data.publicUrl,
+            });
+          } else {
+            // Mock update for disabled auth - use local file URL
+            await updateProfile({
+              photo_url: photoUrl,
+            });
+          }
 
-      toast({
-        title: "Profile picture updated",
-        description: "Your profile picture has been successfully updated.",
-      });
+          toast({
+            title: "Profile picture updated",
+            description: "Your profile picture has been successfully updated.",
+          });
+        } catch (error) {
+          console.error('Error updating avatar:', error);
+          toast({
+            title: "Error",
+            description: "Failed to update profile picture. Please try again.",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      reader.readAsDataURL(file);
     } catch (error) {
-      console.error('Error uploading avatar:', error);
+      console.error('Error handling avatar upload:', error);
       toast({
         title: "Error",
-        description: "Failed to upload profile picture. Please try again.",
+        description: "Failed to process profile picture. Please try again.",
         variant: "destructive",
       });
     }

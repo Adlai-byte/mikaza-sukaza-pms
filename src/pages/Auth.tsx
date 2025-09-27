@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -17,7 +18,8 @@ const loginSchema = z.object({
 export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [rememberMe, setRememberMe] = useState(false);
+  const { signIn, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -25,6 +27,22 @@ export default function Auth() {
     email: "",
     password: "",
   });
+
+  useEffect(() => {
+    // Redirect if already logged in
+    if (user) {
+      navigate('/');
+    }
+    
+    // Load saved credentials if remember me was checked
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+    
+    if (savedEmail && savedRememberMe) {
+      setLoginForm(prev => ({ ...prev, email: savedEmail }));
+      setRememberMe(true);
+    }
+  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +76,15 @@ export default function Auth() {
         return;
       }
 
+      // Save credentials if remember me is checked
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', validatedData.email);
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        localStorage.removeItem('rememberedEmail');
+        localStorage.removeItem('rememberMe');
+      }
+
       toast({
         title: "Welcome back!",
         description: "You have successfully signed in.",
@@ -78,68 +105,91 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Purple gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-purple-800 to-purple-600"></div>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-4">
+      {/* Enhanced gradient background */}
+      <div 
+        className="absolute inset-0"
+        style={{
+          background: 'linear-gradient(135deg, hsl(258, 75%, 35%) 0%, hsl(280, 85%, 25%) 100%)'
+        }}
+      ></div>
       
-      {/* Geometric overlay pattern */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-20 left-20 w-64 h-64 border border-white/20 rotate-45 rounded-lg"></div>
-        <div className="absolute bottom-20 right-20 w-48 h-48 border border-white/20 rotate-12 rounded-lg"></div>
-        <div className="absolute top-1/2 left-10 w-32 h-32 border border-white/20 -rotate-12 rounded-lg"></div>
-        <div className="absolute bottom-1/3 left-1/3 w-40 h-40 border border-white/20 rotate-45 rounded-lg"></div>
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-white/10 blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-white/5 blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 rounded-full bg-white/5 blur-3xl animate-pulse delay-500 transform -translate-x-1/2 -translate-y-1/2"></div>
+      </div>
+      
+      {/* Geometric pattern overlay */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-20 left-20 w-32 h-32 border border-white/30 rotate-45 rounded-lg animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-24 h-24 border border-white/30 rotate-12 rounded-lg animate-pulse delay-700"></div>
+        <div className="absolute top-1/2 left-10 w-16 h-16 border border-white/30 -rotate-12 rounded-lg animate-pulse delay-300"></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-md px-4">
-        {/* Brand Header */}
-        <div className="text-center mb-12">
+      <div className="relative z-10 w-full max-w-md">
+        {/* Enhanced Brand Header */}
+        <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-6">
-            <div className="w-12 h-12 border-2 border-white rounded-lg flex items-center justify-center mr-3">
-              <span className="text-white font-bold text-xl">K</span>
+            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl flex items-center justify-center mr-4 shadow-lg">
+              <User className="text-white w-8 h-8" />
             </div>
-            <h1 className="text-3xl font-normal text-white">mikazasukaza</h1>
+            <h1 className="text-4xl font-light text-white tracking-wide">mikazasukaza</h1>
           </div>
+          <p className="text-white/80 text-sm font-light">Property Management System</p>
         </div>
 
-        {/* Login Form */}
-        <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-2xl">
-          <CardHeader className="text-center pb-6">
-            <h2 className="text-2xl font-normal text-white">Login</h2>
+        {/* Enhanced Login Form */}
+        <Card className="bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl">
+          <CardHeader className="text-center pb-6 pt-8">
+            <h2 className="text-2xl font-light text-white mb-2">Welcome Back</h2>
+            <p className="text-white/70 text-sm">Sign in to access your dashboard</p>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 pb-8">
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white/90 font-normal">
-                  E-mail
+                <Label htmlFor="email" className="text-white/90 font-light text-sm">
+                  Email Address
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={loginForm.email}
-                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                  className="bg-white border-0 text-gray-900 placeholder:text-gray-500 h-12"
-                  required
-                />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={loginForm.email}
+                    onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                    className="bg-white/95 border-0 text-gray-900 placeholder:text-gray-400 h-12 pl-10 focus:bg-white transition-all"
+                    placeholder="Enter your email"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white/90 font-normal">
+                <Label htmlFor="password" className="text-white/90 font-light text-sm">
                   Password
                 </Label>
                 <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input
                     id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     value={loginForm.password}
                     onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                    className="bg-white border-0 text-gray-900 placeholder:text-gray-500 h-12 pr-12"
+                    className="bg-white/95 border-0 text-gray-900 placeholder:text-gray-400 h-12 pl-10 pr-12 focus:bg-white transition-all"
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
                     required
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-500 hover:text-gray-700"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100 text-gray-400 hover:text-gray-600"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
@@ -151,23 +201,44 @@ export default function Auth() {
                 </div>
               </div>
 
-              <div className="text-right">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="remember"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    className="border-white/50 data-[state=checked]:bg-white data-[state=checked]:text-primary"
+                  />
+                  <Label
+                    htmlFor="remember"
+                    className="text-white/80 text-sm font-light cursor-pointer"
+                  >
+                    Remember me
+                  </Label>
+                </div>
+                
                 <button
                   type="button"
-                  className="text-white/80 hover:text-white text-sm underline"
+                  className="text-white/70 hover:text-white text-sm underline font-light"
                 >
-                  Forgot your password?
+                  Forgot password?
                 </button>
               </div>
 
               <Button 
                 type="submit" 
-                className="w-full h-12 bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white font-medium text-base border-0 shadow-lg" 
+                className="w-full h-12 bg-gradient-to-r from-accent to-accent-hover hover:from-accent-hover hover:to-accent text-accent-foreground font-medium text-base border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]" 
                 disabled={loading}
               >
-                {loading ? "Signing In..." : "Login"}
+                {loading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
+            
+            <div className="text-center">
+              <p className="text-white/50 text-xs font-light">
+                Secure authentication powered by Supabase
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
