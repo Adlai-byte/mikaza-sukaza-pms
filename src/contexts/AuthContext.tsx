@@ -23,6 +23,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isOps: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
 }
@@ -38,7 +39,7 @@ export function useAuth() {
 }
 
 // Toggle this to disable authentication temporarily
-const AUTH_ENABLED = false; // Set to true to enable authentication
+const AUTH_ENABLED = true; // Set to true to enable authentication
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -203,6 +204,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAdmin,
     isOps,
     signIn,
+    signUp,
     signOut,
     updateProfile,
   };

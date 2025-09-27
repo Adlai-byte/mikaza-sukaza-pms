@@ -19,7 +19,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const { signIn, user } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -29,9 +29,8 @@ export default function Auth() {
   });
 
   useEffect(() => {
-    // Only redirect if auth is enabled and user is actually logged in
-    const AUTH_ENABLED = false; // This should match the value in AuthContext
-    if (AUTH_ENABLED && user) {
+    // Redirect to dashboard when authenticated
+    if (user) {
       navigate('/');
     }
     
@@ -233,6 +232,51 @@ export default function Auth() {
                 disabled={loading}
               >
                 {loading ? "Signing In..." : "Sign In"}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full h-12 mt-3"
+                disabled={loading}
+                onClick={async () => {
+                  try {
+                    const validatedData = loginSchema.parse(loginForm);
+                    setLoading(true);
+                    const { error } = await signUp(validatedData.email, validatedData.password);
+                    if (error) {
+                      if (error.message?.includes("already registered")) {
+                        toast({
+                          title: "Account exists",
+                          description: "You already have an account. Please sign in.",
+                          variant: "default",
+                        });
+                      } else {
+                        toast({
+                          title: "Sign up failed",
+                          description: error.message,
+                          variant: "destructive",
+                        });
+                      }
+                      return;
+                    }
+                    toast({
+                      title: "Check your email",
+                      description: "We sent you a confirmation link to complete your signup.",
+                    });
+                  } catch (err) {
+                    if (err instanceof z.ZodError) {
+                      toast({
+                        title: "Validation Error",
+                        description: err.errors[0].message,
+                        variant: "destructive",
+                      });
+                    }
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                {loading ? "Processing..." : "Create account"}
               </Button>
             </form>
             
