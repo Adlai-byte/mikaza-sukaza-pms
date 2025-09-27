@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
-import { CreditCard as CreditCardIcon, Plus } from "lucide-react";
+import { CreditCard as CreditCardIcon, Plus, Loader2 } from "lucide-react";
 
 interface CreditCardDialogProps {
   open: boolean;
@@ -167,7 +167,10 @@ export function CreditCardDialog({ open, onOpenChange, user }: CreditCardDialogP
           </div>
 
           {loading ? (
-            <div className="text-center py-4">Loading...</div>
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin mr-2" />
+              <span>Loading credit cards...</span>
+            </div>
           ) : creditCards.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <CreditCardIcon className="h-12 w-12 mx-auto mb-2" />

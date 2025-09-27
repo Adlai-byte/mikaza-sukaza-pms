@@ -69,10 +69,13 @@ export function useUsers() {
 
   const updateUser = async (userId: string, userData: Partial<UserInsert>) => {
     try {
-      // Remove empty password field for updates
+      // Remove empty password field and empty date fields for updates
       const updateData = { ...userData };
       if (updateData.password === "") {
         delete updateData.password;
+      }
+      if (updateData.date_of_birth === "") {
+        delete updateData.date_of_birth;
       }
 
       const { data, error } = await supabase

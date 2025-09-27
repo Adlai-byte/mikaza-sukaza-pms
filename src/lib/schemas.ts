@@ -9,7 +9,9 @@ export const userSchema = z.object({
   is_active: z.boolean().default(true),
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
-  date_of_birth: z.string().optional(),
+  date_of_birth: z.string().optional().refine((val) => !val || val.length === 0 || /^\d{4}-\d{2}-\d{2}$/.test(val), {
+    message: "Date must be in YYYY-MM-DD format or empty"
+  }),
   company: z.string().optional(),
   cellphone_primary: z.string().optional(),
   cellphone_usa: z.string().optional(),
