@@ -20,7 +20,6 @@ interface AuthContextType {
   isAdmin: boolean;
   isOps: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
 }
@@ -188,7 +187,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAdmin,
     isOps,
     signIn,
-    signUp,
     signOut,
     updateProfile,
   };
