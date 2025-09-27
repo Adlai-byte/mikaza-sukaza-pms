@@ -107,7 +107,7 @@ export function useProperties() {
       // Create the main property
       const { data: property, error: propertyError } = await supabase
         .from('properties')
-        .insert([mainPropertyData])
+        .insert([mainPropertyData as any])
         .select()
         .single();
 
