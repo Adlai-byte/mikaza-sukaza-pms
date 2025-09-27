@@ -906,75 +906,7 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
                   )}
                 </Button>
               </div>
-            </form>
-          </Form>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-                    
-                    <div className="grid grid-cols-3 gap-4">
-                      {images.map((image, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={image.url}
-                            alt={`Property ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg"
-                          />
-                          {image.is_primary && (
-                            <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                              Primary
-                            </div>
-                          )}
-                          <div className="absolute top-2 right-2 flex space-x-1">
-                            {!image.is_primary && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => setPrimaryImage(index)}
-                              >
-                                Set Primary
-                              </Button>
-                            )}
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => removeImage(index)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting} className="hover-scale">
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      {property ? "Updating..." : "Creating..."}
-                    </>
-                  ) : (
-                    property ? "Update Property" : "Create Property"
-                  )}
-                </Button>
-              </div>
-            </form>
+             </form>
           </Form>
         </div>
       </DialogContent>
