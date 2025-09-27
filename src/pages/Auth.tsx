@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useUsers } from "@/hooks/useUsers";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { z } from "zod";
 
@@ -19,7 +20,9 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const [showUserList, setShowUserList] = useState(false);
+  const { signIn, signUp, user, sessionLogin } = useAuth();
+  const { users } = useUsers();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -43,6 +46,26 @@ export default function Auth() {
       setRememberMe(true);
     }
   }, [user, navigate]);
+
+  const handleSessionLogin = async (userFromDB: any) => {
+    setLoading(true);
+    try {
+      await sessionLogin(userFromDB);
+      toast({
+        title: "Session login successful",
+        description: `Logged in as ${userFromDB.first_name} ${userFromDB.last_name}`,
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start session",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -225,6 +248,50 @@ export default function Auth() {
                   Forgot password?
                 </button>
               </div>
+
+              {/* Session Login Toggle */}
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowUserList(!showUserList)}
+                  className="w-full mb-4 bg-white/10 border-white/30 text-white hover:bg-white/20"
+                >
+                  {showUserList ? "Hide" : "Show"} Available Users (Session Mode)
+                </Button>
+              </div>
+
+              {/* Available Users List */}
+              {showUserList && (
+                <Card className="mb-4 bg-white/10 border-white/30">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-white">Available Users</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 max-h-60 overflow-y-auto">
+                    {users.length === 0 ? (
+                      <p className="text-white/70 text-sm">No users found. Create users in User Management first.</p>
+                    ) : (
+                      users.filter(u => u.is_active).map((user) => (
+                        <div key={user.user_id} className="flex items-center justify-between p-2 border border-white/20 rounded-lg bg-white/5">
+                          <div className="flex-1">
+                            <p className="font-medium text-white">{user.first_name} {user.last_name}</p>
+                            <p className="text-sm text-white/70">{user.email}</p>
+                            <p className="text-xs text-white/60 capitalize">{user.user_type}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => handleSessionLogin(user)}
+                            disabled={loading}
+                            className="bg-accent hover:bg-accent-hover text-accent-foreground"
+                          >
+                            Login as User
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               <Button 
                 type="submit" 

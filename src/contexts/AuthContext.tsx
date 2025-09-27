@@ -26,6 +26,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  sessionLogin: (userFromDB: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,7 +40,7 @@ export function useAuth() {
 }
 
 // Toggle this to disable authentication temporarily
-const AUTH_ENABLED = true; // Set to true to enable authentication
+const AUTH_ENABLED = false; // Set to true to enable authentication, false for session-based login
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -89,8 +90,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     if (!AUTH_ENABLED) {
-      // When auth is disabled, use mock data
-      setProfile(mockProfile);
+      // Check if there's a stored session user
+      const storedUser = localStorage.getItem('tempSessionUser');
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          const sessionProfile: Profile = {
+            id: userData.user_id,
+            user_id: userData.user_id,
+            email: userData.email,
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            user_type: userData.user_type,
+            is_active: userData.is_active,
+            photo_url: userData.photo_url,
+            created_at: userData.created_at,
+            updated_at: userData.updated_at,
+          };
+          setProfile(sessionProfile);
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+          setProfile(mockProfile);
+        }
+      } else {
+        setProfile(null); // No session user
+      }
       setLoading(false);
       return;
     }
@@ -164,9 +188,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return { error };
   };
 
+  const sessionLogin = async (userFromDB: any) => {
+    if (!AUTH_ENABLED) {
+      // Store user in localStorage for session-based login
+      localStorage.setItem('tempSessionUser', JSON.stringify(userFromDB));
+      
+      const sessionProfile: Profile = {
+        id: userFromDB.user_id,
+        user_id: userFromDB.user_id,
+        email: userFromDB.email,
+        first_name: userFromDB.first_name,
+        last_name: userFromDB.last_name,
+        user_type: userFromDB.user_type,
+        is_active: userFromDB.is_active,
+        photo_url: userFromDB.photo_url,
+        created_at: userFromDB.created_at,
+        updated_at: userFromDB.updated_at,
+      };
+      setProfile(sessionProfile);
+    }
+  };
+
   const signOut = async () => {
     if (!AUTH_ENABLED) {
-      // For disabled auth mode, redirect to login page
+      // Clear session storage and redirect to login page
+      localStorage.removeItem('tempSessionUser');
+      setProfile(null);
       window.location.href = '/auth';
       return;
     }
@@ -197,9 +244,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const value = {
-    user: AUTH_ENABLED ? user : { id: 'mock-user' } as User,
-    session: AUTH_ENABLED ? session : { user: { id: 'mock-user' } } as Session,
-    profile: profile || (AUTH_ENABLED ? null : mockProfile),
+    user: AUTH_ENABLED ? user : (profile ? { id: profile.user_id } as User : null),
+    session: AUTH_ENABLED ? session : (profile ? { user: { id: profile.user_id } } as Session : null),
+    profile,
     loading,
     isAdmin,
     isOps,
@@ -207,6 +254,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signUp,
     signOut,
     updateProfile,
+    sessionLogin,
   };
 
   return (
