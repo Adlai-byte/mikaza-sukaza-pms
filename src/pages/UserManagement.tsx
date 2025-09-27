@@ -3,22 +3,38 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserPlus, Users, Building2, CreditCard } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
+import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { UserForm } from "@/components/UserManagement/UserForm";
 import { UserTable } from "@/components/UserManagement/UserTable";
+import { BankAccountDialog } from "@/components/UserManagement/BankAccountDialog";
+import { CreditCardDialog } from "@/components/UserManagement/CreditCardDialog";
+import { UserDetailsDialog } from "@/components/UserManagement/UserDetailsDialog";
 import { User, UserInsert } from "@/lib/schemas";
 
 export default function UserManagement() {
   const { users, loading, createUser, updateUser, deleteUser } = useUsers();
+  const { logActivity } = useActivityLogs();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [bankAccountDialogUser, setBankAccountDialogUser] = useState<User | null>(null);
+  const [creditCardDialogUser, setCreditCardDialogUser] = useState<User | null>(null);
+  const [userDetailsUser, setUserDetailsUser] = useState<User | null>(null);
 
   const handleCreateUser = async (userData: UserInsert) => {
     await createUser(userData);
+    await logActivity('USER_CREATED', { 
+      userEmail: userData.email, 
+      userType: userData.user_type 
+    }, undefined, 'Admin');
   };
 
   const handleUpdateUser = async (userData: UserInsert) => {
     if (editingUser?.user_id) {
       await updateUser(editingUser.user_id, userData);
+      await logActivity('USER_UPDATED', { 
+        userEmail: userData.email, 
+        userType: userData.user_type 
+      }, editingUser.user_id, 'Admin');
       setEditingUser(null);
     }
   };
@@ -29,17 +45,26 @@ export default function UserManagement() {
   };
 
   const handleDeleteUser = async (userId: string) => {
+    const user = users.find(u => u.user_id === userId);
     await deleteUser(userId);
+    if (user) {
+      await logActivity('USER_DELETED', { 
+        userEmail: user.email, 
+        userType: user.user_type 
+      }, userId, 'Admin');
+    }
   };
 
   const handleViewBankAccounts = (user: User) => {
-    // TODO: Implement bank accounts view
-    console.log("View bank accounts for user:", user.user_id);
+    setBankAccountDialogUser(user);
   };
 
   const handleViewCreditCards = (user: User) => {
-    // TODO: Implement credit cards view
-    console.log("View credit cards for user:", user.user_id);
+    setCreditCardDialogUser(user);
+  };
+
+  const handleViewDetails = (user: User) => {
+    setUserDetailsUser(user);
   };
 
   const handleFormClose = () => {
@@ -123,6 +148,7 @@ export default function UserManagement() {
               onDeleteUser={handleDeleteUser}
               onViewBankAccounts={handleViewBankAccounts}
               onViewCreditCards={handleViewCreditCards}
+              onViewDetails={handleViewDetails}
             />
           )}
         </CardContent>
@@ -135,6 +161,33 @@ export default function UserManagement() {
         user={editingUser}
         onSubmit={editingUser ? handleUpdateUser : handleCreateUser}
       />
+
+      {/* Bank Account Dialog */}
+      {bankAccountDialogUser && (
+        <BankAccountDialog
+          open={!!bankAccountDialogUser}
+          onOpenChange={(open) => !open && setBankAccountDialogUser(null)}
+          user={bankAccountDialogUser}
+        />
+      )}
+
+      {/* Credit Card Dialog */}
+      {creditCardDialogUser && (
+        <CreditCardDialog
+          open={!!creditCardDialogUser}
+          onOpenChange={(open) => !open && setCreditCardDialogUser(null)}
+          user={creditCardDialogUser}
+        />
+      )}
+
+      {/* User Details Dialog */}
+      {userDetailsUser && (
+        <UserDetailsDialog
+          open={!!userDetailsUser}
+          onOpenChange={(open) => !open && setUserDetailsUser(null)}
+          user={userDetailsUser}
+        />
+      )}
     </div>
   );
 }

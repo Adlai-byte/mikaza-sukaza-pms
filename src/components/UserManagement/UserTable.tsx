@@ -11,7 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Edit, Trash2, Search, CreditCard, Building2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Edit, Trash2, Search, CreditCard, Building2, Eye } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +31,7 @@ interface UserTableProps {
   onDeleteUser: (userId: string) => void;
   onViewBankAccounts: (user: User) => void;
   onViewCreditCards: (user: User) => void;
+  onViewDetails: (user: User) => void;
 }
 
 export function UserTable({
@@ -38,6 +40,7 @@ export function UserTable({
   onDeleteUser,
   onViewBankAccounts,
   onViewCreditCards,
+  onViewDetails,
 }: UserTableProps) {
   const [search, setSearch] = useState("");
 
@@ -64,7 +67,7 @@ export function UserTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
+              <TableHead>User</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
@@ -77,7 +80,15 @@ export function UserTable({
             {filteredUsers.map((user) => (
               <TableRow key={user.user_id}>
                 <TableCell className="font-medium">
-                  {user.first_name} {user.last_name}
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.photo_url} />
+                      <AvatarFallback className="text-xs">
+                        {user.first_name.charAt(0)}{user.last_name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{user.first_name} {user.last_name}</span>
+                  </div>
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
@@ -93,11 +104,20 @@ export function UserTable({
                 <TableCell>{user.company || '-'}</TableCell>
                 <TableCell>{user.cellphone_primary || '-'}</TableCell>
                 <TableCell>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onViewDetails(user)}
+                      title="View Details"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onEditUser(user)}
+                      title="Edit User"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -105,6 +125,7 @@ export function UserTable({
                       variant="ghost"
                       size="sm"
                       onClick={() => onViewBankAccounts(user)}
+                      title="Bank Accounts"
                     >
                       <Building2 className="h-4 w-4" />
                     </Button>
@@ -112,6 +133,7 @@ export function UserTable({
                       variant="ghost"
                       size="sm"
                       onClick={() => onViewCreditCards(user)}
+                      title="Credit Cards"
                     >
                       <CreditCard className="h-4 w-4" />
                     </Button>

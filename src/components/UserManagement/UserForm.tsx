@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { userSchema, User, UserInsert } from "@/lib/schemas";
+import { useActivityLogs } from "@/hooks/useActivityLogs";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Upload, X } from "lucide-react";
+import { useState } from "react";
 
 interface UserFormProps {
   open: boolean;
@@ -34,11 +38,14 @@ interface UserFormProps {
 }
 
 export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) {
+  const [photoPreview, setPhotoPreview] = useState<string | null>(user?.photo_url || null);
+  const { logActivity } = useActivityLogs();
+  
   const form = useForm<UserInsert>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       email: user?.email || "",
-      password: "",
+      password: user ? "" : "", // Don't show existing password
       user_type: user?.user_type || "ops",
       is_active: user?.is_active ?? true,
       first_name: user?.first_name || "",
@@ -53,17 +60,60 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
       state: user?.state || "",
       zip: user?.zip || "",
       country: user?.country || "USA",
+      photo_url: user?.photo_url || "",
     },
   });
 
   const handleSubmit = async (data: UserInsert) => {
     try {
-      await onSubmit(data);
+      // Include photo URL in submission data
+      const submissionData = { ...data, photo_url: photoPreview || undefined };
+      
+      await onSubmit(submissionData);
+      
+      // Log the activity
+      const actionType = user ? 'USER_UPDATED' : 'USER_CREATED';
+      const actionDetails = {
+        userEmail: data.email,
+        userType: data.user_type,
+        isActive: data.is_active,
+      };
+      
+      await logActivity(
+        actionType, 
+        actionDetails, 
+        user?.user_id, 
+        'Admin'
+      );
+      
       form.reset();
+      setPhotoPreview(null);
       onOpenChange(false);
     } catch (error) {
       // Error is handled in the parent component
     }
+  };
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setPhotoPreview(result);
+        form.setValue('photo_url', result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setPhotoPreview(null);
+    form.setValue('photo_url', '');
+  };
+
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
   return (
@@ -75,6 +125,49 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            {/* Photo Upload Section */}
+            <div className="flex flex-col items-center space-y-4">
+              <div className="flex items-center space-x-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={photoPreview || undefined} />
+                  <AvatarFallback className="text-lg">
+                    {form.watch('first_name') && form.watch('last_name')
+                      ? getInitials(form.watch('first_name'), form.watch('last_name'))
+                      : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className="flex flex-col space-y-2">
+                  <label className="cursor-pointer">
+                    <Button type="button" variant="outline" size="sm" asChild>
+                      <span>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Photo
+                      </span>
+                    </Button>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  
+                  {photoPreview && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={removePhoto}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -124,9 +217,13 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password *</FormLabel>
+                  <FormLabel>Password {user ? '(leave blank to keep current)' : '*'}</FormLabel>
                   <FormControl>
-                    <Input type="password" {...field} />
+                    <Input 
+                      type="password" 
+                      {...field} 
+                      placeholder={user ? "Leave blank to keep current password" : "Enter password"}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -160,16 +257,19 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
                 control={form.control}
                 name="is_active"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Active User
+                      </FormLabel>
+                      <FormMessage />
+                    </div>
                     <FormControl>
-                      <Checkbox
+                      <Switch
                         checked={field.value}
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Active User</FormLabel>
-                    </div>
                   </FormItem>
                 )}
               />

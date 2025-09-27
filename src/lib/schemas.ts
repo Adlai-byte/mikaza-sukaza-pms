@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const userSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(1, "Password is required").optional().or(z.string().min(8, "Password must be at least 8 characters")),
   user_type: z.enum(["admin", "ops"], {
     required_error: "Please select a user type",
   }),
@@ -19,6 +19,7 @@ export const userSchema = z.object({
   state: z.string().optional(),
   zip: z.string().optional(),
   country: z.string().default("USA"),
+  photo_url: z.string().optional(),
 });
 
 export const bankAccountSchema = z.object({
@@ -42,10 +43,18 @@ export const creditCardSchema = z.object({
   security_code: z.string().regex(/^\d{3,4}$/, "Security code must be 3-4 digits"),
 });
 
+// Activity log schema
+export const activityLogSchema = z.object({
+  user_id: z.string().uuid().optional(),
+  action_type: z.string().min(1, "Action type is required"),
+  action_details: z.record(z.any()).optional(),
+  performed_by: z.string().optional(),
+});
+
 // Insert types (for creating new records)
 export type UserInsert = {
   email: string;
-  password: string;
+  password?: string;
   user_type: "admin" | "ops";
   is_active?: boolean;
   first_name: string;
@@ -60,6 +69,7 @@ export type UserInsert = {
   state?: string;
   zip?: string;
   country?: string;
+  photo_url?: string;
 };
 
 // Database types (includes all fields from DB)
@@ -79,4 +89,9 @@ export type CreditCard = z.infer<typeof creditCardSchema> & {
   credit_card_id?: string;
   created_at?: string;
   updated_at?: string;
+};
+
+export type ActivityLog = z.infer<typeof activityLogSchema> & {
+  log_id?: string;
+  created_at?: string;
 };

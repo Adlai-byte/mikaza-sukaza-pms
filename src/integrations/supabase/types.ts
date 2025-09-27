@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action_details: Json | null
+          action_type: string
+          created_at: string
+          log_id: string
+          performed_by: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_details?: Json | null
+          action_type: string
+          created_at?: string
+          log_id?: string
+          performed_by?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_details?: Json | null
+          action_type?: string
+          created_at?: string
+          log_id?: string
+          performed_by?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       bank_accounts: {
         Row: {
           account_holder: string
@@ -120,6 +155,7 @@ export type Database = {
           is_active: boolean | null
           last_name: string
           password: string
+          photo_url: string | null
           state: string | null
           updated_at: string | null
           user_id: string
@@ -141,6 +177,7 @@ export type Database = {
           is_active?: boolean | null
           last_name: string
           password: string
+          photo_url?: string | null
           state?: string | null
           updated_at?: string | null
           user_id?: string
@@ -162,6 +199,7 @@ export type Database = {
           is_active?: boolean | null
           last_name?: string
           password?: string
+          photo_url?: string | null
           state?: string | null
           updated_at?: string | null
           user_id?: string

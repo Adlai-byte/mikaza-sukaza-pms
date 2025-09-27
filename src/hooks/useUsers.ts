@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, BankAccount, CreditCard, UserInsert } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
+import { useActivityLogs } from "@/hooks/useActivityLogs";
 
 export function useUsers() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { logActivity } = useActivityLogs();
 
   const fetchUsers = async () => {
     try {
@@ -32,9 +34,17 @@ export function useUsers() {
 
   const createUser = async (userData: UserInsert) => {
     try {
+      // Ensure password is provided for new users
+      if (!userData.password) {
+        throw new Error("Password is required for new users");
+      }
+
+      // Create insertion data with required password
+      const insertData = { ...userData, password: userData.password };
+
       const { data, error } = await supabase
         .from('users')
-        .insert([userData])
+        .insert([insertData])
         .select()
         .single();
 
@@ -50,18 +60,24 @@ export function useUsers() {
       console.error('Error creating user:', error);
       toast({
         title: "Error",
-        description: "Failed to create user",
+        description: error instanceof Error ? error.message : "Failed to create user",
         variant: "destructive",
       });
       throw error;
     }
   };
 
-  const updateUser = async (userId: string, userData: Partial<User>) => {
+  const updateUser = async (userId: string, userData: Partial<UserInsert>) => {
     try {
+      // Remove empty password field for updates
+      const updateData = { ...userData };
+      if (updateData.password === "") {
+        delete updateData.password;
+      }
+
       const { data, error } = await supabase
         .from('users')
-        .update(userData)
+        .update(updateData)
         .eq('user_id', userId)
         .select()
         .single();
@@ -71,6 +87,18 @@ export function useUsers() {
       setUsers(prev => prev.map(user => 
         user.user_id === userId ? data as User : user
       ));
+      
+      await logActivity(
+        'USER_UPDATED',
+        { 
+          userId,
+          updatedFields: Object.keys(updateData),
+          userEmail: updateData.email || 'Unknown'
+        },
+        userId,
+        'Admin'
+      );
+
       toast({
         title: "Success",
         description: "User updated successfully",
@@ -89,6 +117,8 @@ export function useUsers() {
 
   const deleteUser = async (userId: string) => {
     try {
+      const userToDelete = users.find(u => u.user_id === userId);
+      
       const { error } = await supabase
         .from('users')
         .delete()
@@ -97,6 +127,18 @@ export function useUsers() {
       if (error) throw error;
 
       setUsers(prev => prev.filter(user => user.user_id !== userId));
+      
+      await logActivity(
+        'USER_DELETED',
+        { 
+          userId,
+          userEmail: userToDelete?.email || 'Unknown',
+          userType: userToDelete?.user_type || 'Unknown'
+        },
+        userId,
+        'Admin'
+      );
+
       toast({
         title: "Success",
         description: "User deleted successfully",
