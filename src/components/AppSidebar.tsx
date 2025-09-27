@@ -12,7 +12,7 @@ import {
   Star,
   Image,
   Menu,
-  X,
+  Users,
 } from "lucide-react";
 
 import {
@@ -29,6 +29,7 @@ import {
 
 const mainMenuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "User Management", url: "/users", icon: Users },
   { title: "Properties", url: "/properties", icon: Building },
   { title: "Active Jobs", url: "/jobs", icon: BriefcaseIcon },
   { title: "Calendar", url: "/calendar", icon: Calendar },

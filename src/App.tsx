@@ -7,6 +7,7 @@ import { MainLayout } from "./components/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
 import Jobs from "./pages/Jobs";
+import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,8 +23,8 @@ const App = () => (
             <Route index element={<Dashboard />} />
             <Route path="/properties" element={<Properties />} />
             <Route path="/jobs" element={<Jobs />} />
+            <Route path="/users" element={<UserManagement />} />
             <Route path="/calendar" element={<div className="p-8 text-center text-muted-foreground">Calendar - Coming Soon</div>} />
-            <Route path="/todos" element={<div className="p-8 text-center text-muted-foreground">To-Do List - Coming Soon</div>} />
             <Route path="/issues" element={<div className="p-8 text-center text-muted-foreground">Issues & Photos - Coming Soon</div>} />
             <Route path="/documents/*" element={<div className="p-8 text-center text-muted-foreground">Documents - Coming Soon</div>} />
             <Route path="/finance/*" element={<div className="p-8 text-center text-muted-foreground">Finance - Coming Soon</div>} />
