@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Home, Building2, MapPin, Users } from "lucide-react";
+import { Home, Building2, MapPin, Users, Database } from "lucide-react";
 import { useProperties } from "@/hooks/useProperties";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { PropertyTable } from "@/components/PropertyManagement/PropertyTable";
@@ -9,14 +9,38 @@ import { PropertyForm } from "@/components/PropertyManagement/PropertyForm";
 import { PropertyDetailsDialog } from "@/components/PropertyManagement/PropertyDetailsDialog";
 import { PropertyImageDialog } from "@/components/PropertyManagement/PropertyImageDialog";
 import { Property, PropertyInsert } from "@/lib/schemas";
+import { generateMockProperties } from "@/utils/generateMockProperties";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Properties() {
   const { properties, loading, amenities, rules, createProperty, updateProperty, deleteProperty } = useProperties();
   const { logActivity } = useActivityLogs();
+  const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [viewingProperty, setViewingProperty] = useState<Property | null>(null);
   const [imageDialogProperty, setImageDialogProperty] = useState<Property | null>(null);
+  const [isGeneratingMocks, setIsGeneratingMocks] = useState(false);
+
+  const handleGenerateMockProperties = async () => {
+    setIsGeneratingMocks(true);
+    try {
+      const results = await generateMockProperties(100);
+      toast({
+        title: "Success",
+        description: `Successfully generated ${results.length} mock properties`,
+      });
+    } catch (error) {
+      console.error('Error generating properties:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate properties",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingMocks(false);
+    }
+  };
 
   const handleCreateProperty = async (propertyData: PropertyInsert & any) => {
     await createProperty(propertyData);
@@ -79,10 +103,16 @@ export default function Properties() {
             Manage properties, locations, and amenities
           </p>
         </div>
-        <Button onClick={() => setIsFormOpen(true)}>
-          <Home className="mr-2 h-4 w-4" />
-          Add Property
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={handleGenerateMockProperties} variant="outline" disabled={isGeneratingMocks}>
+            <Database className="h-4 w-4 mr-2" />
+            {isGeneratingMocks ? "Generating..." : "Generate 100 Mock Properties"}
+          </Button>
+          <Button onClick={() => setIsFormOpen(true)}>
+            <Home className="mr-2 h-4 w-4" />
+            Add Property
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}

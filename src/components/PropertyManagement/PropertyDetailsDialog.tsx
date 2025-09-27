@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Property } from "@/lib/schemas";
 import {
   Dialog,
@@ -7,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImageViewer } from "@/components/ui/image-viewer";
 import { 
   Home, 
   MapPin, 
@@ -19,7 +21,8 @@ import {
   Bed,
   Bath,
   Square,
-  Building
+  Building,
+  Camera
 } from "lucide-react";
 
 interface PropertyDetailsDialogProps {
@@ -29,6 +32,9 @@ interface PropertyDetailsDialogProps {
 }
 
 export function PropertyDetailsDialog({ open, onOpenChange, property }: PropertyDetailsDialogProps) {
+  const [selectedImage, setSelectedImage] = useState<{ url: string; title?: string } | null>(null);
+  const primaryImage = property.images?.find(img => img.is_primary) || property.images?.[0];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -40,6 +46,28 @@ export function PropertyDetailsDialog({ open, onOpenChange, property }: Property
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Property Image */}
+          {primaryImage && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Property Photo</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="w-full h-64 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                  <img
+                    src={primaryImage.image_url}
+                    alt={property.property_type}
+                    className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => setSelectedImage({ url: primaryImage.image_url, title: property.property_type })}
+                  />
+                </div>
+                {primaryImage.image_title && (
+                  <p className="text-sm text-muted-foreground mt-2">{primaryImage.image_title}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Basic Info */}
           <Card>
             <CardHeader>
@@ -382,6 +410,13 @@ export function PropertyDetailsDialog({ open, onOpenChange, property }: Property
           </div>
         </div>
       </DialogContent>
+
+      <ImageViewer
+        open={!!selectedImage}
+        onOpenChange={() => setSelectedImage(null)}
+        imageUrl={selectedImage?.url || ""}
+        title={selectedImage?.title}
+      />
     </Dialog>
   );
 }

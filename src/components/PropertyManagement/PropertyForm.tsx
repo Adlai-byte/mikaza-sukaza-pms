@@ -300,9 +300,10 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-        setImages(prev => [...prev, { 
+        // Replace existing image with new one (only one profile image allowed)
+        setImages([{ 
           url: result, 
-          is_primary: prev.length === 0,
+          is_primary: true, // Always primary since it's the only image
           file: file // Store the file for later upload
         }]);
       };
@@ -310,12 +311,8 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
     }
   };
 
-  const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const setPrimaryImage = (index: number) => {
-    setImages(prev => prev.map((img, i) => ({ ...img, is_primary: i === index })));
+  const updateImageTitle = (title: string) => {
+    setImages(prev => prev.map(img => ({ ...img, title })));
   };
 
   const addUnit = () => {
@@ -847,24 +844,75 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
                 </TabsContent>
 
                 <TabsContent value="images" className="space-y-4">
+                  <h3 className="text-lg font-medium mb-4">Property Profile Image</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Upload one profile image for this property</p>
+                  
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-medium">Property Images</h4>
-                      <label className="cursor-pointer">
-                        <Button type="button" variant="outline" size="sm" asChild>
-                          <span>
-                            <Upload className="h-4 w-4 mr-2" />
-                            Upload Image
-                          </span>
-                        </Button>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                      </label>
+                    <div className="grid w-full max-w-sm items-center gap-1.5">
+                      <label className="text-sm font-medium">Upload Profile Image</label>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                      />
                     </div>
+                    
+                    {images.length > 0 && (
+                      <div className="relative group max-w-sm">
+                        <img
+                          src={images[0].url}
+                          alt={images[0].title || "Property profile image"}
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setImages([])}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <Input
+                          placeholder="Image title"
+                          value={images[0].title || ""}
+                          onChange={(e) => updateImageTitle(e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting} className="hover-scale">
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {property ? "Updating..." : "Creating..."}
+                    </>
+                  ) : (
+                    property ? "Update Property" : "Create Property"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
                     
                     <div className="grid grid-cols-3 gap-4">
                       {images.map((image, index) => (

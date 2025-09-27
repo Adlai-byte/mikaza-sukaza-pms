@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Trash2, Search, Eye, Download, Filter, Home, Images } from "lucide-react";
+import { Edit, Trash2, Search, Eye, Download, Filter, Home, Images, Camera } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { ImageViewer } from "@/components/ui/image-viewer";
 
 interface PropertyTableProps {
   properties: Property[];
@@ -49,6 +50,7 @@ export function PropertyTable({
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedImage, setSelectedImage] = useState<{ url: string; title?: string } | null>(null);
 
   const filteredProperties = properties.filter(property => {
     const matchesSearch = 
@@ -147,6 +149,7 @@ export function PropertyTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Photo</TableHead>
               <TableHead>Property</TableHead>
               <TableHead>Owner</TableHead>
               <TableHead>Location</TableHead>
@@ -156,8 +159,25 @@ export function PropertyTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProperties.map((property) => (
+            {filteredProperties.map((property) => {
+              const primaryImage = property.images?.find(img => img.is_primary) || property.images?.[0];
+              
+              return (
               <TableRow key={property.property_id}>
+                <TableCell>
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                    {primaryImage ? (
+                      <img
+                        src={primaryImage.image_url}
+                        alt={property.property_type}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setSelectedImage({ url: primaryImage.image_url, title: property.property_type })}
+                      />
+                    ) : (
+                      <Camera className="h-6 w-6 text-muted-foreground" />
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="font-medium">
                   <div className="flex items-center space-x-3">
                     <Home className="h-5 w-5 text-muted-foreground" />
@@ -258,10 +278,17 @@ export function PropertyTable({
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            )})}
           </TableBody>
         </Table>
       </div>
+      
+      <ImageViewer
+        open={!!selectedImage}
+        onOpenChange={() => setSelectedImage(null)}
+        imageUrl={selectedImage?.url || ""}
+        title={selectedImage?.title}
+      />
     </div>
   );
 }
