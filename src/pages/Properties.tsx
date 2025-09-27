@@ -100,14 +100,14 @@ export default function Properties() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Property Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Property Management</h1>
           <p className="text-muted-foreground">
             Manage properties, locations, and amenities
           </p>
         </div>
-        <Button onClick={() => setIsFormOpen(true)}>
+        <Button onClick={() => setIsFormOpen(true)} className="self-start sm:self-auto">
           <Home className="mr-2 h-4 w-4" />
           Add Property
         </Button>

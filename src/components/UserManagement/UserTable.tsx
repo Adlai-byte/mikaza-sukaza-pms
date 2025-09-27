@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -142,7 +143,8 @@ export function UserTable({
         </div>
       </div>
 
-      <div className="rounded-md border">
+      {/* Desktop Table View */}
+      <div className="hidden lg:block rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -152,7 +154,7 @@ export function UserTable({
               <TableHead>Status</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Phone</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="w-40">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -247,6 +249,119 @@ export function UserTable({
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="lg:hidden space-y-4">
+        {filteredUsers.map((user) => (
+          <Card key={user.user_id} className="w-full">
+            <CardContent className="p-4">
+              <div className="flex space-x-4">
+                {/* User Avatar */}
+                <div className="flex-shrink-0">
+                  <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
+                    <AvatarImage src={user.photo_url} />
+                    <AvatarFallback className="text-sm">
+                      {user.first_name.charAt(0)}{user.last_name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                
+                {/* User Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base truncate">
+                        {user.first_name} {user.last_name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                      {user.company && (
+                        <p className="text-sm text-muted-foreground">{user.company}</p>
+                      )}
+                      {user.cellphone_primary && (
+                        <p className="text-sm text-muted-foreground">{user.cellphone_primary}</p>
+                      )}
+                    </div>
+                    
+                    {/* Status Badges */}
+                    <div className="flex flex-col space-y-1 items-end">
+                      <Badge variant={user.user_type === 'admin' ? 'default' : 'secondary'} className="text-xs">
+                        {user.user_type === 'admin' ? 'Admin' : 'Ops'}
+                      </Badge>
+                      <Badge variant={user.is_active ? 'default' : 'destructive'} className="text-xs">
+                        {user.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onViewDetails(user)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEditUser(user)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onViewBankAccounts(user)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Building2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onViewCreditCards(user)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <CreditCard className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="max-w-sm mx-4">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete User</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete {user.first_name} {user.last_name}? 
+                            This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onDeleteUser(user.user_id!)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );

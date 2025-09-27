@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -185,17 +186,18 @@ export function PropertyTable({
         </div>
       </div>
 
-      <div className="rounded-md border">
+      {/* Desktop Table View */}
+      <div className="hidden lg:block rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Photo</TableHead>
+              <TableHead className="w-20">Photo</TableHead>
               <TableHead>Property</TableHead>
               <TableHead>Owner</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Details</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="w-32">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -322,6 +324,135 @@ export function PropertyTable({
             )})}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="lg:hidden space-y-4">
+        {filteredProperties.map((property) => {
+          const primaryImage = property.images?.find(img => img.is_primary) || property.images?.[0];
+          
+          return (
+            <Card key={property.property_id} className="w-full">
+              <CardContent className="p-4">
+                <div className="flex space-x-4">
+                  {/* Property Image */}
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                    {primaryImage ? (
+                      <img
+                        src={primaryImage.image_url}
+                        alt={property.property_type}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setSelectedImage({ url: primaryImage.image_url, title: property.property_type })}
+                      />
+                    ) : (
+                      <Camera className="h-6 w-6 text-muted-foreground" />
+                    )}
+                  </div>
+                  
+                  {/* Property Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base truncate">
+                          {property.property_name || property.property_type}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">{property.property_type}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {property.num_bedrooms || 0} bed, {property.num_bathrooms || 0} bath
+                        </p>
+                      </div>
+                      
+                      {/* Status Badges */}
+                      <div className="flex flex-col space-y-1 items-end">
+                        <Badge variant={property.is_active ? 'default' : 'destructive'} className="text-xs">
+                          {property.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                        {property.is_booking && (
+                          <Badge variant="secondary" className="text-xs">Booking</Badge>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Owner & Location */}
+                    <div className="mt-3 space-y-1">
+                      <p className="text-sm">
+                        <span className="font-medium">Owner:</span> {property.owner?.first_name} {property.owner?.last_name}
+                      </p>
+                      <p className="text-sm">
+                        <span className="font-medium">Location:</span> {property.location?.city || 'N/A'}
+                        {property.location?.address && (
+                          <span className="text-muted-foreground block text-xs truncate">
+                            {property.location.address}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-sm">
+                        <span className="font-medium">Capacity:</span> {property.capacity || 0}/{property.max_capacity || 0} • 
+                        <span className="font-medium"> Size:</span> {property.size_sqf || 0} sqf
+                      </p>
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onViewDetails(property)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onViewImages(property)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Images className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEditProperty(property)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="max-w-sm mx-4">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Property</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this {property.property_type} property? 
+                              This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => onDeleteProperty(property.property_id!)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
       
       <ImageViewer
