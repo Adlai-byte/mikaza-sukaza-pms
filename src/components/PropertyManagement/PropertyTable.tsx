@@ -50,10 +50,13 @@ export function PropertyTable({
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [bedroomsFilter, setBedroomsFilter] = useState<string>("all");
   const [selectedImage, setSelectedImage] = useState<{ url: string; title?: string } | null>(null);
 
   const filteredProperties = properties.filter(property => {
     const matchesSearch = 
+      property.property_name?.toLowerCase().includes(search.toLowerCase()) ||
       property.property_type.toLowerCase().includes(search.toLowerCase()) ||
       property.owner?.first_name?.toLowerCase().includes(search.toLowerCase()) ||
       property.owner?.last_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -66,7 +69,15 @@ export function PropertyTable({
       (statusFilter === "inactive" && !property.is_active) ||
       (statusFilter === "booking" && property.is_booking);
     
-    return matchesSearch && matchesType && matchesStatus;
+    const matchesCity = cityFilter === "all" || property.location?.city === cityFilter;
+    const matchesBedrooms = bedroomsFilter === "all" || 
+      (bedroomsFilter === "studio" && (property.num_bedrooms === 0 || !property.num_bedrooms)) ||
+      (bedroomsFilter === "1" && property.num_bedrooms === 1) ||
+      (bedroomsFilter === "2" && property.num_bedrooms === 2) ||
+      (bedroomsFilter === "3" && property.num_bedrooms === 3) ||
+      (bedroomsFilter === "4+" && property.num_bedrooms && property.num_bedrooms >= 4);
+    
+    return matchesSearch && matchesType && matchesStatus && matchesCity && matchesBedrooms;
   });
 
   const exportToCSV = () => {
@@ -97,6 +108,7 @@ export function PropertyTable({
   };
 
   const uniquePropertyTypes = Array.from(new Set(properties.map(p => p.property_type)));
+  const uniqueCities = Array.from(new Set(properties.map(p => p.location?.city).filter(Boolean)));
 
   return (
     <div className="space-y-4">
@@ -111,7 +123,7 @@ export function PropertyTable({
           />
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-40">
               <Filter className="h-4 w-4 mr-2" />
@@ -135,6 +147,34 @@ export function PropertyTable({
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
               <SelectItem value="booking">Booking</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={cityFilter} onValueChange={setCityFilter}>
+            <SelectTrigger className="w-32">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="City" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cities</SelectItem>
+              {uniqueCities.map(city => (
+                <SelectItem key={city} value={city!}>{city}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={bedroomsFilter} onValueChange={setBedroomsFilter}>
+            <SelectTrigger className="w-32">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Bedrooms" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Beds</SelectItem>
+              <SelectItem value="studio">Studio</SelectItem>
+              <SelectItem value="1">1 Bed</SelectItem>
+              <SelectItem value="2">2 Beds</SelectItem>
+              <SelectItem value="3">3 Beds</SelectItem>
+              <SelectItem value="4+">4+ Beds</SelectItem>
             </SelectContent>
           </Select>
 
@@ -182,8 +222,9 @@ export function PropertyTable({
                   <div className="flex items-center space-x-3">
                     <Home className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="font-medium">{property.property_type}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-medium">{property.property_name || property.property_type}</p>
+                      <p className="text-sm text-muted-foreground">{property.property_type}</p>
+                      <p className="text-xs text-muted-foreground">
                         {property.num_bedrooms || 0} bed, {property.num_bathrooms || 0} bath
                       </p>
                     </div>

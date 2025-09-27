@@ -107,16 +107,10 @@ export default function Properties() {
             Manage properties, locations, and amenities
           </p>
         </div>
-        <div className="flex space-x-2">
-          <Button onClick={handleGenerateMockProperties} variant="outline" disabled={isGeneratingMocks}>
-            <Database className="h-4 w-4 mr-2" />
-            {isGeneratingMocks ? "Generating..." : "Generate 100 Mock Properties"}
-          </Button>
-          <Button onClick={() => setIsFormOpen(true)}>
-            <Home className="mr-2 h-4 w-4" />
-            Add Property
-          </Button>
-        </div>
+        <Button onClick={() => setIsFormOpen(true)}>
+          <Home className="mr-2 h-4 w-4" />
+          Add Property
+        </Button>
       </div>
 
       {/* Stats Cards */}
