@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { propertySchema, Property, PropertyInsert, User, Amenity, Rule } from "@/lib/schemas";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { useUsers } from "@/hooks/useUsers";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -30,8 +31,10 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Combobox } from "@/components/ui/combobox";
 import { Upload, X, Loader2, Plus, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface PropertyFormProps {
   open: boolean;
@@ -42,12 +45,31 @@ interface PropertyFormProps {
   rules: Rule[];
 }
 
+const PROPERTY_TYPES = [
+  { value: "apartment", label: "Apartment" },
+  { value: "house", label: "House" },
+  { value: "condo", label: "Condominium" },
+  { value: "townhouse", label: "Townhouse" },
+  { value: "studio", label: "Studio" },
+  { value: "loft", label: "Loft" },
+  { value: "villa", label: "Villa" },
+  { value: "duplex", label: "Duplex" },
+  { value: "penthouse", label: "Penthouse" },
+  { value: "cabin", label: "Cabin" },
+  { value: "cottage", label: "Cottage" },
+  { value: "farmhouse", label: "Farmhouse" },
+  { value: "mansion", label: "Mansion" },
+  { value: "mobile_home", label: "Mobile Home" },
+  { value: "tiny_house", label: "Tiny House" },
+];
+
 export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities, rules }: PropertyFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [images, setImages] = useState<{ url: string; title?: string; is_primary?: boolean }[]>([]);
+  const [images, setImages] = useState<{ url: string; title?: string; is_primary?: boolean; file?: File }[]>([]);
   const [units, setUnits] = useState<{ property_name?: string; license_number?: string; folio?: string }[]>([]);
   const { users } = useUsers();
   const { logActivity } = useActivityLogs();
+  const { toast } = useToast();
   
   const form = useForm<PropertyInsert>({
     resolver: zodResolver(propertySchema),
@@ -114,15 +136,15 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
           is_booking: property.is_booking,
           is_pets_allowed: property.is_pets_allowed,
           property_type: property.property_type,
-          size_sqf: property.size_sqf,
-          capacity: property.capacity,
-          max_capacity: property.max_capacity,
-          num_bedrooms: property.num_bedrooms,
-          num_bathrooms: property.num_bathrooms,
-          num_half_bath: property.num_half_bath,
-          num_wcs: property.num_wcs,
-          num_kitchens: property.num_kitchens,
-          num_living_rooms: property.num_living_rooms,
+          size_sqf: property.size_sqf || undefined,
+          capacity: property.capacity || undefined,
+          max_capacity: property.max_capacity || undefined,
+          num_bedrooms: property.num_bedrooms || undefined,
+          num_bathrooms: property.num_bathrooms || undefined,
+          num_half_bath: property.num_half_bath || undefined,
+          num_wcs: property.num_wcs || undefined,
+          num_kitchens: property.num_kitchens || undefined,
+          num_living_rooms: property.num_living_rooms || undefined,
         });
 
         // Populate related data
@@ -165,7 +187,12 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
         }
 
         setUnits(property.units || []);
-        setImages(property.images?.map(img => ({ url: img.image_url, title: img.image_title, is_primary: img.is_primary })) || []);
+        setImages(property.images?.map(img => ({ 
+          url: img.image_url, 
+          title: img.image_title, 
+          is_primary: img.is_primary,
+          file: undefined // Existing images don't have files
+        })) || []);
         setSelectedAmenities(property.amenities?.map(a => a.amenity_id!) || []);
         setSelectedRules(property.rules?.map(r => r.rule_id!) || []);
       } else {
@@ -205,27 +232,63 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
     }
   }, [property, open, form]);
 
+  const uploadImageToStorage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from('property-images')
+      .upload(filePath, file);
+
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('property-images')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
   const handleSubmit = async (data: PropertyInsert) => {
     try {
       setIsSubmitting(true);
       
+      // Upload images to Supabase storage
+      const uploadedImages = await Promise.all(
+        images.map(async (img) => {
+          if (img.file) {
+            // New image file needs to be uploaded
+            const uploadedUrl = await uploadImageToStorage(img.file);
+            return { url: uploadedUrl, title: img.title, is_primary: img.is_primary };
+          }
+          // Existing image, keep the URL
+          return { url: img.url, title: img.title, is_primary: img.is_primary };
+        })
+      );
+      
       const submissionData = {
         ...data,
-        location: locationData,
-        communication: communicationData,
-        access: accessData,
-        extras: extrasData,
-        units,
-        amenity_ids: selectedAmenities,
-        rule_ids: selectedRules,
-        images,
+        location: Object.keys(locationData).some(key => locationData[key as keyof typeof locationData]) ? locationData : undefined,
+        communication: Object.keys(communicationData).some(key => communicationData[key as keyof typeof communicationData]) ? communicationData : undefined,
+        access: Object.keys(accessData).some(key => accessData[key as keyof typeof accessData]) ? accessData : undefined,
+        extras: Object.keys(extrasData).some(key => extrasData[key as keyof typeof extrasData]) ? extrasData : undefined,
+        units: units.length > 0 ? units : undefined,
+        amenity_ids: selectedAmenities.length > 0 ? selectedAmenities : undefined,
+        rule_ids: selectedRules.length > 0 ? selectedRules : undefined,
+        images: uploadedImages.length > 0 ? uploadedImages : undefined,
       };
       
       await onSubmit(submissionData);
       
       onOpenChange(false);
     } catch (error) {
-      // Error is handled in the parent component
+      console.error('Error submitting form:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload images or submit form",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -237,7 +300,11 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-        setImages(prev => [...prev, { url: result, is_primary: prev.length === 0 }]);
+        setImages(prev => [...prev, { 
+          url: result, 
+          is_primary: prev.length === 0,
+          file: file // Store the file for later upload
+        }]);
       };
       reader.readAsDataURL(file);
     }
@@ -276,10 +343,12 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="basic">Basic Info</TabsTrigger>
                   <TabsTrigger value="location">Location</TabsTrigger>
                   <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="communication">Communication</TabsTrigger>
+                  <TabsTrigger value="access">Access</TabsTrigger>
                   <TabsTrigger value="features">Features</TabsTrigger>
                   <TabsTrigger value="images">Images</TabsTrigger>
                 </TabsList>
@@ -318,7 +387,14 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
                         <FormItem>
                           <FormLabel>Property Type *</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="e.g., Apartment, House, Condo" />
+                            <Combobox
+                              options={PROPERTY_TYPES}
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              placeholder="Select property type..."
+                              searchPlaceholder="Search property types..."
+                              emptyText="No property type found."
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -394,33 +470,54 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">State</label>
-                      <Input
-                        value={locationData.state}
-                        onChange={(e) => setLocationData(prev => ({ ...prev, state: e.target.value }))}
-                        placeholder="State"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Postal Code</label>
-                      <Input
-                        value={locationData.postal_code}
-                        onChange={(e) => setLocationData(prev => ({ ...prev, postal_code: e.target.value }))}
-                        placeholder="Postal code"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Phone</label>
-                      <Input
-                        value={communicationData.phone_number}
-                        onChange={(e) => setCommunicationData(prev => ({ ...prev, phone_number: e.target.value }))}
-                        placeholder="Phone number"
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
+                   <div className="grid grid-cols-2 gap-4">
+                     <div>
+                       <label className="text-sm font-medium">State</label>
+                       <Input
+                         value={locationData.state}
+                         onChange={(e) => setLocationData(prev => ({ ...prev, state: e.target.value }))}
+                         placeholder="State"
+                       />
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium">Postal Code</label>
+                       <Input
+                         value={locationData.postal_code}
+                         onChange={(e) => setLocationData(prev => ({ ...prev, postal_code: e.target.value }))}
+                         placeholder="Postal code"
+                       />
+                     </div>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-4">
+                     <div>
+                       <label className="text-sm font-medium">Latitude</label>
+                       <Input
+                         type="number"
+                         value={locationData.latitude || ""}
+                         onChange={(e) => setLocationData(prev => ({ 
+                           ...prev, 
+                           latitude: e.target.value ? parseFloat(e.target.value) : undefined 
+                         }))}
+                         placeholder="Latitude coordinates"
+                         step="any"
+                       />
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium">Longitude</label>
+                       <Input
+                         type="number"
+                         value={locationData.longitude || ""}
+                         onChange={(e) => setLocationData(prev => ({ 
+                           ...prev, 
+                           longitude: e.target.value ? parseFloat(e.target.value) : undefined 
+                         }))}
+                         placeholder="Longitude coordinates"
+                         step="any"
+                       />
+                     </div>
+                   </div>
+                 </TabsContent>
 
                 <TabsContent value="details" className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
@@ -504,9 +601,22 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="num_kitchens"
+                     <FormField
+                       control={form.control}
+                       name="num_wcs"
+                       render={({ field }) => (
+                         <FormItem>
+                           <FormLabel>WCs</FormLabel>
+                           <FormControl>
+                             <Input {...field} type="number" onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                           </FormControl>
+                         </FormItem>
+                       )}
+                     />
+
+                     <FormField
+                       control={form.control}
+                       name="num_kitchens"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Kitchens</FormLabel>
@@ -569,7 +679,120 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
                       </div>
                     ))}
                   </div>
-                </TabsContent>
+                 </TabsContent>
+
+                 <TabsContent value="communication" className="space-y-4">
+                   <h3 className="text-lg font-medium mb-4">Communication Details</h3>
+                   <div className="grid grid-cols-1 gap-4">
+                     <div>
+                       <label className="text-sm font-medium">Phone Number</label>
+                       <Input
+                         value={communicationData.phone_number}
+                         onChange={(e) => setCommunicationData(prev => ({ ...prev, phone_number: e.target.value }))}
+                         placeholder="Contact phone number"
+                       />
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium">WiFi Network Name</label>
+                       <Input
+                         value={communicationData.wifi_name}
+                         onChange={(e) => setCommunicationData(prev => ({ ...prev, wifi_name: e.target.value }))}
+                         placeholder="WiFi network name/SSID"
+                       />
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium">WiFi Password</label>
+                       <Input
+                         type="password"
+                         value={communicationData.wifi_password}
+                         onChange={(e) => setCommunicationData(prev => ({ ...prev, wifi_password: e.target.value }))}
+                         placeholder="WiFi network password"
+                       />
+                     </div>
+                   </div>
+                 </TabsContent>
+
+                 <TabsContent value="access" className="space-y-4">
+                   <h3 className="text-lg font-medium mb-4">Access Information</h3>
+                   <div className="grid grid-cols-1 gap-4">
+                     <div>
+                       <label className="text-sm font-medium">Gate Code</label>
+                       <Input
+                         value={accessData.gate_code}
+                         onChange={(e) => setAccessData(prev => ({ ...prev, gate_code: e.target.value }))}
+                         placeholder="Gate access code"
+                       />
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium">Door Lock Password</label>
+                       <Input
+                         value={accessData.door_lock_password}
+                         onChange={(e) => setAccessData(prev => ({ ...prev, door_lock_password: e.target.value }))}
+                         placeholder="Door lock password/code"
+                       />
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium">Alarm Passcode</label>
+                       <Input
+                         value={accessData.alarm_passcode}
+                         onChange={(e) => setAccessData(prev => ({ ...prev, alarm_passcode: e.target.value }))}
+                         placeholder="Security alarm passcode"
+                       />
+                     </div>
+                   </div>
+
+                   <h4 className="text-md font-medium mt-6 mb-4">Additional Property Features</h4>
+                   <div className="grid grid-cols-2 gap-4">
+                     <div>
+                       <label className="text-sm font-medium">Storage Number</label>
+                       <Input
+                         value={extrasData.storage_number}
+                         onChange={(e) => setExtrasData(prev => ({ ...prev, storage_number: e.target.value }))}
+                         placeholder="Storage unit number"
+                       />
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium">Storage Code</label>
+                       <Input
+                         value={extrasData.storage_code}
+                         onChange={(e) => setExtrasData(prev => ({ ...prev, storage_code: e.target.value }))}
+                         placeholder="Storage access code"
+                       />
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium">Garage Number</label>
+                       <Input
+                         value={extrasData.garage_number}
+                         onChange={(e) => setExtrasData(prev => ({ ...prev, garage_number: e.target.value }))}
+                         placeholder="Garage/parking number"
+                       />
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium">Front Desk</label>
+                       <Input
+                         value={extrasData.front_desk}
+                         onChange={(e) => setExtrasData(prev => ({ ...prev, front_desk: e.target.value }))}
+                         placeholder="Front desk information"
+                       />
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium">Mailing Box</label>
+                       <Input
+                         value={extrasData.mailing_box}
+                         onChange={(e) => setExtrasData(prev => ({ ...prev, mailing_box: e.target.value }))}
+                         placeholder="Mail box number/address"
+                       />
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium">Pool Access Code</label>
+                       <Input
+                         value={extrasData.pool_access_code}
+                         onChange={(e) => setExtrasData(prev => ({ ...prev, pool_access_code: e.target.value }))}
+                         placeholder="Pool/amenities access code"
+                       />
+                     </div>
+                   </div>
+                 </TabsContent>
 
                 <TabsContent value="features" className="space-y-4">
                   {/* Amenities */}

@@ -224,7 +224,7 @@ export function useProperties() {
       if (Object.keys(updateData).length > 0) {
         const { error: propertyError } = await supabase
           .from('properties')
-          .update(updateData)
+          .update(updateData as any)
           .eq('property_id', propertyId);
 
         if (propertyError) throw propertyError;
@@ -265,6 +265,18 @@ export function useProperties() {
         );
       }
 
+      // Handle units - delete and recreate
+      if (units !== undefined) {
+        await supabase.from('units').delete().eq('property_id', propertyId);
+        
+        if (units.length > 0) {
+          const unitsWithPropertyId = units.map(unit => ({ ...unit, property_id: propertyId }));
+          promises.push(
+            supabase.from('units').insert(unitsWithPropertyId)
+          );
+        }
+      }
+
       // Handle amenity updates
       if (amenity_ids !== undefined) {
         // Remove existing amenities
@@ -293,6 +305,25 @@ export function useProperties() {
         }
       }
 
+      // Handle image updates
+      if (images !== undefined) {
+        // Remove existing images
+        await supabase.from('property_images').delete().eq('property_id', propertyId);
+        
+        // Add new images
+        if (images.length > 0) {
+          const propertyImages = images.map(image => ({ 
+            ...image, 
+            property_id: propertyId, 
+            image_url: image.url,
+            image_title: image.title
+          }));
+          promises.push(
+            supabase.from('property_images').insert(propertyImages)
+          );
+        }
+      }
+
       await Promise.all(promises);
 
       await logActivity('PROPERTY_UPDATED', { 
@@ -310,7 +341,7 @@ export function useProperties() {
       console.error('Error updating property:', error);
       toast({
         title: "Error",
-        description: "Failed to update property",
+        description: error instanceof Error ? error.message : "Failed to update property",
         variant: "destructive",
       });
       throw error;
