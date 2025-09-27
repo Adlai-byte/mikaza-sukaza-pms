@@ -2,9 +2,25 @@ import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Button } from "./ui/button";
-import { Bell, User } from "lucide-react";
+import { Bell, User, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 export function MainLayout() {
+  const { profile, signOut, isAdmin } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full bg-background">
@@ -28,11 +44,35 @@ export function MainLayout() {
                     3
                   </span>
                 </Button>
-                <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm">
-                  <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden xs:inline">User: </span>
-                  <span>Chris</span>
-                </div>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center space-x-2 h-8 sm:h-10 px-2 sm:px-3">
+                      <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="hidden xs:inline text-xs sm:text-sm">
+                        {profile?.first_name || 'User'}
+                      </span>
+                      {isAdmin && (
+                        <Badge variant="secondary" className="text-xs ml-1">
+                          Admin
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1 text-sm text-muted-foreground">
+                      <p>{profile?.email}</p>
+                      <p className="text-xs">Role: {profile?.user_type}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </header>
