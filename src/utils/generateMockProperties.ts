@@ -50,6 +50,8 @@ function getRandomBoolean(): boolean {
 
 export async function generateMockProperties(count: number = 100) {
   try {
+    console.log('Starting mock property generation...');
+    
     // First, get existing users, amenities, and rules
     const { data: users } = await supabase.from('users').select('user_id');
     const { data: amenitiesData } = await supabase.from('amenities').select('amenity_id');
@@ -59,6 +61,8 @@ export async function generateMockProperties(count: number = 100) {
       throw new Error('No users found. Please create users first.');
     }
 
+    console.log(`Found ${users.length} users, ${amenitiesData?.length || 0} amenities, ${rulesData?.length || 0} rules`);
+
     const properties = [];
     
     for (let i = 0; i < count; i++) {
@@ -67,6 +71,7 @@ export async function generateMockProperties(count: number = 100) {
       const propertyType = getRandomElement(propertyTypes);
       const numBedrooms = getRandomNumber(1, 5);
       const numBathrooms = getRandomNumber(1, 3);
+      const propertyName = `${propertyType} ${getRandomElement(['Paradise', 'Haven', 'Retreat', 'Estate', 'Manor', 'Villa', 'Palace', 'Gardens', 'Heights', 'View'])} ${i + 1}`;
       
       // Create property data
       const propertyData = {
@@ -121,7 +126,7 @@ export async function generateMockProperties(count: number = 100) {
         
         // Units data
         units: Array.from({ length: getRandomNumber(1, 3) }, (_, index) => ({
-          property_name: `Unit ${index + 1}`,
+          property_name: `${propertyName} - Unit ${index + 1}`,
           license_number: `LIC${getRandomNumber(100000, 999999)}`,
           folio: `F${getRandomNumber(10000, 99999)}`
         })),
@@ -135,9 +140,12 @@ export async function generateMockProperties(count: number = 100) {
         // Mock image data
         images: [{
           url: `https://picsum.photos/800/600?random=${i + 1}`,
-          title: `${propertyType} Profile Photo`,
+          title: `${propertyName} Profile Photo`,
           is_primary: true
-        }]
+        }],
+        
+        // Store property name for use in units
+        propertyName
       };
       
       properties.push(propertyData);
@@ -252,7 +260,7 @@ export async function generateMockProperties(count: number = 100) {
       console.log(`Created batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(properties.length / batchSize)}`);
     }
 
-    console.log(`Successfully created ${results.length} mock properties`);
+    console.log(`Successfully created ${results.length} out of ${count} requested mock properties`);
     return results;
     
   } catch (error) {

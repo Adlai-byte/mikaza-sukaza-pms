@@ -13,7 +13,7 @@ import { generateMockProperties } from "@/utils/generateMockProperties";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Properties() {
-  const { properties, loading, amenities, rules, createProperty, updateProperty, deleteProperty } = useProperties();
+  const { properties, loading, amenities, rules, createProperty, updateProperty, deleteProperty, refetch } = useProperties();
   const { logActivity } = useActivityLogs();
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -26,6 +26,10 @@ export default function Properties() {
     setIsGeneratingMocks(true);
     try {
       const results = await generateMockProperties(100);
+      
+      // Force refresh the properties data
+      await refetch();
+      
       toast({
         title: "Success",
         description: `Successfully generated ${results.length} mock properties`,
