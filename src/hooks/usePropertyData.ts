@@ -14,6 +14,19 @@ interface PropertyData {
   bookingRates: any;
 }
 
+// Helpers to sanitize and coerce form values before saving
+const toIntOrNull = (v: any) => {
+  if (v === '' || v === undefined || v === null) return null;
+  const n = typeof v === 'string' ? parseInt(v, 10) : v;
+  return Number.isFinite(n) ? n : null;
+};
+const toNumberOrNull = (v: any) => {
+  if (v === '' || v === undefined || v === null) return null;
+  const n = typeof v === 'string' ? parseFloat(v) : v;
+  return Number.isFinite(n) ? n : null;
+};
+const toBool = (v: any) => v === true; // guard against "indeterminate" from Radix
+
 export function usePropertyData(propertyId: string) {
   const [data, setData] = useState<PropertyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,20 +193,20 @@ export function usePropertyData(propertyId: string) {
       setSaving(true);
 
       const rootUpdates: any = {
-        is_active: form.is_active,
-        is_booking: form.is_booking,
-        is_pets_allowed: form.is_pets_allowed,
+        is_active: toBool(form.is_active),
+        is_booking: toBool(form.is_booking),
+        is_pets_allowed: toBool(form.is_pets_allowed),
         property_name: form.property_name,
         property_type: form.property_type,
-        capacity: form.capacity,
-        max_capacity: form.max_capacity,
-        size_sqf: form.size_sqf,
-        num_bedrooms: form.num_bedrooms,
-        num_bathrooms: form.num_bathrooms,
-        num_half_bath: form.num_half_bath,
-        num_wcs: form.num_wcs,
-        num_kitchens: form.num_kitchens,
-        num_living_rooms: form.num_living_rooms,
+        capacity: toIntOrNull(form.capacity),
+        max_capacity: toIntOrNull(form.max_capacity),
+        size_sqf: toIntOrNull(form.size_sqf),
+        num_bedrooms: toIntOrNull(form.num_bedrooms),
+        num_bathrooms: toIntOrNull(form.num_bathrooms),
+        num_half_bath: toIntOrNull(form.num_half_bath),
+        num_wcs: toIntOrNull(form.num_wcs),
+        num_kitchens: toIntOrNull(form.num_kitchens),
+        num_living_rooms: toIntOrNull(form.num_living_rooms),
       };
 
       // Update main property row
@@ -215,12 +228,12 @@ export function usePropertyData(propertyId: string) {
           const { error: upd } = await supabase
             .from('property_location')
             .update({
-              address: form.address,
-              city: form.city,
-              state: form.state,
-              postal_code: form.postal_code,
-              latitude: form.latitude,
-              longitude: form.longitude,
+              address: form.address || null,
+              city: form.city || null,
+              state: form.state || null,
+              postal_code: form.postal_code || null,
+              latitude: toNumberOrNull(form.latitude),
+              longitude: toNumberOrNull(form.longitude),
             })
             .eq('property_id', propertyId);
           if (upd) throw upd;
@@ -229,12 +242,12 @@ export function usePropertyData(propertyId: string) {
             .from('property_location')
             .insert({
               property_id: propertyId,
-              address: form.address,
-              city: form.city,
-              state: form.state,
-              postal_code: form.postal_code,
-              latitude: form.latitude,
-              longitude: form.longitude,
+              address: form.address || null,
+              city: form.city || null,
+              state: form.state || null,
+              postal_code: form.postal_code || null,
+              latitude: toNumberOrNull(form.latitude),
+              longitude: toNumberOrNull(form.longitude),
             });
           if (ins) throw ins;
         }
@@ -345,7 +358,7 @@ export function usePropertyData(propertyId: string) {
       console.error('Error saving property details:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save property details',
+        description: (error as any)?.message || 'Failed to save property details',
         variant: 'destructive',
       });
     } finally {
