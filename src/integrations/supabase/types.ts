@@ -336,6 +336,153 @@ export type Database = {
           },
         ]
       }
+      property_booking_rates: {
+        Row: {
+          cash_payment: boolean | null
+          created_at: string
+          credit_card_payment: boolean | null
+          debit_card_payment: boolean | null
+          deposit_payment: boolean | null
+          extra_guest_price: number | null
+          high_season_rate: number | null
+          holiday_rate: number | null
+          low_season_rate: number | null
+          medium_season_rate: number | null
+          pm_commission: number | null
+          property_id: string
+          rate_id: string
+          stripe_payment: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          cash_payment?: boolean | null
+          created_at?: string
+          credit_card_payment?: boolean | null
+          debit_card_payment?: boolean | null
+          deposit_payment?: boolean | null
+          extra_guest_price?: number | null
+          high_season_rate?: number | null
+          holiday_rate?: number | null
+          low_season_rate?: number | null
+          medium_season_rate?: number | null
+          pm_commission?: number | null
+          property_id: string
+          rate_id?: string
+          stripe_payment?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          cash_payment?: boolean | null
+          created_at?: string
+          credit_card_payment?: boolean | null
+          debit_card_payment?: boolean | null
+          deposit_payment?: boolean | null
+          extra_guest_price?: number | null
+          high_season_rate?: number | null
+          holiday_rate?: number | null
+          low_season_rate?: number | null
+          medium_season_rate?: number | null
+          pm_commission?: number | null
+          property_id?: string
+          rate_id?: string
+          stripe_payment?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      property_bookings: {
+        Row: {
+          booking_id: string
+          booking_status: string | null
+          check_in_date: string
+          check_out_date: string
+          created_at: string
+          deposit_amount: number | null
+          guest_email: string | null
+          guest_name: string
+          guest_phone: string | null
+          number_of_guests: number | null
+          payment_method: string | null
+          property_id: string
+          special_requests: string | null
+          total_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          booking_id?: string
+          booking_status?: string | null
+          check_in_date: string
+          check_out_date: string
+          created_at?: string
+          deposit_amount?: number | null
+          guest_email?: string | null
+          guest_name: string
+          guest_phone?: string | null
+          number_of_guests?: number | null
+          payment_method?: string | null
+          property_id: string
+          special_requests?: string | null
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          booking_status?: string | null
+          check_in_date?: string
+          check_out_date?: string
+          created_at?: string
+          deposit_amount?: number | null
+          guest_email?: string | null
+          guest_name?: string
+          guest_phone?: string | null
+          number_of_guests?: number | null
+          payment_method?: string | null
+          property_id?: string
+          special_requests?: string | null
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      property_checklists: {
+        Row: {
+          assigned_to: string | null
+          checklist_id: string
+          checklist_name: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          is_completed: boolean | null
+          priority: string | null
+          property_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          checklist_id?: string
+          checklist_name: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          is_completed?: boolean | null
+          priority?: string | null
+          property_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          checklist_id?: string
+          checklist_name?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          is_completed?: boolean | null
+          priority?: string | null
+          property_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       property_communication: {
         Row: {
           comm_id: string
@@ -420,6 +567,48 @@ export type Database = {
             referencedColumns: ["property_id"]
           },
         ]
+      }
+      property_financial_entries: {
+        Row: {
+          balance: number | null
+          created_at: string
+          credit: number | null
+          debit: number | null
+          description: string
+          entry_date: string
+          entry_id: string
+          entry_type: string | null
+          property_id: string
+          scheduled_balance: number | null
+          updated_at: string
+        }
+        Insert: {
+          balance?: number | null
+          created_at?: string
+          credit?: number | null
+          debit?: number | null
+          description: string
+          entry_date: string
+          entry_id?: string
+          entry_type?: string | null
+          property_id: string
+          scheduled_balance?: number | null
+          updated_at?: string
+        }
+        Update: {
+          balance?: number | null
+          created_at?: string
+          credit?: number | null
+          debit?: number | null
+          description?: string
+          entry_date?: string
+          entry_id?: string
+          entry_type?: string | null
+          property_id?: string
+          scheduled_balance?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       property_images: {
         Row: {
@@ -506,6 +695,123 @@ export type Database = {
           },
         ]
       }
+      property_notes: {
+        Row: {
+          created_at: string
+          is_pinned: boolean | null
+          note_content: string
+          note_id: string
+          note_title: string | null
+          note_type: string | null
+          property_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_pinned?: boolean | null
+          note_content: string
+          note_id?: string
+          note_title?: string | null
+          note_type?: string | null
+          property_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_pinned?: boolean | null
+          note_content?: string
+          note_id?: string
+          note_title?: string | null
+          note_type?: string | null
+          property_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      property_providers: {
+        Row: {
+          account_number: string | null
+          billing_name: string | null
+          created_at: string
+          observations: string | null
+          password: string | null
+          phone_number: string | null
+          property_id: string
+          provider_id: string
+          provider_name: string
+          provider_type: string | null
+          updated_at: string
+          username: string | null
+          website: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          billing_name?: string | null
+          created_at?: string
+          observations?: string | null
+          password?: string | null
+          phone_number?: string | null
+          property_id: string
+          provider_id?: string
+          provider_name: string
+          provider_type?: string | null
+          updated_at?: string
+          username?: string | null
+          website?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          billing_name?: string | null
+          created_at?: string
+          observations?: string | null
+          password?: string | null
+          phone_number?: string | null
+          property_id?: string
+          provider_id?: string
+          provider_name?: string
+          provider_type?: string | null
+          updated_at?: string
+          username?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      property_qr_codes: {
+        Row: {
+          created_at: string
+          description: string | null
+          is_active: boolean | null
+          property_id: string
+          qr_code_data: string
+          qr_code_image_url: string | null
+          qr_id: string
+          qr_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          is_active?: boolean | null
+          property_id: string
+          qr_code_data: string
+          qr_code_image_url?: string | null
+          qr_id?: string
+          qr_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          is_active?: boolean | null
+          property_id?: string
+          qr_code_data?: string
+          qr_code_image_url?: string | null
+          qr_id?: string
+          qr_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       property_rules: {
         Row: {
           created_at: string
@@ -538,6 +844,54 @@ export type Database = {
             referencedColumns: ["rule_id"]
           },
         ]
+      }
+      property_vehicles: {
+        Row: {
+          color: string | null
+          created_at: string
+          insurance_info: string | null
+          license_plate: string | null
+          make: string | null
+          model: string | null
+          owner_name: string | null
+          property_id: string
+          registration_info: string | null
+          updated_at: string
+          vehicle_id: string
+          vin: string | null
+          year: number | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          insurance_info?: string | null
+          license_plate?: string | null
+          make?: string | null
+          model?: string | null
+          owner_name?: string | null
+          property_id: string
+          registration_info?: string | null
+          updated_at?: string
+          vehicle_id?: string
+          vin?: string | null
+          year?: number | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          insurance_info?: string | null
+          license_plate?: string | null
+          make?: string | null
+          model?: string | null
+          owner_name?: string | null
+          property_id?: string
+          registration_info?: string | null
+          updated_at?: string
+          vehicle_id?: string
+          vin?: string | null
+          year?: number | null
+        }
+        Relationships: []
       }
       rules: {
         Row: {
