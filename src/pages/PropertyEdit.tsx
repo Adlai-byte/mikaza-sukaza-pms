@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Save } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { MikasaSpinner } from '@/components/ui/mikasa-loader';
+import { usePropertyData } from '@/hooks/usePropertyData';
 
 // Tab Components
 import { GeneralTab } from '@/components/PropertyEdit/GeneralTab';
@@ -22,77 +22,29 @@ import { NotesTab } from '@/components/PropertyEdit/NotesTab';
 export default function PropertyEdit() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [property, setProperty] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
-
-  useEffect(() => {
-    if (propertyId) {
-      fetchProperty();
-    }
-  }, [propertyId]);
-
-  const fetchProperty = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('properties')
-        .select(`
-          *,
-          property_location(*),
-          property_communication(*),
-          property_access(*),
-          property_extras(*),
-          units(*),
-          property_images(*),
-          property_amenities(*),
-          property_rules(*)
-        `)
-        .eq('property_id', propertyId)
-        .single();
-
-      if (error) throw error;
-      setProperty(data);
-    } catch (error) {
-      console.error('Error fetching property:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load property details",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+  const { data, loading, saving, updateProperty } = usePropertyData(propertyId!);
 
   const handleSave = async () => {
-    setSaving(true);
-    toast({
-      title: "Success",
-      description: "Property updated successfully",
-    });
-    setSaving(false);
+    // The save functionality is now handled by individual tabs through the usePropertyData hook
+    await updateProperty({});
   };
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
-          <div className="h-64 bg-muted rounded"></div>
-        </div>
+      <div className="min-h-screen bg-gradient-subtle">
+        <MikasaSpinner />
       </div>
     );
   }
 
-  if (!property) {
+  if (!data?.property) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Property Not Found</h1>
-          <Button onClick={() => navigate('/properties')}>
+          <Button variant="outline" onClick={() => navigate('/properties')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Properties
           </Button>
@@ -102,84 +54,92 @@ export default function PropertyEdit() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate('/properties')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Edit: {property.property_name}</h1>
-            <p className="text-muted-foreground">Property ID: {property.property_id}</p>
+    <div className="min-h-screen bg-gradient-subtle">
+      <div className="container mx-auto p-6">
+        {/* Enhanced Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => navigate('/properties')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                Edit: {data.property.property_name}
+              </h1>
+              <p className="text-muted-foreground">Property ID: {data.property.property_id}</p>
+            </div>
           </div>
+          <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-primary-hover shadow-primary">
+            <Save className="mr-2 h-4 w-4" />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
         </div>
-        <Button onClick={handleSave} disabled={saving}>
-          <Save className="mr-2 h-4 w-4" />
-          {saving ? 'Saving...' : 'Save Changes'}
-        </Button>
+
+        {/* Enhanced Tabs Card */}
+        <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
+          <CardContent className="p-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <div className="bg-gradient-secondary p-1 m-6 rounded-lg">
+                <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10 bg-transparent gap-1">
+                  <TabsTrigger value="general" className="data-[state=active]:bg-white data-[state=active]:text-primary">General</TabsTrigger>
+                  <TabsTrigger value="providers" className="data-[state=active]:bg-white data-[state=active]:text-primary">Providers</TabsTrigger>
+                  <TabsTrigger value="owners" className="data-[state=active]:bg-white data-[state=active]:text-primary">Unit Owners</TabsTrigger>
+                  <TabsTrigger value="vehicles" className="data-[state=active]:bg-white data-[state=active]:text-primary">Vehicles</TabsTrigger>
+                  <TabsTrigger value="photos" className="data-[state=active]:bg-white data-[state=active]:text-primary">Photos</TabsTrigger>
+                  <TabsTrigger value="qrcode" className="data-[state=active]:bg-white data-[state=active]:text-primary">QRCode</TabsTrigger>
+                  <TabsTrigger value="financial" className="data-[state=active]:bg-white data-[state=active]:text-primary">Financial</TabsTrigger>
+                  <TabsTrigger value="checklists" className="data-[state=active]:bg-white data-[state=active]:text-primary">Check Lists</TabsTrigger>
+                  <TabsTrigger value="booking" className="data-[state=active]:bg-white data-[state=active]:text-primary">Booking</TabsTrigger>
+                  <TabsTrigger value="notes" className="data-[state=active]:bg-white data-[state=active]:text-primary">Notes</TabsTrigger>
+                </TabsList>
+              </div>
+
+              <div className="p-6">
+                <TabsContent value="general" className="mt-0">
+                  <GeneralTab property={data.property} onUpdate={updateProperty} />
+                </TabsContent>
+
+                <TabsContent value="providers" className="mt-0">
+                  <ProvidersTab propertyId={data.property.property_id} />
+                </TabsContent>
+
+                <TabsContent value="owners" className="mt-0">
+                  <UnitOwnersTab propertyId={data.property.property_id} />
+                </TabsContent>
+
+                <TabsContent value="vehicles" className="mt-0">
+                  <VehiclesTab propertyId={data.property.property_id} />
+                </TabsContent>
+
+                <TabsContent value="photos" className="mt-0">
+                  <PhotosTab propertyId={data.property.property_id} />
+                </TabsContent>
+
+                <TabsContent value="qrcode" className="mt-0">
+                  <QRCodeTab propertyId={data.property.property_id} qrCodes={data.qrCodes} property={data.property} />
+                </TabsContent>
+
+                <TabsContent value="financial" className="mt-0">
+                  <FinancialTab propertyId={data.property.property_id} />
+                </TabsContent>
+
+                <TabsContent value="checklists" className="mt-0">
+                  <CheckListsTab propertyId={data.property.property_id} />
+                </TabsContent>
+
+                <TabsContent value="booking" className="mt-0">
+                  <BookingTab propertyId={data.property.property_id} />
+                </TabsContent>
+
+                <TabsContent value="notes" className="mt-0">
+                  <NotesTab propertyId={data.property.property_id} />
+                </TabsContent>
+              </div>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Tabs */}
-      <Card>
-        <CardContent className="p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-10 mb-6">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="providers">Providers</TabsTrigger>
-              <TabsTrigger value="owners">Unit Owners</TabsTrigger>
-              <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
-              <TabsTrigger value="photos">Photos</TabsTrigger>
-              <TabsTrigger value="qrcode">QRCode</TabsTrigger>
-              <TabsTrigger value="financial">Financial</TabsTrigger>
-              <TabsTrigger value="checklists">Check Lists</TabsTrigger>
-              <TabsTrigger value="booking">Booking</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="general">
-              <GeneralTab property={property} onUpdate={setProperty} />
-            </TabsContent>
-
-            <TabsContent value="providers">
-              <ProvidersTab propertyId={property.property_id} />
-            </TabsContent>
-
-            <TabsContent value="owners">
-              <UnitOwnersTab propertyId={property.property_id} />
-            </TabsContent>
-
-            <TabsContent value="vehicles">
-              <VehiclesTab propertyId={property.property_id} />
-            </TabsContent>
-
-            <TabsContent value="photos">
-              <PhotosTab propertyId={property.property_id} />
-            </TabsContent>
-
-            <TabsContent value="qrcode">
-              <QRCodeTab propertyId={property.property_id} />
-            </TabsContent>
-
-            <TabsContent value="financial">
-              <FinancialTab propertyId={property.property_id} />
-            </TabsContent>
-
-            <TabsContent value="checklists">
-              <CheckListsTab propertyId={property.property_id} />
-            </TabsContent>
-
-            <TabsContent value="booking">
-              <BookingTab propertyId={property.property_id} />
-            </TabsContent>
-
-            <TabsContent value="notes">
-              <NotesTab propertyId={property.property_id} />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
     </div>
   );
 }
