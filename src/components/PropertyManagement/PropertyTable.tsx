@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Edit, Trash2, Search, Eye, Download, Filter, Home, Images, Camera } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +49,7 @@ export function PropertyTable({
   onViewDetails,
   onViewImages,
 }: PropertyTableProps) {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -288,7 +290,7 @@ export function PropertyTable({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onEditProperty(property)}
+                      onClick={() => navigate(`/properties/${property.property_id}/edit`)}
                       title="Edit Property"
                     >
                       <Edit className="h-4 w-4" />
@@ -414,7 +416,7 @@ export function PropertyTable({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onEditProperty(property)}
+                          onClick={() => navigate(`/properties/${property.property_id}/edit`)}
                           className="h-8 w-8 p-0"
                         >
                           <Edit className="h-4 w-4" />

@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MainLayout } from "./components/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
+import PropertyEdit from "./pages/PropertyEdit";
 import Jobs from "./pages/Jobs";
 import UserManagement from "./pages/UserManagement";
 import Auth from "./pages/Auth";
@@ -32,6 +33,7 @@ const App = () => (
             }>
               <Route index element={<Dashboard />} />
               <Route path="/properties" element={<Properties />} />
+              <Route path="/properties/:propertyId/edit" element={<PropertyEdit />} />
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/users" element={<UserManagement />} />
               <Route path="/profile" element={<Profile />} />
