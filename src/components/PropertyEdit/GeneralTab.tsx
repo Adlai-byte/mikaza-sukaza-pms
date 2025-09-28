@@ -59,6 +59,51 @@ export function GeneralTab({ property, onUpdate }: GeneralTabProps) {
     pool_access_code: property.property_extras?.[0]?.pool_access_code || '',
   });
 
+  // Keep form synced when property prop changes
+  React.useEffect(() => {
+    setFormData({
+      is_active: property.is_active || false,
+      is_booking: property.is_booking || false,
+      is_pets_allowed: property.is_pets_allowed || false,
+      property_name: property.property_name || '',
+      address: property.property_location?.[0]?.address || '',
+      city: property.property_location?.[0]?.city || '',
+      state: property.property_location?.[0]?.state || '',
+      postal_code: property.property_location?.[0]?.postal_code || '',
+      latitude: property.property_location?.[0]?.latitude || '',
+      longitude: property.property_location?.[0]?.longitude || '',
+      property_type: property.property_type || 'Apartment',
+      capacity: property.capacity || '',
+      max_capacity: property.max_capacity || '',
+      size_sqf: property.size_sqf || '',
+      num_bedrooms: property.num_bedrooms || '',
+      num_bathrooms: property.num_bathrooms || '',
+      num_half_bath: property.num_half_bath || '',
+      num_wcs: property.num_wcs || '',
+      num_kitchens: property.num_kitchens || '',
+      num_living_rooms: property.num_living_rooms || '',
+      phone_number: property.property_communication?.[0]?.phone_number || '',
+      wifi_name: property.property_communication?.[0]?.wifi_name || '',
+      wifi_password: property.property_communication?.[0]?.wifi_password || '',
+      gate_code: property.property_access?.[0]?.gate_code || '',
+      door_lock_password: property.property_access?.[0]?.door_lock_password || '',
+      alarm_passcode: property.property_access?.[0]?.alarm_passcode || '',
+      storage_number: property.property_extras?.[0]?.storage_number || '',
+      storage_code: property.property_extras?.[0]?.storage_code || '',
+      front_desk: property.property_extras?.[0]?.front_desk || '',
+      garage_number: property.property_extras?.[0]?.garage_number || '',
+      mailing_box: property.property_extras?.[0]?.mailing_box || '',
+      pool_access_code: property.property_extras?.[0]?.pool_access_code || '',
+    });
+  }, [property]);
+
+  // Allow top-level Save button to trigger this tab save
+  React.useEffect(() => {
+    const onSave = () => onUpdate(formData);
+    window.addEventListener('property-edit-save', onSave as EventListener);
+    return () => window.removeEventListener('property-edit-save', onSave as EventListener);
+  }, [formData, onUpdate]);
+
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };

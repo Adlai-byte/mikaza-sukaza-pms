@@ -22,10 +22,10 @@ export function usePropertyData(propertyId: string) {
 
   const fetchAllPropertyData = useCallback(async () => {
     if (!propertyId) return;
-    
+
     try {
       setLoading(true);
-      
+
       // Fetch all property data in parallel
       const [
         propertyResult,
@@ -53,49 +53,49 @@ export function usePropertyData(propertyId: string) {
           `)
           .eq('property_id', propertyId)
           .single(),
-        
+
         supabase
           .from('property_providers')
           .select('*')
           .eq('property_id', propertyId)
           .order('created_at', { ascending: false }),
-        
+
         supabase
           .from('property_vehicles')
           .select('*')
           .eq('property_id', propertyId)
           .order('created_at', { ascending: false }),
-        
+
         supabase
           .from('property_financial_entries')
           .select('*')
           .eq('property_id', propertyId)
           .order('entry_date', { ascending: false }),
-        
+
         supabase
           .from('property_checklists')
           .select('*')
           .eq('property_id', propertyId)
           .order('created_at', { ascending: false }),
-        
+
         supabase
           .from('property_bookings')
           .select('*')
           .eq('property_id', propertyId)
           .order('check_in_date', { ascending: false }),
-        
+
         supabase
           .from('property_notes')
           .select('*')
           .eq('property_id', propertyId)
           .order('created_at', { ascending: false }),
-        
+
         supabase
           .from('property_qr_codes')
           .select('*')
           .eq('property_id', propertyId)
           .order('created_at', { ascending: false }),
-        
+
         supabase
           .from('property_booking_rates')
           .select('*')
@@ -125,13 +125,12 @@ export function usePropertyData(propertyId: string) {
         qrCodes: qrCodesResult.data || [],
         bookingRates: bookingRatesResult.data || null
       });
-
     } catch (error) {
       console.error('Error fetching property data:', error);
       toast({
-        title: "Error",
-        description: "Failed to load property data",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load property data',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -143,7 +142,7 @@ export function usePropertyData(propertyId: string) {
 
     try {
       setSaving(true);
-      
+
       const { error } = await supabase
         .from('properties')
         .update(updates)
@@ -158,21 +157,201 @@ export function usePropertyData(propertyId: string) {
       } : null);
 
       toast({
-        title: "Success",
-        description: "Property updated successfully",
+        title: 'Success',
+        description: 'Property updated successfully',
       });
-
     } catch (error) {
       console.error('Error updating property:', error);
       toast({
-        title: "Error",
-        description: "Failed to update property",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update property',
+        variant: 'destructive',
       });
     } finally {
       setSaving(false);
     }
   }, [propertyId, data, toast]);
+
+  // Save General tab details (root + child tables)
+  const updateGeneralDetails = useCallback(async (form: any) => {
+    if (!propertyId) return;
+
+    try {
+      setSaving(true);
+
+      const rootUpdates: any = {
+        is_active: form.is_active,
+        is_booking: form.is_booking,
+        is_pets_allowed: form.is_pets_allowed,
+        property_name: form.property_name,
+        property_type: form.property_type,
+        capacity: form.capacity,
+        max_capacity: form.max_capacity,
+        size_sqf: form.size_sqf,
+        num_bedrooms: form.num_bedrooms,
+        num_bathrooms: form.num_bathrooms,
+        num_half_bath: form.num_half_bath,
+        num_wcs: form.num_wcs,
+        num_kitchens: form.num_kitchens,
+        num_living_rooms: form.num_living_rooms,
+      };
+
+      // Update main property row
+      const { error: propError } = await supabase
+        .from('properties')
+        .update(rootUpdates)
+        .eq('property_id', propertyId);
+      if (propError) throw propError;
+
+      // property_location
+      {
+        const { data: exists, error } = await supabase
+          .from('property_location')
+          .select('property_id')
+          .eq('property_id', propertyId)
+          .maybeSingle();
+        if (error && (error as any).code !== 'PGRST116') throw error;
+        if (exists) {
+          const { error: upd } = await supabase
+            .from('property_location')
+            .update({
+              address: form.address,
+              city: form.city,
+              state: form.state,
+              postal_code: form.postal_code,
+              latitude: form.latitude,
+              longitude: form.longitude,
+            })
+            .eq('property_id', propertyId);
+          if (upd) throw upd;
+        } else {
+          const { error: ins } = await supabase
+            .from('property_location')
+            .insert({
+              property_id: propertyId,
+              address: form.address,
+              city: form.city,
+              state: form.state,
+              postal_code: form.postal_code,
+              latitude: form.latitude,
+              longitude: form.longitude,
+            });
+          if (ins) throw ins;
+        }
+      }
+
+      // property_communication
+      {
+        const { data: exists, error } = await supabase
+          .from('property_communication')
+          .select('property_id')
+          .eq('property_id', propertyId)
+          .maybeSingle();
+        if (error && (error as any).code !== 'PGRST116') throw error;
+        if (exists) {
+          const { error: upd } = await supabase
+            .from('property_communication')
+            .update({
+              phone_number: form.phone_number,
+              wifi_name: form.wifi_name,
+              wifi_password: form.wifi_password,
+            })
+            .eq('property_id', propertyId);
+          if (upd) throw upd;
+        } else {
+          const { error: ins } = await supabase
+            .from('property_communication')
+            .insert({
+              property_id: propertyId,
+              phone_number: form.phone_number,
+              wifi_name: form.wifi_name,
+              wifi_password: form.wifi_password,
+            });
+          if (ins) throw ins;
+        }
+      }
+
+      // property_access
+      {
+        const { data: exists, error } = await supabase
+          .from('property_access')
+          .select('property_id')
+          .eq('property_id', propertyId)
+          .maybeSingle();
+        if (error && (error as any).code !== 'PGRST116') throw error;
+        if (exists) {
+          const { error: upd } = await supabase
+            .from('property_access')
+            .update({
+              gate_code: form.gate_code,
+              door_lock_password: form.door_lock_password,
+              alarm_passcode: form.alarm_passcode,
+            })
+            .eq('property_id', propertyId);
+          if (upd) throw upd;
+        } else {
+          const { error: ins } = await supabase
+            .from('property_access')
+            .insert({
+              property_id: propertyId,
+              gate_code: form.gate_code,
+              door_lock_password: form.door_lock_password,
+              alarm_passcode: form.alarm_passcode,
+            });
+          if (ins) throw ins;
+        }
+      }
+
+      // property_extras
+      {
+        const { data: exists, error } = await supabase
+          .from('property_extras')
+          .select('property_id')
+          .eq('property_id', propertyId)
+          .maybeSingle();
+        if (error && (error as any).code !== 'PGRST116') throw error;
+        if (exists) {
+          const { error: upd } = await supabase
+            .from('property_extras')
+            .update({
+              storage_number: form.storage_number,
+              storage_code: form.storage_code,
+              front_desk: form.front_desk,
+              garage_number: form.garage_number,
+              mailing_box: form.mailing_box,
+              pool_access_code: form.pool_access_code,
+            })
+            .eq('property_id', propertyId);
+          if (upd) throw upd;
+        } else {
+          const { error: ins } = await supabase
+            .from('property_extras')
+            .insert({
+              property_id: propertyId,
+              storage_number: form.storage_number,
+              storage_code: form.storage_code,
+              front_desk: form.front_desk,
+              garage_number: form.garage_number,
+              mailing_box: form.mailing_box,
+              pool_access_code: form.pool_access_code,
+            });
+          if (ins) throw ins;
+        }
+      }
+
+      toast({ title: 'Success', description: 'Property details saved' });
+      await fetchAllPropertyData();
+    } catch (error) {
+      console.error('Error saving property details:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save property details',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [propertyId, toast, fetchAllPropertyData]);
 
   const refreshData = useCallback(() => {
     fetchAllPropertyData();
@@ -187,6 +366,7 @@ export function usePropertyData(propertyId: string) {
     loading,
     saving,
     updateProperty: updatePropertyData,
-    refreshData
-  };
+    updateGeneralDetails,
+    refreshData,
+  } as const;
 }

@@ -24,11 +24,11 @@ export default function PropertyEdit() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('general');
   
-  const { data, loading, saving, updateProperty } = usePropertyData(propertyId!);
+  const { data, loading, saving, updateProperty, updateGeneralDetails } = usePropertyData(propertyId!);
 
   const handleSave = async () => {
-    // The save functionality is now handled by individual tabs through the usePropertyData hook
-    await updateProperty({});
+    // Broadcast a save event so tabs (e.g., GeneralTab) can persist their local form state
+    window.dispatchEvent(new CustomEvent('property-edit-save'));
   };
 
   if (loading) {
@@ -80,8 +80,8 @@ export default function PropertyEdit() {
         <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
           <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <div className="bg-gradient-secondary p-1 m-6 rounded-lg">
-                <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10 bg-transparent gap-1">
+              <div className="bg-gradient-secondary p-1 m-6 rounded-lg overflow-x-auto">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 bg-transparent gap-1 min-w-max">
                   <TabsTrigger value="general" className="data-[state=active]:bg-white data-[state=active]:text-primary">General</TabsTrigger>
                   <TabsTrigger value="providers" className="data-[state=active]:bg-white data-[state=active]:text-primary">Providers</TabsTrigger>
                   <TabsTrigger value="owners" className="data-[state=active]:bg-white data-[state=active]:text-primary">Unit Owners</TabsTrigger>
@@ -97,7 +97,7 @@ export default function PropertyEdit() {
 
               <div className="p-6">
                 <TabsContent value="general" className="mt-0">
-                  <GeneralTab property={data.property} onUpdate={updateProperty} />
+                  <GeneralTab property={data.property} onUpdate={updateGeneralDetails} />
                 </TabsContent>
 
                 <TabsContent value="providers" className="mt-0">
