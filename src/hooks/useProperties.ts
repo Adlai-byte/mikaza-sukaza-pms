@@ -15,6 +15,7 @@ export function useProperties() {
   const fetchProperties = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Fetching properties...');
       const { data, error } = await supabase
         .from('properties')
         .select(`
@@ -40,7 +41,12 @@ export function useProperties() {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Properties fetch error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Raw properties data:', data);
       
       // Transform the data to match our Property type
       const transformedData = (data || []).map((property: any) => ({
@@ -48,6 +54,9 @@ export function useProperties() {
         amenities: property.amenities?.map((pa: any) => pa.amenities) || [],
         rules: property.rules?.map((pr: any) => pr.rules) || [],
       })) as Property[];
+      
+      console.log('✅ Transformed properties data:', transformedData);
+      console.log('📊 Properties count:', transformedData.length);
       
       setProperties(transformedData);
     } catch (error) {
@@ -59,6 +68,7 @@ export function useProperties() {
       });
     } finally {
       setLoading(false);
+      console.log('⏰ Properties loading finished');
     }
   };
 

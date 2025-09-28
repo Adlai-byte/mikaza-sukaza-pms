@@ -50,6 +50,9 @@ export function UserTable({
   onViewCreditCards,
   onViewDetails,
 }: UserTableProps) {
+  console.log('👥 UserTable render - users:', users);
+  console.log('👥 UserTable render - users.length:', users.length);
+  
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");

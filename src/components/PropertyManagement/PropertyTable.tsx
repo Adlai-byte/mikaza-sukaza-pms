@@ -49,6 +49,9 @@ export function PropertyTable({
   onViewDetails,
   onViewImages,
 }: PropertyTableProps) {
+  console.log('🏠 PropertyTable render - properties:', properties);
+  console.log('🏠 PropertyTable render - properties.length:', properties.length);
+  
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");

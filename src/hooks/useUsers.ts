@@ -13,12 +13,20 @@ export function useUsers() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      console.log('👥 Fetching users...');
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Users fetch error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Users data:', data);
+      console.log('📊 Users count:', data?.length || 0);
+      
       setUsers((data || []) as User[]);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -29,6 +37,7 @@ export function useUsers() {
       });
     } finally {
       setLoading(false);
+      console.log('⏰ Users loading finished');
     }
   };
 
