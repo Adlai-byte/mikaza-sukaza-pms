@@ -38,7 +38,7 @@ export function MainLayout() {
             <div className="flex items-center justify-between h-full px-3 sm:px-6">
               <div className="flex items-center space-x-2 sm:space-x-4">
                 <SidebarTrigger />
-                <div className="hidden sm:block text-sm text-muted-foreground">
+                <div className="hidden sm:block text-sm text-foreground font-medium">
                   Agent: Casa & Concierge
                 </div>
               </div>

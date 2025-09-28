@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 
 interface GeneralTabProps {
   property: any;
@@ -60,6 +61,10 @@ export function GeneralTab({ property, onUpdate }: GeneralTabProps) {
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = () => {
+    onUpdate(formData);
   };
 
   return (
@@ -447,6 +452,13 @@ export function GeneralTab({ property, onUpdate }: GeneralTabProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Save Button */}
+      <div className="flex justify-end pt-4">
+        <Button onClick={handleSave} className="bg-primary hover:bg-primary-hover shadow-primary">
+          Save Changes
+        </Button>
+      </div>
     </div>
   );
 }
