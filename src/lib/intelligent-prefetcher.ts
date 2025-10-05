@@ -417,19 +417,31 @@ export class IntelligentPrefetcher {
     const dataMap: Record<string, { queryKey: string[]; queryFn: () => Promise<any> }> = {
       'properties-list': {
         queryKey: ['properties', 'list'],
-        queryFn: () => supabase.from('properties').select('*').limit(20),
+        queryFn: async () => {
+          const { data } = await supabase.from('properties').select('*').limit(20);
+          return data;
+        },
       },
       'users-list': {
         queryKey: ['users', 'list'],
-        queryFn: () => supabase.from('users').select('*').limit(20),
+        queryFn: async () => {
+          const { data } = await supabase.from('users').select('*').limit(20);
+          return data;
+        },
       },
       'amenities-list': {
         queryKey: ['amenities'],
-        queryFn: () => supabase.from('amenities').select('*'),
+        queryFn: async () => {
+          const { data } = await supabase.from('amenities').select('*');
+          return data;
+        },
       },
       'rules-list': {
         queryKey: ['rules'],
-        queryFn: () => supabase.from('rules').select('*'),
+        queryFn: async () => {
+          const { data } = await supabase.from('rules').select('*');
+          return data;
+        },
       },
     };
 
@@ -438,7 +450,10 @@ export class IntelligentPrefetcher {
       const propertyId = resource.replace('property-detail-', '');
       dataMap[resource] = {
         queryKey: ['properties', 'detail', propertyId],
-        queryFn: () => supabase.from('properties').select('*').eq('property_id', propertyId).single(),
+        queryFn: async () => {
+          const { data } = await supabase.from('properties').select('*').eq('property_id', propertyId).single();
+          return data;
+        },
       };
     }
 
@@ -446,7 +461,10 @@ export class IntelligentPrefetcher {
       const propertyId = resource.replace('property-financial-', '');
       dataMap[resource] = {
         queryKey: ['properties', 'financial', propertyId],
-        queryFn: () => supabase.from('property_financial_entries').select('*').eq('property_id', propertyId),
+        queryFn: async () => {
+          const { data } = await supabase.from('property_financial_entries').select('*').eq('property_id', propertyId);
+          return data;
+        },
       };
     }
 
