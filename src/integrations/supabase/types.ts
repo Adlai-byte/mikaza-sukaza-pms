@@ -965,6 +965,7 @@ export type Database = {
           last_name: string
           password: string
           photo_url: string | null
+          relationship_to_main_owner: string | null
           state: string | null
           updated_at: string | null
           user_id: string
@@ -987,6 +988,7 @@ export type Database = {
           last_name: string
           password: string
           photo_url?: string | null
+          relationship_to_main_owner?: string | null
           state?: string | null
           updated_at?: string | null
           user_id?: string
@@ -1009,6 +1011,7 @@ export type Database = {
           last_name?: string
           password?: string
           photo_url?: string | null
+          relationship_to_main_owner?: string | null
           state?: string | null
           updated_at?: string | null
           user_id?: string
