@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserPlus, Users, Building2, CreditCard } from "lucide-react";
-import { useUsers } from "@/hooks/useUsers";
+import { useUsersOptimized } from "@/hooks/useUsersOptimized";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { UserForm } from "@/components/UserManagement/UserForm";
 import { UserTable } from "@/components/UserManagement/UserTable";
@@ -12,7 +12,7 @@ import { UserDetailsDialog } from "@/components/UserManagement/UserDetailsDialog
 import { User, UserInsert } from "@/lib/schemas";
 
 export default function UserManagement() {
-  const { users, loading, createUser, updateUser, deleteUser } = useUsers();
+  const { users, loading, isFetching, createUser, updateUser, deleteUser } = useUsersOptimized();
   const { logActivity } = useActivityLogs();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -137,20 +137,16 @@ export default function UserManagement() {
           <CardTitle>Users</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-muted-foreground">Loading users...</div>
-            </div>
-          ) : (
-            <UserTable
-              users={users}
-              onEditUser={handleEditUser}
-              onDeleteUser={handleDeleteUser}
-              onViewBankAccounts={handleViewBankAccounts}
-              onViewCreditCards={handleViewCreditCards}
-              onViewDetails={handleViewDetails}
-            />
-          )}
+          <UserTable
+            users={users}
+            onEditUser={handleEditUser}
+            onDeleteUser={handleDeleteUser}
+            onViewBankAccounts={handleViewBankAccounts}
+            onViewCreditCards={handleViewCreditCards}
+            onViewDetails={handleViewDetails}
+            isLoading={loading}
+            isFetching={isFetching}
+          />
         </CardContent>
       </Card>
 

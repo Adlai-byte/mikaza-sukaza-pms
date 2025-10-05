@@ -1,0 +1,1 @@
+:SUPABASE_ACCESS_TOKEN = sb_secret_jnjttqCZH8LCi1rhAcPvpQ_TR_euezd

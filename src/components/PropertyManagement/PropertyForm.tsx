@@ -812,7 +812,7 @@ form.reset({
                   <div>
                     <h4 className="font-medium mb-4">Amenities</h4>
                     <div className="grid grid-cols-3 gap-4">
-                      {amenities.map((amenity) => (
+                      {(Array.isArray(amenities) ? amenities : []).map((amenity) => (
                         <div key={amenity.amenity_id} className="flex items-center space-x-2">
                           <Checkbox
                             id={`amenity-${amenity.amenity_id}`}
@@ -837,7 +837,7 @@ form.reset({
                   <div>
                     <h4 className="font-medium mb-4">Rules</h4>
                     <div className="grid grid-cols-2 gap-4">
-                      {rules.map((rule) => (
+                      {(Array.isArray(rules) ? rules : []).map((rule) => (
                         <div key={rule.rule_id} className="flex items-center space-x-2">
                           <Checkbox
                             id={`rule-${rule.rule_id}`}

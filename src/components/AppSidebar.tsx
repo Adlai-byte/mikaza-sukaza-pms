@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -26,30 +26,33 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PERMISSIONS, Permission } from "@/lib/rbac/permissions";
 
+// Define menu items with their required permissions
 const mainMenuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "User Management", url: "/users", icon: Users },
-  { title: "Properties", url: "/properties", icon: Building },
-  { title: "Active Jobs", url: "/jobs", icon: BriefcaseIcon },
-  { title: "Calendar", url: "/calendar", icon: Calendar },
-  { title: "To-Do List", url: "/todos", icon: CheckSquare },
-  { title: "Issues & Photos", url: "/issues", icon: AlertTriangle },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, permission: null }, // Everyone can access
+  { title: "User Management", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
+  { title: "Properties", url: "/properties", icon: Building, permission: PERMISSIONS.PROPERTIES_VIEW },
+  { title: "Active Jobs", url: "/jobs", icon: BriefcaseIcon, permission: PERMISSIONS.JOBS_VIEW },
+  { title: "Calendar", url: "/calendar", icon: Calendar, permission: PERMISSIONS.BOOKINGS_VIEW },
+  { title: "To-Do List", url: "/todos", icon: CheckSquare, permission: PERMISSIONS.TODOS_VIEW_OWN },
+  { title: "Issues & Photos", url: "/issues", icon: AlertTriangle, permission: PERMISSIONS.ISSUES_VIEW },
 ];
 
 const documentMenuItems = [
-  { title: "Contracts", url: "/documents/contracts", icon: FileText },
-  { title: "Employee Documents", url: "/documents/employee", icon: FileText },
-  { title: "Access Authorization", url: "/documents/access", icon: FileText },
-  { title: "Building COIs", url: "/documents/building", icon: FileText },
-  { title: "Service Authorization", url: "/documents/service", icon: FileText },
-  { title: "Messages Templates", url: "/documents/messages", icon: FileText },
+  { title: "Contracts", url: "/documents/contracts", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
+  { title: "Employee Documents", url: "/documents/employee", icon: FileText, permission: PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW },
+  { title: "Access Authorization", url: "/documents/access", icon: FileText, permission: PERMISSIONS.DOCUMENTS_ACCESS_VIEW },
+  { title: "Building COIs", url: "/documents/building", icon: FileText, permission: PERMISSIONS.DOCUMENTS_COI_VIEW },
+  { title: "Service Authorization", url: "/documents/service", icon: FileText, permission: PERMISSIONS.DOCUMENTS_SERVICE_VIEW },
+  { title: "Messages Templates", url: "/documents/messages", icon: FileText, permission: PERMISSIONS.DOCUMENTS_MESSAGES_VIEW },
 ];
 
 const financeMenuItems = [
-  { title: "Service Pipeline", url: "/finance/pipeline", icon: DollarSign },
-  { title: "Invoices", url: "/finance/invoices", icon: DollarSign },
-  { title: "Commissions", url: "/finance/commissions", icon: DollarSign },
+  { title: "Service Pipeline", url: "/finance/pipeline", icon: DollarSign, permission: PERMISSIONS.PIPELINE_VIEW },
+  { title: "Invoices", url: "/finance/invoices", icon: DollarSign, permission: PERMISSIONS.INVOICES_VIEW },
+  { title: "Commissions", url: "/finance/commissions", icon: DollarSign, permission: PERMISSIONS.COMMISSIONS_VIEW_ALL },
 ];
 
 export function AppSidebar() {
@@ -57,6 +60,23 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
+  const { hasPermission } = usePermissions();
+
+  // Filter menu items based on permissions
+  const visibleMainMenuItems = useMemo(
+    () => mainMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
+    [hasPermission]
+  );
+
+  const visibleDocumentMenuItems = useMemo(
+    () => documentMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
+    [hasPermission]
+  );
+
+  const visibleFinanceMenuItems = useMemo(
+    () => financeMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
+    [hasPermission]
+  );
 
   const isActive = (path: string) => {
     if (path === "/") return currentPath === "/";
@@ -93,73 +113,79 @@ export function AppSidebar() {
         </div>
 
         {/* Main Navigation */}
-        <SidebarGroup>
-          {!isCollapsed && (
-            <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
-              Main
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent className="px-3">
-            <SidebarMenu className="space-y-1">
-              {mainMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="h-10">
-                    <NavLink to={item.url} className={getNavCls}>
-                      <item.icon className="h-5 w-5 min-w-5" />
-                      {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {visibleMainMenuItems.length > 0 && (
+          <SidebarGroup>
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
+                Main
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent className="px-3">
+              <SidebarMenu className="space-y-1">
+                {visibleMainMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild className="h-10">
+                      <NavLink to={item.url} className={getNavCls}>
+                        <item.icon className="h-5 w-5 min-w-5" />
+                        {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Documents */}
-        <SidebarGroup>
-          {!isCollapsed && (
-            <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
-              Documents
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent className="px-3">
-            <SidebarMenu className="space-y-1">
-              {documentMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="h-10">
-                    <NavLink to={item.url} className={getNavCls}>
-                      <item.icon className="h-5 w-5 min-w-5" />
-                      {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {visibleDocumentMenuItems.length > 0 && (
+          <SidebarGroup>
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
+                Documents
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent className="px-3">
+              <SidebarMenu className="space-y-1">
+                {visibleDocumentMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild className="h-10">
+                      <NavLink to={item.url} className={getNavCls}>
+                        <item.icon className="h-5 w-5 min-w-5" />
+                        {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Finance */}
-        <SidebarGroup>
-          {!isCollapsed && (
-            <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
-              Finance
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent className="px-3">
-            <SidebarMenu className="space-y-1">
-              {financeMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="h-10">
-                    <NavLink to={item.url} className={getNavCls}>
-                      <item.icon className="h-5 w-5 min-w-5" />
-                      {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {visibleFinanceMenuItems.length > 0 && (
+          <SidebarGroup>
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
+                Finance
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent className="px-3">
+              <SidebarMenu className="space-y-1">
+                {visibleFinanceMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild className="h-10">
+                      <NavLink to={item.url} className={getNavCls}>
+                        <item.icon className="h-5 w-5 min-w-5" />
+                        {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Media */}
         <SidebarGroup>

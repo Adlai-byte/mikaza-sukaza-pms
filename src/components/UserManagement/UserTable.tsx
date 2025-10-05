@@ -21,6 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Edit, Trash2, Search, CreditCard, Building2, Eye, Download, Filter } from "lucide-react";
+import { UserTableLoadingState, UserLoadingSpinner } from "./UserTableSkeleton";
+import { LoadingOverlay } from "../PropertyManagement/PropertyTableSkeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +42,8 @@ interface UserTableProps {
   onViewBankAccounts: (user: User) => void;
   onViewCreditCards: (user: User) => void;
   onViewDetails: (user: User) => void;
+  isLoading?: boolean;
+  isFetching?: boolean;
 }
 
 export function UserTable({
@@ -49,6 +53,8 @@ export function UserTable({
   onViewBankAccounts,
   onViewCreditCards,
   onViewDetails,
+  isLoading = false,
+  isFetching = false,
 }: UserTableProps) {
   console.log('👥 UserTable render - users:', users);
   console.log('👥 UserTable render - users.length:', users.length);
@@ -56,6 +62,16 @@ export function UserTable({
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Show full loading skeleton on initial load
+  if (isLoading) {
+    return <UserTableLoadingState />;
+  }
+
+  // Show empty state if no users
+  if (!isLoading && users.length === 0) {
+    return <UserLoadingSpinner message="No users found" />;
+  }
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.first_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -102,7 +118,9 @@ export function UserTable({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
+      {/* Loading overlay for background fetching */}
+      <LoadingOverlay isVisible={isFetching && !isLoading} />
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
