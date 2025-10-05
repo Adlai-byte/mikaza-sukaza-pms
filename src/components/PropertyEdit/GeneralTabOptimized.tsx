@@ -98,20 +98,10 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     property,
     propertyId: property?.property_id,
     propertyName: property?.property_name,
-    // Check both field name formats
-    hasLocation: !!(property?.location || property?.property_location),
-    hasCommunication: !!(property?.communication || property?.property_communication),
-    hasAccess: !!(property?.access || property?.property_access),
-    hasExtras: !!(property?.extras || property?.property_extras),
-    // Show actual data
-    location: property?.location,
-    property_location: property?.property_location,
-    communication: property?.communication,
-    property_communication: property?.property_communication,
-    access: property?.access,
-    property_access: property?.property_access,
-    extras: property?.extras,
-    property_extras: property?.property_extras
+    hasLocation: !!property?.property_location?.length,
+    hasCommunication: !!property?.property_communication?.length,
+    hasAccess: !!property?.property_access?.length,
+    hasExtras: !!property?.property_extras?.length
   });
 
   const { toast } = useToast();
@@ -120,151 +110,51 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showLocationMap, setShowLocationMap] = useState(false);
 
-  // Helper to get location data (handle both array and single object, and both field name formats)
-  const getLocation = () => {
-    // Check both aliased name (location) and full table name (property_location)
-    const loc = property.location || property.property_location;
-    if (Array.isArray(loc)) return loc[0];
-    return loc as any;
-  };
-  const getCommunication = () => {
-    const comm = property.communication || property.property_communication;
-    if (Array.isArray(comm)) return comm[0];
-    return comm as any;
-  };
-  const getAccess = () => {
-    const acc = property.access || property.property_access;
-    if (Array.isArray(acc)) return acc[0];
-    return acc as any;
-  };
-  const getExtras = () => {
-    const ext = property.extras || property.property_extras;
-    if (Array.isArray(ext)) return ext[0];
-    return ext as any;
-  };
-
-  const locationData = getLocation();
-  const communicationData = getCommunication();
-  const accessData = getAccess();
-  const extrasData = getExtras();
-
   const [formData, setFormData] = useState({
     // Basic Information
     is_active: property.is_active || false,
     is_booking: property.is_booking || false,
     is_pets_allowed: property.is_pets_allowed || false,
     property_name: property.property_name || '',
-    property_type: property.property_type || '',
-
-    // Property Details
-    capacity: String(property.capacity || ''),
-    max_capacity: String(property.max_capacity || ''),
-    size_sqf: String(property.size_sqf || ''),
-    num_bedrooms: String(property.num_bedrooms || ''),
-    num_bathrooms: String(property.num_bathrooms || ''),
-    num_half_bath: String(property.num_half_bath || ''),
-    num_wcs: String(property.num_wcs || ''),
-    num_kitchens: String(property.num_kitchens || ''),
-    num_living_rooms: String(property.num_living_rooms || ''),
 
     // Location
-    address: locationData?.address || '',
-    city: locationData?.city || '',
-    state: locationData?.state || '',
-    postal_code: locationData?.postal_code || '',
-    latitude: String(locationData?.latitude || ''),
-    longitude: String(locationData?.longitude || ''),
+    address: property.property_location?.[0]?.address || '',
+    city: property.property_location?.[0]?.city || '',
+    state: property.property_location?.[0]?.state || '',
+    postal_code: property.property_location?.[0]?.postal_code || '',
+    latitude: property.property_location?.[0]?.latitude || '',
+    longitude: property.property_location?.[0]?.longitude || '',
+
+    // Capacity
+    property_type: property.property_type || 'Apartment',
+    capacity: property.capacity || '',
+    max_capacity: property.max_capacity || '',
+    size_sqf: property.size_sqf || '',
+    num_bedrooms: property.num_bedrooms || '',
+    num_bathrooms: property.num_bathrooms || '',
+    num_half_bath: property.num_half_bath || '',
+    num_wcs: property.num_wcs || '',
+    num_kitchens: property.num_kitchens || '',
+    num_living_rooms: property.num_living_rooms || '',
 
     // Communication
-    phone_number: communicationData?.phone_number || '',
-    wifi_name: communicationData?.wifi_name || '',
-    wifi_password: communicationData?.wifi_password || '',
+    phone_number: property.property_communication?.[0]?.phone_number || '',
+    wifi_name: property.property_communication?.[0]?.wifi_name || '',
+    wifi_password: property.property_communication?.[0]?.wifi_password || '',
 
     // Access
-    gate_code: accessData?.gate_code || '',
-    door_lock_password: accessData?.door_lock_password || '',
-    alarm_passcode: accessData?.alarm_passcode || '',
+    gate_code: property.property_access?.[0]?.gate_code || '',
+    door_lock_password: property.property_access?.[0]?.door_lock_password || '',
+    alarm_passcode: property.property_access?.[0]?.alarm_passcode || '',
 
     // Extras
-    storage_number: extrasData?.storage_number || '',
-    storage_code: extrasData?.storage_code || '',
-    front_desk: extrasData?.front_desk || '',
-    garage_number: extrasData?.garage_number || '',
-    mailing_box: extrasData?.mailing_box || '',
-    pool_access_code: extrasData?.pool_access_code || '',
+    storage_number: property.property_extras?.[0]?.storage_number || '',
+    storage_code: property.property_extras?.[0]?.storage_code || '',
+    front_desk: property.property_extras?.[0]?.front_desk || '',
+    garage_number: property.property_extras?.[0]?.garage_number || '',
+    mailing_box: property.property_extras?.[0]?.mailing_box || '',
+    pool_access_code: property.property_extras?.[0]?.pool_access_code || '',
   });
-
-  // Re-initialize formData when property changes (after save/reload)
-  useEffect(() => {
-    const loc = getLocation();
-    const comm = getCommunication();
-    const acc = getAccess();
-    const ext = getExtras();
-
-    console.log('🔄 [GeneralTabOptimized] Property changed, re-initializing form data:', {
-      property_id: property.property_id,
-      property_name: property.property_name,
-      locationData: loc,
-      locationAddress: loc?.address,
-      locationCity: loc?.city,
-      communicationData: comm,
-      commPhone: comm?.phone_number,
-      commWifi: comm?.wifi_name,
-      accessData: acc,
-      accessGate: acc?.gate_code,
-      extrasData: ext,
-      extrasStorage: ext?.storage_number
-    });
-
-    setFormData({
-      // Basic Information
-      is_active: property.is_active || false,
-      is_booking: property.is_booking || false,
-      is_pets_allowed: property.is_pets_allowed || false,
-      property_name: property.property_name || '',
-      property_type: property.property_type || '',
-
-      // Property Details
-      capacity: String(property.capacity || ''),
-      max_capacity: String(property.max_capacity || ''),
-      size_sqf: String(property.size_sqf || ''),
-      num_bedrooms: String(property.num_bedrooms || ''),
-      num_bathrooms: String(property.num_bathrooms || ''),
-      num_half_bath: String(property.num_half_bath || ''),
-      num_wcs: String(property.num_wcs || ''),
-      num_kitchens: String(property.num_kitchens || ''),
-      num_living_rooms: String(property.num_living_rooms || ''),
-
-      // Location
-      address: loc?.address || '',
-      city: loc?.city || '',
-      state: loc?.state || '',
-      postal_code: loc?.postal_code || '',
-      latitude: String(loc?.latitude || ''),
-      longitude: String(loc?.longitude || ''),
-
-      // Communication
-      phone_number: comm?.phone_number || '',
-      wifi_name: comm?.wifi_name || '',
-      wifi_password: comm?.wifi_password || '',
-
-      // Access
-      gate_code: acc?.gate_code || '',
-      door_lock_password: acc?.door_lock_password || '',
-      alarm_passcode: acc?.alarm_passcode || '',
-
-      // Extras
-      storage_number: ext?.storage_number || '',
-      storage_code: ext?.storage_code || '',
-      front_desk: ext?.front_desk || '',
-      garage_number: ext?.garage_number || '',
-      mailing_box: ext?.mailing_box || '',
-      pool_access_code: ext?.pool_access_code || '',
-    });
-
-    // Reset unsaved changes when property changes
-    setHasUnsavedChanges(false);
-  }, [property, property.property_id]); // Re-run when property object changes
 
   // Form validation function
   const validateForm = (formValues: typeof formData): Record<string, string> => {
@@ -315,7 +205,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     return errors;
   };
 
-  // React Query mutation for saving with optimistic updates
+  // React Query mutation for saving
   const savePropertyMutation = useMutation({
     mutationFn: async (formValues: typeof formData) => {
       console.log('🏠 [GeneralTab] Starting save mutation:', { formValues, propertyId: property.property_id });
@@ -361,119 +251,186 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       }
       console.log('✅ [GeneralTab] Properties table updated successfully');
 
-      // Helper function to upsert related tables using Supabase's upsert
+      // Helper function to upsert related tables
       const upsertTable = async (tableName: 'property_location' | 'property_communication' | 'property_access' | 'property_extras', data: Record<string, unknown>) => {
         console.log(`🔄 [GeneralTab] Upserting ${tableName}:`, data);
 
-        const { error } = await supabase
+        const { data: exists, error } = await supabase
           .from(tableName as any)
-          .upsert({ ...data, property_id: propertyId }, {
-            onConflict: 'property_id',
-            ignoreDuplicates: false
-          });
+          .select('property_id')
+          .eq('property_id', propertyId)
+          .maybeSingle();
 
-        if (error) {
-          console.error(`❌ [GeneralTab] ${tableName} upsert error:`, error);
+        if (error && (error as { code?: string }).code !== 'PGRST116') {
+          console.error(`❌ [GeneralTab] ${tableName} check error:`, error);
           throw error;
         }
-        console.log(`✅ [GeneralTab] ${tableName} upserted successfully`);
+
+        if (exists) {
+          console.log(`📝 [GeneralTab] Updating existing ${tableName} record`);
+          const { error: updError } = await supabase
+            .from(tableName as any)
+            .update(data)
+            .eq('property_id', propertyId);
+          if (updError) {
+            console.error(`❌ [GeneralTab] ${tableName} update error:`, updError);
+            throw updError;
+          }
+          console.log(`✅ [GeneralTab] ${tableName} updated successfully`);
+        } else {
+          console.log(`➕ [GeneralTab] Inserting new ${tableName} record`);
+          const { error: insError } = await supabase
+            .from(tableName as any)
+            .insert({ ...data, property_id: propertyId });
+          if (insError) {
+            console.error(`❌ [GeneralTab] ${tableName} insert error:`, insError);
+            throw insError;
+          }
+          console.log(`✅ [GeneralTab] ${tableName} inserted successfully`);
+        }
       };
 
-      // Update all tables in parallel for maximum speed
-      await Promise.all([
-        upsertTable('property_location', {
-          address: formValues.address || null,
-          city: formValues.city || null,
-          state: formValues.state || null,
-          postal_code: formValues.postal_code || null,
-          latitude: toNumberOrNull(formValues.latitude),
-          longitude: toNumberOrNull(formValues.longitude),
-        }),
-        upsertTable('property_communication', {
-          phone_number: formValues.phone_number,
-          wifi_name: formValues.wifi_name,
-          wifi_password: formValues.wifi_password,
-        }),
-        upsertTable('property_access', {
-          gate_code: formValues.gate_code,
-          door_lock_password: formValues.door_lock_password,
-          alarm_passcode: formValues.alarm_passcode,
-        }),
-        upsertTable('property_extras', {
-          storage_number: formValues.storage_number,
-          storage_code: formValues.storage_code,
-          front_desk: formValues.front_desk,
-          garage_number: formValues.garage_number,
-          mailing_box: formValues.mailing_box,
-          pool_access_code: formValues.pool_access_code,
-        })
-      ]);
-
-      return formValues;
-    },
-    onMutate: async (formValues) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['properties'] });
-
-      // Snapshot the previous value
-      const previousData = queryClient.getQueryData(['properties']);
-
-      // Optimistically update the cache
-      queryClient.setQueryData(['properties'], (old: any) => {
-        if (!old) return old;
-        return old.map((p: any) =>
-          p.property_id === property.property_id
-            ? { ...p, ...formValues, updated_at: new Date().toISOString() }
-            : p
-        );
+      // Update related tables
+      await upsertTable('property_location', {
+        address: formValues.address || null,
+        city: formValues.city || null,
+        state: formValues.state || null,
+        postal_code: formValues.postal_code || null,
+        latitude: toNumberOrNull(formValues.latitude),
+        longitude: toNumberOrNull(formValues.longitude),
       });
 
-      setHasUnsavedChanges(false);
-      // Notify parent that changes are saved
-      window.dispatchEvent(new CustomEvent('property-edit-unsaved-changes', { detail: { hasChanges: false } }));
+      await upsertTable('property_communication', {
+        phone_number: formValues.phone_number,
+        wifi_name: formValues.wifi_name,
+        wifi_password: formValues.wifi_password,
+      });
 
-      return { previousData };
+      await upsertTable('property_access', {
+        gate_code: formValues.gate_code,
+        door_lock_password: formValues.door_lock_password,
+        alarm_passcode: formValues.alarm_passcode,
+      });
+
+      await upsertTable('property_extras', {
+        storage_number: formValues.storage_number,
+        storage_code: formValues.storage_code,
+        front_desk: formValues.front_desk,
+        garage_number: formValues.garage_number,
+        mailing_box: formValues.mailing_box,
+        pool_access_code: formValues.pool_access_code,
+      });
+
+      return formValues;
     },
     onSuccess: (data) => {
       console.log('🎉 [GeneralTab] Save mutation successful:', data);
 
       toast({
-        title: '✅ Property Saved',
-        description: 'Changes saved successfully',
+        title: '✅ Property Saved Successfully',
+        description: 'Your property details have been saved to the database',
         className: 'border-green-200 bg-green-50 text-green-800',
       });
 
-      // Invalidate both list and detail queries to ensure fresh data
-      queryClient.invalidateQueries({ queryKey: ['properties', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['properties', 'detail', property.property_id] });
+      setHasUnsavedChanges(false);
 
-      console.log('🔄 [GeneralTab] Invalidated queries for property:', property.property_id);
+      // Invalidate related queries to refresh data
+      const queryKeys = [
+        ['propertyEdit', property.property_id],
+        ['properties'],
+        ['property', property.property_id]
+      ];
+
+      console.log('🔄 [GeneralTab] Invalidating query keys:', queryKeys);
+
+      queryKeys.forEach(key => {
+        queryClient.invalidateQueries({ queryKey: key });
+      });
+
+      // Force refetch of property data
+      queryClient.refetchQueries({ queryKey: ['propertyEdit', property.property_id] });
     },
-    onError: (error, formValues, context) => {
-      // Rollback optimistic update on error
-      if (context?.previousData) {
-        queryClient.setQueryData(['properties'], context.previousData);
-      }
-
+    onError: (error) => {
       console.error('Error saving property:', error);
       toast({
         title: 'Error',
         description: (error as Error)?.message || 'Failed to save property details',
         variant: 'destructive',
       });
-
-      setHasUnsavedChanges(true);
     },
   });
+
+  // Keep form synced when property prop changes
+  useEffect(() => {
+    console.log('🔄 [GeneralTab] Property prop changed, updating form data:', {
+      propertyId: property?.property_id,
+      propertyName: property?.property_name,
+      property
+    });
+
+    const newFormData = {
+      is_active: property.is_active || false,
+      is_booking: property.is_booking || false,
+      is_pets_allowed: property.is_pets_allowed || false,
+      property_name: property.property_name || '',
+      address: property.property_location?.[0]?.address || '',
+      city: property.property_location?.[0]?.city || '',
+      state: property.property_location?.[0]?.state || '',
+      postal_code: property.property_location?.[0]?.postal_code || '',
+      latitude: property.property_location?.[0]?.latitude || '',
+      longitude: property.property_location?.[0]?.longitude || '',
+      property_type: property.property_type || 'Apartment',
+      capacity: property.capacity || '',
+      max_capacity: property.max_capacity || '',
+      size_sqf: property.size_sqf || '',
+      num_bedrooms: property.num_bedrooms || '',
+      num_bathrooms: property.num_bathrooms || '',
+      num_half_bath: property.num_half_bath || '',
+      num_wcs: property.num_wcs || '',
+      num_kitchens: property.num_kitchens || '',
+      num_living_rooms: property.num_living_rooms || '',
+      phone_number: property.property_communication?.[0]?.phone_number || '',
+      wifi_name: property.property_communication?.[0]?.wifi_name || '',
+      wifi_password: property.property_communication?.[0]?.wifi_password || '',
+      gate_code: property.property_access?.[0]?.gate_code || '',
+      door_lock_password: property.property_access?.[0]?.door_lock_password || '',
+      alarm_passcode: property.property_access?.[0]?.alarm_passcode || '',
+      storage_number: property.property_extras?.[0]?.storage_number || '',
+      storage_code: property.property_extras?.[0]?.storage_code || '',
+      front_desk: property.property_extras?.[0]?.front_desk || '',
+      garage_number: property.property_extras?.[0]?.garage_number || '',
+      mailing_box: property.property_extras?.[0]?.mailing_box || '',
+      pool_access_code: property.property_extras?.[0]?.pool_access_code || '',
+    };
+
+    console.log('📝 [GeneralTab] New form data:', newFormData);
+
+    setFormData(newFormData);
+    setHasUnsavedChanges(false);
+  }, [property]);
+
+  // Listen for the save event from the parent component
+  useEffect(() => {
+    const onSave = () => {
+      if (hasUnsavedChanges) {
+        (async () => {
+          try {
+            await savePropertyMutation.mutateAsync(formData as FormData);
+          } catch (error) {
+            console.error('❌ [GeneralTab] saveProperty failed:', error);
+          }
+        })();
+      }
+    };
+    window.addEventListener('property-edit-save', onSave as EventListener);
+    return () => window.removeEventListener('property-edit-save', onSave);
+  }, [formData, hasUnsavedChanges, savePropertyMutation]);
 
   const handleInputChange = (field: keyof FormData, value: string | boolean | number) => {
     console.log('📝 [GeneralTab] Input changed:', { field, value, oldValue: formData[field as keyof typeof formData] });
     const newFormData = { ...formData, [field]: value };
     setFormData(newFormData);
     setHasUnsavedChanges(true);
-
-    // Notify parent about unsaved changes
-    window.dispatchEvent(new CustomEvent('property-edit-unsaved-changes', { detail: { hasChanges: true } }));
 
     // Clear validation error for this field when user starts typing
     if (validationErrors[field]) {
@@ -674,6 +631,67 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
                 className="h-11"
                 placeholder="ZIP/Postal Code"
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="latitude" className="text-sm font-medium">Latitude</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="latitude"
+                  value={formData.latitude}
+                  onChange={(e) => handleInputChange('latitude', e.target.value)}
+                  className={`h-11 ${validationErrors.latitude ? 'border-red-500 focus:border-red-500' : ''}`}
+                  placeholder="e.g., 40.7128"
+                  readOnly
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowLocationMap(true)}
+                  className="h-11 px-3 whitespace-nowrap border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
+                  title="Select location on map"
+                >
+                  <Map className="h-4 w-4" />
+                </Button>
+              </div>
+              {validationErrors.latitude && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {validationErrors.latitude}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="longitude" className="text-sm font-medium">Longitude</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="longitude"
+                  value={formData.longitude}
+                  onChange={(e) => handleInputChange('longitude', e.target.value)}
+                  className={`h-11 ${validationErrors.longitude ? 'border-red-500 focus:border-red-500' : ''}`}
+                  placeholder="e.g., -74.0060"
+                  readOnly
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowLocationMap(true)}
+                  className="h-11 px-3 whitespace-nowrap border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
+                  title="Select location on map"
+                >
+                  <MapPin className="h-4 w-4" />
+                </Button>
+              </div>
+              {validationErrors.longitude && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {validationErrors.longitude}
+                </p>
+              )}
             </div>
           </div>
 

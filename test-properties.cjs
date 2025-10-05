@@ -9,11 +9,16 @@ const { exec } = require('child_process');
 const https = require('https');
 const fs = require('fs');
 
+// Optionally load environment variables from .env file if present
+if (fs.existsSync('.env')) {
+  require('dotenv').config();
+}
+
 // Test configuration
 const config = {
   baseUrl: 'http://localhost:8084',
-  supabaseUrl: 'https://ihzkamfnctfreylyzgid.supabase.co',
-  supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloemthbWZuY3RmcmV5bHl6Z2lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5OTI4MjksImV4cCI6MjA3NDU2ODgyOX0.MBMAqte7iI49GTE3gnFVhdsHCVb2viA6qPjftwp3RtY',
+  supabaseUrl: process.env.SUPABASE_URL || 'https://ihzkamfnctfreylyzgid.supabase.co',
+  supabaseKey: process.env.SUPABASE_KEY || '',
   testPropertyId: null, // Will be set during testing
   logFile: './test-results.log'
 };

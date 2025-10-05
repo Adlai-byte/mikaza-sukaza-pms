@@ -33,108 +33,55 @@ export function LocationMap({
 }: LocationMapProps) {
   const [searchQuery, setSearchQuery] = useState(initialAddress);
   const [isSearching, setIsSearching] = useState(false);
-  const [isMapLoading, setIsMapLoading] = useState(true);
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
 
   // Initialize map
   useEffect(() => {
-    if (!isOpen || !mapRef.current) {
-      setIsMapLoading(true);
-      return;
-    }
+    console.log('Map initialization', { isOpen, mapRef: !!mapRef.current });
+    if (!isOpen || !mapRef.current) return;
 
-    // Use requestAnimationFrame for smoother rendering
-    requestAnimationFrame(() => {
-      if (!mapRef.current) return;
+    // Default center (Miami, FL)
+    const defaultCenter: [number, number] = initialLat && initialLng ? 
+      [initialLat, initialLng] : [25.7617, -80.1918];
 
-      // Default center (Miami, FL or provided coordinates)
-      const defaultCenter: [number, number] = initialLat && initialLng ?
-        [initialLat, initialLng] : [25.7617, -80.1918];
-
-      // Clean up existing map instance
-      if (leafletMapRef.current) {
-        leafletMapRef.current.remove();
-        leafletMapRef.current = null;
-      }
-
-      // Create map with performance optimizations
+    if (!leafletMapRef.current) {
+      console.log('Creating new map instance');
       const map = L.map(mapRef.current, {
         center: defaultCenter,
         zoom: 13,
-        scrollWheelZoom: true,
-        dragging: true,
-        zoomControl: true,
-        preferCanvas: true, // Use Canvas for better performance
-        fadeAnimation: false, // Disable fade for faster loading
-        zoomAnimation: true,
-        markerZoomAnimation: true
+        layers: [
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+          })
+        ]
       });
-
-      // Add tile layer with optimizations
-      const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
-        maxZoom: 18,
-        minZoom: 3,
-        keepBuffer: 2, // Keep 2 rows of tiles loaded outside viewport
-        updateWhenIdle: false, // Update tiles while panning for smoother experience
-        updateWhenZooming: false,
-        updateInterval: 150
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      // Track tile loading
-      let firstTileLoaded = false;
-      tileLayer.on('tileload', () => {
-        if (!firstTileLoaded) {
-          firstTileLoaded = true;
-          setIsMapLoading(false);
-          console.log('✅ Map tiles loaded');
-        }
-      });
-
-      tileLayer.on('tileerror', (error) => {
-        console.warn('⚠️ Tile loading error:', error);
-        setIsMapLoading(false); // Hide loader even on error
-      });
-
-      // Fallback: Hide loading after 1 second
-      setTimeout(() => {
-        setIsMapLoading(false);
-      }, 1000);
-
-      // Add click handler
       map.on('click', (e: L.LeafletMouseEvent) => {
         const { lat, lng } = e.latlng;
         updateMarker(lat, lng);
       });
 
       leafletMapRef.current = map;
+    }
 
-      // Invalidate size immediately for proper rendering
-      requestAnimationFrame(() => {
-        if (leafletMapRef.current) {
-          leafletMapRef.current.invalidateSize();
-        }
-      });
-
-      // Add initial marker if coordinates exist
-      if (initialLat && initialLng) {
-        updateMarker(initialLat, initialLng);
-      }
-    });
+    // Add initial marker if coordinates exist
+    if (initialLat && initialLng) {
+      updateMarker(initialLat, initialLng);
+    }
 
     return () => {
-      // Clean up on close
       if (leafletMapRef.current) {
         leafletMapRef.current.remove();
         leafletMapRef.current = null;
       }
-      if (markerRef.current) {
-        markerRef.current = null;
-      }
     };
-  }, [isOpen, initialLat, initialLng]);
+  }, [isOpen]);
 
   const updateMarker = (lat: number, lng: number) => {
     if (!leafletMapRef.current) return;
@@ -190,7 +137,7 @@ export function LocationMap({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
@@ -207,7 +154,7 @@ export function LocationMap({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Enter address or coordinates..."
+              placeholder="Enter address..."
               className="flex-1"
             />
             <Button onClick={handleSearch} disabled={isSearching}>
@@ -215,30 +162,15 @@ export function LocationMap({
             </Button>
           </div>
 
-          <div className="relative">
-            <div
-              ref={mapRef}
-              className="h-[500px] w-full rounded-lg border-2 border-gray-300 overflow-hidden bg-gray-50"
-              style={{ minHeight: '500px', width: '100%', zIndex: 1 }}
-            />
-            {isMapLoading && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50/90 backdrop-blur-sm rounded-lg">
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-2" />
-                  <p className="text-sm text-gray-700 font-medium">Loading Leaflet Map...</p>
-                </div>
-              </div>
-            )}
-          </div>
+                    <div 
+            ref={mapRef} 
+            className="h-[400px] w-full rounded-md border" 
+            style={{ minHeight: '400px', width: '100%' }}
+          />
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button
-              onClick={handleSave}
-              disabled={!markerRef.current}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <MapPin className="mr-2 h-4 w-4" />
+            <Button onClick={handleSave} disabled={!markerRef.current}>
               Save Location
             </Button>
           </div>

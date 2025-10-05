@@ -1,1 +1,2 @@
-:SUPABASE_ACCESS_TOKEN = sb_secret_jnjttqCZH8LCi1rhAcPvpQ_TR_euezd
+# Use environment variable for Supabase access token
+$SUPABASE_ACCESS_TOKEN = $env:SUPABASE_ACCESS_TOKEN
