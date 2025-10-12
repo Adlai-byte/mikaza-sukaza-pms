@@ -6,6 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -470,36 +478,7 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
         </div>
       )}
 
-      {/* Owners Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-4 text-center">
-            <User className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-blue-900">{owners.length}</p>
-            <p className="text-sm text-blue-700">Total Owners</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border-amber-200">
-          <CardContent className="p-4 text-center">
-            <Crown className="h-8 w-8 text-amber-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-amber-900">
-              {owners.filter(o => o.is_primary).length}
-            </p>
-            <p className="text-sm text-amber-700">Primary Owners</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-4 text-center">
-            <Phone className="h-8 w-8 text-green-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-green-900">
-              {owners.filter(o => o.cellphone_primary && o.cellphone_primary !== 'N/A').length}
-            </p>
-            <p className="text-sm text-green-700">With Phone</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Owners List */}
+      {/* Owners Table */}
       {filteredOwners.length === 0 ? (
         <div className="text-center py-12">
           <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -513,120 +492,92 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredOwners.map((owner) => (
-            <Card
-              key={owner.user_id}
-              className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] border-l-4 border-l-primary"
-            >
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <User className="h-5 w-5 text-primary" />
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Relationship</TableHead>
+                <TableHead>Primary Phone</TableHead>
+                <TableHead>USA Phone</TableHead>
+                <TableHead>WhatsApp</TableHead>
+                <TableHead className="w-24">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredOwners.map((owner) => (
+                <TableRow key={owner.user_id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {owner.first_name} {owner.last_name}
+                      {owner.is_primary && (
+                        <Badge className="bg-amber-500 hover:bg-amber-600">
+                          <Crown className="h-3 w-3 mr-1" />
+                          Primary
+                        </Badge>
+                      )}
                     </div>
-                    <div>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        {owner.first_name} {owner.last_name}
-                        {owner.is_primary && (
-                          <Badge className="bg-amber-500 hover:bg-amber-600">
-                            <Crown className="h-3 w-3 mr-1" />
-                            Primary
-                          </Badge>
-                        )}
-                      </CardTitle>
-                    </div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(owner)}
-                      disabled={updateOwnerMutation.isPending}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    {!owner.is_primary && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={deleteOwnerMutation.isPending}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Remove Owner</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to remove {owner.first_name} {owner.last_name}? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteOwnerMutation.mutate(owner.user_id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Remove
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                  </TableCell>
+                  <TableCell>{owner.email}</TableCell>
+                  <TableCell>
+                    {owner.relationship_to_main_owner && owner.relationship_to_main_owner !== 'None' ? (
+                      <Badge variant="secondary">{owner.relationship_to_main_owner}</Badge>
+                    ) : (
+                      '-'
                     )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center space-x-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{owner.email}</span>
-                </div>
-
-                {owner.relationship_to_main_owner && owner.relationship_to_main_owner !== 'None' && (
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Contact className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-blue-600 font-medium">{owner.relationship_to_main_owner} of Main Owner</span>
-                  </div>
-                )}
-
-                {owner.date_of_birth && (
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{new Date(owner.date_of_birth).toLocaleDateString()}</span>
-                  </div>
-                )}
-
-                {formatPhoneNumber(owner.cellphone_primary) && (
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatPhoneNumber(owner.cellphone_primary)}</span>
-                    <Badge variant="secondary">Primary</Badge>
-                  </div>
-                )}
-
-                {formatPhoneNumber(owner.cellphone_usa) && (
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Flag className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatPhoneNumber(owner.cellphone_usa)}</span>
-                    <Badge variant="secondary">USA</Badge>
-                  </div>
-                )}
-
-                {formatPhoneNumber(owner.whatsapp) && (
-                  <div className="flex items-center space-x-2 text-sm">
-                    <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatPhoneNumber(owner.whatsapp)}</span>
-                    <Badge variant="secondary">WhatsApp</Badge>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  </TableCell>
+                  <TableCell>{formatPhoneNumber(owner.cellphone_primary) || '-'}</TableCell>
+                  <TableCell>{formatPhoneNumber(owner.cellphone_usa) || '-'}</TableCell>
+                  <TableCell>{formatPhoneNumber(owner.whatsapp) || '-'}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(owner)}
+                        disabled={updateOwnerMutation.isPending}
+                        title="Edit Owner"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      {!owner.is_primary && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={deleteOwnerMutation.isPending}
+                              title="Delete Owner"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove Owner</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to remove {owner.first_name} {owner.last_name}? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteOwnerMutation.mutate(owner.user_id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Remove
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

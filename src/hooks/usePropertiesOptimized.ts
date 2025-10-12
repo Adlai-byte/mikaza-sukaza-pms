@@ -7,16 +7,16 @@ import { CACHE_CONFIG, OptimisticUpdates, getCacheManagers } from "@/lib/cache-m
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 
-// Query keys for cache management
+// Query keys for cache management - SINGLE SOURCE OF TRUTH
 export const propertyKeys = {
-  all: ['properties'] as const,
-  lists: () => [...propertyKeys.all, 'list'] as const,
-  list: (filters: Record<string, unknown>) => [...propertyKeys.lists(), { filters }] as const,
-  details: () => [...propertyKeys.all, 'detail'] as const,
-  detail: (id: string) => [...propertyKeys.details(), id] as const,
-  amenities: ['amenities'] as const,
-  rules: ['rules'] as const,
-};
+  all: () => ['properties'],
+  lists: () => ['properties', 'list'],
+  list: (filters?: Record<string, unknown>) => ['properties', 'list', ...(filters ? [JSON.stringify(filters)] : [])],
+  details: () => ['properties', 'detail'],
+  detail: (id: string) => ['properties', 'detail', id],
+  amenities: () => ['amenities'],
+  rules: () => ['rules'],
+} as const;
 
 // Fetch properties for LIST VIEW - lightweight query with only essential data
 const fetchPropertiesList = async (): Promise<Property[]> => {
@@ -203,17 +203,15 @@ export function usePropertiesOptimized() {
     refetch,
   } = useQuery({
     queryKey: propertyKeys.lists(),
-    queryFn: fetchPropertiesList, // Using optimized list query
-    staleTime: CACHE_CONFIG.SHORT, // Reduced to 5 minutes for fresher data
-    gcTime: CACHE_CONFIG.GC_MEDIUM, // 2 hours
-    // Reduced background refetching to avoid excessive queries
-    refetchInterval: 10 * 60 * 1000, // Refetch every 10 minutes (was 5)
-    refetchIntervalInBackground: false, // Disabled for better performance
+    queryFn: fetchPropertiesList,
+    staleTime: 1 * 60 * 1000, // 1 minute - reasonable cache
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // Amenities query with ultra-long caching (static data)
   const { data: amenities = [] } = useQuery({
-    queryKey: propertyKeys.amenities,
+    queryKey: propertyKeys.amenities(),
     queryFn: fetchAmenities,
     staleTime: CACHE_CONFIG.ULTRA_LONG, // 24 hours
     gcTime: CACHE_CONFIG.GC_ULTRA_LONG, // 48 hours
@@ -221,7 +219,7 @@ export function usePropertiesOptimized() {
 
   // Rules query with ultra-long caching (static data)
   const { data: rules = [] } = useQuery({
-    queryKey: propertyKeys.rules,
+    queryKey: propertyKeys.rules(),
     queryFn: fetchRules,
     staleTime: CACHE_CONFIG.ULTRA_LONG, // 24 hours
     gcTime: CACHE_CONFIG.GC_ULTRA_LONG, // 48 hours
@@ -409,52 +407,128 @@ export function usePropertiesOptimized() {
 
       const { location, communication, access, extras, units, amenity_ids, rule_ids, images, ...mainPropertyData } = propertyData;
 
-      // Update main property - filter out undefined values
+      // Update main property - include all explicitly set values (including null)
       const updateData = Object.fromEntries(
-        Object.entries(mainPropertyData).filter(([_, value]) => value !== undefined)
+        Object.entries(mainPropertyData)
+          .filter(([_, value]) => value !== undefined)
       );
+      
+      console.log('📝 [PropertyEdit] Processing update:', {
+        propertyId,
+        updateData,
+        originalData: mainPropertyData,
+        hasChanges: Object.keys(updateData).length > 0
+      });
 
-      if (Object.keys(updateData).length > 0) {
-        const { error: propertyError } = await supabase
-          .from('properties')
-          .update(updateData as any)
-          .eq('property_id', propertyId);
+      console.log('📝 [PropertyEdit] Updating with data:', {
+        propertyId,
+        updateData,
+        originalData: mainPropertyData
+      });
 
-        if (propertyError) throw propertyError;
+      // Always perform the update even if updateData is empty to trigger timestamps
+      const { data: updatedData, error: propertyError } = await supabase
+        .from('properties')
+        .update({
+          ...updateData,
+          updated_at: new Date().toISOString() // Force update timestamp
+        } as any)
+        .eq('property_id', propertyId)
+        .select(`
+          property_id,
+          owner_id,
+          property_name,
+          property_type,
+          is_active,
+          is_booking,
+          is_pets_allowed,
+          capacity,
+          max_capacity,
+          num_bedrooms,
+          num_bathrooms,
+          num_half_bath,
+          num_wcs,
+          num_kitchens,
+          num_living_rooms,
+          size_sqf,
+          created_at,
+          updated_at,
+          owner:users!properties_owner_id_fkey (
+            user_id,
+            first_name,
+            last_name,
+            email
+          ),
+          location:property_location(*),
+          communication:property_communication(*),
+          access:property_access(*),
+          extras:property_extras(*),
+          units(*),
+          images:property_images(*),
+          amenities:property_amenities(
+            amenities(*)
+          ),
+          rules:property_rules(
+            rules(*)
+          )
+        `)
+        .single();
+
+      if (propertyError) {
+        console.error('❌ [PropertyEdit] Update failed:', propertyError);
+        throw propertyError;
       }
 
-      // Update related records
-      const promises = [];
+      console.log('✅ [PropertyEdit] Update successful:', {
+        propertyId,
+        updatedFields: Object.keys(updateData),
+        newData: updatedData
+      });
+
+      // Update related records with error handling
+      const relatedUpdates = [];
 
       // Location
-      if (location) {
-        promises.push(
+      if (location !== undefined) {
+        relatedUpdates.push(
           supabase.from('property_location')
             .upsert([{ ...location, property_id: propertyId }], { onConflict: 'property_id' })
+            .then(({ error }) => {
+              if (error) throw new Error(`Failed to update location: ${error.message}`);
+            })
         );
       }
 
       // Communication
-      if (communication) {
-        promises.push(
+      if (communication !== undefined) {
+        relatedUpdates.push(
           supabase.from('property_communication')
             .upsert([{ ...communication, property_id: propertyId }], { onConflict: 'property_id' })
+            .then(({ error }) => {
+              if (error) throw new Error(`Failed to update communication: ${error.message}`);
+            })
         );
       }
 
       // Access
-      if (access) {
-        promises.push(
+      if (access !== undefined) {
+        relatedUpdates.push(
           supabase.from('property_access')
             .upsert([{ ...access, property_id: propertyId }], { onConflict: 'property_id' })
+            .then(({ error }) => {
+              if (error) throw new Error(`Failed to update access: ${error.message}`);
+            })
         );
       }
 
       // Extras
-      if (extras) {
-        promises.push(
+      if (extras !== undefined) {
+        relatedUpdates.push(
           supabase.from('property_extras')
             .upsert([{ ...extras, property_id: propertyId }], { onConflict: 'property_id' })
+            .then(({ error }) => {
+              if (error) throw new Error(`Failed to update extras: ${error.message}`);
+            })
         );
       }
 
@@ -464,8 +538,11 @@ export function usePropertiesOptimized() {
 
         if (units.length > 0) {
           const unitsWithPropertyId = units.map(unit => ({ ...unit, property_id: propertyId }));
-          promises.push(
+          relatedUpdates.push(
             supabase.from('units').insert(unitsWithPropertyId)
+              .then(({ error }) => {
+                if (error) throw new Error(`Failed to update units: ${error.message}`);
+              })
           );
         }
       }
@@ -478,8 +555,11 @@ export function usePropertiesOptimized() {
         // Add new amenities
         if (amenity_ids.length > 0) {
           const propertyAmenities = amenity_ids.map(amenity_id => ({ property_id: propertyId, amenity_id }));
-          promises.push(
+          relatedUpdates.push(
             supabase.from('property_amenities').insert(propertyAmenities)
+              .then(({ error }) => {
+                if (error) throw new Error(`Failed to update amenities: ${error.message}`);
+              })
           );
         }
       }
@@ -492,8 +572,11 @@ export function usePropertiesOptimized() {
         // Add new rules
         if (rule_ids.length > 0) {
           const propertyRules = rule_ids.map(rule_id => ({ property_id: propertyId, rule_id }));
-          promises.push(
+          relatedUpdates.push(
             supabase.from('property_rules').insert(propertyRules)
+              .then(({ error }) => {
+                if (error) throw new Error(`Failed to update rules: ${error.message}`);
+              })
           );
         }
       }
@@ -511,49 +594,105 @@ export function usePropertiesOptimized() {
             image_url: image.url,
             image_title: image.title
           }));
-          promises.push(
+          relatedUpdates.push(
             supabase.from('property_images').insert(propertyImages)
+              .then(({ error }) => {
+                if (error) throw new Error(`Failed to update images: ${error.message}`);
+              })
           );
         }
       }
 
-      await Promise.all(promises);
+      await Promise.all(relatedUpdates);
 
       await logActivity('PROPERTY_UPDATED', {
         propertyId,
         updatedFields: Object.keys(mainPropertyData)
       }, undefined, 'Admin');
 
-      return propertyId;
+      // Transform the data to match our Property type (same as fetchPropertyDetail)
+      const transformedData = {
+        ...updatedData,
+        amenities: updatedData.amenities?.map((pa: any) => pa.amenities) || [],
+        rules: updatedData.rules?.map((pr: any) => pr.rules) || [],
+      } as Property;
+
+      console.log('✅ [PropertyEdit] Returning fresh data:', transformedData);
+
+      // CRITICAL FIX: Return the FULL updated property data, not just the ID
+      return transformedData;
     },
-    onMutate: async ({ propertyId, propertyData }) => {
-      // Cancel any outgoing refetches
+    onMutate: async ({ propertyId }) => {
+      // Cancel queries to prevent race conditions
+      await queryClient.cancelQueries({ queryKey: propertyKeys.detail(propertyId) });
       await queryClient.cancelQueries({ queryKey: propertyKeys.lists() });
-
-      // Snapshot the previous value
-      const previousProperties = queryClient.getQueryData(propertyKeys.lists());
-
-      // Optimistically update the cache
-      OptimisticUpdates.updateProperty(queryClient, propertyId, propertyData);
-
-      // Return context with the previous data
-      return { previousProperties };
     },
-    onSuccess: () => {
-      // Invalidate and refetch properties
-      queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
+    onSuccess: async (freshPropertyData) => {
+      const propertyId = freshPropertyData.property_id;
+
+      console.log('🎉 [Hook] Update successful, updating caches:', {
+        propertyId,
+        propertyName: freshPropertyData.property_name
+      });
+
+      // Update the detail cache with fresh data immediately
+      queryClient.setQueryData(propertyKeys.detail(propertyId), freshPropertyData);
+
+      // CRITICAL FIX: Update the properties LIST cache immediately
+      // This ensures the table shows updated data when user navigates back
+      queryClient.setQueryData(propertyKeys.lists(), (oldData: any) => {
+        if (!oldData || !Array.isArray(oldData)) {
+          console.log('⚠️ [Hook] No list data to update');
+          return oldData;
+        }
+
+        console.log('📝 [Hook] Updating property in list cache:', {
+          propertyId,
+          oldCount: oldData.length,
+          updating: freshPropertyData.property_name
+        });
+
+        // Find and update the property in the list
+        const updated = oldData.map((prop: any) => {
+          if (prop.property_id === propertyId) {
+            // Merge fresh data with existing list item (preserving list-specific fields like owner, images)
+            return {
+              ...prop,
+              property_name: freshPropertyData.property_name,
+              property_type: freshPropertyData.property_type,
+              is_active: freshPropertyData.is_active,
+              is_booking: freshPropertyData.is_booking,
+              is_pets_allowed: freshPropertyData.is_pets_allowed,
+              capacity: freshPropertyData.capacity,
+              max_capacity: freshPropertyData.max_capacity,
+              num_bedrooms: freshPropertyData.num_bedrooms,
+              num_bathrooms: freshPropertyData.num_bathrooms,
+              num_half_bath: freshPropertyData.num_half_bath,
+              num_wcs: freshPropertyData.num_wcs,
+              num_kitchens: freshPropertyData.num_kitchens,
+              num_living_rooms: freshPropertyData.num_living_rooms,
+              size_sqf: freshPropertyData.size_sqf,
+              updated_at: freshPropertyData.updated_at,
+              // Update location if available
+              location: freshPropertyData.location || prop.location,
+            };
+          }
+          return prop;
+        });
+
+        console.log('✅ [Hook] List cache updated successfully');
+        return updated;
+      });
+
       toast({
         title: "Success",
         description: "Property updated successfully",
       });
     },
-    onError: (error, { propertyId, propertyData }, context) => {
-      // Rollback optimistic update
-      if (context?.previousProperties) {
-        queryClient.setQueryData(propertyKeys.lists(), context.previousProperties);
-      }
+    onError: (error, { propertyId }) => {
+      // SIMPLE: Just refetch to get back to correct state
+      queryClient.invalidateQueries({ queryKey: propertyKeys.detail(propertyId) });
 
-      console.error('Error updating property:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update property",
@@ -618,15 +757,6 @@ export function usePropertiesOptimized() {
     },
   });
 
-  // Handle errors
-  if (propertiesError) {
-    toast({
-      title: "Error",
-      description: "Failed to fetch properties",
-      variant: "destructive",
-    });
-  }
-
   return {
     properties,
     loading,
@@ -659,10 +789,10 @@ export function usePropertyDetail(propertyId: string | undefined) {
   } = useQuery({
     queryKey: propertyKeys.detail(propertyId || ''),
     queryFn: () => fetchPropertyDetail(propertyId!),
-    enabled: !!propertyId, // Only fetch when propertyId is provided
-    staleTime: CACHE_CONFIG.SHORT, // 5 minutes
-    gcTime: CACHE_CONFIG.GC_MEDIUM, // 2 hours
-    retry: 2, // Retry failed requests twice
+    enabled: !!propertyId,
+    staleTime: 0, // SIMPLE: Always refetch when invalidated
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
   return {

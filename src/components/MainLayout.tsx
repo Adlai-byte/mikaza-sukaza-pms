@@ -30,7 +30,7 @@ export function MainLayout() {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
+        <AppSidebar key={profile?.user_type} />
         
         <div className="flex-1 flex flex-col">
           {/* Header */}

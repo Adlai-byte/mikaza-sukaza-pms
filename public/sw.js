@@ -15,12 +15,12 @@ const CACHE_STRATEGIES = {
 };
 
 // Static assets to cache immediately
+// IMPORTANT: Only cache assets that actually exist
+// Vite builds to /assets/ not /static/
 const STATIC_ASSETS = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  '/manifest.json',
-  // Add other static assets
+  // Static assets will be cached dynamically as they're loaded
+  // This prevents 404 errors during service worker installation
 ];
 
 // Routes and their caching strategies
@@ -65,14 +65,24 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE)
       .then((cache) => {
         console.log('📦 Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        // Cache assets individually to avoid failure if any single asset fails
+        return Promise.allSettled(
+          STATIC_ASSETS.map(url =>
+            cache.add(url).catch(err => {
+              console.warn(`Failed to cache ${url}:`, err.message);
+              return null;
+            })
+          )
+        );
       })
       .then(() => {
-        console.log('✅ Static assets cached');
+        console.log('✅ Service Worker installed (assets will be cached dynamically)');
         return self.skipWaiting();
       })
       .catch((error) => {
-        console.error('❌ Failed to cache static assets:', error);
+        console.error('❌ Failed to install service worker:', error);
+        // Don't fail installation - skip waiting anyway
+        return self.skipWaiting();
       })
   );
 });

@@ -18,12 +18,19 @@ export const CACHE_CONFIG = {
 
 // Simple localStorage-based persistence with quota management
 const createSimplePersister = () => {
-  const MAX_CACHE_SIZE = 4 * 1024 * 1024; // 4MB limit to avoid quota errors
+  const MAX_CACHE_SIZE = 10 * 1024 * 1024; // 10MB limit (increased from 4MB)
+  const CACHE_TTL = 30 * 60 * 1000; // 30 minutes TTL
 
   return {
     persistClient: async (persistedClient: any) => {
       try {
-        const serialized = JSON.stringify(persistedClient);
+        // Add timestamp to each cached entry
+        const timestampedClient = {
+          cachedAt: Date.now(),
+          queries: persistedClient
+        };
+
+        const serialized = JSON.stringify(timestampedClient);
 
         // Check if cache is too large
         if (serialized.length > MAX_CACHE_SIZE) {
@@ -46,7 +53,20 @@ const createSimplePersister = () => {
     restoreClient: async () => {
       try {
         const cached = localStorage.getItem('mikaza-query-cache');
-        return cached ? JSON.parse(cached) : undefined;
+        if (!cached) return undefined;
+
+        const parsed = JSON.parse(cached);
+
+        // Check if cache has expired
+        const cacheAge = Date.now() - (parsed.cachedAt || 0);
+        if (cacheAge > CACHE_TTL) {
+          console.log('⏰ Cache expired, clearing old data');
+          localStorage.removeItem('mikaza-query-cache');
+          return undefined;
+        }
+
+        console.log(`✅ Restored cache (age: ${Math.round(cacheAge / 60000)} minutes)`);
+        return parsed.queries;
       } catch (error) {
         console.warn('Failed to restore query cache:', error);
         // Clear corrupted cache
@@ -105,13 +125,25 @@ export const createOptimizedQueryClient = () => {
       }
     });
 
-    // Persist cache periodically
+    // Persist cache periodically (with selective persistence to reduce size)
     setInterval(() => {
       const state = queryClient.getQueryCache().getAll();
       const persistableQueries = state
         .filter(query => {
-          const queryKey = query.queryKey[0] as string;
-          return ['properties', 'users', 'amenities', 'rules'].includes(queryKey);
+          const queryKey = query.queryKey;
+          const firstKey = queryKey[0] as string;
+
+          // Only persist list queries, not detail queries
+          // Exclude queries with 'detail', 'edit', or specific IDs
+          const isListQuery = ['properties', 'users', 'amenities', 'rules'].includes(firstKey);
+          const isDetailQuery = queryKey.length > 1 && (
+            queryKey.includes('detail') ||
+            queryKey.includes('edit') ||
+            queryKey.includes('propertyEdit') ||
+            typeof queryKey[1] === 'string' && queryKey[1].includes('-') // UUID pattern
+          );
+
+          return isListQuery && !isDetailQuery;
         })
         .map(query => ({
           queryKey: query.queryKey,
@@ -120,6 +152,15 @@ export const createOptimizedQueryClient = () => {
         }));
 
       if (persistableQueries.length > 0) {
+        // Calculate cache size before persisting
+        const timestampedClient = {
+          cachedAt: Date.now(),
+          queries: persistableQueries
+        };
+        const serialized = JSON.stringify(timestampedClient);
+        const cacheSizeMB = (serialized.length / (1024 * 1024)).toFixed(2);
+
+        console.log(`💾 Persisting ${persistableQueries.length} list queries | Cache size: ${cacheSizeMB} MB / 10 MB`);
         persister.persistClient(persistableQueries);
       }
     }, 30 * 1000); // Every 30 seconds
@@ -465,3 +506,51 @@ export const getCacheManagers = async () => {
     };
   }
 };
+
+// Cache monitoring utility - can be called from browser console
+export const getCacheStats = () => {
+  try {
+    const cached = localStorage.getItem('mikaza-query-cache');
+
+    if (!cached) {
+      console.log('📊 No cache found in localStorage');
+      return { exists: false, size: 0 };
+    }
+
+    const sizeBytes = cached.length;
+    const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(2);
+    const maxSizeMB = 10;
+    const percentUsed = ((parseFloat(sizeMB) / maxSizeMB) * 100).toFixed(1);
+
+    const parsed = JSON.parse(cached);
+    const cacheAge = parsed.cachedAt ? Date.now() - parsed.cachedAt : 0;
+    const cacheAgeMinutes = Math.round(cacheAge / 60000);
+    const numQueries = parsed.queries ? parsed.queries.length : 0;
+
+    console.log('📊 Cache Statistics:');
+    console.log(`   Size: ${sizeMB} MB / ${maxSizeMB} MB (${percentUsed}% used)`);
+    console.log(`   Queries: ${numQueries}`);
+    console.log(`   Age: ${cacheAgeMinutes} minutes (TTL: 30 min)`);
+    console.log(`   Status: ${parseFloat(sizeMB) > maxSizeMB ? '⚠️ OVER LIMIT' : '✅ OK'}`);
+
+    return {
+      exists: true,
+      sizeBytes,
+      sizeMB: parseFloat(sizeMB),
+      maxSizeMB,
+      percentUsed: parseFloat(percentUsed),
+      numQueries,
+      cacheAgeMinutes,
+      isOverLimit: parseFloat(sizeMB) > maxSizeMB,
+    };
+  } catch (error) {
+    console.error('❌ Failed to get cache stats:', error);
+    return { error: true };
+  }
+};
+
+// Make cache stats available globally for debugging
+if (typeof window !== 'undefined') {
+  (window as any).getCacheStats = getCacheStats;
+  console.log('💡 Tip: Run getCacheStats() in console to view cache statistics');
+}
