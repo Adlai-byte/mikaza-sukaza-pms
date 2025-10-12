@@ -203,10 +203,11 @@ export function usePropertiesOptimized() {
     refetch,
   } = useQuery({
     queryKey: propertyKeys.lists(),
-    queryFn: fetchPropertiesList,
-    staleTime: 1 * 60 * 1000, // 1 minute - reasonable cache
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    queryFn: fetchPropertiesList, // Using optimized list query
+    staleTime: 0, // Always consider data stale to force refresh
+    gcTime: 5 * 60 * 1000, // 5 minutes in cache
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
   // Amenities query with ultra-long caching (static data)
@@ -610,89 +611,70 @@ export function usePropertiesOptimized() {
         updatedFields: Object.keys(mainPropertyData)
       }, undefined, 'Admin');
 
-      // Transform the data to match our Property type (same as fetchPropertyDetail)
-      const transformedData = {
-        ...updatedData,
-        amenities: updatedData.amenities?.map((pa: any) => pa.amenities) || [],
-        rules: updatedData.rules?.map((pr: any) => pr.rules) || [],
-      } as Property;
-
-      console.log('✅ [PropertyEdit] Returning fresh data:', transformedData);
-
-      // CRITICAL FIX: Return the FULL updated property data, not just the ID
-      return transformedData;
+      return propertyId;
     },
     onMutate: async ({ propertyId }) => {
-      // Cancel queries to prevent race conditions
-      await queryClient.cancelQueries({ queryKey: propertyKeys.detail(propertyId) });
-      await queryClient.cancelQueries({ queryKey: propertyKeys.lists() });
+      // Cancel any outgoing refetches to prevent race conditions
+      await queryClient.cancelQueries({ queryKey: propertyKeys.all() });
+      console.log('📝 [PropertyEdit] Starting update for property:', propertyId);
+      
+      // Get the current query cache
+      const previousData = {
+        detail: queryClient.getQueryData(propertyKeys.detail(propertyId)),
+        list: queryClient.getQueryData(propertyKeys.lists())
+      };
+
+      return { previousData };
     },
-    onSuccess: async (freshPropertyData) => {
-      const propertyId = freshPropertyData.property_id;
+    onSuccess: async (propertyId) => {
+      console.log('✅ [PropertyEdit] Update succeeded, updating cache and refetching...');
 
-      console.log('🎉 [Hook] Update successful, updating caches:', {
-        propertyId,
-        propertyName: freshPropertyData.property_name
-      });
+      // Immediately fetch the latest data for both detail and list
+      const [freshDetailData, freshListData] = await Promise.all([
+        fetchPropertyDetail(propertyId),
+        fetchPropertiesList()
+      ]);
+      
+      // Update both caches immediately
+      queryClient.setQueryData(propertyKeys.detail(propertyId), freshDetailData);
+      queryClient.setQueryData(propertyKeys.lists(), freshListData);
+      
+      // Then invalidate and refetch all queries to ensure full consistency
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: propertyKeys.detail(propertyId),
+          refetchType: 'all'
+        }),
+        queryClient.invalidateQueries({
+          queryKey: propertyKeys.lists(),
+          refetchType: 'all'
+        })
+      ]);
 
-      // Update the detail cache with fresh data immediately
-      queryClient.setQueryData(propertyKeys.detail(propertyId), freshPropertyData);
-
-      // CRITICAL FIX: Update the properties LIST cache immediately
-      // This ensures the table shows updated data when user navigates back
-      queryClient.setQueryData(propertyKeys.lists(), (oldData: any) => {
-        if (!oldData || !Array.isArray(oldData)) {
-          console.log('⚠️ [Hook] No list data to update');
-          return oldData;
-        }
-
-        console.log('📝 [Hook] Updating property in list cache:', {
-          propertyId,
-          oldCount: oldData.length,
-          updating: freshPropertyData.property_name
-        });
-
-        // Find and update the property in the list
-        const updated = oldData.map((prop: any) => {
-          if (prop.property_id === propertyId) {
-            // Merge fresh data with existing list item (preserving list-specific fields like owner, images)
-            return {
-              ...prop,
-              property_name: freshPropertyData.property_name,
-              property_type: freshPropertyData.property_type,
-              is_active: freshPropertyData.is_active,
-              is_booking: freshPropertyData.is_booking,
-              is_pets_allowed: freshPropertyData.is_pets_allowed,
-              capacity: freshPropertyData.capacity,
-              max_capacity: freshPropertyData.max_capacity,
-              num_bedrooms: freshPropertyData.num_bedrooms,
-              num_bathrooms: freshPropertyData.num_bathrooms,
-              num_half_bath: freshPropertyData.num_half_bath,
-              num_wcs: freshPropertyData.num_wcs,
-              num_kitchens: freshPropertyData.num_kitchens,
-              num_living_rooms: freshPropertyData.num_living_rooms,
-              size_sqf: freshPropertyData.size_sqf,
-              updated_at: freshPropertyData.updated_at,
-              // Update location if available
-              location: freshPropertyData.location || prop.location,
-            };
-          }
-          return prop;
-        });
-
-        console.log('✅ [Hook] List cache updated successfully');
-        return updated;
-      });
+      console.log('✅ [PropertyEdit] Cache invalidated and fresh data fetched for property:', propertyId);
 
       toast({
         title: "Success",
         description: "Property updated successfully",
       });
     },
-    onError: (error, { propertyId }) => {
-      // SIMPLE: Just refetch to get back to correct state
-      queryClient.invalidateQueries({ queryKey: propertyKeys.detail(propertyId) });
+    onError: (error, { propertyId }, context) => {
+      console.error('❌ [PropertyEdit] Update error:', error);
 
+      // Restore previous data from context
+      if (context?.previousData) {
+        const { detail, list } = context.previousData;
+        if (detail) {
+          queryClient.setQueryData(propertyKeys.detail(propertyId), detail);
+        }
+        if (list) {
+          queryClient.setQueryData(propertyKeys.lists(), list);
+        }
+      }
+
+      // Force refetch to ensure consistent state
+      queryClient.invalidateQueries({ queryKey: propertyKeys.all() });
+      
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update property",
@@ -789,10 +771,13 @@ export function usePropertyDetail(propertyId: string | undefined) {
   } = useQuery({
     queryKey: propertyKeys.detail(propertyId || ''),
     queryFn: () => fetchPropertyDetail(propertyId!),
-    enabled: !!propertyId,
-    staleTime: 0, // SIMPLE: Always refetch when invalidated
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
+    enabled: !!propertyId, // Only fetch when propertyId is provided
+    staleTime: 0, // Always treat as stale to force refresh
+    gcTime: 0, // Don't cache at all in edit mode
+    retry: 2, // Retry failed requests twice
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchInterval: 1000, // Poll every second in edit mode
   });
 
   return {
