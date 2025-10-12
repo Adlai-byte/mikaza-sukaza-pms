@@ -6,14 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -48,7 +40,6 @@ import {
   Shield,
   Home,
   Wrench,
-  Search,
 } from 'lucide-react';
 import { usePropertyProviders } from '@/hooks/usePropertyEditTabs';
 import { ProvidersTabSkeleton, TabLoadingSpinner } from './PropertyEditSkeleton';
@@ -113,7 +104,6 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
 
   const [showForm, setShowForm] = useState(false);
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const emptyProvider: Omit<Provider, 'provider_id' | 'property_id' | 'created_at'> = {
     provider_name: '',
@@ -389,121 +379,132 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
         renderEmptyState()
       ) : (
         <>
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search providers by name, type, or phone..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+          {/* Enhanced Provider Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {providers.map((provider) => {
+              const Icon = getProviderIcon(provider.provider_type);
+              const colorClass = getProviderColor(provider.provider_type);
 
-          {/* Providers Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Provider</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Billing Name</TableHead>
-                  <TableHead>Website</TableHead>
-                  <TableHead className="w-24">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {providers
-                  .filter(provider =>
-                    `${provider.provider_name} ${provider.provider_type} ${provider.phone_number || ''}`
-                      .toLowerCase()
-                      .includes(searchQuery.toLowerCase())
-                  )
-                  .map((provider) => {
-                    const Icon = getProviderIcon(provider.provider_type);
-                    const colorClass = getProviderColor(provider.provider_type);
-
-                    return (
-                      <TableRow key={provider.provider_id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center space-x-3">
-                            <div className={`p-2 rounded-lg ${colorClass} text-white`}>
-                              <Icon className="h-4 w-4" />
-                            </div>
-                            <span>{provider.provider_name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{provider.provider_type}</Badge>
-                        </TableCell>
-                        <TableCell>{provider.phone_number || '-'}</TableCell>
-                        <TableCell>{provider.account_number || '-'}</TableCell>
-                        <TableCell>{provider.billing_name || '-'}</TableCell>
-                        <TableCell>
-                          {provider.website ? (
-                            <a
-                              href={provider.website.startsWith('http') ? provider.website : `https://${provider.website}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline flex items-center"
-                            >
-                              <Globe className="h-4 w-4 mr-1" />
-                              Link
-                            </a>
-                          ) : (
-                            '-'
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-1">
+              return (
+                <Card key={provider.provider_id} className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] border-l-4 border-l-primary">
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-lg ${colorClass} text-white`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg">{provider.provider_name}</CardTitle>
+                          <Badge variant="secondary" className="mt-1">
+                            {provider.provider_type}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(provider)}
+                          disabled={isUpdating}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleEdit(provider)}
-                              disabled={isUpdating}
-                              title="Edit Provider"
+                              disabled={isDeleting}
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                             >
-                              <Edit className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={isDeleting}
-                                  title="Delete Provider"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Provider</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete {provider.provider_name}? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteProvider(provider.provider_id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
-            </Table>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Provider</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete {provider.provider_name}? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteProvider(provider.provider_id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {provider.phone_number && (
+                      <div className="flex items-center space-x-2 text-sm">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span>{provider.phone_number}</span>
+                      </div>
+                    )}
+                    {provider.account_number && (
+                      <div className="flex items-center space-x-2 text-sm">
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                        <span>Account: {provider.account_number}</span>
+                      </div>
+                    )}
+                    {provider.billing_name && (
+                      <div className="flex items-center space-x-2 text-sm">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span>{provider.billing_name}</span>
+                      </div>
+                    )}
+                    {provider.website && (
+                      <div className="flex items-center space-x-2 text-sm">
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                        <a
+                          href={provider.website.startsWith('http') ? provider.website : `https://${provider.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Visit Website
+                        </a>
+                      </div>
+                    )}
+                    {provider.observations && (
+                      <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                        {provider.observations}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
+
+          {/* Summary Stats */}
+          <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Providers</p>
+                  <p className="text-2xl font-bold text-primary">{providers.length}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">
+                    {providers.filter(p => p.provider_type === 'Electric').length > 0 && '⚡ '}
+                    {providers.filter(p => p.provider_type === 'Internet').length > 0 && '📡 '}
+                    {providers.filter(p => p.provider_type === 'Water').length > 0 && '💧 '}
+                    {providers.filter(p => p.provider_type === 'Gas').length > 0 && '🔥 '}
+                  </p>
+                  <p className="text-sm font-medium">Services Configured</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

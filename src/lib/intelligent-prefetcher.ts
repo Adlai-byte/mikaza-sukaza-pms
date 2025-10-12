@@ -41,9 +41,6 @@ export class IntelligentPrefetcher {
   private isProcessingQueue = false;
   private sessionId: string;
 
-  // Minimum confidence threshold for prefetching (increased from 0.50 to 0.75)
-  private readonly MIN_CONFIDENCE_THRESHOLD = 0.75;
-
   // Machine learning model weights (simplified)
   private modelWeights = {
     recentActivity: 0.4,
@@ -156,20 +153,15 @@ export class IntelligentPrefetcher {
     // 4. User behavior predictions
     predictions.push(...this.getUserBehaviorPredictions());
 
-    // Filter by minimum confidence threshold
-    const filteredPredictions = predictions.filter(p => p.confidence >= this.MIN_CONFIDENCE_THRESHOLD);
-
     // Sort by confidence and priority
-    filteredPredictions.sort((a, b) => {
+    predictions.sort((a, b) => {
       const priorityWeight = { high: 3, medium: 2, low: 1 };
       const priorityScore = priorityWeight[b.priority] - priorityWeight[a.priority];
       return priorityScore || b.confidence - a.confidence;
     });
 
-    // Update prefetch queue (reduced from 20 to 10 items)
-    this.prefetchQueue = filteredPredictions.slice(0, 10);
-
-    console.log(`🎯 Prefetch queue updated: ${this.prefetchQueue.length} items (filtered from ${predictions.length})`);
+    // Update prefetch queue
+    this.prefetchQueue = predictions.slice(0, 20); // Keep top 20 predictions
   }
 
   // Pattern-based predictions
@@ -364,17 +356,17 @@ export class IntelligentPrefetcher {
       // Always process high priority items
       await this.processPredictions(highPriorityItems);
 
-      // Process medium priority if network is good (reduced from 5 to 2)
+      // Process medium priority if network is good
       if (!isSlowConnection) {
-        await this.processPredictions(mediumPriorityItems.slice(0, 2));
+        await this.processPredictions(mediumPriorityItems.slice(0, 5));
       }
 
-      // Process low priority only on fast connections during idle time (reduced from 3 to 1)
+      // Process low priority only on fast connections during idle time
       if (!isSlowConnection && navigator.userAgent.indexOf('Chrome') > -1) {
         // Use requestIdleCallback if available
         if ('requestIdleCallback' in window) {
           (window as any).requestIdleCallback(() => {
-            this.processPredictions(lowPriorityItems.slice(0, 1));
+            this.processPredictions(lowPriorityItems.slice(0, 3));
           });
         }
       }

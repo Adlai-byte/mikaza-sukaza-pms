@@ -6,14 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -458,7 +450,36 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
         </div>
       )}
 
-      {/* Vehicles Table */}
+      {/* Vehicles Statistics */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+          <CardContent className="p-4 text-center">
+            <Car className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-blue-900">{vehicles.length}</p>
+            <p className="text-sm text-blue-700">Total Vehicles</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+          <CardContent className="p-4 text-center">
+            <Key className="h-8 w-8 text-green-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-green-900">
+              {vehicles.filter(v => v.license_plate).length}
+            </p>
+            <p className="text-sm text-green-700">With License Plates</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border-amber-200">
+          <CardContent className="p-4 text-center">
+            <Shield className="h-8 w-8 text-amber-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-amber-900">
+              {vehicles.filter(v => v.insurance_info).length}
+            </p>
+            <p className="text-sm text-amber-700">With Insurance</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Vehicles List */}
       {filteredVehicles.length === 0 ? (
         <div className="text-center py-12">
           <Car className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -478,104 +499,126 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
           )}
         </div>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Color</TableHead>
-                <TableHead>License Plate</TableHead>
-                <TableHead>Owner</TableHead>
-                <TableHead>VIN</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-24">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredVehicles.map((vehicle) => (
-                <TableRow key={vehicle.vehicle_id}>
-                  <TableCell className="font-medium">{getVehicleDisplayName(vehicle)}</TableCell>
-                  <TableCell>{vehicle.color || '-'}</TableCell>
-                  <TableCell>
-                    {vehicle.license_plate ? (
-                      <Badge variant="outline" className="font-mono">
-                        {vehicle.license_plate}
-                      </Badge>
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                  <TableCell>{vehicle.owner_name || '-'}</TableCell>
-                  <TableCell>
-                    {vehicle.vin ? (
-                      <span className="font-mono text-xs">{vehicle.vin}</span>
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {vehicle.registration_info && (
-                        <Badge variant="secondary" title={vehicle.registration_info}>
-                          <FileText className="h-3 w-3 mr-1" />
-                          Reg
-                        </Badge>
-                      )}
-                      {vehicle.insurance_info && (
-                        <Badge variant="secondary" title={vehicle.insurance_info}>
-                          <Shield className="h-3 w-3 mr-1" />
-                          Ins
-                        </Badge>
-                      )}
-                      {!vehicle.registration_info && !vehicle.insurance_info && '-'}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {filteredVehicles.map((vehicle) => (
+            <Card
+              key={vehicle.vehicle_id}
+              className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] border-l-4 border-l-primary"
+            >
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Car className="h-5 w-5 text-primary" />
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(vehicle)}
-                        disabled={updateVehicleMutation.isPending}
-                        title="Edit Vehicle"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={deleteVehicleMutation.isPending}
-                            title="Delete Vehicle"
+                    <div>
+                      <CardTitle className="text-lg">{getVehicleDisplayName(vehicle)}</CardTitle>
+                      {vehicle.color && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <Palette className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">{vehicle.color}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(vehicle)}
+                      disabled={updateVehicleMutation.isPending}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={deleteVehicleMutation.isPending}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove Vehicle</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to remove {getVehicleDisplayName(vehicle)}? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteVehicleMutation.mutate(vehicle.vehicle_id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Remove Vehicle</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to remove {getVehicleDisplayName(vehicle)}? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteVehicleMutation.mutate(vehicle.vehicle_id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Remove
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                            Remove
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {vehicle.license_plate && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 text-sm">
+                      <Key className="h-4 w-4 text-muted-foreground" />
+                      <span>License Plate</span>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    <Badge variant="outline" className="font-mono">
+                      {vehicle.license_plate}
+                    </Badge>
+                  </div>
+                )}
+
+                {vehicle.owner_name && (
+                  <div className="flex items-center space-x-2 text-sm">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>{vehicle.owner_name}</span>
+                  </div>
+                )}
+
+                {vehicle.vin && (
+                  <div className="flex items-center space-x-2 text-sm">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-mono text-xs">{vehicle.vin}</span>
+                  </div>
+                )}
+
+                {(vehicle.registration_info || vehicle.insurance_info) && (
+                  <div className="pt-3 border-t space-y-2">
+                    {vehicle.registration_info && (
+                      <div>
+                        <div className="flex items-center space-x-2 text-sm font-medium mb-1">
+                          <FileText className="h-3 w-3 text-muted-foreground" />
+                          <span>Registration</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                          {vehicle.registration_info}
+                        </p>
+                      </div>
+                    )}
+                    {vehicle.insurance_info && (
+                      <div>
+                        <div className="flex items-center space-x-2 text-sm font-medium mb-1">
+                          <Shield className="h-3 w-3 text-muted-foreground" />
+                          <span>Insurance</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                          {vehicle.insurance_info}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>
