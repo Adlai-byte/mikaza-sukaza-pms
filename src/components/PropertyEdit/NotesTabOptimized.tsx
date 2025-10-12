@@ -70,7 +70,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
 
   const [formData, setFormData] = useState(emptyNote);
 
-  const { data: notes = [], isLoading, isFetching } = useQuery({
+  const { data: notes = [], isLoading, isFetching, error } = useQuery({
     queryKey: ['property-notes', propertyId],
     queryFn: () => fetchNotes(propertyId),
     enabled: !!propertyId,
@@ -309,6 +309,20 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-destructive mb-4">
+          <FileText className="h-12 w-12 mx-auto mb-2" />
+          <p>Failed to load notes</p>
+        </div>
+        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['property-notes', propertyId] })}>
+          Try Again
+        </Button>
       </div>
     );
   }

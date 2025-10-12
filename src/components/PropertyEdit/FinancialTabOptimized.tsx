@@ -925,6 +925,20 @@ export function FinancialTabOptimized({ propertyId }: FinancialTabOptimizedProps
     );
   }
 
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-destructive mb-4">
+          <DollarSign className="h-12 w-12 mx-auto mb-2" />
+          <p>Failed to load financial entries</p>
+        </div>
+        <Button onClick={() => queryClient.invalidateQueries({ queryKey: financialKeys.monthly(propertyId, selectedMonth) })}>
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header with Action Buttons */}

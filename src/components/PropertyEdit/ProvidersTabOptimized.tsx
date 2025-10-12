@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -99,10 +100,12 @@ const providerTypeColors: Record<string, string> = {
 };
 
 export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
+  const { toast } = useToast();
   const {
     providers,
     isLoading,
     isFetching,
+    error,
     createProvider,
     updateProvider,
     deleteProvider,
@@ -114,6 +117,17 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Handle query errors properly with useEffect
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch providers",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   const emptyProvider: Omit<Provider, 'provider_id' | 'property_id' | 'created_at'> = {
     provider_name: '',
