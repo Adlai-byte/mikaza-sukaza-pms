@@ -83,11 +83,11 @@ export function AppSidebar() {
     return currentPath.startsWith(path);
   };
 
-  const getNavCls = ({ isActive }: { isActive: boolean }) =>
-    `transition-all duration-200 ${
-      isActive 
-        ? "bg-gradient-primary text-primary-foreground font-medium shadow-primary" 
-        : "hover:bg-primary/10 hover:text-primary text-muted-foreground"
+  const getNavCls = (isActive: boolean) =>
+    `transition-all duration-200 rounded-none ${
+      isActive
+        ? "bg-green-600 text-white font-medium border-l-4 border-green-400"
+        : "bg-green-50/50 hover:bg-green-100 hover:text-green-700 text-muted-foreground border-l-4 border-transparent"
     }`;
 
   return (
@@ -188,46 +188,54 @@ export function AppSidebar() {
         )}
 
         {/* Media */}
-        <SidebarGroup>
-          {!isCollapsed && (
-            <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
-              Media
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent className="px-3">
-            <SidebarMenu className="space-y-1">
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className="h-10">
-                  <NavLink to="/media" className={getNavCls}>
-                    <Image className="h-5 w-5 min-w-5" />
-                    {!isCollapsed && <span className="ml-3">Photos & Videos</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {visibleMediaMenuItems.length > 0 && (
+          <SidebarGroup>
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
+                Media
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent className="px-3">
+              <SidebarMenu className="space-y-1">
+                {visibleMediaMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild className="h-10">
+                      <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                        <item.icon className="h-5 w-5 min-w-5" />
+                        {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Highlights */}
-        <SidebarGroup>
-          {!isCollapsed && (
-            <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
-              Highlights
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent className="px-3">
-            <SidebarMenu className="space-y-1">
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className="h-10">
-                  <NavLink to="/highlights" className={getNavCls}>
-                    <Star className="h-5 w-5 min-w-5" />
-                    {!isCollapsed && <span className="ml-3">Highlights</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {visibleHighlightsMenuItems.length > 0 && (
+          <SidebarGroup>
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
+                Highlights
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent className="px-3">
+              <SidebarMenu className="space-y-1">
+                {visibleHighlightsMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild className="h-10">
+                      <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                        <item.icon className="h-5 w-5 min-w-5" />
+                        {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );
