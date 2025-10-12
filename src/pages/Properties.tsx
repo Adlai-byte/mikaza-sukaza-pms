@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Home, Building2, MapPin, Users, Database } from "lucide-react";
-import { useProperties } from "@/hooks/useProperties";
+import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
-import { PropertyTable } from "@/components/PropertyManagement/PropertyTable";
+import { PropertyTableOptimized } from "@/components/PropertyManagement/PropertyTableOptimized";
 import { PropertyForm } from "@/components/PropertyManagement/PropertyForm";
 import { PropertyDetailsDialog } from "@/components/PropertyManagement/PropertyDetailsDialog";
 import { PropertyImageDialog } from "@/components/PropertyManagement/PropertyImageDialog";
@@ -13,7 +13,22 @@ import { generateMockProperties } from "@/utils/generateMockProperties";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Properties() {
-  const { properties, loading, amenities, rules, createProperty, updateProperty, deleteProperty, refetch } = useProperties();
+  const {
+    properties = [],
+    loading,
+    isFetching,
+    amenities = [],
+    rules = [],
+    createProperty,
+    updateProperty,
+    deleteProperty,
+    refetch,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    error: propertiesError
+  } = usePropertiesOptimized();
+
   const { logActivity } = useActivityLogs();
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -22,13 +37,23 @@ export default function Properties() {
   const [imageDialogProperty, setImageDialogProperty] = useState<Property | null>(null);
   const [isGeneratingMocks, setIsGeneratingMocks] = useState(false);
 
+  // Show error message if properties failed to load
+  useEffect(() => {
+    if (propertiesError) {
+      toast({
+        title: "Error loading properties",
+        description: propertiesError instanceof Error ? propertiesError.message : "Failed to load properties",
+        variant: "destructive",
+      });
+    }
+  }, [propertiesError, toast]);
+
   const handleGenerateMockProperties = async () => {
     setIsGeneratingMocks(true);
     try {
       const results = await generateMockProperties(100);
       
-      // Force refresh the properties data
-      await refetch();
+      // React Query will automatically update the cache
       
       toast({
         title: "Success",
@@ -47,21 +72,56 @@ export default function Properties() {
   };
 
   const handleCreateProperty = async (propertyData: PropertyInsert & any) => {
-    await createProperty(propertyData);
-    await logActivity('PROPERTY_CREATED', { 
-      propertyType: propertyData.property_type,
-      ownerId: propertyData.owner_id
-    }, undefined, 'Admin');
+    try {
+      await createProperty(propertyData);
+      await logActivity('PROPERTY_CREATED', { 
+        propertyType: propertyData.property_type,
+        ownerId: propertyData.owner_id
+      }, undefined, 'Admin');
+      toast({
+        title: "Success",
+        description: "Property created successfully",
+      });
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error('Error creating property:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create property",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleUpdateProperty = async (propertyData: PropertyInsert & any) => {
-    if (editingProperty?.property_id) {
+    if (!editingProperty?.property_id) {
+      toast({
+        title: "Error",
+        description: "No property selected for update",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
       await updateProperty(editingProperty.property_id, propertyData);
       await logActivity('PROPERTY_UPDATED', { 
         propertyId: editingProperty.property_id,
         propertyType: propertyData.property_type 
       }, undefined, 'Admin');
       setEditingProperty(null);
+      setIsFormOpen(false);
+      toast({
+        title: "Success",
+        description: "Property updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating property:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update property",
+        variant: "destructive",
+      });
     }
   };
 
@@ -72,12 +132,32 @@ export default function Properties() {
 
   const handleDeleteProperty = async (propertyId: string) => {
     const property = properties.find(p => p.property_id === propertyId);
-    await deleteProperty(propertyId);
-    if (property) {
+    if (!property) {
+      toast({
+        title: "Error",
+        description: "Property not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await deleteProperty(propertyId);
       await logActivity('PROPERTY_DELETED', { 
         propertyId,
         propertyType: property.property_type 
       }, undefined, 'Admin');
+      toast({
+        title: "Success",
+        description: "Property deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting property:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete property",
+        variant: "destructive",
+      });
     }
   };
 
@@ -94,9 +174,20 @@ export default function Properties() {
     setEditingProperty(null);
   };
 
-  const activeProperties = properties.filter(property => property.is_active).length;
-  const bookingProperties = properties.filter(property => property.is_booking).length;
-  const petFriendlyProperties = properties.filter(property => property.is_pets_allowed).length;
+  const activeProperties = properties?.filter(property => property.is_active)?.length ?? 0;
+  const bookingProperties = properties?.filter(property => property.is_booking)?.length ?? 0;
+  const petFriendlyProperties = properties?.filter(property => property.is_pets_allowed)?.length ?? 0;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-muted-foreground">Loading properties...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -164,12 +255,14 @@ export default function Properties() {
               <div className="text-muted-foreground">Loading properties...</div>
             </div>
           ) : (
-            <PropertyTable
+            <PropertyTableOptimized
               properties={properties}
               onEditProperty={handleEditProperty}
               onDeleteProperty={handleDeleteProperty}
               onViewDetails={handleViewDetails}
               onViewImages={handleViewImages}
+              isLoading={loading}
+              isFetching={isFetching}
             />
           )}
         </CardContent>
