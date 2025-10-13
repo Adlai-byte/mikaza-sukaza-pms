@@ -114,6 +114,7 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
     first_name: '',
     last_name: '',
     email: '',
+    password: '',
     date_of_birth: '',
     cellphone_primary: '',
     cellphone_usa: '',
@@ -147,9 +148,15 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
   // Add owner mutation
   const addOwnerMutation = useMutation({
     mutationFn: async (ownerData: typeof emptyOwner) => {
+      // Generate a default password if not provided
+      const dataToInsert = {
+        ...ownerData,
+        password: ownerData.password || `Owner${Date.now()}!`, // Default password
+      };
+
       const { data, error } = await supabase
         .from('users')
-        .insert([ownerData])
+        .insert([dataToInsert])
         .select()
         .single();
 
@@ -268,6 +275,7 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
       first_name: owner.first_name,
       last_name: owner.last_name,
       email: owner.email,
+      password: '', // Don't show existing password
       date_of_birth: owner.date_of_birth || '',
       cellphone_primary: owner.cellphone_primary || '',
       cellphone_usa: owner.cellphone_usa || '',
@@ -377,6 +385,22 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
                     />
                   </div>
                 </div>
+
+                {!editingOwner && (
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password (Optional)</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="Leave empty for auto-generated password"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      If left empty, a secure password will be generated automatically.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">

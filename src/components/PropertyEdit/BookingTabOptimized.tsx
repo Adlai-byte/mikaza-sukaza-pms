@@ -45,6 +45,21 @@ interface BookingRates {
   deposit_payment: boolean;
 }
 
+interface Booking {
+  booking_id: string;
+  property_id: string;
+  guest_name: string;
+  guest_email?: string;
+  guest_phone?: string;
+  check_in: string;
+  check_out: string;
+  guests_count: number;
+  total_price: number;
+  status: 'confirmed' | 'pending' | 'cancelled';
+  notes?: string;
+  created_at?: string;
+}
+
 interface BookingTabOptimizedProps {
   propertyId: string;
 }
@@ -52,6 +67,8 @@ interface BookingTabOptimizedProps {
 // Query keys
 const bookingKeys = {
   all: (propertyId: string) => ['booking', propertyId] as const,
+  rates: (propertyId: string) => ['booking-rates', propertyId] as const,
+  bookings: (propertyId: string) => ['bookings', propertyId] as const,
 };
 
 // Fetch booking rates
@@ -82,25 +99,57 @@ const fetchBookingRates = async (propertyId: string): Promise<BookingRates> => {
   };
 };
 
+// Fetch bookings
+const fetchBookings = async (propertyId: string): Promise<Booking[]> => {
+  const { data, error } = await supabase
+    .from('property_bookings')
+    .select('*')
+    .eq('property_id', propertyId)
+    .order('check_in', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+};
+
 export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
   // Fetch booking rates query
   const {
     data: rates,
-    isLoading,
-    isFetching,
-    error,
+    isLoading: isLoadingRates,
+    isFetching: isFetchingRates,
+    error: ratesError,
   } = useQuery({
-    queryKey: bookingKeys.all(propertyId),
+    queryKey: bookingKeys.rates(propertyId),
     queryFn: () => fetchBookingRates(propertyId),
     enabled: !!propertyId,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
+
+  // Fetch bookings query
+  const {
+    data: bookings = [],
+    isLoading: isLoadingBookings,
+    isFetching: isFetchingBookings,
+    error: bookingsError,
+  } = useQuery({
+    queryKey: bookingKeys.bookings(propertyId),
+    queryFn: () => fetchBookings(propertyId),
+    enabled: !!propertyId,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  });
+
+  const isLoading = isLoadingRates || isLoadingBookings;
+  const isFetching = isFetchingRates || isFetchingBookings;
+  const error = ratesError || bookingsError;
 
   const [formData, setFormData] = useState<BookingRates>({
     property_id: propertyId,
@@ -174,6 +223,18 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const [bookingFormData, setBookingFormData] = useState({
+    guest_name: '',
+    guest_email: '',
+    guest_phone: '',
+    check_in: '',
+    check_out: '',
+    guests_count: 1,
+    total_price: 0,
+    status: 'confirmed' as const,
+    notes: '',
+  });
+
   const goToPreviousMonth = () => {
     setCurrentMonth(prev => subMonths(prev, 1));
   };
@@ -181,6 +242,74 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
   const goToNextMonth = () => {
     setCurrentMonth(prev => addMonths(prev, 1));
   };
+
+  const handleExportCalendar = () => {
+    if (bookings.length === 0) {
+      toast({
+        title: 'No bookings',
+        description: 'There are no bookings to export',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Generate iCal format
+    let icalContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Mikaza Sukaza PMS//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+    ];
+
+    bookings.forEach((booking) => {
+      const startDate = new Date(booking.check_in).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const endDate = new Date(booking.check_out).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+      icalContent.push(
+        'BEGIN:VEVENT',
+        `UID:${booking.booking_id}@mikaza-sukaza.com`,
+        `DTSTAMP:${startDate}`,
+        `DTSTART:${startDate}`,
+        `DTEND:${endDate}`,
+        `SUMMARY:${booking.guest_name} - Booking`,
+        `DESCRIPTION:Guests: ${booking.guests_count}\\nPrice: $${booking.total_price}\\nStatus: ${booking.status}`,
+        'STATUS:CONFIRMED',
+        'END:VEVENT'
+      );
+    });
+
+    icalContent.push('END:VCALENDAR');
+
+    const blob = new Blob([icalContent.join('\n')], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `property-${propertyId}-bookings.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: 'Success',
+      description: 'Calendar exported successfully',
+    });
+  };
+
+  const getBookedDates = () => {
+    const booked = new Set<string>();
+    bookings.forEach((booking) => {
+      const start = new Date(booking.check_in);
+      const end = new Date(booking.check_out);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        booked.add(d.toISOString().split('T')[0]);
+      }
+    });
+    return booked;
+  };
+
+  const bookedDates = getBookedDates();
 
   if (isLoading) {
     return (
@@ -463,6 +592,16 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
               onSelect={setSelectedDate}
               month={currentMonth}
               onMonthChange={setCurrentMonth}
+              modifiers={{
+                booked: (date) => bookedDates.has(date.toISOString().split('T')[0]),
+              }}
+              modifiersStyles={{
+                booked: {
+                  backgroundColor: 'hsl(var(--primary))',
+                  color: 'white',
+                  fontWeight: 'bold',
+                },
+              }}
               className="rounded-md border border-border/50 bg-background/50 backdrop-blur-sm pointer-events-auto"
             />
           </div>
@@ -504,9 +643,9 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
               <Upload className="mr-2 h-4 w-4" />
               Import Calendar
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={handleExportCalendar}>
               <Download className="mr-2 h-4 w-4" />
-              Export Calendar
+              Export Calendar ({bookings.length} bookings)
             </Button>
           </CardContent>
         </Card>

@@ -9,6 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Plus,
   Edit,
   Trash2,
@@ -442,14 +450,17 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
           </div>
 
           {/* Note Form */}
-          {showForm && (
-            <Card className="mb-6 border-blue-200 bg-blue-50/50">
-              <CardHeader className="bg-blue-100 border-b border-blue-200">
-                <CardTitle className="text-blue-800">
-                  {editingNote ? 'Edit Note' : 'Add New Note'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-4">
+          {/* Note Dialog */}
+          <Dialog open={showForm} onOpenChange={setShowForm}>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>{editingNote ? 'Edit Note' : 'Add New Note'}</DialogTitle>
+                <DialogDescription>
+                  {editingNote ? 'Update the note information below.' : 'Create a new note for this property.'}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="note_title">Note Title (Optional)</Label>
@@ -498,22 +509,22 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
                     Pin this note
                   </Label>
                 </div>
+              </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleSave}
-                    className="bg-blue-600 hover:bg-blue-700"
-                    disabled={createNoteMutation.isPending || updateNoteMutation.isPending}
-                  >
-                    {editingNote ? 'Update Note' : 'Save Note'}
-                  </Button>
-                  <Button onClick={resetForm} variant="outline">
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              <DialogFooter>
+                <Button onClick={resetForm} variant="outline">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={createNoteMutation.isPending || updateNoteMutation.isPending}
+                >
+                  {(createNoteMutation.isPending || updateNoteMutation.isPending) ? 'Saving...' : (editingNote ? 'Update Note' : 'Save Note')}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Empty State */}
           {filteredNotes.length === 0 && !showForm && (
