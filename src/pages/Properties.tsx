@@ -13,22 +13,22 @@ import { generateMockProperties } from "@/utils/generateMockProperties";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Properties() {
-  const { 
-    properties = [], 
-    loading, 
-    isFetching, 
-    amenities = [], 
-    rules = [], 
-    createProperty, 
-    updateProperty, 
-    deleteProperty, 
+  const {
+    properties = [],
+    loading,
+    isFetching,
+    amenities = [],
+    rules = [],
+    createProperty,
+    updateProperty,
+    deleteProperty,
     refetch,
-    isCreating, 
-    isUpdating, 
+    isCreating,
+    isUpdating,
     isDeleting,
     error: propertiesError
   } = usePropertiesOptimized();
-  
+
   const { logActivity } = useActivityLogs();
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -38,13 +38,15 @@ export default function Properties() {
   const [isGeneratingMocks, setIsGeneratingMocks] = useState(false);
 
   // Show error message if properties failed to load
-  if (propertiesError) {
-    toast({
-      title: "Error loading properties",
-      description: propertiesError instanceof Error ? propertiesError.message : "Failed to load properties",
-      variant: "destructive",
-    });
-  }
+  useEffect(() => {
+    if (propertiesError) {
+      toast({
+        title: "Error loading properties",
+        description: propertiesError instanceof Error ? propertiesError.message : "Failed to load properties",
+        variant: "destructive",
+      });
+    }
+  }, [propertiesError, toast]);
 
   const handleGenerateMockProperties = async () => {
     setIsGeneratingMocks(true);

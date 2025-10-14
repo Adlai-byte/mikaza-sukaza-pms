@@ -204,9 +204,13 @@ export function CreditCardDialog({ open, onOpenChange, user }: CreditCardDialogP
 
   useEffect(() => {
     if (open && user.user_id) {
-      fetchCreditCards();
+      // Only fetch if we don't already have cards or dialog just opened
+      if (creditCards.length === 0) {
+        fetchCreditCards();
+      }
     }
-  }, [open, user.user_id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user.user_id]); // fetchCreditCards intentionally excluded to prevent refetch on every render
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -268,7 +272,8 @@ export function CreditCardDialog({ open, onOpenChange, user }: CreditCardDialogP
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDeleteCreditCard(card.credit_card_id!)}
+                      onClick={() => card.credit_card_id && handleDeleteCreditCard(card.credit_card_id)}
+                      disabled={!card.credit_card_id}
                     >
                       Delete
                     </Button>

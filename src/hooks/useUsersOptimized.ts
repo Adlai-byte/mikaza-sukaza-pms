@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { User, BankAccount, CreditCard, UserInsert } from "@/lib/schemas";
@@ -5,6 +6,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
+import { validatePassword } from "@/lib/password-validation";
+import { CACHE_CONFIG } from "@/lib/cache-config";
+import { OptimisticUpdates } from "@/lib/cache-manager-simplified";
 
 // Query keys for cache management
 export const userKeys = {
@@ -72,8 +76,10 @@ export function useUsersOptimized() {
   } = useQuery({
     queryKey: userKeys.lists(),
     queryFn: fetchUsers,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: CACHE_CONFIG.LIST.staleTime, // 30 minutes
+    gcTime: CACHE_CONFIG.LIST.gcTime, // 2 hours
+    refetchOnMount: false, // Don't refetch on mount (use cache)
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
   // Create user mutation
@@ -89,6 +95,12 @@ export function useUsersOptimized() {
         throw new Error("Password is required for new users");
       }
 
+      // Validate password strength
+      const passwordValidation = validatePassword(userData.password);
+      if (!passwordValidation.isValid) {
+        throw new Error(passwordValidation.errors.join('. '));
+      }
+
       // Create insertion data with required password
       const insertData = { ...userData, password: userData.password };
 
@@ -102,6 +114,29 @@ export function useUsersOptimized() {
 
       return data;
     },
+    onMutate: async (userData) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: userKeys.lists() });
+
+      // Snapshot the previous value
+      const previousUsers = queryClient.getQueryData(userKeys.lists());
+
+      // Optimistically add the new user
+      const tempUser = {
+        user_id: `temp-${Date.now()}`,
+        ...userData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData(userKeys.lists(), (oldData: any) => {
+        if (!oldData || !Array.isArray(oldData)) return [tempUser];
+        return [tempUser, ...oldData];
+      });
+
+      // Return rollback function
+      return { rollback: () => queryClient.setQueryData(userKeys.lists(), previousUsers) };
+    },
     onSuccess: () => {
       // Invalidate and refetch users
       queryClient.invalidateQueries({ queryKey: userKeys.lists() });
@@ -110,7 +145,10 @@ export function useUsersOptimized() {
         description: "User created successfully",
       });
     },
-    onError: (error) => {
+    onError: (error, userData, context) => {
+      // Rollback optimistic update
+      context?.rollback?.();
+
       console.error('Error creating user:', error);
       toast({
         title: "Error",
@@ -137,6 +175,14 @@ export function useUsersOptimized() {
         delete updateData.date_of_birth;
       }
 
+      // Validate password if it's being changed
+      if (updateData.password && updateData.password !== "") {
+        const passwordValidation = validatePassword(updateData.password);
+        if (!passwordValidation.isValid) {
+          throw new Error(passwordValidation.errors.join('. '));
+        }
+      }
+
       const { data, error } = await supabase
         .from('users')
         .update(updateData)
@@ -159,6 +205,12 @@ export function useUsersOptimized() {
 
       return data;
     },
+    onMutate: async ({ userId, userData }) => {
+      // Optimistically update the user using helper
+      const rollback = OptimisticUpdates.updateUser(queryClient, userId, userData);
+
+      return { rollback };
+    },
     onSuccess: () => {
       // Invalidate and refetch users
       queryClient.invalidateQueries({ queryKey: userKeys.lists() });
@@ -167,7 +219,10 @@ export function useUsersOptimized() {
         description: "User updated successfully",
       });
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Rollback optimistic update
+      context?.rollback?.();
+
       console.error('Error updating user:', error);
       toast({
         title: "Error",
@@ -207,6 +262,22 @@ export function useUsersOptimized() {
 
       return userId;
     },
+    onMutate: async (userId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: userKeys.lists() });
+
+      // Snapshot the previous value
+      const previousUsers = queryClient.getQueryData(userKeys.lists());
+
+      // Optimistically remove from cache
+      queryClient.setQueryData(userKeys.lists(), (oldData: any) => {
+        if (!oldData || !Array.isArray(oldData)) return oldData;
+        return oldData.filter((user: any) => user.user_id !== userId);
+      });
+
+      // Return rollback function
+      return { rollback: () => queryClient.setQueryData(userKeys.lists(), previousUsers) };
+    },
     onSuccess: () => {
       // Invalidate and refetch users
       queryClient.invalidateQueries({ queryKey: userKeys.lists() });
@@ -215,7 +286,10 @@ export function useUsersOptimized() {
         description: "User deleted successfully",
       });
     },
-    onError: (error) => {
+    onError: (error, userId, context) => {
+      // Rollback optimistic update
+      context?.rollback?.();
+
       console.error('Error deleting user:', error);
       toast({
         title: "Error",
@@ -231,8 +305,8 @@ export function useUsersOptimized() {
       queryKey: userKeys.bankAccounts(userId),
       queryFn: () => fetchBankAccounts(userId),
       enabled: !!userId,
-      staleTime: 10 * 60 * 1000, // 10 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes
+      staleTime: CACHE_CONFIG.DETAIL.staleTime, // 10 minutes
+      gcTime: CACHE_CONFIG.DETAIL.gcTime, // 1 hour
     });
   };
 
@@ -242,19 +316,21 @@ export function useUsersOptimized() {
       queryKey: userKeys.creditCards(userId),
       queryFn: () => fetchCreditCards(userId),
       enabled: !!userId,
-      staleTime: 10 * 60 * 1000, // 10 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes
+      staleTime: CACHE_CONFIG.DETAIL.staleTime, // 10 minutes
+      gcTime: CACHE_CONFIG.DETAIL.gcTime, // 1 hour
     });
   };
 
-  // Handle errors
-  if (usersError) {
-    toast({
-      title: "Error",
-      description: "Failed to fetch users",
-      variant: "destructive",
-    });
-  }
+  // Handle errors in useEffect to avoid render-time side effects
+  useEffect(() => {
+    if (usersError) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch users",
+        variant: "destructive",
+      });
+    }
+  }, [usersError, toast]);
 
   return {
     users,

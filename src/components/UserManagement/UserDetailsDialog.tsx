@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { User, ActivityLog } from "@/lib/schemas";
 import {
   Dialog,
@@ -33,20 +33,20 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
   const [loading, setLoading] = useState(false);
   const { getActivityLogs } = useActivityLogs();
 
-  const fetchActivityLogs = async () => {
+  const fetchActivityLogs = useCallback(async () => {
     if (user.user_id) {
       setLoading(true);
       const logs = await getActivityLogs(user.user_id);
       setActivityLogs(logs.slice(0, 10)); // Show last 10 activities
       setLoading(false);
     }
-  };
+  }, [user.user_id, getActivityLogs]);
 
   useEffect(() => {
     if (open && user.user_id) {
       fetchActivityLogs();
     }
-  }, [open, user.user_id]);
+  }, [open, user.user_id, fetchActivityLogs]);
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
@@ -110,12 +110,24 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
                       </div>
                     )}
 
-                    {user.date_of_birth && (
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>{format(new Date(user.date_of_birth), 'MMM dd, yyyy')}</span>
-                      </div>
-                    )}
+                    {user.date_of_birth && (() => {
+                      try {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span>{format(new Date(user.date_of_birth), 'MMM dd, yyyy')}</span>
+                          </div>
+                        );
+                      } catch (error) {
+                        console.error('Error formatting date:', error);
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span>{user.date_of_birth}</span>
+                          </div>
+                        );
+                      }
+                    })()}
                   </div>
                 </div>
               </div>
@@ -197,7 +209,14 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
                           </p>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {log.created_at && format(new Date(log.created_at), 'MMM dd, HH:mm')}
+                          {log.created_at && (() => {
+                            try {
+                              return format(new Date(log.created_at), 'MMM dd, HH:mm');
+                            } catch (error) {
+                              console.error('Error formatting log date:', error);
+                              return log.created_at;
+                            }
+                          })()}
                         </div>
                       </div>
                       {index < activityLogs.length - 1 && <Separator />}

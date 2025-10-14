@@ -194,18 +194,14 @@ export function usePropertyProviders(propertyId: string) {
     },
   });
 
-  if (error) {
-    toast({
-      title: "Error",
-      description: "Failed to fetch providers",
-      variant: "destructive",
-    });
-  }
+  // ❌ REMOVED: Toast in render body (causes infinite loops)
+  // Error handling moved to component level with useEffect
 
   return {
     providers,
     isLoading,
     isFetching,
+    error, // ✅ Return error to component for proper handling
     createProvider: createProviderMutation.mutate,
     updateProvider: updateProviderMutation.mutate,
     deleteProvider: deleteProviderMutation.mutate,
@@ -352,18 +348,14 @@ export function usePropertyPhotos(propertyId: string) {
     },
   });
 
-  if (error) {
-    toast({
-      title: "Error",
-      description: "Failed to fetch photos",
-      variant: "destructive",
-    });
-  }
+  // ❌ REMOVED: Toast in render body (causes infinite loops)
+  // Error handling moved to component level with useEffect
 
   return {
     photos,
     isLoading,
     isFetching,
+    error, // ✅ Return error to component for proper handling
     createPhoto: createPhotoMutation.mutate,
     updatePhoto: updatePhotoMutation.mutate,
     deletePhoto: deletePhotoMutation.mutate,

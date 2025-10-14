@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,10 +53,12 @@ interface PhotosTabProps {
 export function PhotosTabOptimized({ propertyId }: PhotosTabProps) {
   console.log('🖼️ [PhotosTabOptimized] Component rendered:', { propertyId });
 
+  const { toast } = useToast();
   const {
     photos,
     isLoading,
     isFetching,
+    error,
     createPhoto,
     updatePhoto,
     deletePhoto,
@@ -81,6 +84,17 @@ export function PhotosTabOptimized({ propertyId }: PhotosTabProps) {
   const [newTitle, setNewTitle] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle query errors properly with useEffect
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch photos",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   // Handler functions defined before use
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

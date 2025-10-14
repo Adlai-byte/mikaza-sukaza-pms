@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { cacheWarmer } from '@/lib/cache-manager-simplified';
 
 interface Profile {
   id: string;
@@ -124,16 +125,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
           // Fetch profile data when user logs in
           setTimeout(() => {
             fetchProfile(session.user.id);
           }, 0);
+
+          // Warm cache with critical data after login
+          if (event === 'SIGNED_IN' && cacheWarmer) {
+            cacheWarmer.warmCriticalData({
+              properties: async () => {
+                const { data } = await supabase
+                  .from('properties')
+                  .select('*')
+                  .order('created_at', { ascending: false });
+                return data;
+              },
+              amenities: async () => {
+                const { data } = await supabase.from('amenities').select('*');
+                return data;
+              },
+              rules: async () => {
+                const { data } = await supabase.from('rules').select('*');
+                return data;
+              },
+            }).catch(error => {
+              console.warn('⚠️ Cache warming failed:', error);
+            });
+          }
         } else {
           setProfile(null);
         }
-        
+
         setLoading(false);
       }
     );
@@ -192,7 +216,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!AUTH_ENABLED) {
       // Store user in localStorage for session-based login
       localStorage.setItem('tempSessionUser', JSON.stringify(userFromDB));
-      
+
       const sessionProfile: Profile = {
         id: userFromDB.user_id,
         user_id: userFromDB.user_id,
@@ -206,6 +230,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
         updated_at: userFromDB.updated_at,
       };
       setProfile(sessionProfile);
+
+      // Warm cache with critical data after login
+      if (cacheWarmer) {
+        cacheWarmer.warmCriticalData({
+          properties: async () => {
+            const { data } = await supabase
+              .from('properties')
+              .select('*')
+              .order('created_at', { ascending: false });
+            return data;
+          },
+          amenities: async () => {
+            const { data } = await supabase.from('amenities').select('*');
+            return data;
+          },
+          rules: async () => {
+            const { data } = await supabase.from('rules').select('*');
+            return data;
+          },
+        }).catch(error => {
+          console.warn('⚠️ Cache warming failed:', error);
+        });
+      }
     }
   };
 

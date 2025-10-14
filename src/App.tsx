@@ -16,44 +16,56 @@ import UserManagement from "./pages/UserManagement";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Calendar from "./pages/Calendar";
+import BookingManagement from "./pages/BookingManagement";
+import Todos from "./pages/Todos";
+import Issues from "./pages/Issues";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
-import { createOptimizedQueryClient, initializeCacheManagers } from "@/lib/cache-manager";
+import { createOptimizedQueryClient, initializeCacheManagers } from "@/lib/cache-manager-simplified";
+import { initializeOptimizedPrefetcher } from "@/lib/intelligent-prefetcher-optimized";
+import { initializeRealtimeSync } from "@/lib/realtime-cache-sync";
 import { serviceWorkerManager } from "@/lib/service-worker-manager";
 import { indexedDBCache } from "@/lib/indexeddb-cache";
 import { initializeStatePersistence } from "@/lib/state-persistence";
 
-// Create optimized query client with advanced caching and persistence
+// Create optimized query client with simplified caching (no localStorage redundancy)
 const queryClient = createOptimizedQueryClient();
 
+// Make queryClient available globally for debugging
+if (typeof window !== 'undefined') {
+  (window as any).__queryClient = queryClient;
+}
+
 // Initialize cache managers for intelligent prefetching and background sync
-let prefetchManager: any = null;
 let backgroundSyncManager: any = null;
+let cacheInvalidationManager: any = null;
+let cacheWarmer: any = null;
 let intelligentPrefetcher: any = null;
+let realtimeSync: any = null;
 
 // Initialize state persistence for complete offline capability
 const statePersistenceManager = initializeStatePersistence(queryClient);
 
 // Initialize service worker and browser-level caching
 if (typeof window !== 'undefined') {
-  // Initialize cache managers asynchronously
-  initializeCacheManagers(queryClient).then((managers) => {
-    if (managers.prefetchManager) {
-      prefetchManager = managers.prefetchManager;
-      console.log('✅ Prefetch manager ready');
-    }
-    if (managers.backgroundSyncManager) {
-      backgroundSyncManager = managers.backgroundSyncManager;
-      console.log('✅ Background sync manager ready');
-    }
-    if (managers.intelligentPrefetcher) {
-      intelligentPrefetcher = managers.intelligentPrefetcher;
-      console.log('✅ Intelligent prefetcher ready');
-    }
-    console.log('🧠 Cache managers initialization completed');
-  }).catch((error) => {
-    console.warn('⚠️ Failed to initialize cache managers (app will continue without advanced caching):', error);
+  // Initialize simplified cache managers (no localStorage redundancy)
+  const managers = initializeCacheManagers(queryClient);
+  backgroundSyncManager = managers.backgroundSyncManager;
+  cacheInvalidationManager = managers.cacheInvalidationManager;
+  cacheWarmer = managers.cacheWarmer;
+  console.log('✅ Simplified cache managers initialized');
+
+  // Initialize optimized prefetcher (less aggressive: 85% confidence, 5-item queue)
+  intelligentPrefetcher = initializeOptimizedPrefetcher(queryClient);
+  console.log('✅ Optimized prefetcher initialized');
+
+  // Initialize realtime cache sync (auto-invalidate on DB changes)
+  realtimeSync = initializeRealtimeSync(queryClient);
+  realtimeSync.initialize().then(() => {
+    console.log('✅ Realtime cache sync active');
+  }).catch((error: any) => {
+    console.warn('⚠️ Realtime sync initialization failed (will continue without auto-invalidation):', error);
   });
 
   // Register service worker for advanced caching strategies
@@ -83,10 +95,10 @@ if (typeof window !== 'undefined') {
         const cacheStats = await serviceWorkerManager.getCacheStats();
         let prefetchInsights = null;
 
-        // Safely get prefetch insights
+        // Get optimized prefetch insights
         if (intelligentPrefetcher) {
           try {
-            prefetchInsights = await intelligentPrefetcher.getInsights();
+            prefetchInsights = intelligentPrefetcher.getInsights();
           } catch (error) {
             console.warn('⚠️ Failed to get prefetch insights:', error);
           }
@@ -99,11 +111,18 @@ if (typeof window !== 'undefined') {
           prefetch: prefetchInsights,
           state: stateSize
         });
+
+        // Also log React Query cache stats
+        if (typeof (window as any).getCacheStats === 'function') {
+          (window as any).getCacheStats();
+        }
       } catch (error) {
         console.warn('⚠️ Performance monitoring error:', error);
       }
     }, 30 * 1000);
   }
+
+  console.log('🚀 All cache systems initialized successfully');
 }
 
 const App = () => (
@@ -174,6 +193,26 @@ const App = () => (
                   }
                 />
 
+                {/* Booking Management - Both can access */}
+                <Route
+                  path="/bookings"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.BOOKINGS_VIEW}>
+                      <BookingManagement />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* To-Do List / Tasks - View own or all based on role */}
+                <Route
+                  path="/todos"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.TODOS_VIEW_OWN}>
+                      <Todos />
+                    </RBACProtectedRoute>
+                  }
+                />
+
                 {/* Profile - Everyone can access */}
                 <Route path="/profile" element={<Profile />} />
 
@@ -182,7 +221,7 @@ const App = () => (
                   path="/issues"
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.ISSUES_VIEW}>
-                      <div className="p-8 text-center text-muted-foreground">Issues & Photos - Coming Soon</div>
+                      <Issues />
                     </RBACProtectedRoute>
                   }
                 />

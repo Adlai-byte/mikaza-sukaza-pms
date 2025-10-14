@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useUsers } from "@/hooks/useUsers";
+import { useUsersOptimized } from "@/hooks/useUsersOptimized";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { z } from "zod";
 
@@ -22,7 +22,7 @@ export default function Auth() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showUserList, setShowUserList] = useState(false);
   const { signIn, signUp, user, sessionLogin } = useAuth();
-  const { users } = useUsers();
+  const { users, loading: usersLoading } = useUsersOptimized();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -268,7 +268,9 @@ export default function Auth() {
                     <CardTitle className="text-lg text-white">Available Users</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 max-h-60 overflow-y-auto">
-                    {users.length === 0 ? (
+                    {usersLoading ? (
+                      <p className="text-white/70 text-sm">Loading users...</p>
+                    ) : users.length === 0 ? (
                       <p className="text-white/70 text-sm">No users found. Create users in User Management first.</p>
                     ) : (
                       users.filter(u => u.is_active).map((user) => (
