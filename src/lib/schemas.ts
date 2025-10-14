@@ -267,3 +267,213 @@ export type PropertyImage = {
   created_at?: string;
   updated_at?: string;
 };
+
+// Booking schemas
+export const bookingSchema = z.object({
+  property_id: z.string().uuid("Property ID is required"),
+  guest_name: z.string().min(1, "Guest name is required"),
+  guest_email: z.string().email("Valid email is required").optional().or(z.literal("")),
+  guest_phone: z.string().optional(),
+  check_in_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  check_out_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  number_of_guests: z.number().min(1, "At least 1 guest required").optional(),
+  total_amount: z.number().min(0, "Amount must be non-negative").optional(),
+  deposit_amount: z.number().min(0, "Deposit must be non-negative").optional(),
+  payment_method: z.string().optional(),
+  booking_status: z.enum(["pending", "confirmed", "cancelled", "completed"]).default("pending"),
+  special_requests: z.string().optional(),
+});
+
+export type Booking = {
+  booking_id?: string;
+  property_id: string;
+  guest_name: string;
+  guest_email?: string | null;
+  guest_phone?: string | null;
+  check_in_date: string;
+  check_out_date: string;
+  number_of_guests?: number | null;
+  total_amount?: number | null;
+  deposit_amount?: number | null;
+  payment_method?: string | null;
+  booking_status?: string | null;
+  special_requests?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type BookingInsert = z.infer<typeof bookingSchema>;
+
+// Task schemas
+export const taskSchema = z.object({
+  task_id: z.string().uuid().optional(),
+  title: z.string().min(1, "Task title is required"),
+  description: z.string().optional(),
+  property_id: z.string().uuid().optional().nullable(),
+  assigned_to: z.string().uuid().optional().nullable(),
+  created_by: z.string().uuid().optional(),
+  status: z.enum(["pending", "in_progress", "completed", "cancelled"]).default("pending"),
+  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  category: z.enum(["cleaning", "maintenance", "check_in_prep", "check_out_prep", "inspection", "repair", "other"]).default("other"),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional().nullable(),
+  due_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Time must be in HH:MM or HH:MM:SS format").optional().nullable(),
+  completed_at: z.string().optional().nullable(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+export const taskChecklistSchema = z.object({
+  checklist_item_id: z.string().uuid().optional(),
+  task_id: z.string().uuid(),
+  item_text: z.string().min(1, "Checklist item text is required"),
+  is_completed: z.boolean().default(false),
+  order_index: z.number().int().default(0),
+  created_at: z.string().optional(),
+});
+
+export const taskCommentSchema = z.object({
+  comment_id: z.string().uuid().optional(),
+  task_id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  comment_text: z.string().min(1, "Comment text is required"),
+  created_at: z.string().optional(),
+});
+
+export const taskAttachmentSchema = z.object({
+  attachment_id: z.string().uuid().optional(),
+  task_id: z.string().uuid(),
+  file_url: z.string().url("Invalid file URL"),
+  file_name: z.string().min(1, "File name is required"),
+  file_type: z.string().optional(),
+  uploaded_by: z.string().uuid().optional().nullable(),
+  created_at: z.string().optional(),
+});
+
+// Task types
+export type Task = z.infer<typeof taskSchema> & {
+  property?: Property;
+  assigned_user?: User;
+  created_user?: User;
+  checklists?: TaskChecklist[];
+  comments?: TaskComment[];
+  attachments?: TaskAttachment[];
+};
+
+export type TaskChecklist = z.infer<typeof taskChecklistSchema>;
+export type TaskComment = z.infer<typeof taskCommentSchema> & {
+  user?: User;
+};
+export type TaskAttachment = z.infer<typeof taskAttachmentSchema> & {
+  uploaded_user?: User;
+};
+
+export type TaskInsert = Omit<z.infer<typeof taskSchema>, 'task_id' | 'created_at' | 'updated_at'>;
+export type TaskChecklistInsert = Omit<z.infer<typeof taskChecklistSchema>, 'checklist_item_id' | 'created_at'>;
+export type TaskCommentInsert = Omit<z.infer<typeof taskCommentSchema>, 'comment_id' | 'created_at'>;
+export type TaskAttachmentInsert = Omit<z.infer<typeof taskAttachmentSchema>, 'attachment_id' | 'created_at'>;
+
+// Issue schemas
+export const issueSchema = z.object({
+  issue_id: z.string().uuid().optional(),
+  property_id: z.string().uuid("Property is required"),
+  title: z.string().min(1, "Issue title is required"),
+  description: z.string().optional(),
+  category: z.enum(["maintenance", "damage", "repair_needed", "cleaning", "plumbing", "electrical", "appliance", "hvac", "other"]).default("other"),
+  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  status: z.enum(["open", "in_progress", "resolved", "closed", "on_hold"]).default("open"),
+  reported_by: z.string().uuid().optional(),
+  assigned_to: z.string().uuid().optional().nullable(),
+  location: z.string().optional().nullable(),
+  estimated_cost: z.number().min(0, "Cost must be non-negative").optional().nullable(),
+  actual_cost: z.number().min(0, "Cost must be non-negative").optional().nullable(),
+  resolution_notes: z.string().optional().nullable(),
+  resolved_at: z.string().optional().nullable(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+export const issuePhotoSchema = z.object({
+  photo_id: z.string().uuid().optional(),
+  issue_id: z.string().uuid(),
+  photo_url: z.string().url("Invalid photo URL"),
+  photo_type: z.enum(["before", "after", "progress", "other"]).default("before"),
+  caption: z.string().optional().nullable(),
+  uploaded_by: z.string().uuid().optional().nullable(),
+  created_at: z.string().optional(),
+});
+
+// Issue types
+export type Issue = z.infer<typeof issueSchema> & {
+  property?: Property;
+  reported_user?: User;
+  assigned_user?: User;
+  photos?: IssuePhoto[];
+};
+
+export type IssuePhoto = z.infer<typeof issuePhotoSchema> & {
+  uploaded_user?: User;
+};
+
+export type IssueInsert = Omit<z.infer<typeof issueSchema>, 'issue_id' | 'created_at' | 'updated_at'>;
+export type IssuePhotoInsert = Omit<z.infer<typeof issuePhotoSchema>, 'photo_id' | 'created_at'>;
+
+// Notification schemas
+export const notificationSchema = z.object({
+  notification_id: z.string().uuid().optional(),
+  user_id: z.string().uuid(),
+  type: z.enum([
+    'task_assigned',
+    'task_status_changed',
+    'task_completed',
+    'task_due_soon',
+    'task_overdue',
+    'task_comment',
+    'issue_assigned',
+    'issue_status_changed',
+    'issue_resolved',
+    'issue_comment',
+    'mention'
+  ]),
+  title: z.string().min(1, "Title is required"),
+  message: z.string().min(1, "Message is required"),
+  link: z.string().optional().nullable(),
+  task_id: z.string().uuid().optional().nullable(),
+  issue_id: z.string().uuid().optional().nullable(),
+  action_by: z.string().uuid().optional().nullable(),
+  metadata: z.record(z.any()).optional().nullable(),
+  is_read: z.boolean().default(false),
+  read_at: z.string().optional().nullable(),
+  created_at: z.string().optional(),
+});
+
+export const notificationPreferencesSchema = z.object({
+  user_id: z.string().uuid(),
+  email_task_assigned: z.boolean().default(true),
+  email_task_due_soon: z.boolean().default(true),
+  email_task_completed: z.boolean().default(false),
+  email_issue_assigned: z.boolean().default(true),
+  email_issue_resolved: z.boolean().default(false),
+  email_mentions: z.boolean().default(true),
+  app_task_assigned: z.boolean().default(true),
+  app_task_status_changed: z.boolean().default(true),
+  app_task_due_soon: z.boolean().default(true),
+  app_issue_assigned: z.boolean().default(true),
+  app_issue_status_changed: z.boolean().default(true),
+  app_mentions: z.boolean().default(true),
+  browser_enabled: z.boolean().default(false),
+  daily_summary: z.boolean().default(false),
+  weekly_summary: z.boolean().default(false),
+  updated_at: z.string().optional(),
+});
+
+// Notification types (renamed to avoid conflict with browser Notification API)
+export type AppNotification = z.infer<typeof notificationSchema> & {
+  action_user?: User;
+  task?: Task;
+  issue?: Issue;
+};
+
+export type NotificationPreferences = z.infer<typeof notificationPreferencesSchema>;
+
+export type NotificationInsert = Omit<z.infer<typeof notificationSchema>, 'notification_id' | 'created_at' | 'is_read' | 'read_at'>;
+export type NotificationPreferencesInsert = Omit<z.infer<typeof notificationPreferencesSchema>, 'updated_at'>;

@@ -200,9 +200,13 @@ export function BankAccountDialog({ open, onOpenChange, user }: BankAccountDialo
 
   useEffect(() => {
     if (open && user.user_id) {
-      fetchBankAccounts();
+      // Only fetch if we don't already have accounts or dialog just opened
+      if (bankAccounts.length === 0) {
+        fetchBankAccounts();
+      }
     }
-  }, [open, user.user_id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user.user_id]); // fetchBankAccounts intentionally excluded to prevent refetch on every render
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -273,7 +277,8 @@ export function BankAccountDialog({ open, onOpenChange, user }: BankAccountDialo
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDeleteBankAccount(account.bank_account_id!)}
+                      onClick={() => account.bank_account_id && handleDeleteBankAccount(account.bank_account_id)}
+                      disabled={!account.bank_account_id}
                     >
                       Delete
                     </Button>

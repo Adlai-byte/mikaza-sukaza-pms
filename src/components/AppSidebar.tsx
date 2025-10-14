@@ -5,6 +5,7 @@ import {
   Building,
   BriefcaseIcon,
   Calendar,
+  CalendarDays,
   CheckSquare,
   AlertTriangle,
   FileText,
@@ -36,6 +37,7 @@ const mainMenuItems = [
   { title: "Properties", url: "/properties", icon: Building, permission: PERMISSIONS.PROPERTIES_VIEW },
   { title: "Active Jobs", url: "/jobs", icon: BriefcaseIcon, permission: PERMISSIONS.JOBS_VIEW },
   { title: "Calendar", url: "/calendar", icon: Calendar, permission: PERMISSIONS.BOOKINGS_VIEW },
+  { title: "Bookings", url: "/bookings", icon: CalendarDays, permission: PERMISSIONS.BOOKINGS_VIEW },
   { title: "To-Do List", url: "/todos", icon: CheckSquare, permission: PERMISSIONS.TODOS_VIEW_OWN },
   { title: "Issues & Photos", url: "/issues", icon: AlertTriangle, permission: PERMISSIONS.ISSUES_VIEW },
 ];

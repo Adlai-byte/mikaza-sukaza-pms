@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, BankAccount, CreditCard, UserInsert } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
+import { validatePassword } from "@/lib/password-validation";
 
 export function useUsers() {
   const [users, setUsers] = useState<User[]>([]);
@@ -10,7 +11,7 @@ export function useUsers() {
   const { toast } = useToast();
   const { logActivity } = useActivityLogs();
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       console.log('👥 Fetching users...');
@@ -23,10 +24,10 @@ export function useUsers() {
         console.error('❌ Users fetch error:', error);
         throw error;
       }
-      
+
       console.log('✅ Users data:', data);
       console.log('📊 Users count:', data?.length || 0);
-      
+
       setUsers((data || []) as User[]);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -39,13 +40,19 @@ export function useUsers() {
       setLoading(false);
       console.log('⏰ Users loading finished');
     }
-  };
+  }, [toast]);
 
   const createUser = async (userData: UserInsert) => {
     try {
       // Ensure password is provided for new users
       if (!userData.password) {
         throw new Error("Password is required for new users");
+      }
+
+      // Validate password strength
+      const passwordValidation = validatePassword(userData.password);
+      if (!passwordValidation.isValid) {
+        throw new Error(passwordValidation.errors.join('. '));
       }
 
       // Create insertion data with required password
@@ -87,6 +94,14 @@ export function useUsers() {
         delete updateData.date_of_birth;
       }
 
+      // Validate password if it's being changed
+      if (updateData.password && updateData.password !== "") {
+        const passwordValidation = validatePassword(updateData.password);
+        if (!passwordValidation.isValid) {
+          throw new Error(passwordValidation.errors.join('. '));
+        }
+      }
+
       const { data, error } = await supabase
         .from('users')
         .update(updateData)
@@ -96,13 +111,13 @@ export function useUsers() {
 
       if (error) throw error;
 
-      setUsers(prev => prev.map(user => 
+      setUsers(prev => prev.map(user =>
         user.user_id === userId ? data as User : user
       ));
-      
+
       await logActivity(
         'USER_UPDATED',
-        { 
+        {
           userId,
           updatedFields: Object.keys(updateData),
           userEmail: updateData.email || 'Unknown'
@@ -198,7 +213,7 @@ export function useUsers() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   return {
     users,

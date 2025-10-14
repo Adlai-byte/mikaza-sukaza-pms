@@ -35,10 +35,14 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
+import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addDays } from 'date-fns';
 import { Tables } from '@/integrations/supabase/types';
+import { BookingDialog } from '@/components/BookingDialog';
+import { BookingInsert } from '@/lib/schemas';
+import { useToast } from '@/hooks/use-toast';
+import { bookingKeys } from '@/hooks/useBookings';
 
 type Property = Tables<'properties'>;
 type PropertyBooking = Tables<'property_bookings'>;
@@ -62,6 +66,9 @@ interface FilterChip {
 }
 
 const Calendar = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const [filters, setFilters] = useState<FilterState>({
     startDate: new Date(),
     minCapacity: 'all',
@@ -76,6 +83,12 @@ const Calendar = () => {
   const [searchTrigger, setSearchTrigger] = useState(0);
   const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
+
+  // Booking dialog state
+  const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [bookingPropertyId, setBookingPropertyId] = useState<string | null>(null);
+  const [bookingCheckIn, setBookingCheckIn] = useState<string>('');
+  const [bookingCheckOut, setBookingCheckOut] = useState<string>('');
 
   // Debounced search - trigger search 500ms after last filter change
   useEffect(() => {
@@ -456,6 +469,58 @@ const Calendar = () => {
       city: 'all',
       amenities: [],
     });
+  };
+
+  // Handle booking creation from calendar
+  const handleDateClick = (propertyId: string, date: Date, bookingInfo: any) => {
+    // Don't open dialog if date is already booked
+    if (bookingInfo.status === 'booked') {
+      toast({
+        title: 'Date Unavailable',
+        description: `This date is already booked by ${bookingInfo.booking?.guest_name}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Set booking defaults and open dialog
+    setBookingPropertyId(propertyId);
+    setBookingCheckIn(format(date, 'yyyy-MM-dd'));
+    setBookingCheckOut(format(addDays(date, 1), 'yyyy-MM-dd'));
+    setShowBookingDialog(true);
+  };
+
+  const handleBookingSubmit = async (bookingData: BookingInsert) => {
+    try {
+      const { data, error } = await supabase
+        .from('property_bookings')
+        .insert([bookingData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Booking created successfully',
+      });
+
+      // Close dialog and refresh bookings
+      setShowBookingDialog(false);
+      setBookingPropertyId(null);
+      setBookingCheckIn('');
+      setBookingCheckOut('');
+
+      // Invalidate bookings query to refresh the calendar
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.property(bookingData.property_id) });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create booking',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -962,8 +1027,8 @@ const Calendar = () => {
                                     ${bookingInfo.status === 'booked'
                                       ? 'bg-red-100 text-red-800 border-2 border-red-300 hover:bg-red-200 shadow-sm'
                                       : isWeekend
-                                        ? 'bg-blue-50 text-blue-700 border border-blue-300 hover:bg-blue-100'
-                                        : 'bg-green-50 text-green-700 border border-green-300 hover:bg-green-100'
+                                        ? 'bg-blue-50 text-blue-700 border border-blue-300 hover:bg-blue-100 hover:shadow-md'
+                                        : 'bg-green-50 text-green-700 border border-green-300 hover:bg-green-100 hover:shadow-md'
                                     }
                                     ${isToday ? 'ring-2 ring-primary ring-offset-1' : ''}
                                     ${bookingInfo.isCheckIn ? 'border-l-4 border-l-orange-500' : ''}
@@ -971,10 +1036,14 @@ const Calendar = () => {
                                   `}
                                   title={`
                                     ${format(date, 'MMM dd, yyyy')}
-                                    ${bookingInfo.status === 'booked' ? `\nBooked - ${bookingInfo.booking?.guest_name}` : '\nAvailable'}
+                                    ${bookingInfo.status === 'booked' ? `\nBooked - ${bookingInfo.booking?.guest_name}` : '\nAvailable - Click to book'}
                                     ${bookingInfo.isCheckIn ? '\nCheck-in' : ''}
                                     ${bookingInfo.isCheckOut ? '\nCheck-out' : ''}
                                   `}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDateClick(property.property_id, date, bookingInfo);
+                                  }}
                                 >
                                   {bookingInfo.status === 'booked' ? (
                                     <div className="flex items-center justify-center">
@@ -1056,6 +1125,16 @@ const Calendar = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Booking Dialog */}
+      <BookingDialog
+        open={showBookingDialog}
+        onOpenChange={setShowBookingDialog}
+        onSubmit={handleBookingSubmit}
+        propertyId={bookingPropertyId || undefined}
+        defaultCheckIn={bookingCheckIn}
+        defaultCheckOut={bookingCheckOut}
+      />
     </div>
   );
 };

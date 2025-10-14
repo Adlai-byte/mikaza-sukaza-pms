@@ -168,12 +168,13 @@ export const ROLES = {
       PERMISSIONS.BOOKINGS_CANCEL, // May need approval workflow
       PERMISSIONS.CALENDAR_EXPORT,
 
-      // ========== TODOS - Own only ==========
+      // ========== TODOS - Full access for OPS ==========
       PERMISSIONS.TODOS_VIEW_OWN,
+      PERMISSIONS.TODOS_VIEW_ALL, // OPS can view all tasks
       PERMISSIONS.TODOS_CREATE,
       PERMISSIONS.TODOS_EDIT_OWN,
       PERMISSIONS.TODOS_DELETE_OWN,
-      // NOT: TODOS_VIEW_ALL, TODOS_ASSIGN (admin only)
+      PERMISSIONS.TODOS_ASSIGN, // OPS can assign tasks to team members
 
       // ========== ISSUES - Full access ==========
       PERMISSIONS.ISSUES_VIEW,

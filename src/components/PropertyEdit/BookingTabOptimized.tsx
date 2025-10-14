@@ -28,6 +28,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { TabLoadingSpinner } from './PropertyEditSkeleton';
 import { format, addMonths, subMonths } from 'date-fns';
+import { usePropertyBookings, bookingKeys as bookingQueryKeys } from '@/hooks/useBookings';
+import { BookingDialogEnhanced } from '@/components/BookingDialogEnhanced';
+import { BookingsTable } from '@/components/BookingsTable';
+import { Booking, BookingInsert } from '@/lib/schemas';
 
 interface BookingRates {
   rate_id?: string;
@@ -43,21 +47,6 @@ interface BookingRates {
   debit_card_payment: boolean;
   stripe_payment: boolean;
   deposit_payment: boolean;
-}
-
-interface Booking {
-  booking_id: string;
-  property_id: string;
-  guest_name: string;
-  guest_email?: string;
-  guest_phone?: string;
-  check_in: string;
-  check_out: string;
-  guests_count: number;
-  total_price: number;
-  status: 'confirmed' | 'pending' | 'cancelled';
-  notes?: string;
-  created_at?: string;
 }
 
 interface BookingTabOptimizedProps {
@@ -105,7 +94,7 @@ const fetchBookings = async (propertyId: string): Promise<Booking[]> => {
     .from('property_bookings')
     .select('*')
     .eq('property_id', propertyId)
-    .order('check_in', { ascending: true });
+    .order('check_in_date', { ascending: true });
 
   if (error) throw error;
   return data || [];
@@ -118,6 +107,15 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+
+  // Use the new bookings hook
+  const {
+    bookings: propertyBookings = [],
+    loading: loadingBookings,
+    isCreating,
+    isUpdating,
+    isDeleting,
+  } = usePropertyBookings(propertyId) as any;
 
   // Fetch booking rates query
   const {
@@ -133,23 +131,11 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
     gcTime: 10 * 60 * 1000,
   });
 
-  // Fetch bookings query
-  const {
-    data: bookings = [],
-    isLoading: isLoadingBookings,
-    isFetching: isFetchingBookings,
-    error: bookingsError,
-  } = useQuery({
-    queryKey: bookingKeys.bookings(propertyId),
-    queryFn: () => fetchBookings(propertyId),
-    enabled: !!propertyId,
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
+  // Use propertyBookings from the hook above instead of separate query
 
-  const isLoading = isLoadingRates || isLoadingBookings;
-  const isFetching = isFetchingRates || isFetchingBookings;
-  const error = ratesError || bookingsError;
+  const isLoading = isLoadingRates || loadingBookings;
+  const isFetching = isFetchingRates;
+  const error = ratesError;
 
   const [formData, setFormData] = useState<BookingRates>({
     property_id: propertyId,
@@ -223,17 +209,62 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const [bookingFormData, setBookingFormData] = useState({
-    guest_name: '',
-    guest_email: '',
-    guest_phone: '',
-    check_in: '',
-    check_out: '',
-    guests_count: 1,
-    total_price: 0,
-    status: 'confirmed' as const,
-    notes: '',
-  });
+  // Booking handlers
+  const handleCreateBooking = () => {
+    setEditingBooking(null);
+    setShowBookingDialog(true);
+  };
+
+  const handleEditBooking = (booking: Booking) => {
+    setEditingBooking(booking);
+    setShowBookingDialog(true);
+  };
+
+  const handleBookingSubmit = async (bookingData: BookingInsert) => {
+    try {
+      if (editingBooking) {
+        // Update existing booking
+        const { data, error } = await supabase
+          .from('property_bookings')
+          .update(bookingData)
+          .eq('booking_id', editingBooking.booking_id)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Booking updated successfully",
+        });
+      } else {
+        // Create new booking
+        const { data, error } = await supabase
+          .from('property_bookings')
+          .insert([bookingData])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Booking created successfully",
+        });
+      }
+
+      // Close dialog and refresh
+      setShowBookingDialog(false);
+      setEditingBooking(null);
+      queryClient.invalidateQueries({ queryKey: bookingQueryKeys.property(propertyId) });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save booking",
+        variant: "destructive",
+      });
+    }
+  };
 
   const goToPreviousMonth = () => {
     setCurrentMonth(prev => subMonths(prev, 1));
@@ -244,7 +275,7 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
   };
 
   const handleExportCalendar = () => {
-    if (bookings.length === 0) {
+    if (propertyBookings.length === 0) {
       toast({
         title: 'No bookings',
         description: 'There are no bookings to export',
@@ -262,9 +293,9 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
       'METHOD:PUBLISH',
     ];
 
-    bookings.forEach((booking) => {
-      const startDate = new Date(booking.check_in).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-      const endDate = new Date(booking.check_out).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    propertyBookings.forEach((booking) => {
+      const startDate = new Date(booking.check_in_date).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const endDate = new Date(booking.check_out_date).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
       icalContent.push(
         'BEGIN:VEVENT',
@@ -273,7 +304,7 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
         `DTSTART:${startDate}`,
         `DTEND:${endDate}`,
         `SUMMARY:${booking.guest_name} - Booking`,
-        `DESCRIPTION:Guests: ${booking.guests_count}\\nPrice: $${booking.total_price}\\nStatus: ${booking.status}`,
+        `DESCRIPTION:Guests: ${booking.number_of_guests || 0}\\nPrice: $${booking.total_amount || 0}\\nStatus: ${booking.booking_status || 'pending'}`,
         'STATUS:CONFIRMED',
         'END:VEVENT'
       );
@@ -299,9 +330,9 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
 
   const getBookedDates = () => {
     const booked = new Set<string>();
-    bookings.forEach((booking) => {
-      const start = new Date(booking.check_in);
-      const end = new Date(booking.check_out);
+    propertyBookings.forEach((booking) => {
+      const start = new Date(booking.check_in_date);
+      const end = new Date(booking.check_out_date);
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         booked.add(d.toISOString().split('T')[0]);
       }
@@ -608,6 +639,13 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
         </CardContent>
       </Card>
 
+      {/* Bookings List */}
+      <BookingsTable
+        bookings={propertyBookings}
+        onEdit={handleEditBooking}
+        emptyMessage="No bookings for this property yet. Create a new booking to get started."
+      />
+
       {/* New Booking & Calendar Sync */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* New Booking */}
@@ -619,14 +657,16 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button className="w-full bg-accent hover:bg-accent-hover text-accent-foreground">
+            <Button
+              className="w-full bg-accent hover:bg-accent-hover text-accent-foreground"
+              onClick={handleCreateBooking}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Create New Booking
             </Button>
-            <Button variant="outline" className="w-full">
-              <CalendarDays className="mr-2 h-4 w-4" />
-              View All Bookings
-            </Button>
+            <div className="text-sm text-muted-foreground text-center">
+              {propertyBookings.length} active booking{propertyBookings.length !== 1 ? 's' : ''}
+            </div>
           </CardContent>
         </Card>
 
@@ -645,7 +685,7 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
             </Button>
             <Button variant="outline" className="w-full" onClick={handleExportCalendar}>
               <Download className="mr-2 h-4 w-4" />
-              Export Calendar ({bookings.length} bookings)
+              Export Calendar ({propertyBookings.length} bookings)
             </Button>
           </CardContent>
         </Card>
@@ -658,6 +698,16 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
           <strong>Note:</strong> Remember to save your changes before leaving this page. Your pricing and payment settings will affect all future bookings.
         </AlertDescription>
       </Alert>
+
+      {/* Booking Dialog */}
+      <BookingDialogEnhanced
+        open={showBookingDialog}
+        onOpenChange={setShowBookingDialog}
+        onSubmit={handleBookingSubmit}
+        isSubmitting={isCreating || isUpdating}
+        propertyId={propertyId}
+        booking={editingBooking}
+      />
     </div>
   );
 }

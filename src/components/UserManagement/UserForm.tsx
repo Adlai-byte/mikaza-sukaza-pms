@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { userSchema, User, UserInsert } from "@/lib/schemas";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Upload, X, Loader2, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface UserFormProps {
@@ -40,7 +41,9 @@ interface UserFormProps {
 export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(user?.photo_url || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { logActivity } = useActivityLogs();
+  const { toast } = useToast();
   
   const form = useForm<UserInsert>({
     resolver: zodResolver(userSchema),
@@ -70,7 +73,7 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
     if (open) {
       const formData = {
         email: user?.email || "",
-        password: user ? "" : "", // Don't show existing password
+        password: user?.password || "", // Show existing password
         user_type: user?.user_type || "ops",
         is_active: user?.is_active ?? true,
         first_name: user?.first_name || "",
@@ -87,11 +90,12 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
         country: user?.country || "USA",
         photo_url: user?.photo_url || "",
       };
-      
+
       form.reset(formData);
       setPhotoPreview(user?.photo_url || null);
     }
-  }, [user, open, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, open]); // form.reset is stable and doesn't need to be in deps
 
   const handleSubmit = async (data: UserInsert) => {
     try {
@@ -129,15 +133,48 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setPhotoPreview(result);
-        form.setValue('photo_url', result);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a valid image file (JPEG, PNG, GIF, or WebP)",
+        variant: "destructive",
+      });
+      event.target.value = ''; // Reset input
+      return;
     }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      event.target.value = ''; // Reset input
+      return;
+    }
+
+    // Read and preview the file
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setPhotoPreview(result);
+      form.setValue('photo_url', result);
+    };
+    reader.onerror = () => {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to read the image file. Please try again.",
+        variant: "destructive",
+      });
+      event.target.value = ''; // Reset input
+    };
+    reader.readAsDataURL(file);
   };
 
   const removePhoto = () => {
@@ -253,13 +290,29 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password {user ? '(leave blank to keep current)' : '*'}</FormLabel>
+                  <FormLabel>Password *</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="password" 
-                      {...field} 
-                      placeholder={user ? "Leave blank to keep current password" : "Enter password"}
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        {...field}
+                        placeholder="Enter password"
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

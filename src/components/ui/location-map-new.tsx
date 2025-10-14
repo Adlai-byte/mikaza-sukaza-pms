@@ -14,10 +14,20 @@ L.Icon.Default.mergeOptions({
   shadowUrl: '/marker-shadow.png',
 });
 
+interface LocationData {
+  lat: number;
+  lng: number;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+}
+
 interface LocationMapProps {
   isOpen: boolean;
   onClose: () => void;
-  onLocationSelect: (lat: number, lng: number, address?: string) => void;
+  onLocationSelect: (lat: number, lng: number, address?: string, city?: string, state?: string, postal_code?: string, country?: string) => void;
   initialLat?: number;
   initialLng?: number;
   initialAddress?: string;
@@ -33,9 +43,10 @@ export function LocationMap({
 }: LocationMapProps) {
   const [searchQuery, setSearchQuery] = useState(initialAddress);
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(
     initialLat && initialLng ? { lat: initialLat, lng: initialLng } : null
   );
+  const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -146,7 +157,53 @@ export function LocationMap({
     };
   }, [isOpen, initialLat, initialLng]);
 
-  const updateMarker = (lat: number, lng: number) => {
+  // Reverse geocode coordinates to get address details
+  const reverseGeocode = async (lat: number, lng: number): Promise<LocationData> => {
+    try {
+      setIsReverseGeocoding(true);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'PropertyManagementSystem/1.0'
+          }
+        }
+      );
+
+      if (!response.ok) throw new Error('Reverse geocoding failed');
+
+      const data = await response.json();
+      console.log('🌍 Reverse geocoding result:', data);
+
+      const addressComponents = data.address || {};
+
+      // Extract address components
+      const road = addressComponents.road || '';
+      const houseNumber = addressComponents.house_number || '';
+      const streetAddress = houseNumber ? `${houseNumber} ${road}`.trim() : road;
+
+      const locationData: LocationData = {
+        lat,
+        lng,
+        address: streetAddress || data.display_name?.split(',')[0] || '',
+        city: addressComponents.city || addressComponents.town || addressComponents.village || addressComponents.municipality || '',
+        state: addressComponents.state || '',
+        postal_code: addressComponents.postcode || '',
+        country: addressComponents.country || 'USA'
+      };
+
+      console.log('📍 Extracted location data:', locationData);
+      return locationData;
+    } catch (error) {
+      console.error('❌ Reverse geocoding error:', error);
+      // Return basic location data if reverse geocoding fails
+      return { lat, lng };
+    } finally {
+      setIsReverseGeocoding(false);
+    }
+  };
+
+  const updateMarker = async (lat: number, lng: number, skipReverseGeocode: boolean = false) => {
     if (!leafletMapRef.current) {
       console.error('❌ Cannot update marker: map not initialized');
       return;
@@ -165,6 +222,23 @@ export function LocationMap({
       markerRef.current = L.marker([lat, lng]).addTo(leafletMapRef.current);
       leafletMapRef.current.setView([lat, lng], 15);
       console.log('✅ Marker added and view updated');
+
+      // Fetch address details via reverse geocoding
+      if (!skipReverseGeocode) {
+        const locationData = await reverseGeocode(lat, lng);
+        setSelectedLocation(locationData);
+
+        // Update search query with the address
+        if (locationData.address) {
+          const fullAddress = [
+            locationData.address,
+            locationData.city,
+            locationData.state,
+            locationData.postal_code
+          ].filter(Boolean).join(', ');
+          setSearchQuery(fullAddress);
+        }
+      }
     } catch (error) {
       console.error('❌ Error adding marker:', error);
     }
@@ -191,9 +265,9 @@ export function LocationMap({
         const { lat, lon, display_name } = data[0];
         const latitude = parseFloat(lat);
         const longitude = parseFloat(lon);
-        updateMarker(latitude, longitude);
-        setSelectedLocation({ lat: latitude, lng: longitude });
-        setSearchQuery(display_name);
+
+        // Use the search result's display name but still fetch detailed address components
+        await updateMarker(latitude, longitude, false);
         console.log('🔍 Search result:', latitude, longitude);
       }
     } catch (error) {
@@ -205,7 +279,15 @@ export function LocationMap({
 
   const handleSave = () => {
     if (selectedLocation) {
-      onLocationSelect(selectedLocation.lat, selectedLocation.lng, searchQuery);
+      onLocationSelect(
+        selectedLocation.lat,
+        selectedLocation.lng,
+        selectedLocation.address,
+        selectedLocation.city,
+        selectedLocation.state,
+        selectedLocation.postal_code,
+        selectedLocation.country
+      );
       console.log('💾 Saved location:', selectedLocation);
       onClose();
     }
@@ -252,10 +334,39 @@ export function LocationMap({
             }}
           />
 
-          {/* Selected coordinates display */}
-          {selectedLocation && (
-            <div className="text-sm text-gray-600 bg-green-50 border border-green-200 rounded p-3">
-              <strong>📍 Selected:</strong> Latitude: {selectedLocation.lat.toFixed(6)}, Longitude: {selectedLocation.lng.toFixed(6)}
+          {/* Reverse geocoding indicator */}
+          {isReverseGeocoding && (
+            <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded p-3 flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Fetching address details...</span>
+            </div>
+          )}
+
+          {/* Selected location display */}
+          {selectedLocation && !isReverseGeocoding && (
+            <div className="text-sm text-gray-700 bg-green-50 border border-green-200 rounded p-4 space-y-2">
+              <div className="font-semibold text-green-800 flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Selected Location
+              </div>
+              {selectedLocation.address && (
+                <div><strong>Address:</strong> {selectedLocation.address}</div>
+              )}
+              {selectedLocation.city && (
+                <div><strong>City:</strong> {selectedLocation.city}</div>
+              )}
+              {selectedLocation.state && (
+                <div><strong>State:</strong> {selectedLocation.state}</div>
+              )}
+              {selectedLocation.postal_code && (
+                <div><strong>Postal Code:</strong> {selectedLocation.postal_code}</div>
+              )}
+              {selectedLocation.country && (
+                <div><strong>Country:</strong> {selectedLocation.country}</div>
+              )}
+              <div className="text-xs text-gray-500 pt-2 border-t border-green-300">
+                Coordinates: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
+              </div>
             </div>
           )}
 

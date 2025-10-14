@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Property, PropertyInsert, Amenity, Rule } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
-import { CACHE_CONFIG, OptimisticUpdates, getCacheManagers } from "@/lib/cache-manager";
+import { CACHE_CONFIG } from "@/lib/cache-config";
+import { OptimisticUpdates } from "@/lib/cache-manager-simplified";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 
@@ -204,26 +205,26 @@ export function usePropertiesOptimized() {
   } = useQuery({
     queryKey: propertyKeys.lists(),
     queryFn: fetchPropertiesList, // Using optimized list query
-    staleTime: 0, // Always consider data stale to force refresh
-    gcTime: 5 * 60 * 1000, // 5 minutes in cache
-    refetchOnMount: true, // Refetch when component mounts
+    staleTime: CACHE_CONFIG.LIST.staleTime, // 30 minutes
+    gcTime: CACHE_CONFIG.LIST.gcTime, // 2 hours
+    refetchOnMount: false, // Don't refetch on mount (use cache)
     refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
-  // Amenities query with ultra-long caching (static data)
+  // Amenities query with static caching (rarely changes)
   const { data: amenities = [] } = useQuery({
     queryKey: propertyKeys.amenities(),
     queryFn: fetchAmenities,
-    staleTime: CACHE_CONFIG.ULTRA_LONG, // 24 hours
-    gcTime: CACHE_CONFIG.GC_ULTRA_LONG, // 48 hours
+    staleTime: CACHE_CONFIG.STATIC.staleTime, // 24 hours
+    gcTime: CACHE_CONFIG.STATIC.gcTime, // 48 hours
   });
 
-  // Rules query with ultra-long caching (static data)
+  // Rules query with static caching (rarely changes)
   const { data: rules = [] } = useQuery({
     queryKey: propertyKeys.rules(),
     queryFn: fetchRules,
-    staleTime: CACHE_CONFIG.ULTRA_LONG, // 24 hours
-    gcTime: CACHE_CONFIG.GC_ULTRA_LONG, // 48 hours
+    staleTime: CACHE_CONFIG.STATIC.staleTime, // 24 hours
+    gcTime: CACHE_CONFIG.STATIC.gcTime, // 48 hours
   });
 
   // Create property mutation with optimistic updates and retry logic
@@ -332,12 +333,6 @@ export function usePropertiesOptimized() {
       return property;
     },
     onMutate: async (propertyData) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: propertyKeys.lists() });
-
-      // Snapshot the previous value
-      const previousProperties = queryClient.getQueryData(propertyKeys.lists());
-
       // Optimistically update the cache
       const tempProperty = {
         property_id: `temp-${Date.now()}`,
@@ -346,23 +341,15 @@ export function usePropertiesOptimized() {
         updated_at: new Date().toISOString(),
       };
 
-      OptimisticUpdates.addItem(queryClient, propertyKeys.lists(), tempProperty);
+      // Use OptimisticUpdates helper with automatic rollback
+      const rollback = OptimisticUpdates.addProperty(queryClient, tempProperty);
 
-      // Return context with the previous data
-      return { previousProperties };
+      // Return context with rollback function
+      return { rollback };
     },
     onSuccess: (data) => {
       // Invalidate and refetch to get the real data
       queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
-
-      // Prefetch related data
-      getCacheManagers().then(({ prefetchManager }) => {
-        if (prefetchManager && data?.property_id) {
-          prefetchManager.prefetchPropertyDetails([data.property_id]);
-        }
-      }).catch(error => {
-        console.warn('Failed to get cache managers for prefetching:', error);
-      });
 
       toast({
         title: "Success",
@@ -370,10 +357,8 @@ export function usePropertiesOptimized() {
       });
     },
     onError: (error, propertyData, context) => {
-      // Rollback optimistic update
-      if (context?.previousProperties) {
-        queryClient.setQueryData(propertyKeys.lists(), context.previousProperties);
-      }
+      // Rollback optimistic update using the rollback function
+      context?.rollback?.();
 
       console.error('Error creating property:', error);
       toast({
@@ -613,18 +598,13 @@ export function usePropertiesOptimized() {
 
       return propertyId;
     },
-    onMutate: async ({ propertyId }) => {
-      // Cancel any outgoing refetches to prevent race conditions
-      await queryClient.cancelQueries({ queryKey: propertyKeys.all() });
+    onMutate: async ({ propertyId, propertyData }) => {
       console.log('📝 [PropertyEdit] Starting update for property:', propertyId);
-      
-      // Get the current query cache
-      const previousData = {
-        detail: queryClient.getQueryData(propertyKeys.detail(propertyId)),
-        list: queryClient.getQueryData(propertyKeys.lists())
-      };
 
-      return { previousData };
+      // Optimistically update the cache using the helper
+      const rollback = OptimisticUpdates.updateProperty(queryClient, propertyId, propertyData);
+
+      return { rollback };
     },
     onSuccess: async (propertyId) => {
       console.log('✅ [PropertyEdit] Update succeeded, updating cache and refetching...');
@@ -661,20 +641,12 @@ export function usePropertiesOptimized() {
     onError: (error, { propertyId }, context) => {
       console.error('❌ [PropertyEdit] Update error:', error);
 
-      // Restore previous data from context
-      if (context?.previousData) {
-        const { detail, list } = context.previousData;
-        if (detail) {
-          queryClient.setQueryData(propertyKeys.detail(propertyId), detail);
-        }
-        if (list) {
-          queryClient.setQueryData(propertyKeys.lists(), list);
-        }
-      }
+      // Rollback optimistic update
+      context?.rollback?.();
 
       // Force refetch to ensure consistent state
       queryClient.invalidateQueries({ queryKey: propertyKeys.all() });
-      
+
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update property",
@@ -704,17 +676,11 @@ export function usePropertiesOptimized() {
       return propertyId;
     },
     onMutate: async (propertyId) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: propertyKeys.lists() });
+      // Optimistically remove from cache using helper
+      const rollback = OptimisticUpdates.removeProperty(queryClient, propertyId);
 
-      // Snapshot the previous value
-      const previousProperties = queryClient.getQueryData(propertyKeys.lists());
-
-      // Optimistically remove from cache
-      OptimisticUpdates.removeItem(queryClient, propertyKeys.lists(), propertyId, 'property_id');
-
-      // Return context with the previous data
-      return { previousProperties };
+      // Return context with rollback function
+      return { rollback };
     },
     onSuccess: () => {
       // Invalidate and refetch properties
@@ -726,9 +692,7 @@ export function usePropertiesOptimized() {
     },
     onError: (error, propertyId, context) => {
       // Rollback optimistic update
-      if (context?.previousProperties) {
-        queryClient.setQueryData(propertyKeys.lists(), context.previousProperties);
-      }
+      context?.rollback?.();
 
       console.error('Error deleting property:', error);
       toast({
@@ -772,12 +736,11 @@ export function usePropertyDetail(propertyId: string | undefined) {
     queryKey: propertyKeys.detail(propertyId || ''),
     queryFn: () => fetchPropertyDetail(propertyId!),
     enabled: !!propertyId, // Only fetch when propertyId is provided
-    staleTime: 0, // Always treat as stale to force refresh
-    gcTime: 0, // Don't cache at all in edit mode
+    staleTime: CACHE_CONFIG.DETAIL.staleTime, // 10 minutes (will be invalidated by realtime sync)
+    gcTime: CACHE_CONFIG.DETAIL.gcTime, // 1 hour
     retry: 2, // Retry failed requests twice
-    refetchOnMount: true, // Refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchInterval: 1000, // Poll every second in edit mode
+    refetchOnMount: false, // Don't refetch on mount (use cache, realtime will update)
+    refetchOnWindowFocus: false, // Don't refetch on window focus (realtime will update)
   });
 
   return {

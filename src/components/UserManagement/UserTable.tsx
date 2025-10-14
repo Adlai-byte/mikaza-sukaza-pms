@@ -74,16 +74,16 @@ export function UserTable({
   }
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.first_name.toLowerCase().includes(search.toLowerCase()) ||
-      user.last_name.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase()) ||
-      user.user_type.toLowerCase().includes(search.toLowerCase());
-    
+    const matchesSearch = (user.first_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (user.last_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (user.email || '').toLowerCase().includes(search.toLowerCase()) ||
+      (user.user_type || '').toLowerCase().includes(search.toLowerCase());
+
     const matchesType = typeFilter === "all" || user.user_type === typeFilter;
-    const matchesStatus = statusFilter === "all" || 
+    const matchesStatus = statusFilter === "all" ||
       (statusFilter === "active" && user.is_active) ||
       (statusFilter === "inactive" && !user.is_active);
-    
+
     return matchesSearch && matchesType && matchesStatus;
   });
 
@@ -256,7 +256,7 @@ export function UserTable({
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => onDeleteUser(user.user_id!)}
+                            onClick={() => user.user_id && onDeleteUser(user.user_id)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
                             Delete
@@ -369,7 +369,7 @@ export function UserTable({
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => onDeleteUser(user.user_id!)}
+                            onClick={() => user.user_id && onDeleteUser(user.user_id)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
                             Delete

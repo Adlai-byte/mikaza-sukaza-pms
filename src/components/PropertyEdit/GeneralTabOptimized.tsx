@@ -664,12 +664,34 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     })();
   };
 
-  const handleLocationSelect = (lat: number, lng: number, address?: string) => {
+  const handleLocationSelect = (
+    lat: number,
+    lng: number,
+    address?: string,
+    city?: string,
+    state?: string,
+    postal_code?: string,
+    country?: string
+  ) => {
+    // Always update coordinates
     handleInputChange('latitude', lat.toString());
     handleInputChange('longitude', lng.toString());
-    if (address && !formData.address) {
+
+    // Auto-fill address fields if they're provided and current fields are empty
+    if (address) {
       handleInputChange('address', address);
     }
+    if (city) {
+      handleInputChange('city', city);
+    }
+    if (state) {
+      handleInputChange('state', state);
+    }
+    if (postal_code) {
+      handleInputChange('postal_code', postal_code);
+    }
+
+    console.log('📍 Location selected with details:', { lat, lng, address, city, state, postal_code, country });
   };
 
   const propertyTypes = ['Apartment', 'House', 'Condo', 'Villa', 'Studio', 'Townhouse'];

@@ -2,7 +2,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Button } from "./ui/button";
-import { Bell, User, LogOut, Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export function MainLayout() {
   const { profile, signOut, isAdmin } = useAuth();
@@ -44,13 +45,8 @@ export function MainLayout() {
               </div>
               
               <div className="flex items-center space-x-2 sm:space-x-3">
-                <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-10 sm:w-10">
-                  <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full text-[10px] flex items-center justify-center text-white">
-                    3
-                  </span>
-                </Button>
-                
+                <NotificationBell />
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center space-x-2 h-8 sm:h-10 px-2 sm:px-3">
