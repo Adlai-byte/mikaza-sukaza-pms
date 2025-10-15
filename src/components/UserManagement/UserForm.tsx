@@ -42,7 +42,6 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
   const [photoPreview, setPhotoPreview] = useState<string | null>(user?.photo_url || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { logActivity } = useActivityLogs();
   const { toast } = useToast();
   
@@ -76,7 +75,6 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
       const formData = {
         email: user?.email || "",
         password: user?.password || "", // Show existing password
-        confirmPassword: user?.password || "", // Match existing password
         user_type: user?.user_type || "ops",
         is_active: user?.is_active ?? true,
         first_name: user?.first_name || "",

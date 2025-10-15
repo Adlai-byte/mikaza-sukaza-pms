@@ -295,8 +295,8 @@ export function LocationMap({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
+      <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
             Select Location on Map
@@ -306,9 +306,9 @@ export function LocationMap({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+        <div className="space-y-4">
           {/* Search bar */}
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex gap-2">
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -321,74 +321,57 @@ export function LocationMap({
             </Button>
           </div>
 
-          {/* Content area with map and details side by side */}
-          <div className="flex-1 flex gap-4 min-h-0">
-            {/* Map container */}
-            <div
-              ref={mapRef}
-              className="flex-1 rounded-lg border-2 border-gray-300 overflow-hidden bg-gray-100"
-              style={{
-                minHeight: '400px',
-                position: 'relative',
-                zIndex: 0
-              }}
-            />
+          {/* Map container */}
+          <div
+            ref={mapRef}
+            className="w-full rounded-lg border-2 border-gray-300 overflow-hidden bg-gray-100"
+            style={{
+              height: '500px',
+              minHeight: '500px',
+              width: '100%',
+              position: 'relative',
+              zIndex: 0
+            }}
+          />
 
-            {/* Side panel for location details */}
-            <div className="w-80 flex-shrink-0 flex flex-col gap-3 overflow-y-auto">
-              {/* Reverse geocoding indicator */}
-              {isReverseGeocoding && (
-                <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded p-3 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Fetching address details...</span>
-                </div>
-              )}
-
-              {/* Selected location display */}
-              {selectedLocation && !isReverseGeocoding && (
-                <div className="text-sm text-gray-700 bg-green-50 border border-green-200 rounded p-4 space-y-2">
-                  <div className="font-semibold text-green-800 flex items-center gap-2 mb-3">
-                    <MapPin className="h-4 w-4" />
-                    Selected Location
-                  </div>
-                  {selectedLocation.address && (
-                    <div><strong>Address:</strong> {selectedLocation.address}</div>
-                  )}
-                  {selectedLocation.city && (
-                    <div><strong>City:</strong> {selectedLocation.city}</div>
-                  )}
-                  {selectedLocation.state && (
-                    <div><strong>State:</strong> {selectedLocation.state}</div>
-                  )}
-                  {selectedLocation.postal_code && (
-                    <div><strong>Postal Code:</strong> {selectedLocation.postal_code}</div>
-                  )}
-                  {selectedLocation.country && (
-                    <div><strong>Country:</strong> {selectedLocation.country}</div>
-                  )}
-                  <div className="text-xs text-gray-500 pt-2 border-t border-green-300">
-                    Coordinates: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
-                  </div>
-                </div>
-              )}
-
-              {/* Helper text when no location selected */}
-              {!selectedLocation && !isReverseGeocoding && (
-                <div className="text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded p-4">
-                  <p className="font-medium mb-2">How to select a location:</p>
-                  <ol className="list-decimal list-inside space-y-1">
-                    <li>Click anywhere on the map</li>
-                    <li>Or search for an address above</li>
-                    <li>Review the address details</li>
-                    <li>Click "Save Location" below</li>
-                  </ol>
-                </div>
-              )}
+          {/* Reverse geocoding indicator */}
+          {isReverseGeocoding && (
+            <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded p-3 flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Fetching address details...</span>
             </div>
-          </div>
+          )}
 
-          {/* Action buttons - Fixed at bottom */}
-          <div className="flex justify-end gap-2 pt-2 border-t flex-shrink-0">
+          {/* Selected location display */}
+          {selectedLocation && !isReverseGeocoding && (
+            <div className="text-sm text-gray-700 bg-green-50 border border-green-200 rounded p-4 space-y-2">
+              <div className="font-semibold text-green-800 flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Selected Location
+              </div>
+              {selectedLocation.address && (
+                <div><strong>Address:</strong> {selectedLocation.address}</div>
+              )}
+              {selectedLocation.city && (
+                <div><strong>City:</strong> {selectedLocation.city}</div>
+              )}
+              {selectedLocation.state && (
+                <div><strong>State:</strong> {selectedLocation.state}</div>
+              )}
+              {selectedLocation.postal_code && (
+                <div><strong>Postal Code:</strong> {selectedLocation.postal_code}</div>
+              )}
+              {selectedLocation.country && (
+                <div><strong>Country:</strong> {selectedLocation.country}</div>
+              )}
+              <div className="text-xs text-gray-500 pt-2 border-t border-green-300">
+                Coordinates: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>

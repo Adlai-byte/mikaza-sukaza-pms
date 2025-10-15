@@ -109,7 +109,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         if (session?.user) {
           // Fetch profile data when user logs in
-          fetchProfile(session.user.id);
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+          }, 0);
 
           // Warm cache with critical data after login
           if (event === 'SIGNED_IN' && cacheWarmer) {
@@ -137,6 +139,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setProfile(null);
           setLoading(false);
         }
+
+        setLoading(false);
       }
     );
 
@@ -199,6 +203,50 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     });
     return { error };
+  };
+
+  const sessionLogin = async (userFromDB: any) => {
+    if (!AUTH_ENABLED) {
+      // Store user in localStorage for session-based login
+      localStorage.setItem('tempSessionUser', JSON.stringify(userFromDB));
+
+      const sessionProfile: Profile = {
+        id: userFromDB.user_id,
+        user_id: userFromDB.user_id,
+        email: userFromDB.email,
+        first_name: userFromDB.first_name,
+        last_name: userFromDB.last_name,
+        user_type: userFromDB.user_type,
+        is_active: userFromDB.is_active,
+        photo_url: userFromDB.photo_url,
+        created_at: userFromDB.created_at,
+        updated_at: userFromDB.updated_at,
+      };
+      setProfile(sessionProfile);
+
+      // Warm cache with critical data after login
+      if (cacheWarmer) {
+        cacheWarmer.warmCriticalData({
+          properties: async () => {
+            const { data } = await supabase
+              .from('properties')
+              .select('*')
+              .order('created_at', { ascending: false });
+            return data;
+          },
+          amenities: async () => {
+            const { data } = await supabase.from('amenities').select('*');
+            return data;
+          },
+          rules: async () => {
+            const { data } = await supabase.from('rules').select('*');
+            return data;
+          },
+        }).catch(error => {
+          console.warn('⚠️ Cache warming failed:', error);
+        });
+      }
+    }
   };
 
   const signOut = async () => {
