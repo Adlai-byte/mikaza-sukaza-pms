@@ -132,7 +132,7 @@ export const ROLES = {
     name: 'Administrator',
     description: 'Full system access - manages users, finances, and all operations',
     permissions: [
-      // ALL PERMISSIONS - Admin has unrestricted access
+      // ALL PERMISSIONS INCLUDING TODOS
       ...Object.values(PERMISSIONS),
     ],
   },
@@ -144,7 +144,7 @@ export const ROLES = {
    */
   ops: {
     name: 'Operations Manager',
-    description: 'Property and operations management - limited access to finance and user management',
+    description: 'Property and operations management - no user management access',
     permissions: [
       // ========== PROPERTIES - Full CRUD except delete ==========
       PERMISSIONS.PROPERTIES_VIEW,
@@ -152,6 +152,7 @@ export const ROLES = {
       PERMISSIONS.PROPERTIES_EDIT,
       PERMISSIONS.PROPERTIES_EXPORT,
       // NOT: PROPERTIES_DELETE (admin only)
+      // NOT: Any user management permissions (admin only)
 
       // ========== JOBS - Full access ==========
       PERMISSIONS.JOBS_VIEW,
@@ -230,6 +231,71 @@ export const ROLES = {
 
       // NO SYSTEM ACCESS
       // NOT: SYSTEM_SETTINGS, SYSTEM_LOGS, SYSTEM_AUDIT
+    ],
+  },
+
+  /**
+   * PROVIDER - Service Provider/Vendor
+   * Limited access to jobs and bookings assigned to them
+   */
+  provider: {
+    name: 'Service Provider',
+    description: 'External vendor or service provider with limited access',
+    permissions: [
+      // Can only view jobs assigned to them
+      PERMISSIONS.JOBS_VIEW,
+      PERMISSIONS.JOBS_EDIT, // Can update job status and notes
+      PERMISSIONS.JOBS_COMPLETE,
+
+      // Can view bookings related to their jobs
+      PERMISSIONS.BOOKINGS_VIEW,
+
+      // Can view their own tasks
+      PERMISSIONS.TODOS_VIEW_OWN,
+      PERMISSIONS.TODOS_EDIT_OWN,
+
+      // Can create/view issues
+      PERMISSIONS.ISSUES_VIEW,
+      PERMISSIONS.ISSUES_CREATE,
+      PERMISSIONS.PHOTOS_UPLOAD,
+
+      // Can upload/view media
+      PERMISSIONS.MEDIA_VIEW,
+      PERMISSIONS.MEDIA_UPLOAD,
+      PERMISSIONS.MEDIA_DOWNLOAD,
+
+      // View own commission
+      PERMISSIONS.COMMISSIONS_VIEW_OWN,
+    ],
+  },
+
+  /**
+   * CUSTOMER - Property Owner/Guest
+   * Read-only access to their properties and bookings
+   */
+  customer: {
+    name: 'Customer',
+    description: 'Property owner or guest with view-only access to their data',
+    permissions: [
+      // View their own properties
+      PERMISSIONS.PROPERTIES_VIEW,
+
+      // View bookings for their properties
+      PERMISSIONS.BOOKINGS_VIEW,
+      PERMISSIONS.CALENDAR_EXPORT,
+
+      // View issues for their properties
+      PERMISSIONS.ISSUES_VIEW,
+      PERMISSIONS.ISSUES_CREATE, // Can report issues
+      PERMISSIONS.PHOTOS_UPLOAD, // Can upload issue photos
+
+      // View media for their properties
+      PERMISSIONS.MEDIA_VIEW,
+      PERMISSIONS.MEDIA_DOWNLOAD,
+
+      // View financial data for their properties
+      PERMISSIONS.FINANCE_VIEW,
+      PERMISSIONS.INVOICES_VIEW,
     ],
   },
 } as const;

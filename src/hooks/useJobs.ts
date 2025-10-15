@@ -5,7 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Tables } from '@/integrations/supabase/types';
+import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 
 // ============================================
@@ -13,18 +13,18 @@ import { useToast } from '@/hooks/use-toast';
 // ============================================
 
 export type Job = Tables<'jobs'>;
-export type JobInsert = Tables<'jobs'>['Insert'];
-export type JobUpdate = Tables<'jobs'>['Update'];
+export type JobInsert = TablesInsert<'jobs'>;
+export type JobUpdate = TablesUpdate<'jobs'>;
 
 export type JobTask = Tables<'job_tasks'>;
-export type JobTaskInsert = Tables<'job_tasks'>['Insert'];
-export type JobTaskUpdate = Tables<'job_tasks'>['Update'];
+export type JobTaskInsert = TablesInsert<'job_tasks'>;
+export type JobTaskUpdate = TablesUpdate<'job_tasks'>;
 
 export type JobComment = Tables<'job_comments'>;
-export type JobCommentInsert = Tables<'job_comments'>['Insert'];
+export type JobCommentInsert = TablesInsert<'job_comments'>;
 
 export type JobAttachment = Tables<'job_attachments'>;
-export type JobAttachmentInsert = Tables<'job_attachments'>['Insert'];
+export type JobAttachmentInsert = TablesInsert<'job_attachments'>;
 
 export interface JobWithRelations extends Job {
   property?: Tables<'properties'>;

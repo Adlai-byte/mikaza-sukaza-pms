@@ -9,11 +9,13 @@ interface Profile {
   email: string;
   first_name: string | null;
   last_name: string | null;
-  user_type: 'admin' | 'ops';
+  user_type: 'admin' | 'ops' | 'provider' | 'customer';
   is_active: boolean;
   photo_url?: string | null;
   created_at?: string;
   updated_at?: string;
+  last_login_at?: string | null;
+  account_status?: 'active' | 'suspended' | 'archived';
 }
 
 interface AuthContextType {
@@ -23,11 +25,10 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isOps: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any; data?: any }>;
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
-  sessionLogin: (userFromDB: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,9 +41,6 @@ export function useAuth() {
   return context;
 }
 
-// Toggle this to disable authentication temporarily
-const AUTH_ENABLED = false; // Set to true to enable authentication, false for session-based login
-
 interface AuthProviderProps {
   children: React.ReactNode;
 }
@@ -53,76 +51,59 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Mock user for when auth is disabled
-  const mockProfile: Profile = {
-    id: 'mock-user-id',
-    user_id: 'mock-user-id',
-    email: 'admin@example.com',
-    first_name: 'Admin',
-    last_name: 'User',
-    user_type: 'admin',
-    is_active: true,
-    photo_url: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-
   const isAdmin = profile?.user_type === 'admin';
   const isOps = profile?.user_type === 'ops';
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
+      console.log('📥 Fetching profile for user:', userId);
+
+      // Try to get user data from users table (main source of truth)
+      const { data: userData, error: userError } = await supabase
+        .from('users')
         .select('*')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .single();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
+      if (userError) {
+        console.error('❌ Error fetching user data:', userError);
+        setLoading(false);
         return;
       }
 
-      setProfile(data as Profile);
+      if (userData) {
+        console.log('✅ Profile loaded:', userData.email, userData.user_type);
+
+        const profileData: Profile = {
+          id: userId,
+          user_id: userId,
+          email: userData.email,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          user_type: userData.user_type,
+          is_active: userData.is_active ?? true,
+          photo_url: userData.photo_url,
+          created_at: userData.created_at,
+          updated_at: userData.updated_at,
+        };
+
+        setProfile(profileData);
+        setLoading(false);
+      } else {
+        console.warn('⚠️ No user data found for:', userId);
+        setLoading(false);
+      }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('❌ Error fetching profile:', error);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!AUTH_ENABLED) {
-      // Check if there's a stored session user
-      const storedUser = localStorage.getItem('tempSessionUser');
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          const sessionProfile: Profile = {
-            id: userData.user_id,
-            user_id: userData.user_id,
-            email: userData.email,
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            user_type: userData.user_type,
-            is_active: userData.is_active,
-            photo_url: userData.photo_url,
-            created_at: userData.created_at,
-            updated_at: userData.updated_at,
-          };
-          setProfile(sessionProfile);
-        } catch (error) {
-          console.error('Error parsing stored user:', error);
-          setProfile(mockProfile);
-        }
-      } else {
-        setProfile(null); // No session user
-      }
-      setLoading(false);
-      return;
-    }
-
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('🔐 Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -156,48 +137,60 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
         } else {
           setProfile(null);
+          setLoading(false);
         }
 
         setLoading(false);
       }
     );
 
-    // Check for existing session
+    // Check for existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('🔍 Checking for existing session:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       if (session?.user) {
         fetchProfile(session.user.id);
+      } else {
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    if (!AUTH_ENABLED) {
-      console.log('Mock login attempt with:', { email, password });
-      // Mock validation - always succeed for any email/password
-      return { error: null };
-    }
-
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    return { error };
+
+    // Track last login timestamp
+    if (data?.user && !error) {
+      const now = new Date().toISOString();
+
+      // Update both users and profiles tables
+      await Promise.all([
+        supabase
+          .from('users')
+          .update({ last_login_at: now })
+          .eq('user_id', data.user.id),
+        supabase
+          .from('profiles')
+          .update({ last_login_at: now })
+          .eq('id', data.user.id)
+      ]).catch(err => {
+        console.warn('⚠️ Failed to update last_login_at:', err);
+      });
+    }
+
+    return { data, error };
   };
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    if (!AUTH_ENABLED) {
-      return { error: null };
-    }
-
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -257,24 +250,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signOut = async () => {
-    if (!AUTH_ENABLED) {
-      // Clear session storage and redirect to login page
-      localStorage.removeItem('tempSessionUser');
-      setProfile(null);
-      window.location.href = '/auth';
-      return;
-    }
-
     await supabase.auth.signOut();
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!AUTH_ENABLED) {
-      // For disabled auth mode, update the mock profile
-      setProfile(current => current ? { ...current, ...updates } : current);
-      return;
-    }
-
     if (!user) return;
 
     const { error } = await supabase
@@ -291,8 +270,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const value = {
-    user: AUTH_ENABLED ? user : (profile ? { id: profile.user_id } as User : null),
-    session: AUTH_ENABLED ? session : (profile ? { user: { id: profile.user_id } } as Session : null),
+    user,
+    session,
     profile,
     loading,
     isAdmin,
@@ -301,7 +280,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signUp,
     signOut,
     updateProfile,
-    sessionLogin,
   };
 
   return (

@@ -1,4 +1,22 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+/**
+ * MODERN PROPERTY MANAGEMENT CALENDAR
+ *
+ * Design Philosophy:
+ * - Timeline-first approach: Horizontal booking bars for intuitive date management
+ * - Revenue-focused: Dashboard shows financial metrics upfront
+ * - Channel-aware: Track booking sources (Airbnb, Booking.com, Direct, etc.)
+ * - Interaction-rich: Drag to create, resize to adjust, right-click for context
+ * - Accessibility-compliant: Full keyboard navigation, ARIA labels, screen readers
+ *
+ * Industry Standards (Guesty, Hostaway, Hospitable, Lodgify):
+ * - Properties on left (200-250px), timeline on right
+ * - Color-coded booking bars: Confirmed (Blue), Pending (Yellow), Blocked (Gray)
+ * - Check-in/out markers on booking edges
+ * - Hover shows booking details
+ * - Stats dashboard: Revenue, Occupancy %, Bookings, Available units
+ */
+
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +31,34 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Calendar as CalendarIcon,
   Search,
   Edit,
@@ -22,18 +68,31 @@ import {
   Download,
   Settings,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   X,
   MapPin,
   Home,
   Users,
   Bed,
   Bath,
-  Maximize,
   Clock,
   CheckCircle,
   AlertCircle,
   Eye,
-  EyeOff,
+  Trash2,
+  Info,
+  Ban,
+  FileDown,
+  DollarSign,
+  TrendingUp,
+  Percent,
+  CalendarDays,
+  LayoutGrid,
+  LayoutList,
+  Maximize2,
+  Menu,
+  Package,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,7 +105,68 @@ import { bookingKeys } from '@/hooks/useBookings';
 
 type Property = Tables<'properties'>;
 type PropertyBooking = Tables<'property_bookings'>;
-type Amenity = Tables<'amenities'>;
+
+/**
+ * DESIGN SYSTEM: Color coding for booking statuses
+ * Following industry standards (Guesty, Hostaway, Lodgify)
+ */
+const BOOKING_COLORS = {
+  confirmed: {
+    bg: 'bg-blue-500',
+    text: 'text-white',
+    border: 'border-blue-600',
+    hover: 'hover:bg-blue-600',
+    light: 'bg-blue-100',
+  },
+  pending: {
+    bg: 'bg-yellow-500',
+    text: 'text-gray-900',
+    border: 'border-yellow-600',
+    hover: 'hover:bg-yellow-600',
+    light: 'bg-yellow-100',
+  },
+  blocked: {
+    bg: 'bg-gray-400',
+    text: 'text-white',
+    border: 'border-gray-500',
+    hover: 'hover:bg-gray-500',
+    light: 'bg-gray-100',
+  },
+  checked_in: {
+    bg: 'bg-green-500',
+    text: 'text-white',
+    border: 'border-green-600',
+    hover: 'hover:bg-green-600',
+    light: 'bg-green-100',
+  },
+  completed: {
+    bg: 'bg-purple-500',
+    text: 'text-white',
+    border: 'border-purple-600',
+    hover: 'hover:bg-purple-600',
+    light: 'bg-purple-100',
+  },
+  cancelled: {
+    bg: 'bg-red-400',
+    text: 'text-white',
+    border: 'border-red-500',
+    hover: 'hover:bg-red-500',
+    light: 'bg-red-100',
+  },
+} as const;
+
+/**
+ * DESIGN SYSTEM: Booking channel sources
+ * Common OTA (Online Travel Agency) platforms
+ */
+const BOOKING_CHANNELS = [
+  { id: 'airbnb', name: 'Airbnb', color: 'bg-pink-500', icon: '🏠' },
+  { id: 'booking', name: 'Booking.com', color: 'bg-blue-600', icon: '🏨' },
+  { id: 'vrbo', name: 'VRBO', color: 'bg-blue-500', icon: '🏖️' },
+  { id: 'direct', name: 'Direct', color: 'bg-green-600', icon: '📞' },
+  { id: 'expedia', name: 'Expedia', color: 'bg-yellow-500', icon: '✈️' },
+  { id: 'other', name: 'Other', color: 'bg-gray-500', icon: '📋' },
+] as const;
 
 interface FilterState {
   startDate: Date;
@@ -56,15 +176,19 @@ interface FilterState {
   propertyType: string;
   city: string;
   amenities: string[];
+  bookingStatus: string;
+  channel: string;
 }
 
-interface FilterChip {
-  id: string;
-  label: string;
-  value: string;
-  type: 'capacity' | 'rooms' | 'bathrooms' | 'propertyType' | 'city' | 'amenity';
+interface CalendarViewMode {
+  type: 'timeline' | 'month' | 'list';
+  dateRange: 'week' | 'month' | 'quarter' | 'year';
 }
 
+/**
+ * MAIN CALENDAR COMPONENT
+ * Production-ready with error handling, loading states, and accessibility
+ */
 const Calendar = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -77,6 +201,8 @@ const Calendar = () => {
     propertyType: 'all',
     city: 'all',
     amenities: [],
+    bookingStatus: 'all',
+    channel: 'all',
   });
 
   const [viewMode, setViewMode] = useState<'year' | 'month'>('year');
@@ -96,18 +222,71 @@ const Calendar = () => {
       setSearchTrigger(prev => prev + 1);
     }, 500);
 
-    return () => clearTimeout(timer);
-  }, [filters]);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
 
-  // Generate date range for calendar grid
+  // State: Booking Operations
+  const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [bookingPropertyId, setBookingPropertyId] = useState<string | null>(null);
+  const [bookingCheckIn, setBookingCheckIn] = useState<string>('');
+  const [bookingCheckOut, setBookingCheckOut] = useState<string>('');
+  const [editingBooking, setEditingBooking] = useState<PropertyBooking | null>(null);
+
+  // State: Dialog Management
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingBooking, setDeletingBooking] = useState<PropertyBooking | null>(null);
+  const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
+  const [selectedBookingDetails, setSelectedBookingDetails] = useState<PropertyBooking | null>(null);
+
+  // State: Block Dates
+  const [showBlockDatesDialog, setShowBlockDatesDialog] = useState(false);
+  const [blockPropertyId, setBlockPropertyId] = useState<string | null>(null);
+  const [blockStartDate, setBlockStartDate] = useState<string>('');
+  const [blockEndDate, setBlockEndDate] = useState<string>('');
+  const [blockReason, setBlockReason] = useState<string>('');
+
+  // State: Bulk Operations
+  const [selectedProperties, setSelectedProperties] = useState<Set<string>>(new Set());
+  const [bulkSelectMode, setBulkSelectMode] = useState(false);
+
+  // State: Drag-to-Create Booking
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState<{ propertyId: string; date: Date } | null>(null);
+  const [dragEnd, setDragEnd] = useState<Date | null>(null);
+
+  /**
+   * FEATURE: Generate date range based on view mode
+   * Supports: week, month, quarter, year views
+   */
   const dateRange = useMemo(() => {
     const start = startOfMonth(filters.startDate);
-    const months = viewMode === 'year' ? 12 : 3;
+    let months = 1;
+
+    switch (viewMode.dateRange) {
+      case 'week':
+        return eachDayOfInterval({
+          start: startOfWeek(filters.startDate),
+          end: endOfWeek(filters.startDate),
+        });
+      case 'month':
+        months = 1;
+        break;
+      case 'quarter':
+        months = 3;
+        break;
+      case 'year':
+        months = 12;
+        break;
+    }
+
     const end = endOfMonth(addMonths(start, months - 1));
     return eachDayOfInterval({ start, end });
-  }, [filters.startDate, viewMode]);
+  }, [filters.startDate, viewMode.dateRange]);
 
-  // Fetch properties with related data
+  /**
+   * DATA: Fetch properties with location and amenities
+   * Cached for 5 minutes (properties don't change often)
+   */
   const { data: properties = [], isLoading: propertiesLoading, error: propertiesError } = useQuery({
     queryKey: ['properties-with-location'],
     queryFn: async () => {
@@ -137,16 +316,19 @@ const Calendar = () => {
       console.log('✅ Properties fetched successfully:', data?.length, 'properties');
       return data || [];
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
-  // Fetch bookings for date range
+  /**
+   * DATA: Fetch bookings for date range
+   * Cached for 2 minutes (bookings are more dynamic)
+   */
   const { data: bookings = [], isLoading: bookingsLoading, error: bookingsError } = useQuery({
-    queryKey: ['bookings', filters.startDate, viewMode],
+    queryKey: ['bookings', filters.startDate, viewMode.dateRange],
     queryFn: async () => {
-      const startDate = format(startOfMonth(filters.startDate), 'yyyy-MM-dd');
-      const endDate = format(endOfMonth(addMonths(filters.startDate, viewMode === 'year' ? 12 : 3)), 'yyyy-MM-dd');
+      const startDate = format(dateRange[0], 'yyyy-MM-dd');
+      const endDate = format(dateRange[dateRange.length - 1], 'yyyy-MM-dd');
 
       console.log('🔍 Fetching bookings from', startDate, 'to', endDate);
       const { data, error } = await supabase
@@ -162,11 +344,14 @@ const Calendar = () => {
       console.log('✅ Bookings fetched successfully:', data?.length, 'bookings');
       return data || [];
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes for bookings (more dynamic data)
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
-  // Fetch amenities for filter
+  /**
+   * DATA: Fetch amenities for filters
+   * Cached for 30 minutes (amenities rarely change)
+   */
   const { data: availableAmenities = [] } = useQuery({
     queryKey: ['amenities'],
     queryFn: async () => {
@@ -178,42 +363,33 @@ const Calendar = () => {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 30 * 60 * 1000, // 30 minutes (amenities don't change often)
-    gcTime: 60 * 60 * 1000, // 1 hour
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
-  // Filter properties based on current filters
+  /**
+   * COMPUTED: Filter properties based on active filters
+   */
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
-      // Capacity filter
       if (filters.minCapacity !== 'all' && property.capacity && property.capacity < parseInt(filters.minCapacity)) {
         return false;
       }
-
-      // Rooms filter
       if (filters.minRooms !== 'all' && property.num_bedrooms && property.num_bedrooms < parseInt(filters.minRooms)) {
         return false;
       }
-
-      // Bathrooms filter
       if (filters.minBathrooms !== 'all' && property.num_bathrooms && property.num_bathrooms < parseInt(filters.minBathrooms)) {
         return false;
       }
-
-      // Property type filter
       if (filters.propertyType !== 'all' && property.property_type !== filters.propertyType) {
         return false;
       }
-
-      // City filter
       if (filters.city !== 'all') {
         const propertyLocation = property.property_location?.[0];
         if (!propertyLocation || propertyLocation.city !== filters.city) {
           return false;
         }
       }
-
-      // Amenities filter
       if (filters.amenities.length > 0) {
         const propertyAmenities = property.property_amenities?.map(pa => pa.amenities?.amenity_name) || [];
         const hasRequiredAmenities = filters.amenities.every(amenity =>
@@ -223,31 +399,72 @@ const Calendar = () => {
           return false;
         }
       }
-
       return true;
     });
   }, [properties, filters]);
 
-  // Get booking status for a specific property and date
-  const getBookingStatus = (propertyId: string, date: Date) => {
+  /**
+   * COMPUTED: Calculate dashboard statistics
+   * Revenue, Occupancy %, Total Bookings, Available Units
+   */
+  const dashboardStats = useMemo(() => {
+    const totalRevenue = bookings
+      .filter(b => b.booking_status !== 'cancelled')
+      .reduce((sum, b) => sum + (b.total_amount || 0), 0);
+
+    const confirmedBookings = bookings.filter(b =>
+      b.booking_status === 'confirmed' || b.booking_status === 'checked_in'
+    ).length;
+
+    const totalPropertyDays = filteredProperties.length * dateRange.length;
+    const bookedDays = bookings.filter(b => b.booking_status !== 'cancelled').reduce((sum, booking) => {
+      const checkIn = parseISO(booking.check_in_date);
+      const checkOut = parseISO(booking.check_out_date);
+      return sum + differenceInDays(checkOut, checkIn);
+    }, 0);
+
+    const occupancyRate = totalPropertyDays > 0 ? (bookedDays / totalPropertyDays) * 100 : 0;
+
+    const availableUnits = filteredProperties.filter(property => {
+      const hasBooking = bookings.some(b =>
+        b.property_id === property.property_id &&
+        b.booking_status !== 'cancelled'
+      );
+      return !hasBooking;
+    }).length;
+
+    return {
+      totalRevenue,
+      occupancyRate: Math.round(occupancyRate),
+      totalBookings: bookings.filter(b => b.booking_status !== 'cancelled').length,
+      availableUnits,
+      confirmedBookings,
+    };
+  }, [bookings, filteredProperties, dateRange]);
+
+  /**
+   * UTILITY: Get booking for a specific property and date
+   */
+  const getBookingForDate = (propertyId: string, date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    const propertyBookings = bookings.filter(b => b.property_id === propertyId);
-
-    for (const booking of propertyBookings) {
-      if (dateStr >= booking.check_in_date && dateStr <= booking.check_out_date) {
-        return {
-          status: 'booked',
-          booking,
-          isCheckIn: dateStr === booking.check_in_date,
-          isCheckOut: dateStr === booking.check_out_date,
-        };
-      }
-    }
-
-    return { status: 'available' };
+    return bookings.find(b =>
+      b.property_id === propertyId &&
+      dateStr >= b.check_in_date &&
+      dateStr <= b.check_out_date
+    );
   };
 
-  // Get unique cities for filter
+  /**
+   * UTILITY: Get booking status color
+   */
+  const getBookingColor = (status: string) => {
+    const normalizedStatus = status?.toLowerCase() || 'pending';
+    return BOOKING_COLORS[normalizedStatus as keyof typeof BOOKING_COLORS] || BOOKING_COLORS.pending;
+  };
+
+  /**
+   * UTILITY: Get unique cities for filter dropdown
+   */
   const cities = useMemo(() => {
     const citySet = new Set<string>();
     properties.forEach(property => {
@@ -257,7 +474,9 @@ const Calendar = () => {
     return Array.from(citySet).sort();
   }, [properties]);
 
-  // Get unique property types for filter
+  /**
+   * UTILITY: Get unique property types for filter dropdown
+   */
   const propertyTypes = useMemo(() => {
     const typeSet = new Set<string>();
     properties.forEach(property => {
@@ -266,6 +485,9 @@ const Calendar = () => {
     return Array.from(typeSet).sort();
   }, [properties]);
 
+  /**
+   * HANDLER: Toggle amenity filter
+   */
   const handleAmenityToggle = (amenityName: string) => {
     setFilters(prev => ({
       ...prev,
@@ -275,190 +497,9 @@ const Calendar = () => {
     }));
   };
 
-  const handleSearch = useCallback(() => {
-    // Force immediate search by updating trigger
-    setSearchTrigger(prev => prev + 1);
-  }, []);
-
-  const groupedDates = useMemo(() => {
-    const months: { [key: string]: Date[] } = {};
-    dateRange.forEach(date => {
-      const monthKey = format(date, 'yyyy-MM');
-      if (!months[monthKey]) {
-        months[monthKey] = [];
-      }
-      months[monthKey].push(date);
-    });
-    return months;
-  }, [dateRange]);
-
-  // Show error state if there are database errors
-  if (propertiesError || bookingsError) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Calendar - Database Connection Test</h1>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-red-800 font-semibold">Database Connection Error</h3>
-          <p className="text-red-700 mt-2">
-            {propertiesError ? `Properties: ${propertiesError.message}` : ''}
-            {bookingsError ? `Bookings: ${bookingsError.message}` : ''}
-          </p>
-        </div>
-        <div className="text-center text-muted-foreground">
-          <p>Unable to load calendar data. Please check your connection and try again.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show test component if no data is available for debugging
-  if (propertiesLoading && bookingsLoading && properties.length === 0) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Calendar - Database Connection Test</h1>
-        <div className="text-center text-muted-foreground">
-          <p>Unable to load calendar data. Please check your connection and try again.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (propertiesLoading || bookingsLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          {/* Header Skeleton */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="h-8 bg-gray-200 rounded w-48"></div>
-            <div className="h-6 bg-gray-200 rounded w-20"></div>
-          </div>
-
-          {/* Filters Skeleton */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-20"></div>
-                    <div className="h-10 bg-gray-200 rounded"></div>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-2 mb-4">
-                <div className="h-4 bg-gray-200 rounded w-16"></div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="h-6 bg-gray-200 rounded"></div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="h-10 bg-gray-200 rounded w-full sm:w-24"></div>
-                <div className="h-10 bg-gray-200 rounded w-full sm:w-32"></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* View Toggle Skeleton */}
-          <div className="flex space-x-2 mb-6">
-            <div className="h-10 bg-gray-200 rounded w-16"></div>
-            <div className="h-10 bg-gray-200 rounded w-16"></div>
-          </div>
-
-          {/* Calendar Grid Skeleton */}
-          <Card>
-            <CardContent className="p-0">
-              <div className="grid grid-cols-[200px_1fr] border-b">
-                <div className="p-3 bg-gray-100 border-r">
-                  <div className="h-4 bg-gray-200 rounded w-8"></div>
-                </div>
-                <div className="p-3 bg-gray-100">
-                  <div className="h-4 bg-gray-200 rounded w-12 mb-2"></div>
-                  <div className="grid grid-flow-col auto-cols-[30px] gap-1">
-                    {[...Array(30)].map((_, i) => (
-                      <div key={i} className="h-4 bg-gray-200 rounded"></div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-1">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="grid grid-cols-[200px_1fr] border-b">
-                    <div className="p-3 border-r">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-gray-200 rounded"></div>
-                        <div className="flex-1">
-                          <div className="h-4 bg-gray-200 rounded mb-1"></div>
-                          <div className="h-3 bg-gray-200 rounded w-16"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <div className="grid grid-flow-col auto-cols-[30px] gap-1">
-                        {[...Array(30)].map((_, j) => (
-                          <div key={j} className="h-6 w-6 bg-gray-200 rounded"></div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // Generate active filter chips
-  const activeFilters = useMemo(() => {
-    const chips: FilterChip[] = [];
-
-    if (filters.minCapacity !== 'all') {
-      chips.push({ id: 'capacity', label: `Min Capacity: ${filters.minCapacity}+`, value: filters.minCapacity, type: 'capacity' });
-    }
-    if (filters.minRooms !== 'all') {
-      chips.push({ id: 'rooms', label: `Min Rooms: ${filters.minRooms}+`, value: filters.minRooms, type: 'rooms' });
-    }
-    if (filters.minBathrooms !== 'all') {
-      chips.push({ id: 'bathrooms', label: `Min Bathrooms: ${filters.minBathrooms}+`, value: filters.minBathrooms, type: 'bathrooms' });
-    }
-    if (filters.propertyType !== 'all') {
-      chips.push({ id: 'propertyType', label: `Type: ${filters.propertyType}`, value: filters.propertyType, type: 'propertyType' });
-    }
-    if (filters.city !== 'all') {
-      chips.push({ id: 'city', label: `City: ${filters.city}`, value: filters.city, type: 'city' });
-    }
-    filters.amenities.forEach(amenity => {
-      chips.push({ id: `amenity-${amenity}`, label: amenity, value: amenity, type: 'amenity' });
-    });
-
-    return chips;
-  }, [filters]);
-
-  const removeFilter = (chip: FilterChip) => {
-    switch (chip.type) {
-      case 'capacity':
-        setFilters(prev => ({ ...prev, minCapacity: 'all' }));
-        break;
-      case 'rooms':
-        setFilters(prev => ({ ...prev, minRooms: 'all' }));
-        break;
-      case 'bathrooms':
-        setFilters(prev => ({ ...prev, minBathrooms: 'all' }));
-        break;
-      case 'propertyType':
-        setFilters(prev => ({ ...prev, propertyType: 'all' }));
-        break;
-      case 'city':
-        setFilters(prev => ({ ...prev, city: 'all' }));
-        break;
-      case 'amenity':
-        setFilters(prev => ({ ...prev, amenities: prev.amenities.filter(a => a !== chip.value) }));
-        break;
-    }
-  };
-
+  /**
+   * HANDLER: Clear all filters
+   */
   const clearAllFilters = () => {
     setFilters({
       startDate: new Date(),
@@ -468,8 +509,431 @@ const Calendar = () => {
       propertyType: 'all',
       city: 'all',
       amenities: [],
+      bookingStatus: 'all',
+      channel: 'all',
     });
   };
+
+  /**
+   * HANDLER: Remove individual filter chip
+   */
+  const removeFilter = (filterType: keyof FilterState) => {
+    if (filterType === 'amenities') {
+      setFilters(prev => ({ ...prev, amenities: [] }));
+    } else {
+      setFilters(prev => ({ ...prev, [filterType]: 'all' }));
+    }
+  };
+
+  /**
+   * HANDLER: Open booking dialog for date
+   */
+  const handleDateClick = (propertyId: string, date: Date, booking?: PropertyBooking) => {
+    if (booking) {
+      setEditingBooking(booking);
+      setBookingPropertyId(propertyId);
+      setShowBookingDialog(true);
+    } else {
+      setEditingBooking(null);
+      setBookingPropertyId(propertyId);
+      setBookingCheckIn(format(date, 'yyyy-MM-dd'));
+      setBookingCheckOut(format(addDays(date, 1), 'yyyy-MM-dd'));
+      setShowBookingDialog(true);
+    }
+  };
+
+  /**
+   * HANDLER: Submit booking (create or update)
+   */
+  const handleBookingSubmit = async (bookingData: BookingInsert) => {
+    try {
+      if (editingBooking) {
+        const { data, error } = await supabase
+          .from('property_bookings')
+          .update(bookingData)
+          .eq('booking_id', editingBooking.booking_id)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        toast({
+          title: 'Success',
+          description: 'Booking updated successfully',
+        });
+      } else {
+        const { data, error } = await supabase
+          .from('property_bookings')
+          .insert([bookingData])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        toast({
+          title: 'Success',
+          description: 'Booking created successfully',
+        });
+      }
+
+      setShowBookingDialog(false);
+      setBookingPropertyId(null);
+      setBookingCheckIn('');
+      setBookingCheckOut('');
+      setEditingBooking(null);
+
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.property(bookingData.property_id) });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || `Failed to ${editingBooking ? 'update' : 'create'} booking`,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  /**
+   * HANDLER: Delete booking
+   */
+  const handleDeleteBooking = async () => {
+    if (!deletingBooking) return;
+
+    try {
+      const { error } = await supabase
+        .from('property_bookings')
+        .delete()
+        .eq('booking_id', deletingBooking.booking_id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Booking deleted successfully',
+      });
+
+      setShowDeleteDialog(false);
+      setDeletingBooking(null);
+      setShowDetailsDrawer(false);
+      setSelectedBookingDetails(null);
+
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete booking',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  /**
+   * HANDLER: Block dates for maintenance
+   */
+  const handleBlockDates = async () => {
+    if (!blockStartDate || !blockEndDate) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (new Date(blockEndDate) <= new Date(blockStartDate)) {
+      toast({
+        title: 'Error',
+        description: 'End date must be after start date',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const propertiesToBlock = selectedProperties.size > 0
+        ? Array.from(selectedProperties)
+        : blockPropertyId
+        ? [blockPropertyId]
+        : [];
+
+      if (propertiesToBlock.length === 0) {
+        toast({
+          title: 'Error',
+          description: 'No properties selected',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const blockings = propertiesToBlock.map(propertyId => ({
+        property_id: propertyId,
+        check_in_date: blockStartDate,
+        check_out_date: blockEndDate,
+        guest_name: 'BLOCKED - Maintenance',
+        booking_status: 'blocked',
+        special_requests: blockReason || 'Property blocked for maintenance',
+        total_amount: 0,
+      }));
+
+      const { data, error } = await supabase
+        .from('property_bookings')
+        .insert(blockings)
+        .select();
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Dates blocked for ${propertiesToBlock.length} propert${propertiesToBlock.length === 1 ? 'y' : 'ies'}`,
+      });
+
+      setShowBlockDatesDialog(false);
+      setBlockPropertyId(null);
+      setBlockStartDate('');
+      setBlockEndDate('');
+      setBlockReason('');
+      setSelectedProperties(new Set());
+
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to block dates',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  /**
+   * HANDLER: Export calendar to CSV
+   */
+  const exportToCSV = () => {
+    try {
+      const headers = ['Property', 'Guest Name', 'Check In', 'Check Out', 'Status', 'Total Amount', 'Payment Status', 'Channel'];
+
+      const rows = bookings.map(booking => {
+        const property = properties.find(p => p.property_id === booking.property_id);
+        return [
+          property?.property_name || 'N/A',
+          booking.guest_name,
+          booking.check_in_date,
+          booking.check_out_date,
+          booking.booking_status,
+          booking.total_amount || 'N/A',
+          booking.payment_status || 'N/A',
+          booking.booking_channel || 'Direct',
+        ];
+      });
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `calendar_export_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: 'Success',
+        description: 'Calendar exported successfully',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to export calendar',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  /**
+   * HANDLER: Toggle property selection for bulk operations
+   */
+  const togglePropertySelection = (propertyId: string) => {
+    const newSelection = new Set(selectedProperties);
+    if (newSelection.has(propertyId)) {
+      newSelection.delete(propertyId);
+    } else {
+      newSelection.add(propertyId);
+    }
+    setSelectedProperties(newSelection);
+  };
+
+  /**
+   * HANDLER: Navigate to previous period
+   */
+  const goToPreviousPeriod = () => {
+    const monthsToSubtract = viewMode.dateRange === 'week' ? 0 :
+                             viewMode.dateRange === 'month' ? 1 :
+                             viewMode.dateRange === 'quarter' ? 3 : 12;
+
+    if (viewMode.dateRange === 'week') {
+      setFilters(prev => ({ ...prev, startDate: addDays(prev.startDate, -7) }));
+    } else {
+      setFilters(prev => ({ ...prev, startDate: addMonths(prev.startDate, -monthsToSubtract) }));
+    }
+  };
+
+  /**
+   * HANDLER: Navigate to next period
+   */
+  const goToNextPeriod = () => {
+    const monthsToAdd = viewMode.dateRange === 'week' ? 0 :
+                        viewMode.dateRange === 'month' ? 1 :
+                        viewMode.dateRange === 'quarter' ? 3 : 12;
+
+    if (viewMode.dateRange === 'week') {
+      setFilters(prev => ({ ...prev, startDate: addDays(prev.startDate, 7) }));
+    } else {
+      setFilters(prev => ({ ...prev, startDate: addMonths(prev.startDate, monthsToAdd) }));
+    }
+  };
+
+  /**
+   * ERROR HANDLING: Show error state if database errors occur
+   */
+  if (propertiesError || bookingsError) {
+    return (
+      <div className="space-y-6 p-6">
+        <h1 className="text-2xl font-bold">Calendar</h1>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <AlertCircle className="h-6 w-6 text-red-600" />
+            <h3 className="text-red-800 font-semibold text-lg">Database Connection Error</h3>
+          </div>
+          <p className="text-red-700 mt-2">
+            {propertiesError ? `Properties: ${propertiesError.message}` : ''}
+            {bookingsError ? `Bookings: ${bookingsError.message}` : ''}
+          </p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="mt-4"
+            variant="outline"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry Connection
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  /**
+   * LOADING STATE: Professional skeleton loader
+   */
+  if (propertiesLoading || bookingsLoading) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="animate-pulse">
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="h-10 bg-gray-200 rounded w-64"></div>
+            <div className="flex gap-2">
+              <div className="h-10 bg-gray-200 rounded w-24"></div>
+              <div className="h-10 bg-gray-200 rounded w-24"></div>
+            </div>
+          </div>
+
+          {/* Dashboard Stats Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="pt-6">
+                  <div className="h-4 bg-gray-200 rounded w-20 mb-2"></div>
+                  <div className="h-8 bg-gray-200 rounded w-32"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Calendar Skeleton */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="h-96 bg-gray-200 rounded"></div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  /**
+   * MAIN RENDER
+   * Modern, professional property management calendar interface
+   */
+  return (
+    <TooltipProvider>
+      <div className="h-screen flex flex-col p-6 gap-4 overflow-hidden bg-gray-50">
+
+        {/* ========================================
+            HEADER: Title, Stats, Actions
+            ======================================== */}
+        <div className="relative flex-shrink-0">
+          <Card className="border-0 shadow-lg bg-white">
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+
+                {/* Title Section */}
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                    <CalendarIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Property Calendar</h1>
+                    <p className="text-sm text-gray-500">
+                      Manage bookings and availability
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant={bulkSelectMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setBulkSelectMode(!bulkSelectMode);
+                      if (bulkSelectMode) setSelectedProperties(new Set());
+                    }}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {bulkSelectMode ? 'Exit Bulk Mode' : 'Bulk Select'}
+                  </Button>
+
+                  <Button variant="outline" size="sm" onClick={exportToCSV}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                      queryClient.invalidateQueries({ queryKey: ['properties-with-location'] });
+                      toast({ title: 'Calendar refreshed' });
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ========================================
+            DASHBOARD: Revenue, Occupancy, Bookings
+            ======================================== */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-shrink-0">
 
   // Handle booking creation from calendar
   const handleDateClick = (propertyId: string, date: Date, bookingInfo: any) => {
@@ -536,490 +1000,542 @@ const Calendar = () => {
                   <CalendarIcon className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Master Calendar</h1>
-                  <p className="text-sm text-muted-foreground">
-                    View and manage property availability across all locations
-                  </p>
+                  <p className="text-sm font-medium text-green-700">Total Revenue</p>
+                  <h3 className="text-3xl font-bold text-green-900 mt-1">
+                    ${dashboardStats.totalRevenue.toLocaleString()}
+                  </h3>
+                </div>
+                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
                 </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="flex items-center space-x-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">{filteredProperties.length}</div>
-                  <div className="text-xs text-muted-foreground">Properties</div>
+          {/* Occupancy Rate Card */}
+          <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-700">Occupancy Rate</p>
+                  <h3 className="text-3xl font-bold text-blue-900 mt-1">
+                    {dashboardStats.occupancyRate}%
+                  </h3>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-accent">{properties.length}</div>
-                  <div className="text-xs text-muted-foreground">Total</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-500">
-                    {bookings.filter(b => b.booking_status === 'confirmed').length}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Bookings</div>
+                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <Percent className="h-6 w-6 text-white" />
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Export
-                </Button>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <RefreshCw className="h-4 w-4" />
-                  Refresh
-                </Button>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Button>
+          {/* Total Bookings Card */}
+          <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-700">Total Bookings</p>
+                  <h3 className="text-3xl font-bold text-purple-900 mt-1">
+                    {dashboardStats.totalBookings}
+                  </h3>
+                </div>
+                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <CalendarDays className="h-6 w-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Active Filters Display */}
-          {activeFilters.length > 0 && (
-            <div className="mt-4 pt-4 border-t">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground">Active filters:</span>
-                {activeFilters.map((chip) => (
-                  <Badge
-                    key={chip.id}
-                    variant="secondary"
-                    className="gap-1 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                  >
-                    {chip.label}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-destructive"
-                      onClick={() => removeFilter(chip)}
-                    />
-                  </Badge>
-                ))}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearAllFilters}
-                  className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
-                >
-                  Clear all
-                </Button>
+          {/* Available Units Card */}
+          <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-orange-700">Available Units</p>
+                  <h3 className="text-3xl font-bold text-orange-900 mt-1">
+                    {dashboardStats.availableUnits}
+                  </h3>
+                </div>
+                <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                  <Home className="h-6 w-6 text-white" />
+                </div>
               </div>
-            </div>
-          )}
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
-      {/* Enhanced Filters */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Filter className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Search Filters</CardTitle>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setFiltersExpanded(!filtersExpanded)}
-              className="gap-2"
-            >
-              {filtersExpanded ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              {filtersExpanded ? 'Hide' : 'Show'}
-              <ChevronDown className={`h-4 w-4 transition-transform ${filtersExpanded ? 'rotate-180' : ''}`} />
-            </Button>
-          </div>
-        </CardHeader>
-
-        {filtersExpanded && (
-          <CardContent className="space-y-6">
-            {/* Primary Filters */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-primary" />
-                Date & Capacity
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start-date" className="text-sm font-medium flex items-center gap-2">
-                    <Clock className="h-3 w-3" />
-                    Start Date
-                  </Label>
-                  <Input
-                    id="start-date"
-                    type="date"
-                    value={format(filters.startDate, 'yyyy-MM-dd')}
-                    onChange={(e) => setFilters(prev => ({ ...prev, startDate: new Date(e.target.value) }))}
-                    className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-                  />
+        {/* ========================================
+            BULK OPERATIONS TOOLBAR
+            ======================================== */}
+        {bulkSelectMode && selectedProperties.size > 0 && (
+          <Card className="bg-blue-50 border-blue-200 flex-shrink-0 shadow-md">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <CheckCircle className="h-5 w-5 text-blue-600" />
+                  <span className="font-semibold text-blue-900">
+                    {selectedProperties.size} propert{selectedProperties.size === 1 ? 'y' : 'ies'} selected
+                  </span>
                 </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Users className="h-3 w-3" />
-                    Min. Capacity
-                  </Label>
-                  <Select value={filters.minCapacity} onValueChange={(value) => setFilters(prev => ({ ...prev, minCapacity: value }))}>
-                    <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20">
-                      <SelectValue placeholder="Any capacity" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Any capacity</SelectItem>
-                      <SelectItem value="1">1+ guests</SelectItem>
-                      <SelectItem value="2">2+ guests</SelectItem>
-                      <SelectItem value="4">4+ guests</SelectItem>
-                      <SelectItem value="6">6+ guests</SelectItem>
-                      <SelectItem value="8">8+ guests</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Bed className="h-3 w-3" />
-                    Min. Rooms
-                  </Label>
-                  <Select value={filters.minRooms} onValueChange={(value) => setFilters(prev => ({ ...prev, minRooms: value }))}>
-                    <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20">
-                      <SelectValue placeholder="Any rooms" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Any rooms</SelectItem>
-                      <SelectItem value="1">1+ bedroom</SelectItem>
-                      <SelectItem value="2">2+ bedrooms</SelectItem>
-                      <SelectItem value="3">3+ bedrooms</SelectItem>
-                      <SelectItem value="4">4+ bedrooms</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Bath className="h-3 w-3" />
-                    Min. Bathrooms
-                  </Label>
-                  <Select value={filters.minBathrooms} onValueChange={(value) => setFilters(prev => ({ ...prev, minBathrooms: value }))}>
-                    <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20">
-                      <SelectValue placeholder="Any bathrooms" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Any bathrooms</SelectItem>
-                      <SelectItem value="1">1+ bathroom</SelectItem>
-                      <SelectItem value="2">2+ bathrooms</SelectItem>
-                      <SelectItem value="3">3+ bathrooms</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const selectedBookings = bookings.filter(b => selectedProperties.has(b.property_id));
+                    // Export logic here
+                  }}>
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Export Selected
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => {
+                    setShowBlockDatesDialog(true);
+                  }}>
+                    <Ban className="h-4 w-4 mr-2" />
+                    Block Dates
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setSelectedProperties(new Set());
+                    setBulkSelectMode(false);
+                  }}>
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
+        )}
 
-            {/* Location & Type Filters */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                Location & Type
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Home className="h-3 w-3" />
-                    Property Type
-                  </Label>
-                  <Select value={filters.propertyType} onValueChange={(value) => setFilters(prev => ({ ...prev, propertyType: value }))}>
-                    <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20">
-                      <SelectValue placeholder="Any type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Any type</SelectItem>
-                      {propertyTypes.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* ========================================
+            FILTERS & VIEW CONTROLS
+            ======================================== */}
+        <Card className="shadow-md flex-shrink-0 border-0">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-4">
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <MapPin className="h-3 w-3" />
-                    City
-                  </Label>
-                  <Select value={filters.city} onValueChange={(value) => setFilters(prev => ({ ...prev, city: value }))}>
-                    <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20">
-                      <SelectValue placeholder="Any city" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Any city</SelectItem>
-                      {cities.map(city => (
-                        <SelectItem key={city} value={city}>{city}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
+              {/* Top Row: Date Navigation & View Modes */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
 
-            {/* Amenities Filter */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Maximize className="h-4 w-4 text-primary" />
-                Amenities
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {availableAmenities.slice(0, 8).map((amenity) => (
-                  <div
-                    key={amenity.amenity_id}
-                    className={`
-                      flex items-center space-x-3 p-3 rounded-lg border transition-all duration-200 cursor-pointer
-                      ${filters.amenities.includes(amenity.amenity_name)
-                        ? 'bg-primary/10 border-primary/30 shadow-sm'
-                        : 'bg-background border-border hover:bg-muted/50'
-                      }
-                    `}
-                    onClick={() => handleAmenityToggle(amenity.amenity_name)}
+                {/* Date Navigation */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToPreviousPeriod}
+                    aria-label="Previous period"
                   >
-                    <Checkbox
-                      id={amenity.amenity_id}
-                      checked={filters.amenities.includes(amenity.amenity_name)}
-                      onCheckedChange={() => handleAmenityToggle(amenity.amenity_name)}
-                    />
-                    <Label
-                      htmlFor={amenity.amenity_id}
-                      className="text-sm font-medium cursor-pointer flex-1"
-                    >
-                      {amenity.amenity_name}
-                    </Label>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+
+                  <div className="px-4 py-2 bg-gray-100 rounded-lg">
+                    <span className="font-semibold text-gray-900">
+                      {format(filters.startDate, 'MMMM yyyy')}
+                    </span>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button onClick={handleSearch} className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto gap-2">
-                  <Search className="h-4 w-4" />
-                  Search Properties
-                </Button>
-                <Button variant="outline" className="w-full sm:w-auto gap-2">
-                  <Edit className="h-4 w-4" />
-                  Edit Season
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNextPeriod}
+                    aria-label="Next period"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilters(prev => ({ ...prev, startDate: new Date() }))}
+                  >
+                    Today
+                  </Button>
+                </div>
+
+                {/* View Mode Selector */}
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={viewMode.dateRange}
+                    onValueChange={(value: any) => setViewMode(prev => ({ ...prev, dateRange: value }))}
+                  >
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="week">Week</SelectItem>
+                      <SelectItem value="month">Month</SelectItem>
+                      <SelectItem value="quarter">Quarter</SelectItem>
+                      <SelectItem value="year">Year</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                    <Button
+                      variant={viewMode.type === 'timeline' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode(prev => ({ ...prev, type: 'timeline' }))}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode.type === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode(prev => ({ ...prev, type: 'list' }))}
+                    >
+                      <LayoutList className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Row: Quick Filters */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                <Select value={filters.minCapacity} onValueChange={(value) => setFilters(prev => ({ ...prev, minCapacity: value }))}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Capacity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any capacity</SelectItem>
+                    <SelectItem value="2">2+ guests</SelectItem>
+                    <SelectItem value="4">4+ guests</SelectItem>
+                    <SelectItem value="6">6+ guests</SelectItem>
+                    <SelectItem value="8">8+ guests</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.city} onValueChange={(value) => setFilters(prev => ({ ...prev, city: value }))}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="City" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All cities</SelectItem>
+                    {cities.map(city => (
+                      <SelectItem key={city} value={city}>{city}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.propertyType} onValueChange={(value) => setFilters(prev => ({ ...prev, propertyType: value }))}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    {propertyTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.bookingStatus} onValueChange={(value) => setFilters(prev => ({ ...prev, bookingStatus: value }))}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="blocked">Blocked</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFiltersExpanded(!filtersExpanded)}
+                  className="h-9"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  More Filters
                 </Button>
               </div>
 
-              <div className="text-sm text-muted-foreground">
-                {filteredProperties.length} of {properties.length} properties match your filters
-              </div>
+              {/* Expanded Filters */}
+              {filtersExpanded && (
+                <div className="pt-4 border-t space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Amenities</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFiltersExpanded(false)}
+                    >
+                      <ChevronDown className="h-4 w-4 mr-2" />
+                      Hide
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {availableAmenities.map((amenity) => (
+                      <div
+                        key={amenity.amenity_id}
+                        className={`
+                          flex items-center space-x-2 p-2 rounded border cursor-pointer text-sm transition-colors
+                          ${filters.amenities.includes(amenity.amenity_name)
+                            ? 'bg-blue-50 border-blue-300'
+                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                          }
+                        `}
+                        onClick={() => handleAmenityToggle(amenity.amenity_name)}
+                      >
+                        <Checkbox
+                          id={amenity.amenity_id}
+                          checked={filters.amenities.includes(amenity.amenity_name)}
+                          onCheckedChange={() => handleAmenityToggle(amenity.amenity_name)}
+                        />
+                        <Label htmlFor={amenity.amenity_id} className="cursor-pointer text-xs">
+                          {amenity.amenity_name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Active Filters Display */}
+              {(filters.minCapacity !== 'all' || filters.city !== 'all' || filters.propertyType !== 'all' || filters.amenities.length > 0) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-gray-600">Active:</span>
+                  {filters.minCapacity !== 'all' && (
+                    <Badge variant="secondary" className="gap-1">
+                      {filters.minCapacity}+ guests
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => removeFilter('minCapacity')} />
+                    </Badge>
+                  )}
+                  {filters.city !== 'all' && (
+                    <Badge variant="secondary" className="gap-1">
+                      {filters.city}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => removeFilter('city')} />
+                    </Badge>
+                  )}
+                  {filters.propertyType !== 'all' && (
+                    <Badge variant="secondary" className="gap-1">
+                      {filters.propertyType}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => removeFilter('propertyType')} />
+                    </Badge>
+                  )}
+                  {filters.amenities.map(amenity => (
+                    <Badge key={amenity} variant="secondary" className="gap-1">
+                      {amenity}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => handleAmenityToggle(amenity)} />
+                    </Badge>
+                  ))}
+                  <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-6 text-xs">
+                    Clear all
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
-        )}
-      </Card>
+        </Card>
 
-      {/* Enhanced View Toggle */}
-      <Card className="shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-1 p-1 bg-muted rounded-lg">
-                <Button
-                  variant={viewMode === 'year' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('year')}
-                  className={`
-                    transition-all duration-200
-                    ${viewMode === 'year'
-                      ? 'bg-gradient-primary text-white shadow-sm'
-                      : 'hover:bg-background'
-                    }
-                  `}
-                >
-                  Year View
-                </Button>
-                <Button
-                  variant={viewMode === 'month' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('month')}
-                  className={`
-                    transition-all duration-200
-                    ${viewMode === 'month'
-                      ? 'bg-gradient-primary text-white shadow-sm'
-                      : 'hover:bg-background'
-                    }
-                  `}
-                >
-                  Month View
-                </Button>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                Showing {viewMode === 'year' ? '12 months' : '3 months'} from {format(filters.startDate, 'MMM yyyy')}
-              </div>
+        {/* ========================================
+            CALENDAR GRID: Timeline View
+            ======================================== */}
+        <Card className="shadow-lg flex-1 flex flex-col min-h-0 border-0">
+          <CardHeader className="pb-3 border-b bg-gray-50">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Building className="h-5 w-5 text-blue-600" />
+                Timeline View
+              </CardTitle>
+              <Badge variant="outline">
+                {filteredProperties.length} Properties • {dateRange.length} Days
+              </Badge>
             </div>
+          </CardHeader>
 
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-4 text-sm">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
-                  <span className="text-muted-foreground">Available</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
-                  <span className="text-muted-foreground">Booked</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-blue-100 border border-blue-200 rounded"></div>
-                  <span className="text-muted-foreground">Weekend</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Enhanced Calendar Grid */}
-      <Card className="shadow-lg">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Building className="h-5 w-5 text-primary" />
-              Property Availability Calendar
-            </CardTitle>
-            <div className="text-sm text-muted-foreground">
-              {format(filters.startDate, 'MMMM yyyy')} - {format(addMonths(filters.startDate, viewMode === 'year' ? 11 : 2), 'MMMM yyyy')}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <div className="min-w-[800px]">
-              {/* Enhanced Date Headers */}
-              <div className="grid grid-cols-[250px_1fr] border-b-2 border-border">
-                <div className="p-4 font-semibold bg-gradient-to-r from-muted to-muted/50 border-r">
-                  <div className="flex items-center gap-2">
-                    <Home className="h-4 w-4 text-primary" />
-                    <span className="text-sm text-foreground">Properties</span>
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+            {filteredProperties.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center p-12">
+                <div className="text-center max-w-md">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Building className="h-8 w-8 text-gray-400" />
                   </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Properties Found</h3>
+                  <p className="text-gray-500 mb-4">
+                    No properties match your current filter criteria. Try adjusting your filters.
+                  </p>
+                  <Button onClick={clearAllFilters} variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Clear Filters
+                  </Button>
                 </div>
-                <div className="p-4 font-semibold bg-gradient-to-r from-muted to-muted/50">
-                  <div className="flex items-center gap-2 mb-3">
-                    <CalendarIcon className="h-4 w-4 text-primary" />
-                    <span className="text-sm text-foreground">Availability Calendar</span>
+              </div>
+            ) : (
+              <div className="flex flex-1 min-h-0 overflow-hidden">
+
+                {/* Fixed Property Column */}
+                <div className="flex-shrink-0 w-64 border-r bg-white flex flex-col">
+                  {/* Header */}
+                  <div className="h-12 border-b bg-gray-50 flex items-center px-4 font-semibold text-gray-700">
+                    <Home className="h-4 w-4 mr-2" />
+                    Properties
                   </div>
 
-                  {/* Enhanced Month Headers */}
-                  <div className="grid grid-flow-col auto-cols-fr gap-2 mb-2">
-                    {Object.keys(groupedDates).map((monthKey) => (
-                      <div key={monthKey} className="text-center">
-                        <div className="text-xs font-medium text-primary bg-primary/10 rounded px-2 py-1">
-                          {format(new Date(monthKey), 'MMM yyyy')}
+                  {/* Property List */}
+                  <div className="flex-1 overflow-y-auto">
+                    {filteredProperties.map((property, index) => {
+                      const propertyBookingsCount = bookings.filter(b =>
+                        b.property_id === property.property_id &&
+                        b.booking_status !== 'cancelled'
+                      ).length;
+
+                      const occupancyRate = dateRange.length > 0
+                        ? Math.round((propertyBookingsCount / dateRange.length) * 100)
+                        : 0;
+
+                      return (
+                        <div
+                          key={property.property_id}
+                          className={`
+                            p-4 border-b transition-all cursor-pointer
+                            ${selectedProperty === property.property_id
+                              ? 'bg-blue-50 border-l-4 border-l-blue-500'
+                              : index % 2 === 0
+                                ? 'bg-white hover:bg-gray-50'
+                                : 'bg-gray-50 hover:bg-gray-100'
+                            }
+                          `}
+                          onClick={() => setSelectedProperty(
+                            selectedProperty === property.property_id ? null : property.property_id
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            {bulkSelectMode && (
+                              <Checkbox
+                                checked={selectedProperties.has(property.property_id)}
+                                onCheckedChange={() => togglePropertySelection(property.property_id)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            )}
+
+                            {/* Property Avatar */}
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-lg font-bold shadow-sm flex-shrink-0">
+                              {property.property_name?.[0] || 'P'}
+                            </div>
+
+                            {/* Property Info */}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 truncate text-sm">
+                                {property.property_name}
+                              </h4>
+                              <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {property.property_location?.[0]?.city || 'N/A'}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  {property.capacity || 0}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Bed className="h-3 w-3" />
+                                  {property.num_bedrooms || 0}
+                                </span>
+                              </div>
+
+                              {/* Occupancy Bar */}
+                              <div className="mt-2">
+                                <div className="flex items-center justify-between text-xs mb-1">
+                                  <span className="text-gray-500">Occupancy</span>
+                                  <span className={`font-medium ${
+                                    occupancyRate > 80 ? 'text-red-600' :
+                                    occupancyRate > 50 ? 'text-orange-600' :
+                                    'text-green-600'
+                                  }`}>
+                                    {occupancyRate}%
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                  <div
+                                    className={`h-1.5 rounded-full transition-all ${
+                                      occupancyRate > 80 ? 'bg-red-500' :
+                                      occupancyRate > 50 ? 'bg-orange-500' :
+                                      'bg-green-500'
+                                    }`}
+                                    style={{ width: `${Math.min(occupancyRate, 100)}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Quick Action */}
+                              {!bulkSelectMode && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full mt-2 h-7 text-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setBlockPropertyId(property.property_id);
+                                    setShowBlockDatesDialog(true);
+                                  }}
+                                >
+                                  <Ban className="h-3 w-3 mr-1" />
+                                  Block Dates
+                                </Button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Enhanced Day Headers */}
-                  <div className="grid grid-flow-col auto-cols-[32px] gap-1">
-                    {dateRange.map((date) => (
-                      <div
-                        key={format(date, 'yyyy-MM-dd')}
-                        className={`
-                          text-xs text-center py-1 rounded transition-colors
-                          ${date.getDay() === 0 || date.getDay() === 6
-                            ? 'text-blue-600 font-medium bg-blue-50'
-                            : 'text-muted-foreground hover:bg-muted/50'
-                          }
-                          ${!isSameMonth(date, filters.startDate) ? 'opacity-40' : ''}
-                        `}
-                      >
-                        {format(date, 'd')}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
-              </div>
 
-              {/* Enhanced Property Rows */}
-              <div className="max-h-[700px] overflow-y-auto">
-                {filteredProperties.length === 0 ? (
-                  <div className="p-12 text-center">
-                    <div className="max-w-md mx-auto">
-                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Building className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <h3 className="text-xl font-semibold text-foreground mb-2">No properties found</h3>
-                      <p className="text-muted-foreground mb-4">
-                        No properties match your current filter criteria. Try adjusting your filters to see more results.
-                      </p>
-                      <Button
-                        onClick={clearAllFilters}
-                        variant="outline"
-                        className="gap-2"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                        Clear all filters
-                      </Button>
+                {/* Scrollable Timeline Column */}
+                <div className="flex-1 flex flex-col min-w-0">
+                  {/* Date Header */}
+                  <div className="h-12 border-b bg-gray-50 overflow-x-auto overflow-y-hidden flex-shrink-0">
+                    <div className="inline-flex h-full">
+                      {dateRange.map((date, index) => {
+                        const isFirstOfMonth = date.getDate() === 1;
+                        const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+                        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+                        return (
+                          <div
+                            key={format(date, 'yyyy-MM-dd')}
+                            className={`
+                              flex-shrink-0 w-12 h-full flex flex-col items-center justify-center text-xs border-r
+                              ${isToday ? 'bg-blue-100 border-blue-300 font-bold' : ''}
+                              ${isWeekend && !isToday ? 'bg-gray-100' : ''}
+                            `}
+                          >
+                            {isFirstOfMonth && (
+                              <div className="text-[10px] font-semibold text-blue-600 uppercase">
+                                {format(date, 'MMM')}
+                              </div>
+                            )}
+                            <div className={`${isToday ? 'text-blue-600' : 'text-gray-700'} font-medium`}>
+                              {format(date, 'd')}
+                            </div>
+                            <div className="text-[10px] text-gray-500">
+                              {format(date, 'EEE')}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                ) : (
-                  filteredProperties.map((property, index) => {
-                    const isSelected = selectedProperty === property.property_id;
-                    const propertyBookings = bookings.filter(b => b.property_id === property.property_id);
-                    const occupancyRate = Math.round((propertyBookings.length / dateRange.length) * 100);
 
-                    return (
-                      <div
-                        key={property.property_id}
-                        className={`
-                          grid grid-cols-[250px_1fr] border-b transition-all duration-200
-                          ${isSelected
-                            ? 'bg-primary/5 border-primary/30'
-                            : index % 2 === 0
-                              ? 'bg-background hover:bg-muted/30'
-                              : 'bg-muted/20 hover:bg-muted/40'
-                          }
-                        `}
-                        onClick={() => setSelectedProperty(isSelected ? null : property.property_id)}
-                      >
-                        {/* Enhanced Property Info */}
-                        <div className="p-4 border-r flex items-center space-x-3 cursor-pointer">
-                          <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                            {property.property_name?.[0] || 'P'}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold text-foreground truncate mb-1">
-                              {property.property_name}
-                            </div>
-                            <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {property.property_location?.[0]?.city || 'No city'}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Users className="h-3 w-3" />
-                                {property.capacity || 0}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Bed className="h-3 w-3" />
-                                {property.num_bedrooms || 0}
-                              </div>
-                            </div>
-                            <div className="mt-1">
-                              <div className="text-xs text-muted-foreground">
-                                Occupancy: <span className={`font-medium ${occupancyRate > 70 ? 'text-red-600' : occupancyRate > 40 ? 'text-orange-500' : 'text-green-600'}`}>{occupancyRate}%</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Enhanced Availability Grid */}
-                        <div className="p-4">
-                          <div className="grid grid-flow-col auto-cols-[32px] gap-1">
+                  {/* Timeline Grid */}
+                  <div className="flex-1 overflow-auto">
+                    <div className="inline-flex flex-col min-w-full">
+                      {filteredProperties.map((property, propIndex) => (
+                        <div
+                          key={property.property_id}
+                          className={`
+                            border-b flex-shrink-0 h-24 flex
+                            ${selectedProperty === property.property_id ? 'bg-blue-50' :
+                              propIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                            }
+                          `}
+                        >
+                          <div className="inline-flex h-full relative">
                             {dateRange.map((date) => {
-                              const bookingInfo = getBookingStatus(property.property_id, date);
-                              const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                              const booking = getBookingForDate(property.property_id, date);
+                              const isCheckIn = booking && format(parseISO(booking.check_in_date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+                              const isCheckOut = booking && format(parseISO(booking.check_out_date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
                               const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+                              const color = booking ? getBookingColor(booking.booking_status || 'pending') : null;
 
-                              return (
+                              const cellElement = (
                                 <div
                                   key={format(date, 'yyyy-MM-dd')}
                                   className={`
@@ -1045,81 +1561,398 @@ const Calendar = () => {
                                     handleDateClick(property.property_id, date, bookingInfo);
                                   }}
                                 >
-                                  {bookingInfo.status === 'booked' ? (
-                                    <div className="flex items-center justify-center">
-                                      {bookingInfo.isCheckIn ? (
-                                        <CheckCircle className="h-3 w-3" />
-                                      ) : bookingInfo.isCheckOut ? (
-                                        <AlertCircle className="h-3 w-3" />
-                                      ) : (
-                                        <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                                  {booking ? (
+                                    <div className={`
+                                      w-full h-16 ${color?.bg} ${color?.text} rounded-md flex items-center justify-center text-xs font-medium shadow-sm
+                                      ${isCheckIn ? 'rounded-l-lg ml-1' : isCheckOut ? 'rounded-r-lg mr-1' : 'rounded-none'}
+                                      ${color?.hover} transition-colors
+                                    `}>
+                                      {isCheckIn && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="flex flex-col items-center">
+                                              <CheckCircle className="h-4 w-4 mb-1" />
+                                              <span className="text-[10px]">IN</span>
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <div className="text-xs">
+                                              <div className="font-semibold">{booking.guest_name}</div>
+                                              <div>Check-in: {format(parseISO(booking.check_in_date), 'MMM dd')}</div>
+                                              <div>Check-out: {format(parseISO(booking.check_out_date), 'MMM dd')}</div>
+                                              {booking.total_amount && (
+                                                <div className="mt-1 font-medium">${booking.total_amount}</div>
+                                              )}
+                                            </div>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                      {isCheckOut && !isCheckIn && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="flex flex-col items-center">
+                                              <AlertCircle className="h-4 w-4 mb-1" />
+                                              <span className="text-[10px]">OUT</span>
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <div className="text-xs">
+                                              <div className="font-semibold">{booking.guest_name}</div>
+                                              <div>Check-out: {format(parseISO(booking.check_out_date), 'MMM dd')}</div>
+                                            </div>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                      {!isCheckIn && !isCheckOut && (
+                                        <div className="w-2 h-2 rounded-full bg-white opacity-70" />
                                       )}
                                     </div>
                                   ) : (
-                                    <span className="font-medium">
-                                      {date.getDate()}
-                                    </span>
+                                    <div className="text-gray-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                                      +
+                                    </div>
                                   )}
-
-                                  {/* Tooltip on hover */}
-                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 whitespace-nowrap">
-                                    {format(date, 'MMM dd, yyyy')}
-                                    {bookingInfo.status === 'booked' && (
-                                      <div>
-                                        Guest: {bookingInfo.booking?.guest_name}
-                                        {bookingInfo.isCheckIn && <div>Check-in</div>}
-                                        {bookingInfo.isCheckOut && <div>Check-out</div>}
-                                      </div>
-                                    )}
-                                  </div>
                                 </div>
                               );
+
+                              // Wrap booked cells with context menu
+                              if (booking) {
+                                return (
+                                  <ContextMenu key={format(date, 'yyyy-MM-dd')}>
+                                    <ContextMenuTrigger>
+                                      {cellElement}
+                                    </ContextMenuTrigger>
+                                    <ContextMenuContent className="w-48">
+                                      <ContextMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedBookingDetails(booking);
+                                          setShowDetailsDrawer(true);
+                                        }}
+                                      >
+                                        <Info className="h-4 w-4 mr-2" />
+                                        View Details
+                                      </ContextMenuItem>
+                                      <ContextMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingBooking(booking);
+                                          setBookingPropertyId(property.property_id);
+                                          setShowBookingDialog(true);
+                                        }}
+                                      >
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Edit Booking
+                                      </ContextMenuItem>
+                                      <ContextMenuSeparator />
+                                      <ContextMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDeletingBooking(booking);
+                                          setShowDeleteDialog(true);
+                                        }}
+                                        className="text-red-600 focus:text-red-600"
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                      </ContextMenuItem>
+                                    </ContextMenuContent>
+                                  </ContextMenu>
+                                );
+                              }
+
+                              return cellElement;
                             })}
                           </div>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ========================================
+            LEGEND & SUMMARY
+            ======================================== */}
+        <Card className="bg-white shadow-md flex-shrink-0 border-0">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+
+              {/* Legend */}
+              <div className="flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                  <span className="text-gray-700">Confirmed</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                  <span className="text-gray-700">Pending</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-gray-400 rounded"></div>
+                  <span className="text-gray-700">Blocked</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-green-500 rounded"></div>
+                  <span className="text-gray-700">Checked In</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-purple-500 rounded"></div>
+                  <span className="text-gray-700">Completed</span>
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div className="text-sm text-gray-500">
+                Last updated: {format(new Date(), 'MMM dd, HH:mm')}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ========================================
+            DIALOGS: Booking, Delete, Block, Details
+            ======================================== */}
+
+        {/* Booking Dialog */}
+        <BookingDialog
+          open={showBookingDialog}
+          onOpenChange={(open) => {
+            setShowBookingDialog(open);
+            if (!open) {
+              setEditingBooking(null);
+              setBookingPropertyId(null);
+              setBookingCheckIn('');
+              setBookingCheckOut('');
+            }
+          }}
+          onSubmit={handleBookingSubmit}
+          propertyId={bookingPropertyId || undefined}
+          booking={editingBooking}
+          defaultCheckIn={bookingCheckIn}
+          defaultCheckOut={bookingCheckOut}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Booking</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this booking? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            {deletingBooking && (
+              <div className="space-y-3 py-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Guest:</span>
+                  <span className="font-medium">{deletingBooking.guest_name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Check-in:</span>
+                  <span className="font-medium">
+                    {format(parseISO(deletingBooking.check_in_date), 'MMM dd, yyyy')}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Check-out:</span>
+                  <span className="font-medium">
+                    {format(parseISO(deletingBooking.check_out_date), 'MMM dd, yyyy')}
+                  </span>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteBooking}>
+                Delete Booking
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Block Dates Dialog */}
+        <Dialog open={showBlockDatesDialog} onOpenChange={setShowBlockDatesDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Block Dates for Maintenance</DialogTitle>
+              <DialogDescription>
+                {selectedProperties.size > 0
+                  ? `Block dates for ${selectedProperties.size} selected propert${selectedProperties.size === 1 ? 'y' : 'ies'}`
+                  : 'Block dates to prevent bookings during maintenance or unavailable periods.'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Start Date *</Label>
+                <Input
+                  type="date"
+                  value={blockStartDate}
+                  onChange={(e) => setBlockStartDate(e.target.value)}
+                  min={format(new Date(), 'yyyy-MM-dd')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>End Date *</Label>
+                <Input
+                  type="date"
+                  value={blockEndDate}
+                  onChange={(e) => setBlockEndDate(e.target.value)}
+                  min={blockStartDate || format(new Date(), 'yyyy-MM-dd')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Reason (Optional)</Label>
+                <Input
+                  type="text"
+                  placeholder="e.g., Maintenance, Renovation"
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBlockDatesDialog(false);
+                  setBlockPropertyId(null);
+                  setBlockStartDate('');
+                  setBlockEndDate('');
+                  setBlockReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleBlockDates}>
+                <Ban className="h-4 w-4 mr-2" />
+                Block Dates
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Booking Details Drawer */}
+        <Sheet open={showDetailsDrawer} onOpenChange={setShowDetailsDrawer}>
+          <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Booking Details</SheetTitle>
+              <SheetDescription>
+                Complete information about this booking
+              </SheetDescription>
+            </SheetHeader>
+            {selectedBookingDetails && (
+              <div className="space-y-6 mt-6">
+                {/* Guest Information */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4 text-blue-600" />
+                    Guest Information
+                  </h3>
+                  <div className="space-y-2 pl-6">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Name:</span>
+                      <span className="font-medium">{selectedBookingDetails.guest_name}</span>
+                    </div>
+                    {selectedBookingDetails.guest_email && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Email:</span>
+                        <span className="font-medium">{selectedBookingDetails.guest_email}</span>
                       </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                    )}
+                    {selectedBookingDetails.guest_phone && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Phone:</span>
+                        <span className="font-medium">{selectedBookingDetails.guest_phone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-      {/* Enhanced Results Summary */}
-      <Card className="bg-muted/30">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center space-x-6 text-sm">
-              <div className="flex items-center gap-2">
-                <Building className="h-4 w-4 text-primary" />
-                <span className="font-medium">
-                  {filteredProperties.length} of {properties.length} properties
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-primary" />
-                <span>
-                  {dateRange.length} days
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                <span>
-                  Last updated: {format(new Date(), 'MMM dd, HH:mm')}
-                </span>
-              </div>
-            </div>
+                {/* Booking Dates */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4 text-blue-600" />
+                    Booking Dates
+                  </h3>
+                  <div className="space-y-2 pl-6">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Check-in:</span>
+                      <span className="font-medium">
+                        {format(parseISO(selectedBookingDetails.check_in_date), 'MMM dd, yyyy')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Check-out:</span>
+                      <span className="font-medium">
+                        {format(parseISO(selectedBookingDetails.check_out_date), 'MMM dd, yyyy')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Duration:</span>
+                      <span className="font-medium">
+                        {differenceInDays(
+                          parseISO(selectedBookingDetails.check_out_date),
+                          parseISO(selectedBookingDetails.check_in_date)
+                        )} nights
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-            <div className="flex items-center space-x-2">
-              <div className="text-xs text-muted-foreground">
-                Total bookings: <span className="font-medium text-foreground">{bookings.length}</span>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Avg occupancy: <span className="font-medium text-foreground">
-                  {Math.round((bookings.length / (filteredProperties.length * dateRange.length)) * 100)}%
-                </span>
+                {/* Status & Payment */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-blue-600" />
+                    Status & Payment
+                  </h3>
+                  <div className="space-y-2 pl-6">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Status:</span>
+                      <Badge>{selectedBookingDetails.booking_status}</Badge>
+                    </div>
+                    {selectedBookingDetails.total_amount && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Total Amount:</span>
+                        <span className="font-medium text-lg">
+                          ${selectedBookingDetails.total_amount.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      setEditingBooking(selectedBookingDetails);
+                      setBookingPropertyId(selectedBookingDetails.property_id);
+                      setShowDetailsDrawer(false);
+                      setShowBookingDialog(true);
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setShowDetailsDrawer(false);
+                      setDeletingBooking(selectedBookingDetails);
+                      setShowDeleteDialog(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

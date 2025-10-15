@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Trash2, Search, CreditCard, Building2, Eye, Download, Filter } from "lucide-react";
+import { Edit, Trash2, Search, CreditCard, Building2, Eye, Download, Filter, Key, Mail, Ban, Archive, CheckCircle, MoreVertical } from "lucide-react";
 import { UserTableLoadingState, UserLoadingSpinner } from "./UserTableSkeleton";
 import { LoadingOverlay } from "../PropertyManagement/PropertyTableSkeleton";
 import {
@@ -34,6 +34,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface UserTableProps {
   users: User[];
@@ -42,6 +50,11 @@ interface UserTableProps {
   onViewBankAccounts: (user: User) => void;
   onViewCreditCards: (user: User) => void;
   onViewDetails: (user: User) => void;
+  onChangePassword: (user: User) => void;
+  onResetPassword?: (user: User) => void;
+  onSuspendUser?: (user: User) => void;
+  onArchiveUser?: (user: User) => void;
+  onReactivateUser?: (user: User) => void;
   isLoading?: boolean;
   isFetching?: boolean;
 }
@@ -53,6 +66,11 @@ export function UserTable({
   onViewBankAccounts,
   onViewCreditCards,
   onViewDetails,
+  onChangePassword,
+  onResetPassword,
+  onSuspendUser,
+  onArchiveUser,
+  onReactivateUser,
   isLoading = false,
   isFetching = false,
 }: UserTableProps) {
@@ -62,6 +80,18 @@ export function UserTable({
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const getAccountStatusBadge = (status: string | undefined) => {
+    switch (status) {
+      case 'suspended':
+        return { variant: 'destructive' as const, label: 'Suspended' };
+      case 'archived':
+        return { variant: 'secondary' as const, label: 'Archived' };
+      case 'active':
+      default:
+        return { variant: 'default' as const, label: 'Active' };
+    }
+  };
 
   // Show full loading skeleton on initial load
   if (isLoading) {
@@ -172,10 +202,11 @@ export function UserTable({
               <TableHead>User</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Account Status</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Company</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead className="w-40">Actions</TableHead>
+              <TableHead>Last Login</TableHead>
+              <TableHead className="w-20 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -199,12 +230,16 @@ export function UserTable({
                   </Badge>
                 </TableCell>
                 <TableCell>
+                  <Badge variant={getAccountStatusBadge(user.account_status).variant}>
+                    {getAccountStatusBadge(user.account_status).label}
+                  </Badge>
+                </TableCell>
+                <TableCell>
                   <Badge variant={user.is_active ? 'default' : 'destructive'}>
                     {user.is_active ? 'Active' : 'Inactive'}
                   </Badge>
                 </TableCell>
                 <TableCell>{user.company || '-'}</TableCell>
-                <TableCell>{user.cellphone_primary || '-'}</TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-1">
                     <Button
@@ -259,12 +294,31 @@ export function UserTable({
                             onClick={() => user.user_id && onDeleteUser(user.user_id)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete User
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete User</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete {user.first_name} {user.last_name}?
+                              This action cannot be undone and will also delete all associated bank accounts and credit cards.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => user.user_id && onDeleteUser(user.user_id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
@@ -309,6 +363,9 @@ export function UserTable({
                       <Badge variant={user.user_type === 'admin' ? 'default' : 'secondary'} className="text-xs">
                         {user.user_type === 'admin' ? 'Admin' : 'Ops'}
                       </Badge>
+                      <Badge variant={getAccountStatusBadge(user.account_status).variant} className="text-xs">
+                        {getAccountStatusBadge(user.account_status).label}
+                      </Badge>
                       <Badge variant={user.is_active ? 'default' : 'destructive'} className="text-xs">
                         {user.is_active ? 'Active' : 'Inactive'}
                       </Badge>
@@ -317,45 +374,29 @@ export function UserTable({
                   
                   {/* Actions */}
                   <div className="flex items-center justify-between mt-4 pt-3 border-t">
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center gap-2">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => onViewDetails(user)}
-                        className="h-8 w-8 p-0"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => onEditUser(user)}
-                        className="h-8 w-8 p-0"
                       >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onViewBankAccounts(user)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Building2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onViewCreditCards(user)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <CreditCard className="h-4 w-4" />
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
                       </Button>
                     </div>
-                    
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent className="max-w-sm mx-4">

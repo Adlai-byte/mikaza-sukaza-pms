@@ -64,8 +64,18 @@ export function ProtectedRoute({
   requireAuth = true,
 }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth();
-  const { hasPermission, hasAllPermissions, hasAnyPermission } = usePermissions();
+  const { hasPermission, hasAllPermissions, hasAnyPermission, getPermissions } = usePermissions();
   const location = useLocation();
+
+  // DEBUG: Log permission check details
+  console.log('🔐 ProtectedRoute Check:', {
+    path: location.pathname,
+    requiredPermission: permission,
+    userType: profile?.user_type,
+    userId: profile?.user_id,
+    hasProfile: !!profile,
+    loading,
+  });
 
   // Show loading spinner while checking authentication
   if (requireAuth && loading) {
@@ -96,8 +106,21 @@ export function ProtectedRoute({
       : hasAnyPermission(permission)
     : hasPermission(permission);
 
+  // DEBUG: Log permission check result
+  console.log('✅ Permission Check Result:', {
+    hasAccess,
+    userPermissions: getPermissions(),
+    requiredPermission: permission,
+  });
+
   // Redirect if user lacks permission
   if (!hasAccess) {
+    console.error('❌ Access Denied:', {
+      path: location.pathname,
+      requiredPermission: permission,
+      userType: profile?.user_type,
+      redirectingTo: redirectTo,
+    });
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 

@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useUsersOptimized } from "@/hooks/useUsersOptimized";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -30,51 +31,33 @@ export default function Auth() {
     email: "",
     password: "",
   });
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
 
   useEffect(() => {
     // Redirect to dashboard when authenticated
-    if (user) {
-      navigate('/');
+    if (user || profile) {
+      navigate('/', { replace: true });
+      return;
     }
-    
+
     // Load saved credentials if remember me was checked
     const savedEmail = localStorage.getItem('rememberedEmail');
     const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
-    
+
     if (savedEmail && savedRememberMe) {
       setLoginForm(prev => ({ ...prev, email: savedEmail }));
       setRememberMe(true);
     }
-  }, [user, navigate]);
-
-  const handleSessionLogin = async (userFromDB: any) => {
-    setLoading(true);
-    try {
-      await sessionLogin(userFromDB);
-      toast({
-        title: "Session login successful",
-        description: `Logged in as ${userFromDB.first_name} ${userFromDB.last_name}`,
-      });
-      navigate("/");
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start session",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [user, profile, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const validatedData = loginSchema.parse(loginForm);
       setLoading(true);
 
-      const { error } = await signIn(validatedData.email, validatedData.password);
+      const { error, data } = await signIn(validatedData.email, validatedData.password);
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
@@ -99,6 +82,17 @@ export default function Auth() {
         return;
       }
 
+      // Check if email is verified (Supabase returns user even if not verified)
+      if (data?.user && !data.user.email_confirmed_at) {
+        await signOut();
+        toast({
+          title: "Email Not Verified",
+          description: "Please verify your email before signing in. Check your inbox for the verification link.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Save credentials if remember me is checked
       if (rememberMe) {
         localStorage.setItem('rememberedEmail', validatedData.email);
@@ -108,18 +102,24 @@ export default function Auth() {
         localStorage.removeItem('rememberMe');
       }
 
-      console.log('Login successful, navigating to dashboard');
       toast({
         title: "Welcome back!",
         description: "You have successfully signed in.",
       });
-      
-      navigate("/");
+
+      // Navigation will be handled by useEffect
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
           title: "Validation Error",
           description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        console.error('Login error:', error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred during login",
           variant: "destructive",
         });
       }
@@ -128,23 +128,75 @@ export default function Auth() {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!loginForm.email) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address to resend the verification link.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const validatedEmail = loginSchema.pick({ email: true }).parse({ email: loginForm.email });
+      setIsResendingEmail(true);
+
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: validatedEmail.email,
+      });
+
+      if (error) {
+        toast({
+          title: "Resend Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Verification Email Sent",
+        description: "Please check your inbox for the verification link. If you don't see it, check your spam folder.",
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Invalid Email",
+          description: "Please enter a valid email address.",
+          variant: "destructive",
+        });
+      } else {
+        console.error('Resend verification error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to resend verification email. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsResendingEmail(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-4">
       {/* Enhanced gradient background */}
-      <div 
+      <div
         className="absolute inset-0"
         style={{
           background: 'linear-gradient(135deg, hsl(258, 75%, 35%) 0%, hsl(280, 85%, 25%) 100%)'
         }}
       ></div>
-      
+
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-white/10 blur-3xl animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-white/5 blur-3xl animate-pulse delay-1000"></div>
         <div className="absolute top-1/2 left-1/2 w-96 h-96 rounded-full bg-white/5 blur-3xl animate-pulse delay-500 transform -translate-x-1/2 -translate-y-1/2"></div>
       </div>
-      
+
       {/* Geometric pattern overlay */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-20 w-32 h-32 border border-white/30 rotate-45 rounded-lg animate-pulse"></div>
@@ -191,7 +243,7 @@ export default function Auth() {
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-white/90 font-light text-sm">
                   Password
@@ -240,7 +292,7 @@ export default function Auth() {
                     Remember me
                   </Label>
                 </div>
-                
+
                 <button
                   type="button"
                   className="text-white/70 hover:text-white text-sm underline font-light"
@@ -249,15 +301,29 @@ export default function Auth() {
                 </button>
               </div>
 
-              {/* Session Login Toggle */}
-              <div className="text-center">
+              <Button
+                type="submit"
+                className="w-full h-12 bg-gradient-to-r from-accent to-accent-hover hover:from-accent-hover hover:to-accent text-accent-foreground font-medium text-base border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                disabled={loading}
+              >
+                {loading ? "Signing In..." : "Sign In"}
+              </Button>
+
+              <div className="text-center mt-4">
+                <p className="text-white/60 text-xs">
+                  Don't have an account? Contact your administrator.
+                </p>
+              </div>
+
+              <div className="text-center mt-2">
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => setShowUserList(!showUserList)}
-                  className="w-full mb-4 bg-white/10 border-white/30 text-white hover:bg-white/20"
+                  variant="link"
+                  className="text-white/70 hover:text-white text-xs underline font-light"
+                  onClick={handleResendVerification}
+                  disabled={isResendingEmail}
                 >
-                  {showUserList ? "Hide" : "Show"} Available Users (Session Mode)
+                  {isResendingEmail ? "Sending..." : "Resend Verification Email"}
                 </Button>
               </div>
 
@@ -348,7 +414,7 @@ export default function Auth() {
                 {loading ? "Processing..." : "Create account"}
               </Button>
             </form>
-            
+
             <div className="text-center">
               <p className="text-white/50 text-xs font-light">
                 Secure authentication powered by Supabase

@@ -85,13 +85,20 @@ export function useUsersOptimized() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: UserInsert) => {
+      console.log('🔐 Creating user - Permission check...');
+
       // Check permission
       if (!hasPermission(PERMISSIONS.USERS_CREATE)) {
+        console.error('❌ Permission denied for user creation');
         throw new Error("You don't have permission to create users");
       }
 
+      console.log('✅ Permission granted');
+      console.log('🔒 Password validation...');
+
       // Ensure password is provided for new users
       if (!userData.password) {
+        console.error('❌ No password provided');
         throw new Error("Password is required for new users");
       }
 
@@ -104,13 +111,28 @@ export function useUsersOptimized() {
       // Create insertion data with required password
       const insertData = { ...userData, password: userData.password };
 
+      // Step 3: Insert user into users table
       const { data, error } = await supabase
         .from('users')
         .insert([insertData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database insert error:', error);
+        // If database insert fails, we should clean up the Auth user
+        // But Supabase doesn't allow deleting users from client side
+        // Admin will need to manually clean up in Supabase Dashboard
+        throw new Error(`User account created but database entry failed: ${error.message}. Please contact administrator.`);
+      }
+
+      console.log('✅ User created in database:', data?.user_id);
+      console.log('📧 Verification email sent to:', userData.email);
+
+      toast({
+        title: "User Created Successfully",
+        description: `User account created. A verification email has been sent to ${userData.email}. The user must verify their email before logging in.`,
+      });
 
       return data;
     },

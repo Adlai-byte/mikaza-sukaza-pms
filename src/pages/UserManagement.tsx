@@ -4,21 +4,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserPlus, Users, Building2, CreditCard } from "lucide-react";
 import { useUsersOptimized } from "@/hooks/useUsersOptimized";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
+import { useToast } from "@/hooks/use-toast";
 import { UserForm } from "@/components/UserManagement/UserForm";
 import { UserTable } from "@/components/UserManagement/UserTable";
 import { BankAccountDialog } from "@/components/UserManagement/BankAccountDialog";
 import { CreditCardDialog } from "@/components/UserManagement/CreditCardDialog";
 import { UserDetailsDialog } from "@/components/UserManagement/UserDetailsDialog";
+import { ChangePasswordDialog } from "@/components/UserManagement/ChangePasswordDialog";
+import { AdminPasswordResetDialog } from "@/components/UserManagement/AdminPasswordResetDialog";
+import { SuspendUserDialog } from "@/components/UserManagement/SuspendUserDialog";
+import { ArchiveUserDialog } from "@/components/UserManagement/ArchiveUserDialog";
+import { ReactivateUserDialog } from "@/components/UserManagement/ReactivateUserDialog";
 import { User, UserInsert } from "@/lib/schemas";
 
 export default function UserManagement() {
   const { users, loading, isFetching, createUser, updateUser, deleteUser } = useUsersOptimized();
   const { logActivity } = useActivityLogs();
+  const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [bankAccountDialogUser, setBankAccountDialogUser] = useState<User | null>(null);
   const [creditCardDialogUser, setCreditCardDialogUser] = useState<User | null>(null);
   const [userDetailsUser, setUserDetailsUser] = useState<User | null>(null);
+  const [changePasswordUser, setChangePasswordUser] = useState<User | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
+  const [suspendUser, setSuspendUser] = useState<User | null>(null);
+  const [archiveUser, setArchiveUser] = useState<User | null>(null);
+  const [reactivateUser, setReactivateUser] = useState<User | null>(null);
 
   const handleCreateUser = async (userData: UserInsert) => {
     await createUser(userData);
@@ -67,6 +79,71 @@ export default function UserManagement() {
     setUserDetailsUser(user);
   };
 
+  const handleChangePassword = (user: User) => {
+    setChangePasswordUser(user);
+  };
+
+  const handleResetPassword = (user: User) => {
+    setResetPasswordUser(user);
+  };
+
+  const handleSuspendUser = (user: User) => {
+    setSuspendUser(user);
+  };
+
+  const handleArchiveUser = (user: User) => {
+    setArchiveUser(user);
+  };
+
+  const handleReactivateUser = (user: User) => {
+    setReactivateUser(user);
+  };
+
+  const handleLifecycleSuccess = () => {
+    // Refresh the user list after lifecycle action
+    window.location.reload();
+  };
+
+  const handlePasswordChange = async (userId: string, currentPassword: string, newPassword: string) => {
+    // For self-service password change, user must verify current password via Supabase Auth
+    // We'll use Supabase Auth's re-authentication + password update
+    // Note: This is a simplified version - in production, consider using updatePassword with session
+
+    const user = users.find(u => u.user_id === userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Attempt to re-authenticate with current password to verify it
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      throw new Error("Current password is incorrect");
+    }
+
+    // Update password via Supabase Auth
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (updateError) {
+      throw new Error(`Failed to update password: ${updateError.message}`);
+    }
+
+    // Optionally update the password field in database for compatibility
+    // Note: In production, consider removing this field entirely
+    await updateUser(userId, { password: newPassword });
+
+    toast({
+      title: "Password Updated",
+      description: "The password has been changed successfully via Supabase Auth.",
+    });
+  };
+
   const handleFormClose = () => {
     setIsFormOpen(false);
     setEditingUser(null);
@@ -91,42 +168,85 @@ export default function UserManagement() {
         </Button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Matching Dashboard Design */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{users.length}</div>
+        {/* Total Users Card */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-700">Total Users</p>
+                <h3 className="text-3xl font-bold text-blue-900 mt-1">
+                  {loading ? '...' : users.length}
+                </h3>
+                <p className="text-xs text-blue-600 mt-1">
+                  All registered users
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeUsers}</div>
+
+        {/* Active Users Card */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-700">Active Users</p>
+                <h3 className="text-3xl font-bold text-green-900 mt-1">
+                  {loading ? '...' : activeUsers}
+                </h3>
+                <p className="text-xs text-green-600 mt-1">
+                  {users.length - activeUsers} inactive
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Admins</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{adminUsers}</div>
+
+        {/* Admins Card */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-700">Admins</p>
+                <h3 className="text-3xl font-bold text-purple-900 mt-1">
+                  {loading ? '...' : adminUsers}
+                </h3>
+                <p className="text-xs text-purple-600 mt-1">
+                  Full system access
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-white" />
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ops Team</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{opsUsers}</div>
+
+        {/* Ops Team Card */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-orange-700">Ops Team</p>
+                <h3 className="text-3xl font-bold text-orange-900 mt-1">
+                  {loading ? '...' : opsUsers}
+                </h3>
+                <p className="text-xs text-orange-600 mt-1">
+                  Operations staff
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                <CreditCard className="h-6 w-4 text-white" />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -144,6 +264,11 @@ export default function UserManagement() {
             onViewBankAccounts={handleViewBankAccounts}
             onViewCreditCards={handleViewCreditCards}
             onViewDetails={handleViewDetails}
+            onChangePassword={handleChangePassword}
+            onResetPassword={handleResetPassword}
+            onSuspendUser={handleSuspendUser}
+            onArchiveUser={handleArchiveUser}
+            onReactivateUser={handleReactivateUser}
             isLoading={loading}
             isFetching={isFetching}
           />
@@ -182,6 +307,55 @@ export default function UserManagement() {
           open={!!userDetailsUser}
           onOpenChange={(open) => !open && setUserDetailsUser(null)}
           user={userDetailsUser}
+        />
+      )}
+
+      {/* Change Password Dialog */}
+      {changePasswordUser && (
+        <ChangePasswordDialog
+          open={!!changePasswordUser}
+          onOpenChange={(open) => !open && setChangePasswordUser(null)}
+          user={changePasswordUser}
+          onPasswordChange={handlePasswordChange}
+        />
+      )}
+
+      {/* Admin Password Reset Dialog */}
+      {resetPasswordUser && (
+        <AdminPasswordResetDialog
+          open={!!resetPasswordUser}
+          onOpenChange={(open) => !open && setResetPasswordUser(null)}
+          user={resetPasswordUser}
+        />
+      )}
+
+      {/* Suspend User Dialog */}
+      {suspendUser && (
+        <SuspendUserDialog
+          open={!!suspendUser}
+          onOpenChange={(open) => !open && setSuspendUser(null)}
+          user={suspendUser}
+          onSuccess={handleLifecycleSuccess}
+        />
+      )}
+
+      {/* Archive User Dialog */}
+      {archiveUser && (
+        <ArchiveUserDialog
+          open={!!archiveUser}
+          onOpenChange={(open) => !open && setArchiveUser(null)}
+          user={archiveUser}
+          onSuccess={handleLifecycleSuccess}
+        />
+      )}
+
+      {/* Reactivate User Dialog */}
+      {reactivateUser && (
+        <ReactivateUserDialog
+          open={!!reactivateUser}
+          onOpenChange={(open) => !open && setReactivateUser(null)}
+          user={reactivateUser}
+          onSuccess={handleLifecycleSuccess}
         />
       )}
     </div>

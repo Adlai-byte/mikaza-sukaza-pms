@@ -9,7 +9,6 @@ import { PropertyForm } from "@/components/PropertyManagement/PropertyForm";
 import { PropertyDetailsDialog } from "@/components/PropertyManagement/PropertyDetailsDialog";
 import { PropertyImageDialog } from "@/components/PropertyManagement/PropertyImageDialog";
 import { Property, PropertyInsert } from "@/lib/schemas";
-import { generateMockProperties } from "@/utils/generateMockProperties";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Properties() {
@@ -35,7 +34,6 @@ export default function Properties() {
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [viewingProperty, setViewingProperty] = useState<Property | null>(null);
   const [imageDialogProperty, setImageDialogProperty] = useState<Property | null>(null);
-  const [isGeneratingMocks, setIsGeneratingMocks] = useState(false);
 
   // Show error message if properties failed to load
   useEffect(() => {
@@ -62,14 +60,12 @@ export default function Properties() {
     } catch (error) {
       console.error('Error generating properties:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate properties",
+        title: "Error loading properties",
+        description: propertiesError instanceof Error ? propertiesError.message : "Failed to load properties",
         variant: "destructive",
       });
-    } finally {
-      setIsGeneratingMocks(false);
     }
-  };
+  }, [propertiesError, toast]);
 
   const handleCreateProperty = async (propertyData: PropertyInsert & any) => {
     try {
@@ -206,40 +202,56 @@ export default function Properties() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Properties</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{properties.length}</div>
+        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-700">Total Properties</p>
+                <h3 className="text-3xl font-bold text-blue-900 mt-1">{properties.length}</h3>
+              </div>
+              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-white" />
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Properties</CardTitle>
-            <Home className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeProperties}</div>
+        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-700">Active Properties</p>
+                <h3 className="text-3xl font-bold text-green-900 mt-1">{activeProperties}</h3>
+              </div>
+              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                <Home className="h-6 w-6 text-white" />
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Booking Available</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{bookingProperties}</div>
+        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-700">Booking Available</p>
+                <h3 className="text-3xl font-bold text-purple-900 mt-1">{bookingProperties}</h3>
+              </div>
+              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pet Friendly</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{petFriendlyProperties}</div>
+        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-orange-700">Pet Friendly</p>
+                <h3 className="text-3xl font-bold text-orange-900 mt-1">{petFriendlyProperties}</h3>
+              </div>
+              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                <MapPin className="h-6 w-6 text-white" />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
