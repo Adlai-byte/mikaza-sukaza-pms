@@ -51,8 +51,7 @@ export default function Todos() {
   const [showOverdue, setShowOverdue] = useState(false);
 
   // Build filters object
-  // For ops users: automatically filter to only their assigned tasks
-  // For admin users: show all tasks (unless manually filtered)
+  // Show all tasks by default for both admin and ops users
   const filters: TaskFilters = useMemo(() => {
     const baseFilters: TaskFilters = {
       status: statusFilter.length > 0 ? statusFilter : undefined,
@@ -63,12 +62,11 @@ export default function Todos() {
       overdue: showOverdue || undefined,
     };
 
-    // If ops user and no manual assignee filter, show only their tasks
-    if (user?.user_type === 'ops' && !assignedFilter) {
-      baseFilters.assigned_to = user.user_id;
-    } else if (assignedFilter) {
+    // If manual assignee filter is set, use it
+    if (assignedFilter) {
       baseFilters.assigned_to = assignedFilter;
     }
+    // Otherwise show all tasks (no filter)
 
     return baseFilters;
   }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery, showOverdue, user]);
@@ -199,13 +197,10 @@ export default function Todos() {
           <div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
               <CheckSquare className="h-8 w-8 text-primary" />
-              {user?.user_type === 'ops' ? 'My Tasks' : 'Task Management'}
+              Task Management
             </h1>
             <p className="text-muted-foreground mt-2">
-              {user?.user_type === 'ops'
-                ? 'View and manage your assigned tasks'
-                : 'Manage tasks, track progress, and organize your workflow'
-              }
+              Manage tasks, track progress, and organize your workflow
             </p>
           </div>
           <Button onClick={handleCreateTask} className="bg-primary hover:bg-primary/90">
@@ -319,27 +314,26 @@ export default function Todos() {
                 </Select>
               </div>
 
-              {/* Assignee Filter - Only show for admin users */}
-              {user?.user_type === 'admin' && (
-                <div className="space-y-2">
-                  <Label htmlFor="assignee">Assigned To</Label>
-                  <Select value={assignedFilter || undefined} onValueChange={(value) => setAssignedFilter(value || '')}>
-                    <SelectTrigger id="assignee">
-                      <SelectValue placeholder="All users" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {user?.user_id && (
-                        <SelectItem value={user.user_id}>My Tasks</SelectItem>
-                      )}
-                      {users.map(u => (
-                        <SelectItem key={u.user_id} value={u.user_id}>
-                          {u.first_name} {u.last_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {/* Assignee Filter - Show for all users */}
+              <div className="space-y-2">
+                <Label htmlFor="assignee">Assigned To</Label>
+                <Select value={assignedFilter || 'all'} onValueChange={(value) => setAssignedFilter(value === 'all' ? '' : value)}>
+                  <SelectTrigger id="assignee">
+                    <SelectValue placeholder="All users" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tasks</SelectItem>
+                    {user?.user_id && (
+                      <SelectItem value={user.user_id}>My Tasks</SelectItem>
+                    )}
+                    {users.map(u => (
+                      <SelectItem key={u.user_id} value={u.user_id}>
+                        {u.first_name} {u.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Category Filter */}
               <div className="space-y-2">

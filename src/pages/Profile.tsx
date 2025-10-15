@@ -8,8 +8,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, Lock, User, Mail } from 'lucide-react';
+import { Camera, Lock, User, Mail, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { validateFile } from '@/lib/file-validation';
 
 export default function Profile() {
   const { profile, updateProfile } = useAuth();
@@ -17,6 +18,7 @@ export default function Profile() {
   
   const [isUpdating, setIsUpdating] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -126,64 +128,102 @@ export default function Profile() {
     const file = event.target.files?.[0];
     if (!file || !profile) return;
 
+    setIsUploadingAvatar(true);
+
     try {
-      // Create a local URL for preview when auth is disabled
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const photoUrl = e.target?.result as string;
-        
-        try {
-          // Check if we have a real session for storage upload
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session) {
-            // Real upload to Supabase
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${profile.user_id}.${fileExt}`;
-            const filePath = `avatars/${fileName}`;
+      // Validate file
+      const validation = await validateFile(file, 'IMAGE');
+      if (!validation.isValid) {
+        toast({
+          title: "Invalid File",
+          description: validation.errors[0] || "Please select a valid image file.",
+          variant: "destructive",
+        });
+        setIsUploadingAvatar(false);
+        return;
+      }
 
-            const { error: uploadError } = await supabase.storage
-              .from('property-images')
-              .upload(filePath, file, { upsert: true });
+      // Show warnings if any
+      if (validation.warnings.length > 0) {
+        console.warn('File validation warnings:', validation.warnings);
+      }
 
-            if (uploadError) throw uploadError;
+      // Check if we have a real session for storage upload
+      const { data: { session } } = await supabase.auth.getSession();
 
-            const { data } = supabase.storage
-              .from('property-images')
-              .getPublicUrl(filePath);
+      if (session) {
+        // Real upload to Supabase Storage
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${profile.user_id}-${Date.now()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
 
-            await updateProfile({
-              photo_url: data.publicUrl,
-            });
-          } else {
-            // Mock update for disabled auth - use local file URL
-            await updateProfile({
-              photo_url: photoUrl,
-            });
-          }
+        console.log('📤 Uploading avatar to Supabase Storage:', filePath);
+
+        const { error: uploadError } = await supabase.storage
+          .from('property-images')
+          .upload(filePath, file, {
+            upsert: true,
+            contentType: file.type
+          });
+
+        if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          throw new Error(`Upload failed: ${uploadError.message}`);
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('property-images')
+          .getPublicUrl(filePath);
+
+        console.log('✅ Avatar uploaded, updating profile with URL:', urlData.publicUrl);
+
+        // Update user profile in database
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ photo_url: urlData.publicUrl })
+          .eq('user_id', profile.user_id);
+
+        if (updateError) {
+          console.error('Profile update error:', updateError);
+          throw new Error(`Failed to update profile: ${updateError.message}`);
+        }
+
+        // Also update profile in AuthContext
+        await updateProfile({
+          photo_url: urlData.publicUrl,
+        });
+
+        toast({
+          title: "Profile Picture Updated",
+          description: "Your profile picture has been successfully updated.",
+        });
+      } else {
+        // For development without auth - use local file URL
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const photoUrl = e.target?.result as string;
+          await updateProfile({
+            photo_url: photoUrl,
+          });
 
           toast({
-            title: "Profile picture updated",
+            title: "Profile Picture Updated",
             description: "Your profile picture has been successfully updated.",
           });
-        } catch (error) {
-          console.error('Error updating avatar:', error);
-          toast({
-            title: "Error",
-            description: "Failed to update profile picture. Please try again.",
-            variant: "destructive",
-          });
-        }
-      };
-      
-      reader.readAsDataURL(file);
-    } catch (error) {
-      console.error('Error handling avatar upload:', error);
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
       toast({
-        title: "Error",
-        description: "Failed to process profile picture. Please try again.",
+        title: "Upload Failed",
+        description: error.message || "Failed to update profile picture. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsUploadingAvatar(false);
+      // Reset file input
+      event.target.value = '';
     }
   };
 
@@ -228,8 +268,13 @@ export default function Profile() {
                     variant="outline"
                     className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
                     onClick={() => document.getElementById('avatar-upload')?.click()}
+                    disabled={isUploadingAvatar}
                   >
-                    <Camera className="h-4 w-4" />
+                    {isUploadingAvatar ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
                   </Button>
                   <input
                     id="avatar-upload"

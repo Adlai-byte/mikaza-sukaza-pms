@@ -162,10 +162,17 @@ export type UserInsert = {
 export type PropertyInsert = z.infer<typeof propertySchema>;
 
 // Database types (includes all fields from DB)
-export type User = z.infer<typeof userSchema> & { 
+export type User = z.infer<typeof userSchema> & {
   user_id?: string;
   created_at?: string;
   updated_at?: string;
+  account_status?: 'active' | 'suspended' | 'archived';
+  suspended_at?: string | null;
+  suspended_by?: string | null;
+  suspension_reason?: string | null;
+  archived_at?: string | null;
+  archived_by?: string | null;
+  last_login_at?: string | null;
 };
 
 export type BankAccount = z.infer<typeof bankAccountSchema> & { 

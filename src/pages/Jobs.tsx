@@ -22,6 +22,7 @@ import { useJobs, useJobStats, useCreateJob, useUpdateJob, useDeleteJob, JobFilt
 import { format, parseISO } from "date-fns";
 import { useState, useMemo } from "react";
 import { JobDialog } from "@/components/jobs/JobDialog";
+import { JobDetailsDialog } from "@/components/jobs/JobDetailsDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,6 +71,8 @@ export default function Jobs() {
 
   const [showJobDialog, setShowJobDialog] = useState(false);
   const [editingJob, setEditingJob] = useState<any>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
 
   // Fetch users for filter
   const { data: users = [] } = useQuery({
@@ -136,6 +139,31 @@ export default function Jobs() {
   const handleEditJob = (job: any) => {
     setEditingJob(job);
     setShowJobDialog(true);
+  };
+
+  const handleViewJob = (job: any) => {
+    setSelectedJob(job);
+    setShowDetailsDialog(true);
+  };
+
+  const handleStatusChange = async (jobId: string, status: string) => {
+    try {
+      await updateJob.mutateAsync({
+        jobId,
+        updates: { status },
+      });
+      toast({
+        title: "Status Updated",
+        description: `Job status changed to ${status.replace('_', ' ')}`,
+      });
+    } catch (error) {
+      console.error('Error updating job status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update job status",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleJobSubmit = async (jobData: any) => {
@@ -517,99 +545,76 @@ export default function Jobs() {
         ) : (
           jobs.map((job) => (
             <Card key={job.job_id} className="hover:shadow-card transition-all duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
+              <CardContent className="p-5">
+                {/* Header with Title and Badges */}
+                <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-semibold">{job.title}</h3>
+                    <h3 className="text-lg font-semibold mb-2">{job.title}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
                       {getStatusBadge(job.status)}
                       <Badge variant="outline" className={getPriorityColor(job.priority)}>
-                        {job.priority.charAt(0).toUpperCase() + job.priority.slice(1)} Priority
+                        {job.priority.charAt(0).toUpperCase() + job.priority.slice(1)}
                       </Badge>
                       {job.job_type && (
-                        <Badge variant="secondary">
+                        <Badge variant="secondary" className="text-xs">
                           {job.job_type.replace(/_/g, ' ').toUpperCase()}
                         </Badge>
                       )}
                     </div>
-
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        <span className="font-medium text-primary">
-                          {job.property?.property_name || 'No property assigned'}
-                        </span>
-                        {job.location_notes && (
-                          <>
-                            <span className="mx-2">•</span>
-                            <span>{job.location_notes}</span>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center">
-                        <User className="h-4 w-4 mr-2" />
-                        <span>
-                          Assigned to:{' '}
-                          {job.assigned_user
-                            ? `${job.assigned_user.first_name} ${job.assigned_user.last_name}`
-                            : 'Unassigned'}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        <span>Due: {formatDate(job.due_date)}</span>
-                      </div>
-                      {(job.estimated_cost || job.actual_cost) && (
-                        <div className="flex items-center">
-                          <DollarSign className="h-4 w-4 mr-2" />
-                          <span>
-                            Cost: {job.actual_cost ? `$${job.actual_cost}` : `Est. $${job.estimated_cost || 0}`}
-                          </span>
-                        </div>
-                      )}
-                      {(job.estimated_hours || job.actual_hours) && (
-                        <div className="flex items-center">
-                          <Timer className="h-4 w-4 mr-2" />
-                          <span>
-                            Time: {job.actual_hours ? `${job.actual_hours}h` : `Est. ${job.estimated_hours || 0}h`}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {job.description && (
-                      <p className="text-sm mt-2 text-muted-foreground">{job.description}</p>
-                    )}
                   </div>
                 </div>
 
+                {/* Essential Info - Single Row */}
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4 flex-wrap">
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-1.5 text-primary" />
+                    <span className="font-medium">
+                      {job.property?.property_name || 'No property'}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <User className="h-4 w-4 mr-1.5" />
+                    <span>
+                      {job.assigned_user
+                        ? `${job.assigned_user.first_name} ${job.assigned_user.last_name}`
+                        : 'Unassigned'}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-1.5" />
+                    <span>{formatDate(job.due_date)}</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-muted-foreground">
-                    Job ID: {job.job_id?.slice(0, 8)}
+                    ID: {job.job_id?.slice(0, 8)}
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleViewJob(job)}
+                    >
+                      <BriefcaseIcon className="h-3.5 w-3.5 mr-1.5" />
+                      View Details
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEditJob(job)}
+                    >
+                      Edit
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleCreateTaskFromJob(job)}
                       disabled={createTask.isPending}
                     >
-                      <CheckSquare className="h-3 w-3 mr-1" />
+                      <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
                       Create Task
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEditJob(job)}
-                    >
-                      Edit Job
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="bg-accent hover:bg-accent-hover"
-                      onClick={() => handleEditJob(job)}
-                    >
-                      Update
                     </Button>
                   </div>
                 </div>
@@ -626,6 +631,16 @@ export default function Jobs() {
         onSubmit={handleJobSubmit}
         job={editingJob}
         isSubmitting={createJob.isPending || updateJob.isPending}
+      />
+
+      {/* Job Details Dialog */}
+      <JobDetailsDialog
+        open={showDetailsDialog}
+        onOpenChange={setShowDetailsDialog}
+        job={selectedJob}
+        onEdit={handleEditJob}
+        onCreateTask={handleCreateTaskFromJob}
+        onStatusChange={handleStatusChange}
       />
     </div>
   );

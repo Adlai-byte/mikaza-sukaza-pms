@@ -76,10 +76,11 @@ export function useUsersOptimized() {
   } = useQuery({
     queryKey: userKeys.lists(),
     queryFn: fetchUsers,
-    staleTime: CACHE_CONFIG.LIST.staleTime, // 30 minutes
+    staleTime: 0, // CRITICAL FIX: Treat data as stale immediately to force refetch
     gcTime: CACHE_CONFIG.LIST.gcTime, // 2 hours
-    refetchOnMount: false, // Don't refetch on mount (use cache)
+    refetchOnMount: true, // TEMPORARILY ENABLED: Always refetch on mount to ensure fresh data
     refetchOnWindowFocus: false, // Don't refetch on window focus
+    retry: 1, // Retry once if fetch fails
   });
 
   // Create user mutation
@@ -110,13 +111,43 @@ export function useUsersOptimized() {
       }
 
       console.log('✅ Password validated');
+      console.log('🔐 Creating Supabase Auth user...');
+
+      // Step 1: Create Supabase Auth user first
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            user_type: userData.user_type,
+          }
+        }
+      });
+
+      if (authError) {
+        console.error('❌ Supabase Auth creation error:', authError);
+        throw new Error(`Failed to create authentication account: ${authError.message}`);
+      }
+
+      if (!authData.user) {
+        console.error('❌ No user returned from Supabase Auth');
+        throw new Error('Failed to create authentication account');
+      }
+
+      console.log('✅ Supabase Auth user created:', authData.user.id);
       console.log('💾 Inserting user into database...');
 
-      // Create insertion data with required password and remove confirmPassword
-      const { confirmPassword, ...insertData } = { ...userData, password: userData.password };
+      // Step 2: Create insertion data with Supabase Auth user ID
+      const { confirmPassword, ...insertData } = {
+        ...userData,
+        user_id: authData.user.id, // Use Supabase Auth ID
+        password: userData.password
+      };
 
       // Clean up optional fields with empty strings - PostgreSQL doesn't accept "" for date fields
-      // Only clean optional fields, keep required fields (email, password, first_name, last_name, user_type)
       const optionalFields = [
         'date_of_birth', 'company', 'cellphone_primary', 'cellphone_usa',
         'whatsapp', 'address', 'city', 'state', 'zip', 'photo_url'
@@ -131,6 +162,7 @@ export function useUsersOptimized() {
 
       console.log('🧹 Cleaned insert data (empty optional fields removed)');
 
+      // Step 3: Insert user into users table
       const { data, error } = await supabase
         .from('users')
         .insert([insertData])
@@ -139,10 +171,20 @@ export function useUsersOptimized() {
 
       if (error) {
         console.error('❌ Database insert error:', error);
-        throw error;
+        // If database insert fails, we should clean up the Auth user
+        // But Supabase doesn't allow deleting users from client side
+        // Admin will need to manually clean up in Supabase Dashboard
+        throw new Error(`User account created but database entry failed: ${error.message}. Please contact administrator.`);
       }
 
       console.log('✅ User created in database:', data?.user_id);
+      console.log('📧 Verification email sent to:', userData.email);
+
+      toast({
+        title: "User Created Successfully",
+        description: `User account created. A verification email has been sent to ${userData.email}. The user must verify their email before logging in.`,
+      });
+
       return data;
     },
     onMutate: async (userData) => {
@@ -351,6 +393,22 @@ export function useUsersOptimized() {
       gcTime: CACHE_CONFIG.DETAIL.gcTime, // 1 hour
     });
   };
+
+  // Force invalidate cache on mount to ensure fresh data
+  useEffect(() => {
+    console.log('🔄 useUsersOptimized mounted - invalidating cache...');
+    queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 useUsersOptimized - State Update:');
+    console.log('   - users:', users);
+    console.log('   - users.length:', users.length);
+    console.log('   - loading:', loading);
+    console.log('   - isFetching:', isFetching);
+    console.log('   - error:', usersError);
+  }, [users, loading, isFetching, usersError]);
 
   // Handle errors in useEffect to avoid render-time side effects
   useEffect(() => {
