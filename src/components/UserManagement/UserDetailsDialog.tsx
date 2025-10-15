@@ -52,6 +52,34 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
+  const formatActionDetails = (details: Record<string, any> | undefined) => {
+    if (!details || Object.keys(details).length === 0) return null;
+
+    const formattedDetails: string[] = [];
+
+    // Format different fields in a user-friendly way
+    if (details.userEmail) formattedDetails.push(`Email: ${details.userEmail}`);
+    if (details.userType) formattedDetails.push(`Type: ${details.userType}`);
+    if (details.isActive !== undefined) formattedDetails.push(`Active: ${details.isActive ? 'Yes' : 'No'}`);
+    if (details.propertyName) formattedDetails.push(`Property: ${details.propertyName}`);
+    if (details.bookingId) formattedDetails.push(`Booking ID: ${details.bookingId}`);
+    if (details.taskId) formattedDetails.push(`Task ID: ${details.taskId}`);
+    if (details.issueId) formattedDetails.push(`Issue ID: ${details.issueId}`);
+    if (details.status) formattedDetails.push(`Status: ${details.status}`);
+    if (details.priority) formattedDetails.push(`Priority: ${details.priority}`);
+
+    // If there are other details not explicitly handled, add them
+    const handledKeys = ['userEmail', 'userType', 'isActive', 'propertyName', 'bookingId', 'taskId', 'issueId', 'status', 'priority'];
+    Object.entries(details).forEach(([key, value]) => {
+      if (!handledKeys.includes(key) && value !== null && value !== undefined) {
+        const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        formattedDetails.push(`${formattedKey}: ${value}`);
+      }
+    });
+
+    return formattedDetails.join(' • ');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -194,34 +222,39 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {activityLogs.map((log, index) => (
-                    <div key={log.log_id || index}>
-                      <div className="flex items-center justify-between py-2">
-                        <div>
-                          <p className="font-medium">{log.action_type.replace(/_/g, ' ')}</p>
-                          {log.action_details && Object.keys(log.action_details).length > 0 && (
-                            <p className="text-sm text-muted-foreground">
-                              {JSON.stringify(log.action_details)}
+                  {activityLogs.map((log, index) => {
+                    const formattedDetails = formatActionDetails(log.action_details);
+                    return (
+                      <div key={log.log_id || index}>
+                        <div className="flex items-center justify-between py-2">
+                          <div className="flex-1">
+                            <p className="font-medium capitalize">
+                              {log.action_type.replace(/_/g, ' ').toLowerCase()}
                             </p>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            by {log.performed_by}
-                          </p>
+                            {formattedDetails && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {formattedDetails}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              by {log.performed_by}
+                            </p>
+                          </div>
+                          <div className="text-sm text-muted-foreground whitespace-nowrap ml-4">
+                            {log.created_at && (() => {
+                              try {
+                                return format(new Date(log.created_at), 'MMM dd, HH:mm');
+                              } catch (error) {
+                                console.error('Error formatting log date:', error);
+                                return log.created_at;
+                              }
+                            })()}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {log.created_at && (() => {
-                            try {
-                              return format(new Date(log.created_at), 'MMM dd, HH:mm');
-                            } catch (error) {
-                              console.error('Error formatting log date:', error);
-                              return log.created_at;
-                            }
-                          })()}
-                        </div>
+                        {index < activityLogs.length - 1 && <Separator />}
                       </div>
-                      {index < activityLogs.length - 1 && <Separator />}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

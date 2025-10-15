@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Trash2, Search, CreditCard, Building2, Eye, Download, Filter } from "lucide-react";
+import { Edit, Trash2, Search, CreditCard, Building2, Eye, Download, Filter, Key } from "lucide-react";
 import { UserTableLoadingState, UserLoadingSpinner } from "./UserTableSkeleton";
 import { LoadingOverlay } from "../PropertyManagement/PropertyTableSkeleton";
 import {
@@ -42,6 +42,7 @@ interface UserTableProps {
   onViewBankAccounts: (user: User) => void;
   onViewCreditCards: (user: User) => void;
   onViewDetails: (user: User) => void;
+  onChangePassword: (user: User) => void;
   isLoading?: boolean;
   isFetching?: boolean;
 }
@@ -53,6 +54,7 @@ export function UserTable({
   onViewBankAccounts,
   onViewCreditCards,
   onViewDetails,
+  onChangePassword,
   isLoading = false,
   isFetching = false,
 }: UserTableProps) {
@@ -226,6 +228,14 @@ export function UserTable({
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => onChangePassword(user)}
+                      title="Change Password"
+                    >
+                      <Key className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => onViewBankAccounts(user)}
                       title="Bank Accounts"
                     >
@@ -249,7 +259,7 @@ export function UserTable({
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete User</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete {user.first_name} {user.last_name}? 
+                            Are you sure you want to delete {user.first_name} {user.last_name}?
                             This action cannot be undone and will also delete all associated bank accounts and credit cards.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
@@ -333,6 +343,14 @@ export function UserTable({
                         className="h-8 w-8 p-0"
                       >
                         <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onChangePassword(user)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Key className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"

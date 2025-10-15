@@ -8,8 +8,11 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireAuth = false }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Check if user is authenticated (either via Supabase auth or session mode)
+  const isAuthenticated = !!(user || profile);
 
   useEffect(() => {
     // If auth is not required, always show the content
@@ -17,16 +20,19 @@ export function ProtectedRoute({ children, requireAuth = false }: ProtectedRoute
       return;
     }
 
-    // If auth is required but user is not loaded yet, wait
+    // If auth is required but still loading, wait
     if (loading) {
       return;
     }
 
-    // If auth is required and no user, redirect to auth page
-    if (!user) {
-      navigate("/auth");
+    // If auth is required and not authenticated, redirect to auth page
+    if (!isAuthenticated) {
+      console.log('🚫 ProtectedRoute: Not authenticated, redirecting to /auth');
+      navigate("/auth", { replace: true });
+    } else {
+      console.log('✅ ProtectedRoute: Authenticated, allowing access');
     }
-  }, [user, loading, navigate, requireAuth]);
+  }, [isAuthenticated, loading, navigate, requireAuth]);
 
   // Show loading while checking auth status
   if (requireAuth && loading) {
@@ -40,8 +46,8 @@ export function ProtectedRoute({ children, requireAuth = false }: ProtectedRoute
     );
   }
 
-  // If auth is required but no user, don't render anything (will redirect)
-  if (requireAuth && !user) {
+  // If auth is required but not authenticated, don't render anything (will redirect)
+  if (requireAuth && !isAuthenticated) {
     return null;
   }
 

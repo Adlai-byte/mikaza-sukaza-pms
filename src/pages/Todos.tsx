@@ -51,15 +51,27 @@ export default function Todos() {
   const [showOverdue, setShowOverdue] = useState(false);
 
   // Build filters object
-  const filters: TaskFilters = useMemo(() => ({
-    status: statusFilter.length > 0 ? statusFilter : undefined,
-    priority: priorityFilter.length > 0 ? priorityFilter : undefined,
-    category: categoryFilter.length > 0 ? categoryFilter : undefined,
-    property_id: propertyFilter || undefined,
-    assigned_to: assignedFilter || undefined,
-    search: searchQuery || undefined,
-    overdue: showOverdue || undefined,
-  }), [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery, showOverdue]);
+  // For ops users: automatically filter to only their assigned tasks
+  // For admin users: show all tasks (unless manually filtered)
+  const filters: TaskFilters = useMemo(() => {
+    const baseFilters: TaskFilters = {
+      status: statusFilter.length > 0 ? statusFilter : undefined,
+      priority: priorityFilter.length > 0 ? priorityFilter : undefined,
+      category: categoryFilter.length > 0 ? categoryFilter : undefined,
+      property_id: propertyFilter || undefined,
+      search: searchQuery || undefined,
+      overdue: showOverdue || undefined,
+    };
+
+    // If ops user and no manual assignee filter, show only their tasks
+    if (user?.user_type === 'ops' && !assignedFilter) {
+      baseFilters.assigned_to = user.user_id;
+    } else if (assignedFilter) {
+      baseFilters.assigned_to = assignedFilter;
+    }
+
+    return baseFilters;
+  }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery, showOverdue, user]);
 
   const { tasks, loading } = useTasks(filters);
   const createTask = useCreateTask();
@@ -187,10 +199,13 @@ export default function Todos() {
           <div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
               <CheckSquare className="h-8 w-8 text-primary" />
-              Task Management
+              {user?.user_type === 'ops' ? 'My Tasks' : 'Task Management'}
             </h1>
             <p className="text-muted-foreground mt-2">
-              Manage tasks, track progress, and organize your workflow
+              {user?.user_type === 'ops'
+                ? 'View and manage your assigned tasks'
+                : 'Manage tasks, track progress, and organize your workflow'
+              }
             </p>
           </div>
           <Button onClick={handleCreateTask} className="bg-primary hover:bg-primary/90">
@@ -201,55 +216,63 @@ export default function Todos() {
 
         {/* Statistics Dashboard */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
-              <CheckSquare className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                All tasks
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-700">Total Tasks</p>
+                  <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
+                  <p className="text-xs text-blue-600 mt-1">All tasks</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <CheckSquare className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
-              <p className="text-xs text-muted-foreground">
-                Requires attention
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-700">Overdue</p>
+                  <h3 className="text-3xl font-bold text-red-900 mt-1">{stats.overdue}</h3>
+                  <p className="text-xs text-red-600 mt-1">Requires attention</p>
+                </div>
+                <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed Today</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.completedToday}</div>
-              <p className="text-xs text-muted-foreground">
-                Today's achievements
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-700">Completed Today</p>
+                  <h3 className="text-3xl font-bold text-green-900 mt-1">{stats.completedToday}</h3>
+                  <p className="text-xs text-green-600 mt-1">Today's achievements</p>
+                </div>
+                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                  <CheckCircle2 className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-              <Clock className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.inProgress}</div>
-              <p className="text-xs text-muted-foreground">
-                Currently active
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-700">In Progress</p>
+                  <h3 className="text-3xl font-bold text-purple-900 mt-1">{stats.inProgress}</h3>
+                  <p className="text-xs text-purple-600 mt-1">Currently active</p>
+                </div>
+                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -296,25 +319,27 @@ export default function Todos() {
                 </Select>
               </div>
 
-              {/* Assignee Filter */}
-              <div className="space-y-2">
-                <Label htmlFor="assignee">Assigned To</Label>
-                <Select value={assignedFilter || undefined} onValueChange={(value) => setAssignedFilter(value || '')}>
-                  <SelectTrigger id="assignee">
-                    <SelectValue placeholder="All users" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {user?.user_id && (
-                      <SelectItem value={user.user_id}>My Tasks</SelectItem>
-                    )}
-                    {users.map(u => (
-                      <SelectItem key={u.user_id} value={u.user_id}>
-                        {u.first_name} {u.last_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Assignee Filter - Only show for admin users */}
+              {user?.user_type === 'admin' && (
+                <div className="space-y-2">
+                  <Label htmlFor="assignee">Assigned To</Label>
+                  <Select value={assignedFilter || undefined} onValueChange={(value) => setAssignedFilter(value || '')}>
+                    <SelectTrigger id="assignee">
+                      <SelectValue placeholder="All users" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {user?.user_id && (
+                        <SelectItem value={user.user_id}>My Tasks</SelectItem>
+                      )}
+                      {users.map(u => (
+                        <SelectItem key={u.user_id} value={u.user_id}>
+                          {u.first_name} {u.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Category Filter */}
               <div className="space-y-2">

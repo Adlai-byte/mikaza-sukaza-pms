@@ -42,6 +42,7 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
   const [photoPreview, setPhotoPreview] = useState<string | null>(user?.photo_url || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { logActivity } = useActivityLogs();
   const { toast } = useToast();
   
@@ -50,6 +51,7 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
     defaultValues: {
       email: "",
       password: "",
+      confirmPassword: "",
       user_type: "ops",
       is_active: true,
       first_name: "",
@@ -74,6 +76,7 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
       const formData = {
         email: user?.email || "",
         password: user?.password || "", // Show existing password
+        confirmPassword: user?.password || "", // Match existing password
         user_type: user?.user_type || "ops",
         is_active: user?.is_active ?? true,
         first_name: user?.first_name || "",
@@ -100,12 +103,20 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
   const handleSubmit = async (data: UserInsert) => {
     try {
       setIsSubmitting(true);
-      
-      // Include photo URL in submission data
-      const submissionData = { ...data, photo_url: photoPreview || undefined };
-      
+
+      console.log('📝 Form submission data:', {
+        ...data,
+        password: data.password ? '***HIDDEN***' : 'EMPTY',
+        confirmPassword: data.confirmPassword ? '***HIDDEN***' : 'EMPTY'
+      });
+
+      // Remove confirmPassword from submission data and include photo URL
+      const { confirmPassword, ...submissionData } = data;
+      submissionData.photo_url = photoPreview || undefined;
+
+      console.log('🚀 Submitting user data to backend...');
       await onSubmit(submissionData);
-      
+
       // Log the activity
       const actionType = user ? 'USER_UPDATED' : 'USER_CREATED';
       const actionDetails = {
@@ -113,19 +124,27 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
         userType: data.user_type,
         isActive: data.is_active,
       };
-      
+
       await logActivity(
-        actionType, 
-        actionDetails, 
-        user?.user_id, 
+        actionType,
+        actionDetails,
+        user?.user_id,
         'Admin'
       );
-      
+
+      console.log('✅ User created/updated successfully');
       form.reset();
       setPhotoPreview(null);
+      setShowPassword(false);
+      setShowConfirmPassword(false);
       onOpenChange(false);
     } catch (error) {
-      // Error is handled in the parent component
+      console.error('❌ User form submission error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save user. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -318,6 +337,62 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm Password *</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type={showConfirmPassword ? "text" : "password"}
+                        {...field}
+                        placeholder="Confirm password"
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Password Requirements */}
+            <div className="text-sm text-muted-foreground space-y-1 bg-muted/50 p-3 rounded-md">
+              <p className="font-medium text-foreground">Password must contain:</p>
+              <ul className="space-y-1">
+                <li className={form.watch('password')?.length >= 8 ? "text-green-600" : ""}>
+                  • At least 8 characters
+                </li>
+                <li className={/[A-Z]/.test(form.watch('password') || '') ? "text-green-600" : ""}>
+                  • At least one uppercase letter
+                </li>
+                <li className={/[a-z]/.test(form.watch('password') || '') ? "text-green-600" : ""}>
+                  • At least one lowercase letter
+                </li>
+                <li className={/[0-9]/.test(form.watch('password') || '') ? "text-green-600" : ""}>
+                  • At least one number
+                </li>
+                <li className={/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(form.watch('password') || '') ? "text-green-600" : ""}>
+                  • At least one special character (!@#$%...)
+                </li>
+              </ul>
+            </div>
 
             <div className="grid grid-cols-2 gap-4 animate-fade-in">
               <FormField

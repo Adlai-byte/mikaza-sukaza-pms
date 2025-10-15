@@ -126,4 +126,32 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Enhanced Focus Indicators for Accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
+  /* Specific focus styles for buttons */
+  button:focus-visible,
+  a:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background transition-all duration-200;
+  }
+
+  /* Calendar grid cells with custom focus indicator */
+  [role="gridcell"]:focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-1 ring-offset-background z-10;
+  }
+
+  /* Property rows focus */
+  [role="row"]:focus-visible {
+    @apply outline-none ring-2 ring-primary/50 ring-inset;
+  }
+
+  /* Input and select focus */
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-0 border-primary;
+  }
 }

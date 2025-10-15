@@ -85,24 +85,51 @@ export function useUsersOptimized() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: UserInsert) => {
+      console.log('🔐 Creating user - Permission check...');
+
       // Check permission
       if (!hasPermission(PERMISSIONS.USERS_CREATE)) {
+        console.error('❌ Permission denied for user creation');
         throw new Error("You don't have permission to create users");
       }
 
+      console.log('✅ Permission granted');
+      console.log('🔒 Password validation...');
+
       // Ensure password is provided for new users
       if (!userData.password) {
+        console.error('❌ No password provided');
         throw new Error("Password is required for new users");
       }
 
       // Validate password strength
       const passwordValidation = validatePassword(userData.password);
       if (!passwordValidation.isValid) {
+        console.error('❌ Password validation failed:', passwordValidation.errors);
         throw new Error(passwordValidation.errors.join('. '));
       }
 
-      // Create insertion data with required password
-      const insertData = { ...userData, password: userData.password };
+      console.log('✅ Password validated');
+      console.log('💾 Inserting user into database...');
+
+      // Create insertion data with required password and remove confirmPassword
+      const { confirmPassword, ...insertData } = { ...userData, password: userData.password };
+
+      // Clean up optional fields with empty strings - PostgreSQL doesn't accept "" for date fields
+      // Only clean optional fields, keep required fields (email, password, first_name, last_name, user_type)
+      const optionalFields = [
+        'date_of_birth', 'company', 'cellphone_primary', 'cellphone_usa',
+        'whatsapp', 'address', 'city', 'state', 'zip', 'photo_url'
+      ];
+
+      optionalFields.forEach(field => {
+        if (insertData[field as keyof typeof insertData] === "" ||
+            insertData[field as keyof typeof insertData] === undefined) {
+          delete insertData[field as keyof typeof insertData];
+        }
+      });
+
+      console.log('🧹 Cleaned insert data (empty optional fields removed)');
 
       const { data, error } = await supabase
         .from('users')
@@ -110,8 +137,12 @@ export function useUsersOptimized() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database insert error:', error);
+        throw error;
+      }
 
+      console.log('✅ User created in database:', data?.user_id);
       return data;
     },
     onMutate: async (userData) => {

@@ -125,15 +125,18 @@ export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
 
 export const ROLES = {
   /**
-   * ADMIN - Full System Access
+   * ADMIN - Full System Access (except Todos)
    * Complete control over all modules and data
+   * NOTE: Admins focus on Jobs, Ops handle day-to-day tasks/todos
    */
   admin: {
     name: 'Administrator',
-    description: 'Full system access - manages users, finances, and all operations',
+    description: 'Full system access - manages users, finances, and all operations (focuses on Jobs)',
     permissions: [
-      // ALL PERMISSIONS - Admin has unrestricted access
-      ...Object.values(PERMISSIONS),
+      // ALL PERMISSIONS EXCEPT TODOS - Admin focuses on Jobs, not day-to-day tasks
+      ...Object.values(PERMISSIONS).filter(
+        perm => !perm.startsWith('todos.')
+      ),
     ],
   },
 

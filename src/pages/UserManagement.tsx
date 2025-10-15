@@ -4,21 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserPlus, Users, Building2, CreditCard } from "lucide-react";
 import { useUsersOptimized } from "@/hooks/useUsersOptimized";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
+import { useToast } from "@/hooks/use-toast";
 import { UserForm } from "@/components/UserManagement/UserForm";
 import { UserTable } from "@/components/UserManagement/UserTable";
 import { BankAccountDialog } from "@/components/UserManagement/BankAccountDialog";
 import { CreditCardDialog } from "@/components/UserManagement/CreditCardDialog";
 import { UserDetailsDialog } from "@/components/UserManagement/UserDetailsDialog";
+import { ChangePasswordDialog } from "@/components/UserManagement/ChangePasswordDialog";
 import { User, UserInsert } from "@/lib/schemas";
 
 export default function UserManagement() {
   const { users, loading, isFetching, createUser, updateUser, deleteUser } = useUsersOptimized();
   const { logActivity } = useActivityLogs();
+  const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [bankAccountDialogUser, setBankAccountDialogUser] = useState<User | null>(null);
   const [creditCardDialogUser, setCreditCardDialogUser] = useState<User | null>(null);
   const [userDetailsUser, setUserDetailsUser] = useState<User | null>(null);
+  const [changePasswordUser, setChangePasswordUser] = useState<User | null>(null);
 
   const handleCreateUser = async (userData: UserInsert) => {
     await createUser(userData);
@@ -65,6 +69,31 @@ export default function UserManagement() {
 
   const handleViewDetails = (user: User) => {
     setUserDetailsUser(user);
+  };
+
+  const handleChangePassword = (user: User) => {
+    setChangePasswordUser(user);
+  };
+
+  const handlePasswordChange = async (userId: string, currentPassword: string, newPassword: string) => {
+    // Find the user
+    const user = users.find(u => u.user_id === userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Verify current password matches
+    if (user.password !== currentPassword) {
+      throw new Error("Current password is incorrect");
+    }
+
+    // Update user with new password
+    await updateUser(userId, { ...user, password: newPassword });
+
+    toast({
+      title: "Password Updated",
+      description: "The password has been changed successfully.",
+    });
   };
 
   const handleFormClose = () => {
@@ -144,6 +173,7 @@ export default function UserManagement() {
             onViewBankAccounts={handleViewBankAccounts}
             onViewCreditCards={handleViewCreditCards}
             onViewDetails={handleViewDetails}
+            onChangePassword={handleChangePassword}
             isLoading={loading}
             isFetching={isFetching}
           />
@@ -182,6 +212,16 @@ export default function UserManagement() {
           open={!!userDetailsUser}
           onOpenChange={(open) => !open && setUserDetailsUser(null)}
           user={userDetailsUser}
+        />
+      )}
+
+      {/* Change Password Dialog */}
+      {changePasswordUser && (
+        <ChangePasswordDialog
+          open={!!changePasswordUser}
+          onOpenChange={(open) => !open && setChangePasswordUser(null)}
+          user={changePasswordUser}
+          onPasswordChange={handlePasswordChange}
         />
       )}
     </div>

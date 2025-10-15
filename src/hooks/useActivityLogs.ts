@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ActivityLog } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
@@ -7,7 +7,7 @@ export function useActivityLogs() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const logActivity = async (
+  const logActivity = useCallback(async (
     actionType: string,
     actionDetails?: Record<string, any>,
     userId?: string,
@@ -31,9 +31,9 @@ export function useActivityLogs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getActivityLogs = async (userId?: string): Promise<ActivityLog[]> => {
+  const getActivityLogs = useCallback(async (userId?: string): Promise<ActivityLog[]> => {
     try {
       let query = supabase
         .from('activity_logs')
@@ -57,7 +57,7 @@ export function useActivityLogs() {
       });
       return [];
     }
-  };
+  }, [toast]);
 
   return {
     loading,

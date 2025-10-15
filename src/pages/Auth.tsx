@@ -21,7 +21,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showUserList, setShowUserList] = useState(false);
-  const { signIn, signUp, user, sessionLogin } = useAuth();
+  const { signIn, signUp, user, profile, sessionLogin } = useAuth();
   const { users, loading: usersLoading } = useUsersOptimized();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -32,31 +32,47 @@ export default function Auth() {
   });
 
   useEffect(() => {
-    // Redirect to dashboard when authenticated
-    if (user) {
-      navigate('/');
+    console.log('🔍 Auth.tsx useEffect - Checking authentication state:', {
+      hasUser: !!user,
+      hasProfile: !!profile,
+      userEmail: user?.email || profile?.email || 'none'
+    });
+
+    // Redirect to dashboard when authenticated (check both user and profile for session mode)
+    if (user || profile) {
+      console.log('✅ User authenticated, navigating to dashboard...', { user, profile });
+      navigate('/', { replace: true });
+      return; // Early return to prevent loading saved credentials after navigation
     }
-    
-    // Load saved credentials if remember me was checked
+
+    // Load saved credentials if remember me was checked (only if not authenticated)
     const savedEmail = localStorage.getItem('rememberedEmail');
     const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
-    
+
     if (savedEmail && savedRememberMe) {
+      console.log('📧 Loading saved email from localStorage');
       setLoginForm(prev => ({ ...prev, email: savedEmail }));
       setRememberMe(true);
     }
-  }, [user, navigate]);
+  }, [user, profile, navigate]);
 
   const handleSessionLogin = async (userFromDB: any) => {
+    console.log('🚀 handleSessionLogin called with user:', userFromDB.email);
     setLoading(true);
     try {
+      console.log('📞 Calling sessionLogin...');
       await sessionLogin(userFromDB);
+      console.log('✅ sessionLogin completed successfully');
+
       toast({
         title: "Session login successful",
         description: `Logged in as ${userFromDB.first_name} ${userFromDB.last_name}`,
       });
-      navigate("/");
+
+      console.log('📍 Waiting for useEffect to handle navigation...');
+      // Navigation will be handled by useEffect after profile state updates
     } catch (error) {
+      console.error('❌ Session login error:', error);
       toast({
         title: "Error",
         description: "Failed to start session",
@@ -64,16 +80,41 @@ export default function Auth() {
       });
     } finally {
       setLoading(false);
+      console.log('🏁 handleSessionLogin finished');
     }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const validatedData = loginSchema.parse(loginForm);
       setLoading(true);
 
+      console.log('🔐 Attempting login with email:', validatedData.email);
+
+      // In session mode (AUTH_ENABLED = false), we need to find the user in the database
+      // and call sessionLogin instead of signIn
+      const matchingUser = users.find(u => u.email === validatedData.email && u.is_active);
+
+      if (matchingUser) {
+        console.log('✅ Found matching user in database, using session login');
+        await handleSessionLogin(matchingUser);
+
+        // Save credentials if remember me is checked
+        if (rememberMe) {
+          localStorage.setItem('rememberedEmail', validatedData.email);
+          localStorage.setItem('rememberMe', 'true');
+        } else {
+          localStorage.removeItem('rememberedEmail');
+          localStorage.removeItem('rememberMe');
+        }
+
+        return; // handleSessionLogin will handle navigation
+      }
+
+      // If no matching user found, try regular Supabase auth (for when AUTH_ENABLED = true)
+      console.log('⚠️ No matching user found in database, trying Supabase auth');
       const { error } = await signIn(validatedData.email, validatedData.password);
 
       if (error) {
@@ -113,13 +154,20 @@ export default function Auth() {
         title: "Welcome back!",
         description: "You have successfully signed in.",
       });
-      
-      navigate("/");
+
+      // Navigation will be handled by useEffect
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
           title: "Validation Error",
           description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        console.error('❌ Login error:', error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred during login",
           variant: "destructive",
         });
       }

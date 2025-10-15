@@ -1,8 +1,23 @@
 import { z } from "zod";
 
+// Password validation regex patterns
+const passwordRegex = {
+  minLength: /.{8,}/,
+  hasUpperCase: /[A-Z]/,
+  hasLowerCase: /[a-z]/,
+  hasNumber: /[0-9]/,
+  hasSpecialChar: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/,
+};
+
 export const userSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required").optional().or(z.string().min(8, "Password must be at least 8 characters")),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(passwordRegex.hasUpperCase, "Password must contain at least one uppercase letter")
+    .regex(passwordRegex.hasLowerCase, "Password must contain at least one lowercase letter")
+    .regex(passwordRegex.hasNumber, "Password must contain at least one number")
+    .regex(passwordRegex.hasSpecialChar, "Password must contain at least one special character (!@#$%^&*...)"),
+  confirmPassword: z.string().min(1, "Please confirm your password").optional(),
   user_type: z.enum(["admin", "ops"], {
     required_error: "Please select a user type",
   }),
@@ -22,6 +37,15 @@ export const userSchema = z.object({
   zip: z.string().optional(),
   country: z.string().default("USA"),
   photo_url: z.string().optional(),
+}).refine((data) => {
+  // If confirmPassword is provided, it must match password
+  if (data.confirmPassword !== undefined && data.confirmPassword !== '') {
+    return data.password === data.confirmPassword;
+  }
+  return true;
+}, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
 export const bankAccountSchema = z.object({
@@ -116,7 +140,8 @@ export const unitSchema = z.object({
 // Insert types (for creating new records)
 export type UserInsert = {
   email: string;
-  password?: string;
+  password: string;
+  confirmPassword?: string;
   user_type: "admin" | "ops";
   is_active?: boolean;
   first_name: string;

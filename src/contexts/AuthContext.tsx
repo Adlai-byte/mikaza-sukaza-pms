@@ -91,33 +91,128 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     if (!AUTH_ENABLED) {
-      // Check if there's a stored session user
+      const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
+
+      // Check if session is still valid based on inactivity
+      const checkSessionValidity = () => {
+        const storedUser = localStorage.getItem('tempSessionUser');
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            const lastActivity = userData.lastActivityAt || new Date().getTime();
+            const now = new Date().getTime();
+            const inactiveTime = now - lastActivity;
+
+            if (inactiveTime > INACTIVITY_TIMEOUT) {
+              console.log('⏰ Session expired due to inactivity (10 minutes)');
+              localStorage.removeItem('tempSessionUser');
+              setProfile(null);
+              window.location.href = '/auth';
+              return false;
+            }
+            return true;
+          } catch (error) {
+            console.error('Error checking session validity:', error);
+            return false;
+          }
+        }
+        return false;
+      };
+
+      // Check if there's a stored session user and if it's still valid
       const storedUser = localStorage.getItem('tempSessionUser');
       if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          const sessionProfile: Profile = {
-            id: userData.user_id,
-            user_id: userData.user_id,
-            email: userData.email,
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            user_type: userData.user_type,
-            is_active: userData.is_active,
-            photo_url: userData.photo_url,
-            created_at: userData.created_at,
-            updated_at: userData.updated_at,
-          };
-          setProfile(sessionProfile);
-        } catch (error) {
-          console.error('Error parsing stored user:', error);
-          setProfile(mockProfile);
+        if (checkSessionValidity()) {
+          try {
+            const userData = JSON.parse(storedUser);
+            const sessionProfile: Profile = {
+              id: userData.user_id,
+              user_id: userData.user_id,
+              email: userData.email,
+              first_name: userData.first_name,
+              last_name: userData.last_name,
+              user_type: userData.user_type,
+              is_active: userData.is_active,
+              photo_url: userData.photo_url,
+              created_at: userData.created_at,
+              updated_at: userData.updated_at,
+            };
+            setProfile(sessionProfile);
+
+            // Update activity timestamp on load
+            updateLastActivity();
+          } catch (error) {
+            console.error('Error parsing stored user:', error);
+            setProfile(mockProfile);
+          }
         }
       } else {
         setProfile(null); // No session user
       }
+
+      // Set up activity listeners
+      const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+      const throttledUpdateActivity = (() => {
+        let timeout: NodeJS.Timeout | null = null;
+        return () => {
+          if (!timeout) {
+            timeout = setTimeout(() => {
+              updateLastActivity();
+              timeout = null;
+            }, 30000); // Update at most once every 30 seconds
+          }
+        };
+      })();
+
+      activityEvents.forEach(event => {
+        window.addEventListener(event, throttledUpdateActivity);
+      });
+
+      // Check inactivity every minute
+      const inactivityCheckInterval = setInterval(() => {
+        checkSessionValidity();
+      }, 60000); // Check every 60 seconds
+
+      // Add a global function to check session status (for debugging)
+      (window as any).checkSessionStatus = () => {
+        const storedUser = localStorage.getItem('tempSessionUser');
+        if (!storedUser) {
+          console.log('❌ No active session');
+          return;
+        }
+        try {
+          const userData = JSON.parse(storedUser);
+          const lastActivity = userData.lastActivityAt || 0;
+          const now = new Date().getTime();
+          const inactiveTime = now - lastActivity;
+          const remainingTime = INACTIVITY_TIMEOUT - inactiveTime;
+          const remainingMinutes = Math.floor(remainingTime / 60000);
+          const remainingSeconds = Math.floor((remainingTime % 60000) / 1000);
+
+          console.log('🔐 Session Status:');
+          console.log(`   User: ${userData.first_name} ${userData.last_name} (${userData.email})`);
+          console.log(`   Last Activity: ${new Date(lastActivity).toLocaleString()}`);
+          console.log(`   Inactive Time: ${Math.floor(inactiveTime / 60000)} min ${Math.floor((inactiveTime % 60000) / 1000)} sec`);
+          console.log(`   Time Until Logout: ${remainingMinutes} min ${remainingSeconds} sec`);
+
+          if (remainingTime <= 0) {
+            console.log('⚠️ Session should have expired! Check will run within 1 minute.');
+          }
+        } catch (error) {
+          console.error('Error checking session:', error);
+        }
+      };
+
       setLoading(false);
-      return;
+
+      // Cleanup
+      return () => {
+        activityEvents.forEach(event => {
+          window.removeEventListener(event, throttledUpdateActivity);
+        });
+        clearInterval(inactivityCheckInterval);
+        delete (window as any).checkSessionStatus;
+      };
     }
 
     // Set up auth state listener
@@ -212,10 +307,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return { error };
   };
 
+  const updateLastActivity = () => {
+    if (!AUTH_ENABLED) {
+      const storedUser = localStorage.getItem('tempSessionUser');
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          userData.lastActivityAt = new Date().getTime();
+          localStorage.setItem('tempSessionUser', JSON.stringify(userData));
+        } catch (error) {
+          console.error('Error updating activity timestamp:', error);
+        }
+      }
+    }
+  };
+
   const sessionLogin = async (userFromDB: any) => {
     if (!AUTH_ENABLED) {
-      // Store user in localStorage for session-based login
-      localStorage.setItem('tempSessionUser', JSON.stringify(userFromDB));
+      console.log('🔐 Starting session login for:', userFromDB.email);
+
+      // Store user in localStorage for session-based login with activity tracking
+      const sessionData = {
+        ...userFromDB,
+        lastActivityAt: new Date().getTime(),
+      };
+
+      localStorage.setItem('tempSessionUser', JSON.stringify(sessionData));
+      console.log('💾 Session data stored in localStorage');
 
       const sessionProfile: Profile = {
         id: userFromDB.user_id,
@@ -229,7 +347,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         created_at: userFromDB.created_at,
         updated_at: userFromDB.updated_at,
       };
+
+      console.log('👤 Setting profile state:', sessionProfile);
       setProfile(sessionProfile);
+      console.log('✅ Profile state updated - session login complete');
 
       // Warm cache with critical data after login
       if (cacheWarmer) {
