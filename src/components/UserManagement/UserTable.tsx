@@ -81,6 +81,21 @@ export function UserTable({
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  const getUserTypeBadge = (userType: string) => {
+    switch (userType) {
+      case 'admin':
+        return { variant: 'default' as const, label: 'Admin' };
+      case 'ops':
+        return { variant: 'secondary' as const, label: 'Ops' };
+      case 'provider':
+        return { variant: 'outline' as const, label: 'Provider' };
+      case 'customer':
+        return { variant: 'outline' as const, label: 'Customer' };
+      default:
+        return { variant: 'secondary' as const, label: userType };
+    }
+  };
+
   const getAccountStatusBadge = (status: string | undefined) => {
     switch (status) {
       case 'suspended':
@@ -172,6 +187,8 @@ export function UserTable({
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="ops">Ops</SelectItem>
+              <SelectItem value="provider">Provider</SelectItem>
+              <SelectItem value="customer">Customer</SelectItem>
             </SelectContent>
           </Select>
 
@@ -225,8 +242,8 @@ export function UserTable({
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  <Badge variant={user.user_type === 'admin' ? 'default' : 'secondary'}>
-                    {user.user_type === 'admin' ? 'Admin' : 'Ops'}
+                  <Badge variant={getUserTypeBadge(user.user_type).variant}>
+                    {getUserTypeBadge(user.user_type).label}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -396,8 +413,8 @@ export function UserTable({
                     
                     {/* Status Badges */}
                     <div className="flex flex-col space-y-1 items-end">
-                      <Badge variant={user.user_type === 'admin' ? 'default' : 'secondary'} className="text-xs">
-                        {user.user_type === 'admin' ? 'Admin' : 'Ops'}
+                      <Badge variant={getUserTypeBadge(user.user_type).variant} className="text-xs">
+                        {getUserTypeBadge(user.user_type).label}
                       </Badge>
                       <Badge variant={getAccountStatusBadge(user.account_status).variant} className="text-xs">
                         {getAccountStatusBadge(user.account_status).label}

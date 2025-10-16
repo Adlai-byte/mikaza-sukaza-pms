@@ -410,6 +410,8 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
                       <SelectContent>
                         <SelectItem value="admin">Admin</SelectItem>
                         <SelectItem value="ops">Ops (Internal Team)</SelectItem>
+                        <SelectItem value="provider">Provider (Service Vendor)</SelectItem>
+                        <SelectItem value="customer">Customer (Property Owner/Guest)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
