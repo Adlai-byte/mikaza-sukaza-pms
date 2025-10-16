@@ -987,18 +987,10 @@ const Calendar = () => {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Enhanced Header */}
-      <div className="relative">
-        <div className="absolute inset-0 bg-gradient-primary opacity-5 rounded-lg"></div>
-        <div className="relative bg-card border rounded-lg p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
-                  <CalendarIcon className="h-5 w-5 text-white" />
-                </div>
+          {/* Total Revenue Card */}
+          <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-green-700">Total Revenue</p>
                   <h3 className="text-3xl font-bold text-green-900 mt-1">
