@@ -231,20 +231,25 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
                             <p className="font-medium capitalize">
                               {log.action_type.replace(/_/g, ' ').toLowerCase()}
                             </p>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            by {log.performed_by}
-                          </p>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {log.created_at && (() => {
-                            try {
-                              return format(new Date(log.created_at), 'MMM dd, HH:mm');
-                            } catch (error) {
-                              console.error('Error formatting log date:', error);
-                              return log.created_at;
-                            }
-                          })()}
+                            {formattedDetails && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {formattedDetails}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              by {log.performed_by}
+                            </p>
+                          </div>
+                          <div className="text-sm text-muted-foreground whitespace-nowrap ml-4">
+                            {log.created_at && (() => {
+                              try {
+                                return format(new Date(log.created_at), 'MMM dd, HH:mm');
+                              } catch (error) {
+                                console.error('Error formatting log date:', error);
+                                return log.created_at;
+                              }
+                            })()}
+                          </div>
                         </div>
                         {index < activityLogs.length - 1 && <Separator />}
                       </div>

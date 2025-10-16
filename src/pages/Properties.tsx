@@ -46,27 +46,6 @@ export default function Properties() {
     }
   }, [propertiesError, toast]);
 
-  const handleGenerateMockProperties = async () => {
-    setIsGeneratingMocks(true);
-    try {
-      const results = await generateMockProperties(100);
-      
-      // React Query will automatically update the cache
-      
-      toast({
-        title: "Success",
-        description: `Successfully generated ${results.length} mock properties`,
-      });
-    } catch (error) {
-      console.error('Error generating properties:', error);
-      toast({
-        title: "Error loading properties",
-        description: propertiesError instanceof Error ? propertiesError.message : "Failed to load properties",
-        variant: "destructive",
-      });
-    }
-  }, [propertiesError, toast]);
-
   const handleCreateProperty = async (propertyData: PropertyInsert & any) => {
     try {
       await createProperty(propertyData);

@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useUsersOptimized } from "@/hooks/useUsersOptimized";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,9 +20,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [showUserList, setShowUserList] = useState(false);
-  const { signIn, signUp, user, sessionLogin } = useAuth();
-  const { users, loading: usersLoading } = useUsersOptimized();
+  const { signIn, signUp, signOut, user, profile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -326,93 +323,6 @@ export default function Auth() {
                   {isResendingEmail ? "Sending..." : "Resend Verification Email"}
                 </Button>
               </div>
-
-              {/* Available Users List */}
-              {showUserList && (
-                <Card className="mb-4 bg-white/10 border-white/30">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-white">Available Users</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 max-h-60 overflow-y-auto">
-                    {usersLoading ? (
-                      <p className="text-white/70 text-sm">Loading users...</p>
-                    ) : users.length === 0 ? (
-                      <p className="text-white/70 text-sm">No users found. Create users in User Management first.</p>
-                    ) : (
-                      users.filter(u => u.is_active).map((user) => (
-                        <div key={user.user_id} className="flex items-center justify-between p-2 border border-white/20 rounded-lg bg-white/5">
-                          <div className="flex-1">
-                            <p className="font-medium text-white">{user.first_name} {user.last_name}</p>
-                            <p className="text-sm text-white/70">{user.email}</p>
-                            <p className="text-xs text-white/60 capitalize">{user.user_type}</p>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSessionLogin(user)}
-                            disabled={loading}
-                            className="bg-accent hover:bg-accent-hover text-accent-foreground"
-                          >
-                            Login as User
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              <Button 
-                type="submit" 
-                className="w-full h-12 bg-gradient-to-r from-accent to-accent-hover hover:from-accent-hover hover:to-accent text-accent-foreground font-medium text-base border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]" 
-                disabled={loading}
-              >
-                {loading ? "Signing In..." : "Sign In"}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="w-full h-12 mt-3"
-                disabled={loading}
-                onClick={async () => {
-                  try {
-                    const validatedData = loginSchema.parse(loginForm);
-                    setLoading(true);
-                    const { error } = await signUp(validatedData.email, validatedData.password);
-                    if (error) {
-                      if (error.message?.includes("already registered")) {
-                        toast({
-                          title: "Account exists",
-                          description: "You already have an account. Please sign in.",
-                          variant: "default",
-                        });
-                      } else {
-                        toast({
-                          title: "Sign up failed",
-                          description: error.message,
-                          variant: "destructive",
-                        });
-                      }
-                      return;
-                    }
-                    toast({
-                      title: "Check your email",
-                      description: "We sent you a confirmation link to complete your signup.",
-                    });
-                  } catch (err) {
-                    if (err instanceof z.ZodError) {
-                      toast({
-                        title: "Validation Error",
-                        description: err.errors[0].message,
-                        variant: "destructive",
-                      });
-                    }
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                {loading ? "Processing..." : "Create account"}
-              </Button>
             </form>
 
             <div className="text-center">

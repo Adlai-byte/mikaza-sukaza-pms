@@ -222,55 +222,63 @@ export default function Issues() {
 
         {/* Statistics Dashboard */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Issues</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                All reported issues
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-700">Total Issues</p>
+                  <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
+                  <p className="text-xs text-blue-600 mt-1">All reported issues</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Open Issues</CardTitle>
-              <XCircle className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.open}</div>
-              <p className="text-xs text-muted-foreground">
-                Requires attention
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-700">Open Issues</p>
+                  <h3 className="text-3xl font-bold text-red-900 mt-1">{stats.open}</h3>
+                  <p className="text-xs text-red-600 mt-1">Requires attention</p>
+                </div>
+                <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
+                  <XCircle className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.resolved}</div>
-              <p className="text-xs text-muted-foreground">
-                Completed issues
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-700">Resolved</p>
+                  <h3 className="text-3xl font-bold text-green-900 mt-1">{stats.resolved}</h3>
+                  <p className="text-xs text-green-600 mt-1">Completed issues</p>
+                </div>
+                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${stats.totalCost.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">
-                Actual costs
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-700">Total Cost</p>
+                  <h3 className="text-3xl font-bold text-purple-900 mt-1">${stats.totalCost.toFixed(2)}</h3>
+                  <p className="text-xs text-purple-600 mt-1">Actual costs</p>
+                </div>
+                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -241,58 +241,94 @@ export function UserTable({
                 </TableCell>
                 <TableCell>{user.company || '-'}</TableCell>
                 <TableCell>
-                  <div className="flex items-center space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewDetails(user)}
-                      title="View Details"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEditUser(user)}
-                      title="Edit User"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewBankAccounts(user)}
-                      title="Bank Accounts"
-                    >
-                      <Building2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewCreditCards(user)}
-                      title="Credit Cards"
-                    >
-                      <CreditCard className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete User</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete {user.first_name} {user.last_name}? 
-                            This action cannot be undone and will also delete all associated bank accounts and credit cards.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => user.user_id && onDeleteUser(user.user_id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  {user.last_login_at
+                    ? new Date(user.last_login_at).toLocaleDateString()
+                    : 'Never'}
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem onClick={() => onViewDetails(user)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem onClick={() => onEditUser(user)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit User
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs text-muted-foreground">Security</DropdownMenuLabel>
+
+                      <DropdownMenuItem onClick={() => onChangePassword(user)}>
+                        <Key className="mr-2 h-4 w-4" />
+                        Change Password
+                      </DropdownMenuItem>
+
+                      {onResetPassword && (
+                        <DropdownMenuItem onClick={() => onResetPassword(user)}>
+                          <Mail className="mr-2 h-4 w-4" />
+                          Send Reset Email
+                        </DropdownMenuItem>
+                      )}
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs text-muted-foreground">Financial</DropdownMenuLabel>
+
+                      <DropdownMenuItem onClick={() => onViewBankAccounts(user)}>
+                        <Building2 className="mr-2 h-4 w-4" />
+                        Bank Accounts
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem onClick={() => onViewCreditCards(user)}>
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        Credit Cards
+                      </DropdownMenuItem>
+
+                      {(onSuspendUser || onArchiveUser || onReactivateUser) && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-xs text-muted-foreground">Account Status</DropdownMenuLabel>
+
+                          {onSuspendUser && user.account_status !== 'suspended' && user.account_status !== 'archived' && (
+                            <DropdownMenuItem onClick={() => onSuspendUser(user)} className="text-orange-600">
+                              <Ban className="mr-2 h-4 w-4" />
+                              Suspend User
+                            </DropdownMenuItem>
+                          )}
+
+                          {onArchiveUser && user.account_status !== 'archived' && (
+                            <DropdownMenuItem onClick={() => onArchiveUser(user)} className="text-gray-600">
+                              <Archive className="mr-2 h-4 w-4" />
+                              Archive User
+                            </DropdownMenuItem>
+                          )}
+
+                          {onReactivateUser && (user.account_status === 'suspended' || user.account_status === 'archived') && (
+                            <DropdownMenuItem onClick={() => onReactivateUser(user)} className="text-green-600">
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Reactivate User
+                            </DropdownMenuItem>
+                          )}
+                        </>
+                      )}
+
+                      <DropdownMenuSeparator />
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem
+                            onSelect={(e) => e.preventDefault()}
+                            className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete User
@@ -398,26 +434,99 @@ export function UserTable({
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="max-w-sm mx-4">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete User</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete {user.first_name} {user.last_name}? 
-                            This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => user.user_id && onDeleteUser(user.user_id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>More Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">Security</DropdownMenuLabel>
+
+                        <DropdownMenuItem onClick={() => onChangePassword(user)}>
+                          <Key className="mr-2 h-4 w-4" />
+                          Change Password
+                        </DropdownMenuItem>
+
+                        {onResetPassword && (
+                          <DropdownMenuItem onClick={() => onResetPassword(user)}>
+                            <Mail className="mr-2 h-4 w-4" />
+                            Send Reset Email
+                          </DropdownMenuItem>
+                        )}
+
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">Financial</DropdownMenuLabel>
+
+                        <DropdownMenuItem onClick={() => onViewBankAccounts(user)}>
+                          <Building2 className="mr-2 h-4 w-4" />
+                          Bank Accounts
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem onClick={() => onViewCreditCards(user)}>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Credit Cards
+                        </DropdownMenuItem>
+
+                        {(onSuspendUser || onArchiveUser || onReactivateUser) && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">Account Status</DropdownMenuLabel>
+
+                            {onSuspendUser && user.account_status !== 'suspended' && user.account_status !== 'archived' && (
+                              <DropdownMenuItem onClick={() => onSuspendUser(user)} className="text-orange-600">
+                                <Ban className="mr-2 h-4 w-4" />
+                                Suspend User
+                              </DropdownMenuItem>
+                            )}
+
+                            {onArchiveUser && user.account_status !== 'archived' && (
+                              <DropdownMenuItem onClick={() => onArchiveUser(user)} className="text-gray-600">
+                                <Archive className="mr-2 h-4 w-4" />
+                                Archive User
+                              </DropdownMenuItem>
+                            )}
+
+                            {onReactivateUser && (user.account_status === 'suspended' || user.account_status === 'archived') && (
+                              <DropdownMenuItem onClick={() => onReactivateUser(user)} className="text-green-600">
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Reactivate User
+                              </DropdownMenuItem>
+                            )}
+                          </>
+                        )}
+
+                        <DropdownMenuSeparator />
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem
+                              onSelect={(e) => e.preventDefault()}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete User
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="max-w-sm mx-4">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete User</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete {user.first_name} {user.last_name}?
+                                This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => user.user_id && onDeleteUser(user.user_id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </div>
