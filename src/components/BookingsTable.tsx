@@ -280,7 +280,8 @@ export function BookingsTable({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          {/* Desktop Table View */}
+          <div className="hidden md:block rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -459,6 +460,188 @@ export function BookingsTable({
                 })}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {bookings.map((booking) => {
+              const nights = calculateNights(booking.check_in_date, booking.check_out_date);
+              const additionalOptions = parseAdditionalOptions(booking.special_requests);
+
+              return (
+                <Card key={booking.booking_id} className="border-l-4 border-l-primary">
+                  <CardContent className="p-4 space-y-3">
+                    {/* Guest Info */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="font-semibold text-base flex items-center gap-2 mb-1">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          {booking.guest_name}
+                        </div>
+                        {booking.guest_email && (
+                          <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5" />
+                            {booking.guest_email}
+                          </div>
+                        )}
+                        {booking.guest_phone && (
+                          <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5" />
+                            {booking.guest_phone}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0">
+                        {getStatusBadge(booking.booking_status)}
+                      </div>
+                    </div>
+
+                    {/* Check-in / Check-out Dates */}
+                    <div className="grid grid-cols-2 gap-3 py-2 border-t border-b">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Check-in</div>
+                        <div className="flex items-center gap-1.5">
+                          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">{formatDate(booking.check_in_date)}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Check-out</div>
+                        <div className="flex items-center gap-1.5">
+                          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">{formatDate(booking.check_out_date)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Nights & Guests */}
+                    <div className="flex gap-3">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                        {nights} {nights === 1 ? 'night' : 'nights'}
+                      </Badge>
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span>{booking.number_of_guests || 0} guest{(booking.number_of_guests || 0) !== 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+
+                    {/* Additional Options */}
+                    {additionalOptions.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {additionalOptions.map((optionId) => (
+                          <Badge
+                            key={optionId}
+                            variant="outline"
+                            className="text-xs bg-purple-50 text-purple-700 border-purple-200"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            {getOptionLabel(optionId)}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Amount */}
+                    <div className="flex items-center justify-between py-2 border-t">
+                      <div>
+                        <div className="font-semibold text-lg flex items-center gap-1">
+                          <DollarSign className="h-5 w-5 text-green-600" />
+                          {formatCurrency(booking.total_amount)}
+                        </div>
+                        {booking.deposit_amount && booking.deposit_amount > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            Deposit: {formatCurrency(booking.deposit_amount)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="flex gap-2 flex-wrap">
+                      {getQuickActions(booking)}
+                    </div>
+
+                    {/* Actions Menu */}
+                    <div className="flex gap-2 border-t pt-3">
+                      {onEdit && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => onEdit(booking)}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <MoreHorizontal className="h-4 w-4 mr-2" />
+                            More
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {booking.booking_status !== 'inquiry' && (
+                            <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'inquiry')}>
+                              <Clock className="mr-2 h-4 w-4" />
+                              Mark as Inquiry
+                            </DropdownMenuItem>
+                          )}
+                          {booking.booking_status !== 'pending' && (
+                            <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'pending')}>
+                              <Clock className="mr-2 h-4 w-4" />
+                              Mark as Pending
+                            </DropdownMenuItem>
+                          )}
+                          {booking.booking_status !== 'confirmed' && (
+                            <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'confirmed')}>
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Mark as Confirmed
+                            </DropdownMenuItem>
+                          )}
+                          {booking.booking_status !== 'checked_in' && (
+                            <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'checked_in')}>
+                              <Key className="mr-2 h-4 w-4" />
+                              Mark as Checked In
+                            </DropdownMenuItem>
+                          )}
+                          {booking.booking_status !== 'checked_out' && (
+                            <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'checked_out')}>
+                              <LogOut className="mr-2 h-4 w-4" />
+                              Mark as Checked Out
+                            </DropdownMenuItem>
+                          )}
+                          {booking.booking_status !== 'completed' && (
+                            <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'completed')}>
+                              <CheckCheck className="mr-2 h-4 w-4" />
+                              Mark as Completed
+                            </DropdownMenuItem>
+                          )}
+                          {booking.booking_status !== 'blocked' && (
+                            <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'blocked')}>
+                              <XCircle className="mr-2 h-4 w-4" />
+                              Mark as Blocked
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setBookingToDelete(booking)}
+                            disabled={booking.booking_status === 'cancelled'}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Cancel Booking
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

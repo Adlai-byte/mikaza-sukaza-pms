@@ -159,7 +159,8 @@ export function IssuesTable({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          {/* Desktop Table View */}
+          <div className="hidden md:block rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -356,6 +357,179 @@ export function IssuesTable({
                 })}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {issues.map((issue) => {
+              const priorityConfig = getPriorityConfig(issue.priority);
+              const statusConfig = getStatusConfig(issue.status);
+              const photoCount = issue.photos?.length || 0;
+
+              return (
+                <Card key={issue.issue_id} className={`border-l-4 ${
+                  issue.priority === 'urgent' ? 'border-l-red-500' :
+                  issue.priority === 'high' ? 'border-l-orange-500' :
+                  issue.priority === 'medium' ? 'border-l-yellow-500' :
+                  'border-l-gray-300'
+                }`}>
+                  <CardContent className="p-4 space-y-3">
+                    {/* Title and Status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-base mb-1">{issue.title}</h3>
+                        {issue.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {issue.description}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className={statusConfig.className}>
+                        {statusConfig.label}
+                      </Badge>
+                    </div>
+
+                    {/* Location */}
+                    {issue.location && (
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        {issue.location}
+                      </div>
+                    )}
+
+                    {/* Property and Category */}
+                    <div className="grid grid-cols-2 gap-2 py-2 border-t">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Property</div>
+                        {issue.property ? (
+                          <div className="flex items-center gap-1.5 text-sm">
+                            <Building className="h-4 w-4 text-muted-foreground" />
+                            <span className="truncate">{issue.property.property_name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Category</div>
+                        <Badge variant="outline" className="text-xs">
+                          {getCategoryLabel(issue.category)}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Priority and Assigned */}
+                    <div className="flex items-center justify-between py-2 border-t border-b">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Priority</div>
+                        <Badge variant="outline" className={priorityConfig.className}>
+                          {priorityConfig.label}
+                        </Badge>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Assigned</div>
+                        {issue.assigned_user ? (
+                          <div className="flex items-center gap-1.5">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                {getUserInitials(issue.assigned_user)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{issue.assigned_user.first_name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Unassigned</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Cost Information */}
+                    <div className="flex items-center gap-4">
+                      {issue.estimated_cost !== null && (
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <DollarSign className="h-4 w-4" />
+                          <span>Est: ${issue.estimated_cost.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {issue.actual_cost !== null && (
+                        <div className="flex items-center gap-1 text-sm text-green-600 font-medium">
+                          <DollarSign className="h-4 w-4" />
+                          <span>Act: ${issue.actual_cost.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {photoCount > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onViewPhotos?.(issue)}
+                          className="h-7 ml-auto"
+                        >
+                          <ImageIcon className="h-4 w-4 mr-1" />
+                          {photoCount} photo{photoCount !== 1 ? 's' : ''}
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 border-t pt-3">
+                      {onEdit && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => onEdit(issue)}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <MoreHorizontal className="h-4 w-4 mr-2" />
+                            More
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {onStatusChange && issue.status !== 'resolved' && (
+                            <DropdownMenuItem onClick={() => onStatusChange(issue.issue_id!, 'resolved')}>
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Mark Resolved
+                            </DropdownMenuItem>
+                          )}
+                          {onStatusChange && issue.status === 'open' && (
+                            <DropdownMenuItem onClick={() => onStatusChange(issue.issue_id!, 'in_progress')}>
+                              <Clock className="mr-2 h-4 w-4" />
+                              Start Working
+                            </DropdownMenuItem>
+                          )}
+                          {photoCount > 0 && onViewPhotos && (
+                            <DropdownMenuItem onClick={() => onViewPhotos(issue)}>
+                              <ImageIcon className="mr-2 h-4 w-4" />
+                              View Photos ({photoCount})
+                            </DropdownMenuItem>
+                          )}
+                          {onDelete && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setIssueToDelete(issue)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Issue
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
