@@ -100,7 +100,7 @@ export default function ActivityLogs() {
   const [itemsPerPage, setItemsPerPage] = useState(25);
 
   // Check if user has permission to view activity logs
-  const canView = hasPermission(PERMISSIONS.ADMIN_ACCESS);
+  const canView = hasPermission(PERMISSIONS.SYSTEM_AUDIT);
 
   const {
     data: logs = [],

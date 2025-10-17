@@ -262,7 +262,7 @@ const App = () => (
                 <Route
                   path="/activity-logs"
                   element={
-                    <RBACProtectedRoute permission={PERMISSIONS.ADMIN_ACCESS}>
+                    <RBACProtectedRoute permission={PERMISSIONS.SYSTEM_AUDIT}>
                       <ActivityLogs />
                     </RBACProtectedRoute>
                   }

@@ -37,7 +37,7 @@ import { PERMISSIONS, Permission } from "@/lib/rbac/permissions";
 const mainMenuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, permission: null }, // Everyone can access
   { title: "User Management", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
-  { title: "Activity Logs", url: "/activity-logs", icon: Activity, permission: PERMISSIONS.ADMIN_ACCESS }, // Admin only
+  { title: "Activity Logs", url: "/activity-logs", icon: Activity, permission: PERMISSIONS.SYSTEM_AUDIT }, // Admin only
   { title: "Providers", url: "/providers", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW }, // Unified providers (Services & Utilities)
   { title: "Properties", url: "/properties", icon: Building, permission: PERMISSIONS.PROPERTIES_VIEW },
   { title: "Active Jobs", url: "/jobs", icon: BriefcaseIcon, permission: PERMISSIONS.JOBS_VIEW },
