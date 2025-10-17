@@ -194,7 +194,7 @@ export default function ActivityLogs() {
 
   if (!canView) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="space-y-6">
         <Alert variant="destructive">
           <AlertDescription>
             You don't have permission to view activity logs. This page is only accessible to administrators.
@@ -205,7 +205,7 @@ export default function ActivityLogs() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">

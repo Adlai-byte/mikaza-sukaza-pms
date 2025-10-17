@@ -138,8 +138,7 @@ export default function BookingManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      <div className="container mx-auto p-6">
+    <div className="space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
@@ -406,7 +405,6 @@ export default function BookingManagement() {
           isSubmitting={isCreating || isUpdating}
           booking={editingBooking}
         />
-      </div>
     </div>
   );
 }
