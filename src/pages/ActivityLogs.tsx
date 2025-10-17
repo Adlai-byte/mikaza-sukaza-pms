@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { MainLayout } from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -195,21 +194,18 @@ export default function ActivityLogs() {
 
   if (!canView) {
     return (
-      <MainLayout>
-        <div className="container mx-auto py-8">
-          <Alert variant="destructive">
-            <AlertDescription>
-              You don't have permission to view activity logs. This page is only accessible to administrators.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </MainLayout>
+      <div className="container mx-auto py-8">
+        <Alert variant="destructive">
+          <AlertDescription>
+            You don't have permission to view activity logs. This page is only accessible to administrators.
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
   return (
-    <MainLayout>
-      <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-8 space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -439,6 +435,5 @@ export default function ActivityLogs() {
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
   );
 }
