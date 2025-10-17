@@ -551,6 +551,14 @@ export const notificationSchema = z.object({
     'issue_status_changed',
     'issue_resolved',
     'issue_comment',
+    'booking_created',
+    'booking_confirmed',
+    'booking_cancelled',
+    'booking_updated',
+    'booking_status_changed',
+    'booking_check_in_reminder',
+    'booking_check_out_reminder',
+    'booking_payment_received',
     'mention'
   ]),
   title: z.string().min(1, "Title is required"),
@@ -558,6 +566,7 @@ export const notificationSchema = z.object({
   link: z.string().optional().nullable(),
   task_id: z.string().uuid().optional().nullable(),
   issue_id: z.string().uuid().optional().nullable(),
+  booking_id: z.string().uuid().optional().nullable(),
   action_by: z.string().uuid().optional().nullable(),
   metadata: z.record(z.any()).optional().nullable(),
   is_read: z.boolean().default(false),
@@ -572,12 +581,20 @@ export const notificationPreferencesSchema = z.object({
   email_task_completed: z.boolean().default(false),
   email_issue_assigned: z.boolean().default(true),
   email_issue_resolved: z.boolean().default(false),
+  email_booking_created: z.boolean().default(true),
+  email_booking_confirmed: z.boolean().default(true),
+  email_booking_cancelled: z.boolean().default(true),
+  email_booking_reminders: z.boolean().default(true),
   email_mentions: z.boolean().default(true),
   app_task_assigned: z.boolean().default(true),
   app_task_status_changed: z.boolean().default(true),
   app_task_due_soon: z.boolean().default(true),
   app_issue_assigned: z.boolean().default(true),
   app_issue_status_changed: z.boolean().default(true),
+  app_booking_created: z.boolean().default(true),
+  app_booking_confirmed: z.boolean().default(true),
+  app_booking_cancelled: z.boolean().default(true),
+  app_booking_reminders: z.boolean().default(true),
   app_mentions: z.boolean().default(true),
   browser_enabled: z.boolean().default(false),
   daily_summary: z.boolean().default(false),
@@ -590,6 +607,7 @@ export type AppNotification = z.infer<typeof notificationSchema> & {
   action_user?: User;
   task?: Task;
   issue?: Issue;
+  booking?: Booking;
 };
 
 export type NotificationPreferences = z.infer<typeof notificationPreferencesSchema>;

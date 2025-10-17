@@ -6,6 +6,13 @@ import { CACHE_CONFIG } from "@/lib/cache-config";
 import { OptimisticUpdates } from "@/lib/cache-manager-simplified";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  notifyBookingCreated,
+  notifyBookingConfirmed,
+  notifyBookingCancelled,
+  notifyBookingStatusChanged,
+} from "@/lib/notifications/booking-notifications";
 
 // Query keys for cache management
 export const bookingKeys = {
@@ -127,6 +134,8 @@ export function useBookings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const { user, profile } = useAuth();
+  const currentUserId = profile?.user_id || user?.id;
 
   // Bookings query with caching (critical data - 1 minute stale time)
   const {
@@ -197,10 +206,22 @@ export function useBookings() {
       // Return rollback function
       return { rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings) };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       // Invalidate and refetch bookings
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id) });
+
+      // Get property name for notification
+      const { data: property } = await supabase
+        .from('properties')
+        .select('property_name')
+        .eq('property_id', data.property_id)
+        .single();
+
+      // Send notification
+      if (property?.property_name) {
+        await notifyBookingCreated(data, property.property_name, currentUserId);
+      }
 
       toast({
         title: "Success",
@@ -284,11 +305,40 @@ export function useBookings() {
       // Return rollback function
       return { rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings) };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data, variables) => {
       // Invalidate and refetch bookings
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id) });
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(data.booking_id!) });
+
+      // Get property name for notification
+      const { data: property } = await supabase
+        .from('properties')
+        .select('property_name')
+        .eq('property_id', data.property_id)
+        .single();
+
+      // Get previous booking data to check for status changes
+      const previousBooking = bookings.find(b => b.booking_id === variables.bookingId);
+
+      if (property?.property_name) {
+        // Check if status changed
+        if (variables.bookingData.booking_status &&
+            previousBooking?.booking_status !== variables.bookingData.booking_status) {
+          // Special notification for confirmation
+          if (variables.bookingData.booking_status === 'confirmed') {
+            await notifyBookingConfirmed(data, property.property_name, currentUserId);
+          } else {
+            await notifyBookingStatusChanged(
+              data,
+              property.property_name,
+              previousBooking?.booking_status || 'unknown',
+              variables.bookingData.booking_status,
+              currentUserId
+            );
+          }
+        }
+      }
 
       toast({
         title: "Success",
@@ -349,10 +399,27 @@ export function useBookings() {
       // Return rollback function
       return { rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings) };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data, bookingId) => {
       // Invalidate and refetch bookings
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id) });
+
+      // Get property name for notification
+      const { data: property } = await supabase
+        .from('properties')
+        .select('property_name')
+        .eq('property_id', data.property_id)
+        .single();
+
+      // Send cancellation notification
+      if (property?.property_name) {
+        await notifyBookingCancelled(
+          data,
+          property.property_name,
+          currentUserId,
+          data.cancellation_reason || undefined
+        );
+      }
 
       toast({
         title: "Success",
