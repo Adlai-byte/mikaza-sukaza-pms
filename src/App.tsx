@@ -22,6 +22,7 @@ import Calendar from "./pages/Calendar";
 import BookingManagement from "./pages/BookingManagement";
 import Todos from "./pages/Todos";
 import Issues from "./pages/Issues";
+import ActivityLogs from "./pages/ActivityLogs";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
@@ -253,6 +254,16 @@ const App = () => (
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.ISSUES_VIEW}>
                       <Issues />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Activity Logs - Admin Only */}
+                <Route
+                  path="/activity-logs"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.ADMIN_ACCESS}>
+                      <ActivityLogs />
                     </RBACProtectedRoute>
                   }
                 />
