@@ -10,6 +10,10 @@ import {
   Clock,
   MessageSquare,
   UserPlus,
+  CalendarDays,
+  CalendarCheck,
+  CalendarX,
+  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -84,6 +88,20 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
       case 'issue_comment':
       case 'mention':
         return <MessageSquare className="h-4 w-4 text-indigo-600" />;
+      // Booking notifications
+      case 'booking_created':
+      case 'booking_updated':
+      case 'booking_status_changed':
+        return <CalendarDays className="h-4 w-4 text-purple-600" />;
+      case 'booking_confirmed':
+        return <CalendarCheck className="h-4 w-4 text-green-600" />;
+      case 'booking_cancelled':
+        return <CalendarX className="h-4 w-4 text-red-600" />;
+      case 'booking_check_in_reminder':
+      case 'booking_check_out_reminder':
+        return <AlertTriangle className="h-4 w-4 text-amber-600" />;
+      case 'booking_payment_received':
+        return <DollarSign className="h-4 w-4 text-green-600" />;
       default:
         return <Bell className="h-4 w-4 text-gray-600" />;
     }
