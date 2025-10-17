@@ -336,7 +336,8 @@ export default function ActivityLogs() {
               </div>
             ) : (
               <>
-                <div className="rounded-md border">
+                {/* Desktop Table View */}
+                <div className="hidden md:block rounded-md border">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -385,10 +386,54 @@ export default function ActivityLogs() {
                   </Table>
                 </div>
 
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                  {paginatedLogs.map((log) => (
+                    <Card key={log.log_id}>
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          {/* Date & Time */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Calendar className="h-4 w-4" />
+                              <span className="font-mono">
+                                {format(new Date(log.created_at), 'MMM dd, yyyy HH:mm:ss')}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Action Type Badge */}
+                          <div>
+                            <Badge
+                              variant="outline"
+                              className={ACTION_TYPE_COLORS[log.action_type] || 'bg-gray-100 text-gray-800'}
+                            >
+                              {log.action_type}
+                            </Badge>
+                          </div>
+
+                          {/* Performed By */}
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{log.performed_by || 'System'}</span>
+                          </div>
+
+                          {/* Details */}
+                          {log.action_details && Object.keys(log.action_details).length > 0 && (
+                            <div className="pt-2 border-t">
+                              {formatActionDetails(log.action_details)}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
                 {/* Pagination */}
-                <div className="flex items-center justify-between mt-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Rows per page:</span>
+                    <span className="text-sm text-muted-foreground hidden sm:inline">Rows per page:</span>
                     <Select
                       value={itemsPerPage.toString()}
                       onValueChange={(value) => {
@@ -417,7 +462,7 @@ export default function ActivityLogs() {
                     >
                       Previous
                     </Button>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">
                       Page {currentPage} of {totalPages}
                     </span>
                     <Button
