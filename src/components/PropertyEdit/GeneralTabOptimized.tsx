@@ -539,6 +539,10 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
 
       setHasUnsavedChanges(false);
 
+      // Emit event to notify parent (PropertyEdit page) to refresh header
+      window.dispatchEvent(new Event('property-updated'));
+      console.log('🔔 [GeneralTab] Dispatched property-updated event');
+
       // Clear the flag after a tick to allow useEffect to handle future updates
       setTimeout(() => {
         justSavedRef.current = false;
@@ -673,25 +677,32 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     postal_code?: string,
     country?: string
   ) => {
+    console.log('📍 handleLocationSelect called with:', { lat, lng, address, city, state, postal_code, country });
+
     // Always update coordinates
     handleInputChange('latitude', lat.toString());
     handleInputChange('longitude', lng.toString());
 
-    // Auto-fill address fields if they're provided and current fields are empty
+    // CRITICAL FIX: Always update address fields when provided (not just when empty)
     if (address) {
+      console.log('📍 Setting address to:', address);
       handleInputChange('address', address);
     }
     if (city) {
+      console.log('📍 Setting city to:', city);
       handleInputChange('city', city);
     }
     if (state) {
+      console.log('📍 Setting state to:', state);
       handleInputChange('state', state);
     }
     if (postal_code) {
+      console.log('📍 Setting postal_code to:', postal_code);
       handleInputChange('postal_code', postal_code);
     }
 
-    console.log('📍 Location selected with details:', { lat, lng, address, city, state, postal_code, country });
+    console.log('📍 Location selected - form data will be updated');
+    setShowLocationMap(false);
   };
 
   const propertyTypes = ['Apartment', 'House', 'Condo', 'Villa', 'Studio', 'Townhouse'];

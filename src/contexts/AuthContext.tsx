@@ -157,14 +157,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log('🔑 [AuthContext] Sign in started:', {
+      email,
+      timestamp: new Date().toISOString()
+    });
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
+    if (error) {
+      console.error('❌ [AuthContext] Sign in failed:', {
+        email,
+        error: error.message,
+        errorCode: error.code,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.log('✅ [AuthContext] Sign in successful:', {
+        email,
+        userId: data?.user?.id,
+        emailVerified: !!data?.user?.email_confirmed_at,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     // Track last login timestamp
     if (data?.user && !error) {
       const now = new Date().toISOString();
+
+      console.log('⏰ [AuthContext] Updating last_login_at:', {
+        userId: data.user.id,
+        email,
+        timestamp: now
+      });
 
       // Update both users and profiles tables
       await Promise.all([
@@ -177,7 +204,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           .update({ last_login_at: now })
           .eq('id', data.user.id)
       ]).catch(err => {
-        console.warn('⚠️ Failed to update last_login_at:', err);
+        console.warn('⚠️ [AuthContext] Failed to update last_login_at:', err);
       });
     }
 
@@ -186,6 +213,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
     const redirectUrl = `${window.location.origin}/`;
+
+    console.log('📝 [AuthContext] Sign up started:', {
+      email,
+      firstName,
+      lastName,
+      timestamp: new Date().toISOString()
+    });
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -198,15 +232,74 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       }
     });
+
+    if (error) {
+      console.error('❌ [AuthContext] Sign up failed:', {
+        email,
+        error: error.message,
+        errorCode: error.code,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.log('✅ [AuthContext] Sign up successful:', {
+        email,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     return { error };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      console.log('🚪 [AuthContext] Signing out user:', {
+        email: user?.email,
+        userId: user?.id,
+        timestamp: new Date().toISOString()
+      });
+
+      // Clear local state immediately
+      setProfile(null);
+      setUser(null);
+      setSession(null);
+
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error('❌ [AuthContext] Supabase signOut error:', {
+          error: error.message,
+          errorCode: error.code,
+          timestamp: new Date().toISOString()
+        });
+        throw error;
+      }
+
+      console.log('✅ [AuthContext] Successfully signed out:', {
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ [AuthContext] Error during sign out:', error);
+      // Clear state anyway even if supabase signout fails
+      setProfile(null);
+      setUser(null);
+      setSession(null);
+      throw error;
+    }
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return;
+    if (!user) {
+      console.warn('⚠️ [AuthContext] Update profile attempted without user');
+      return;
+    }
+
+    console.log('🔄 [AuthContext] Updating profile:', {
+      userId: user.id,
+      email: user.email,
+      updates: Object.keys(updates),
+      timestamp: new Date().toISOString()
+    });
 
     const { error } = await supabase
       .from('profiles')
@@ -214,8 +307,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       .eq('id', user.id);
 
     if (error) {
+      console.error('❌ [AuthContext] Profile update failed:', {
+        userId: user.id,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
+
+    console.log('✅ [AuthContext] Profile updated successfully:', {
+      userId: user.id,
+      timestamp: new Date().toISOString()
+    });
 
     // Refresh profile data
     await fetchProfile(user.id);

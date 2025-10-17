@@ -22,6 +22,20 @@ export const PERMISSIONS = {
   USERS_DELETE: 'users.delete',
   USERS_CHANGE_ROLE: 'users.change_role',
 
+  // ========== SERVICE PROVIDERS ==========
+  SERVICE_PROVIDERS_VIEW: 'service_providers.view',
+  SERVICE_PROVIDERS_CREATE: 'service_providers.create',
+  SERVICE_PROVIDERS_EDIT: 'service_providers.edit',
+  SERVICE_PROVIDERS_DELETE: 'service_providers.delete',
+  SERVICE_PROVIDERS_EXPORT: 'service_providers.export',
+
+  // ========== UTILITY PROVIDERS ==========
+  UTILITY_PROVIDERS_VIEW: 'utility_providers.view',
+  UTILITY_PROVIDERS_CREATE: 'utility_providers.create',
+  UTILITY_PROVIDERS_EDIT: 'utility_providers.edit',
+  UTILITY_PROVIDERS_DELETE: 'utility_providers.delete',
+  UTILITY_PROVIDERS_EXPORT: 'utility_providers.export',
+
   // ========== JOBS ==========
   JOBS_VIEW: 'jobs.view',
   JOBS_CREATE: 'jobs.create',
@@ -153,6 +167,20 @@ export const ROLES = {
       PERMISSIONS.PROPERTIES_EXPORT,
       // NOT: PROPERTIES_DELETE (admin only)
       // NOT: Any user management permissions (admin only)
+
+      // ========== SERVICE PROVIDERS - Full CRUD except delete ==========
+      PERMISSIONS.SERVICE_PROVIDERS_VIEW,
+      PERMISSIONS.SERVICE_PROVIDERS_CREATE,
+      PERMISSIONS.SERVICE_PROVIDERS_EDIT,
+      PERMISSIONS.SERVICE_PROVIDERS_EXPORT,
+      // NOT: SERVICE_PROVIDERS_DELETE (admin only)
+
+      // ========== UTILITY PROVIDERS - Full CRUD except delete ==========
+      PERMISSIONS.UTILITY_PROVIDERS_VIEW,
+      PERMISSIONS.UTILITY_PROVIDERS_CREATE,
+      PERMISSIONS.UTILITY_PROVIDERS_EDIT,
+      PERMISSIONS.UTILITY_PROVIDERS_EXPORT,
+      // NOT: UTILITY_PROVIDERS_DELETE (admin only)
 
       // ========== JOBS - Full access ==========
       PERMISSIONS.JOBS_VIEW,
@@ -337,6 +365,8 @@ export function getRoleInfo(role: RoleName) {
 export const PERMISSION_CATEGORIES = {
   PROPERTIES: 'Properties Management',
   USERS: 'User Management',
+  SERVICE_PROVIDERS: 'Service Providers',
+  UTILITY_PROVIDERS: 'Utility Providers',
   JOBS: 'Job Management',
   BOOKINGS: 'Bookings & Calendar',
   TODOS: 'To-Do Lists',

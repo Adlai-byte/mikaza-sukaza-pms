@@ -40,6 +40,12 @@ import {
   AlertCircle,
   Plus,
   Sparkles,
+  CheckCircle,
+  XCircle,
+  Key,
+  LogOut,
+  CheckCheck,
+  Clock,
 } from 'lucide-react';
 import { Booking } from '@/lib/schemas';
 import { format, differenceInDays, parseISO } from 'date-fns';
@@ -59,17 +65,21 @@ export function BookingsTable({
   showPropertyColumn = false,
   emptyMessage = 'No bookings found',
 }: BookingsTableProps) {
-  const { deleteBooking, isDeleting } = useBookings();
+  const { deleteBooking, isDeleting, updateBooking, isUpdating } = useBookings();
   const [bookingToDelete, setBookingToDelete] = useState<Booking | null>(null);
 
   const getStatusBadge = (status?: string | null) => {
     const statusValue = status || 'pending';
 
     const statusConfig = {
+      inquiry: { label: 'Inquiry', variant: 'secondary' as const, className: 'bg-purple-100 text-purple-800 hover:bg-purple-200' },
       pending: { label: 'Pending', variant: 'secondary' as const, className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' },
       confirmed: { label: 'Confirmed', variant: 'default' as const, className: 'bg-green-100 text-green-800 hover:bg-green-200' },
+      checked_in: { label: 'Checked In', variant: 'default' as const, className: 'bg-blue-100 text-blue-800 hover:bg-blue-200' },
+      checked_out: { label: 'Checked Out', variant: 'outline' as const, className: 'bg-gray-100 text-gray-800 hover:bg-gray-200' },
+      completed: { label: 'Completed', variant: 'outline' as const, className: 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200' },
+      blocked: { label: 'Blocked', variant: 'secondary' as const, className: 'bg-gray-400 text-white hover:bg-gray-500' },
       cancelled: { label: 'Cancelled', variant: 'destructive' as const, className: 'bg-red-100 text-red-800 hover:bg-red-200' },
-      completed: { label: 'Completed', variant: 'outline' as const, className: 'bg-blue-100 text-blue-800 hover:bg-blue-200' },
     };
 
     const config = statusConfig[statusValue as keyof typeof statusConfig] || statusConfig.pending;
@@ -95,6 +105,109 @@ export function BookingsTable({
       deleteBooking(bookingToDelete.booking_id);
       setBookingToDelete(null);
     }
+  };
+
+  const handleStatusChange = (bookingId: string, newStatus: string) => {
+    updateBooking(bookingId, { booking_status: newStatus as any });
+  };
+
+  const getQuickActions = (booking: Booking) => {
+    const status = booking.booking_status || 'pending';
+    const actions = [];
+
+    // Based on current status, show relevant quick actions
+    switch (status) {
+      case 'inquiry':
+        actions.push(
+          <Button
+            key="confirm"
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
+            onClick={() => handleStatusChange(booking.booking_id!, 'confirmed')}
+            disabled={isUpdating}
+          >
+            <CheckCircle className="h-3 w-3" />
+            Confirm
+          </Button>
+        );
+        break;
+
+      case 'pending':
+        actions.push(
+          <Button
+            key="confirm"
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
+            onClick={() => handleStatusChange(booking.booking_id!, 'confirmed')}
+            disabled={isUpdating}
+          >
+            <CheckCircle className="h-3 w-3" />
+            Confirm
+          </Button>
+        );
+        break;
+
+      case 'confirmed':
+        actions.push(
+          <Button
+            key="checkin"
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
+            onClick={() => handleStatusChange(booking.booking_id!, 'checked_in')}
+            disabled={isUpdating}
+          >
+            <Key className="h-3 w-3" />
+            Check In
+          </Button>
+        );
+        break;
+
+      case 'checked_in':
+        actions.push(
+          <Button
+            key="checkout"
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200"
+            onClick={() => handleStatusChange(booking.booking_id!, 'checked_out')}
+            disabled={isUpdating}
+          >
+            <LogOut className="h-3 w-3" />
+            Check Out
+          </Button>
+        );
+        break;
+
+      case 'checked_out':
+        actions.push(
+          <Button
+            key="complete"
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200"
+            onClick={() => handleStatusChange(booking.booking_id!, 'completed')}
+            disabled={isUpdating}
+          >
+            <CheckCheck className="h-3 w-3" />
+            Complete
+          </Button>
+        );
+        break;
+
+      case 'completed':
+      case 'cancelled':
+      case 'blocked':
+        // No quick actions for terminal states
+        break;
+
+      default:
+        break;
+    }
+
+    return actions;
   };
 
   const formatDate = (dateString: string) => {
@@ -258,7 +371,14 @@ export function BookingsTable({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{getStatusBadge(booking.booking_status)}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-2">
+                          {getStatusBadge(booking.booking_status)}
+                          <div className="flex gap-1">
+                            {getQuickActions(booking)}
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -276,6 +396,53 @@ export function BookingsTable({
                                 Edit Booking
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">
+                              Change Status
+                            </DropdownMenuLabel>
+                            {booking.booking_status !== 'inquiry' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'inquiry')}>
+                                <Clock className="mr-2 h-4 w-4" />
+                                Mark as Inquiry
+                              </DropdownMenuItem>
+                            )}
+                            {booking.booking_status !== 'pending' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'pending')}>
+                                <Clock className="mr-2 h-4 w-4" />
+                                Mark as Pending
+                              </DropdownMenuItem>
+                            )}
+                            {booking.booking_status !== 'confirmed' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'confirmed')}>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Mark as Confirmed
+                              </DropdownMenuItem>
+                            )}
+                            {booking.booking_status !== 'checked_in' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'checked_in')}>
+                                <Key className="mr-2 h-4 w-4" />
+                                Mark as Checked In
+                              </DropdownMenuItem>
+                            )}
+                            {booking.booking_status !== 'checked_out' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'checked_out')}>
+                                <LogOut className="mr-2 h-4 w-4" />
+                                Mark as Checked Out
+                              </DropdownMenuItem>
+                            )}
+                            {booking.booking_status !== 'completed' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'completed')}>
+                                <CheckCheck className="mr-2 h-4 w-4" />
+                                Mark as Completed
+                              </DropdownMenuItem>
+                            )}
+                            {booking.booking_status !== 'blocked' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'blocked')}>
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Mark as Blocked
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={() => setBookingToDelete(booking)}

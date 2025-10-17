@@ -48,23 +48,14 @@ export default function Properties() {
 
   const handleCreateProperty = async (propertyData: PropertyInsert & any) => {
     try {
+      console.log('🏠 [Properties] Creating property:', propertyData);
       await createProperty(propertyData);
-      await logActivity('PROPERTY_CREATED', { 
-        propertyType: propertyData.property_type,
-        ownerId: propertyData.owner_id
-      }, undefined, 'Admin');
-      toast({
-        title: "Success",
-        description: "Property created successfully",
-      });
+
+      // Hook handles cache update, refetch, and success toast
       setIsFormOpen(false);
     } catch (error) {
-      console.error('Error creating property:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create property",
-        variant: "destructive",
-      });
+      // Hook handles error toast
+      console.error('❌ [Properties] Error creating property:', error);
     }
   };
 
@@ -79,24 +70,15 @@ export default function Properties() {
     }
 
     try {
+      console.log('🏠 [Properties] Updating property:', editingProperty.property_id);
       await updateProperty(editingProperty.property_id, propertyData);
-      await logActivity('PROPERTY_UPDATED', { 
-        propertyId: editingProperty.property_id,
-        propertyType: propertyData.property_type 
-      }, undefined, 'Admin');
+
+      // Hook handles cache update, refetch, and success toast
       setEditingProperty(null);
       setIsFormOpen(false);
-      toast({
-        title: "Success",
-        description: "Property updated successfully",
-      });
     } catch (error) {
-      console.error('Error updating property:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update property",
-        variant: "destructive",
-      });
+      // Hook handles error toast
+      console.error('❌ [Properties] Error updating property:', error);
     }
   };
 
@@ -117,22 +99,13 @@ export default function Properties() {
     }
 
     try {
+      console.log('🗑️ [Properties] Deleting property:', propertyId);
       await deleteProperty(propertyId);
-      await logActivity('PROPERTY_DELETED', { 
-        propertyId,
-        propertyType: property.property_type 
-      }, undefined, 'Admin');
-      toast({
-        title: "Success",
-        description: "Property deleted successfully",
-      });
+
+      // Hook handles cache update, refetch, and success toast
     } catch (error) {
-      console.error('Error deleting property:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete property",
-        variant: "destructive",
-      });
+      // Hook handles error toast
+      console.error('❌ [Properties] Error deleting property:', error);
     }
   };
 

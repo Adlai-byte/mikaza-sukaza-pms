@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserPlus, Users, Building2, CreditCard } from "lucide-react";
+import { UserPlus, Users, Building2, CreditCard, RefreshCw } from "lucide-react";
 import { useUsersOptimized } from "@/hooks/useUsersOptimized";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +18,7 @@ import { ReactivateUserDialog } from "@/components/UserManagement/ReactivateUser
 import { User, UserInsert } from "@/lib/schemas";
 
 export default function UserManagement() {
-  const { users, loading, isFetching, createUser, updateUser, deleteUser } = useUsersOptimized();
+  const { users, loading, isFetching, createUser, updateUser, deleteUser, refetch } = useUsersOptimized();
   const { logActivity } = useActivityLogs();
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -33,21 +33,35 @@ export default function UserManagement() {
   const [reactivateUser, setReactivateUser] = useState<User | null>(null);
 
   const handleCreateUser = async (userData: UserInsert) => {
-    await createUser(userData);
-    await logActivity('USER_CREATED', { 
-      userEmail: userData.email, 
-      userType: userData.user_type 
-    }, undefined, 'Admin');
+    try {
+      await createUser(userData);
+      await logActivity('USER_CREATED', {
+        userEmail: userData.email,
+        userType: userData.user_type
+      });
+      // Close form after successful creation
+      setIsFormOpen(false);
+    } catch (error) {
+      // Error handling is done in the mutation
+      console.error('Failed to create user:', error);
+    }
   };
 
   const handleUpdateUser = async (userData: UserInsert) => {
     if (editingUser?.user_id) {
-      await updateUser(editingUser.user_id, userData);
-      await logActivity('USER_UPDATED', { 
-        userEmail: userData.email, 
-        userType: userData.user_type 
-      }, editingUser.user_id, 'Admin');
-      setEditingUser(null);
+      try {
+        await updateUser(editingUser.user_id, userData);
+        await logActivity('USER_UPDATED', {
+          userEmail: userData.email,
+          userType: userData.user_type
+        }, editingUser.user_id);
+        // Close form after successful update
+        setIsFormOpen(false);
+        setEditingUser(null);
+      } catch (error) {
+        // Error handling is done in the mutation
+        console.error('Failed to update user:', error);
+      }
     }
   };
 
@@ -60,10 +74,10 @@ export default function UserManagement() {
     const user = users.find(u => u.user_id === userId);
     await deleteUser(userId);
     if (user) {
-      await logActivity('USER_DELETED', { 
-        userEmail: user.email, 
-        userType: user.user_type 
-      }, userId, 'Admin');
+      await logActivity('USER_DELETED', {
+        userEmail: user.email,
+        userType: user.user_type
+      }, userId);
     }
   };
 
@@ -101,7 +115,7 @@ export default function UserManagement() {
 
   const handleLifecycleSuccess = () => {
     // Refresh the user list after lifecycle action
-    window.location.reload();
+    refetch();
   };
 
   const handlePasswordChange = async (userId: string, currentPassword: string, newPassword: string) => {
@@ -162,10 +176,16 @@ export default function UserManagement() {
             Manage users, roles, and permissions
           </p>
         </div>
-        <Button onClick={() => setIsFormOpen(true)} className="self-start sm:self-auto">
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <Button onClick={() => refetch()} variant="outline" disabled={isFetching}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={() => setIsFormOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add User
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards - Matching Dashboard Design */}

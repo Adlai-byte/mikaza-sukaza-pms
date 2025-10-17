@@ -13,6 +13,9 @@ import Properties from "./pages/Properties";
 import PropertyEdit from "./pages/PropertyEdit";
 import Jobs from "./pages/Jobs";
 import UserManagement from "./pages/UserManagement";
+import Providers from "./pages/Providers";
+import ServiceProviders from "./pages/ServiceProviders";
+import UtilityProviders from "./pages/UtilityProviders";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Calendar from "./pages/Calendar";
@@ -151,6 +154,34 @@ const App = () => (
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
                       <UserManagement />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Unified Providers - Admin and Ops can access */}
+                <Route
+                  path="/providers"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.SERVICE_PROVIDERS_VIEW}>
+                      <Providers />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Legacy Routes - Keep for backward compatibility, redirect to unified page */}
+                <Route
+                  path="/service-providers"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.SERVICE_PROVIDERS_VIEW}>
+                      <Providers />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/utility-providers"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.UTILITY_PROVIDERS_VIEW}>
+                      <Providers />
                     </RBACProtectedRoute>
                   }
                 />

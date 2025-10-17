@@ -18,9 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Calendar as CalendarIcon,
@@ -29,28 +27,14 @@ import {
   Phone,
   Users,
   DollarSign,
-  CreditCard,
-  FileText,
-  AlertCircle,
   Save,
   X,
   Building,
-  Plus,
   Check,
-  Sparkles,
 } from 'lucide-react';
 import { Booking, BookingInsert } from '@/lib/schemas';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
-
-interface AdditionalOption {
-  id: string;
-  label: string;
-  description: string;
-  price: number;
-  icon: React.ElementType;
-  selected: boolean;
-}
 
 interface BookingDialogEnhancedProps {
   open: boolean;
@@ -89,77 +73,11 @@ export function BookingDialogEnhanced({
     payment_method: booking?.payment_method || '',
     booking_status: (booking?.booking_status as any) || 'pending',
     special_requests: booking?.special_requests || '',
+    booking_channel: booking?.booking_channel || undefined,
+    payment_status: booking?.payment_status || 'pending',
   });
 
-  const [additionalOptions, setAdditionalOptions] = useState<AdditionalOption[]>([
-    {
-      id: 'extra_cleaning',
-      label: 'Extra Cleaning',
-      description: 'Deep cleaning service before arrival',
-      price: 75,
-      icon: Sparkles,
-      selected: false,
-    },
-    {
-      id: 'airport_pickup',
-      label: 'Airport Pickup',
-      description: 'Private transfer from airport',
-      price: 85,
-      icon: CreditCard,
-      selected: false,
-    },
-    {
-      id: 'late_checkin',
-      label: 'Late Check-in',
-      description: 'Check-in after 10 PM',
-      price: 50,
-      icon: CalendarIcon,
-      selected: false,
-    },
-    {
-      id: 'early_checkout',
-      label: 'Early Check-out',
-      description: 'Check-out before 8 AM',
-      price: 40,
-      icon: CalendarIcon,
-      selected: false,
-    },
-    {
-      id: 'pet_fee',
-      label: 'Pet Friendly',
-      description: 'Bring your furry friend',
-      price: 100,
-      icon: Users,
-      selected: false,
-    },
-    {
-      id: 'parking',
-      label: 'Parking Space',
-      description: 'Reserved parking spot',
-      price: 30,
-      icon: CreditCard,
-      selected: false,
-    },
-    {
-      id: 'breakfast',
-      label: 'Breakfast Included',
-      description: 'Daily breakfast service',
-      price: 25,
-      icon: DollarSign,
-      selected: false,
-    },
-    {
-      id: 'extra_keys',
-      label: 'Extra Keys',
-      description: 'Additional set of keys',
-      price: 15,
-      icon: Plus,
-      selected: false,
-    },
-  ]);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [baseAmount, setBaseAmount] = useState(0);
 
   // Reset form when dialog opens with new data
   useEffect(() => {
@@ -177,28 +95,10 @@ export function BookingDialogEnhanced({
         payment_method: booking?.payment_method || '',
         booking_status: (booking?.booking_status as any) || 'pending',
         special_requests: booking?.special_requests || '',
+        booking_channel: booking?.booking_channel || undefined,
+        payment_status: booking?.payment_status || 'pending',
       });
       setErrors({});
-
-      // Parse special requests if it contains options JSON
-      if (booking?.special_requests) {
-        try {
-          const parsed = JSON.parse(booking.special_requests);
-          if (parsed.options && Array.isArray(parsed.options)) {
-            setAdditionalOptions(prev =>
-              prev.map(opt => ({
-                ...opt,
-                selected: parsed.options.includes(opt.id)
-              }))
-            );
-          }
-        } catch (e) {
-          // Not JSON, just regular text
-        }
-      } else {
-        // Reset options
-        setAdditionalOptions(prev => prev.map(opt => ({ ...opt, selected: false })));
-      }
     }
   }, [open, booking, propertyId, defaultCheckIn, defaultCheckOut]);
 
@@ -261,20 +161,7 @@ export function BookingDialogEnhanced({
       return;
     }
 
-    // Encode selected options into special_requests
-    const selectedOptionIds = additionalOptions.filter(opt => opt.selected).map(opt => opt.id);
-    const optionsData = {
-      options: selectedOptionIds,
-      notes: formData.special_requests || ''
-    };
-
-    const submissionData = {
-      ...formData,
-      special_requests: JSON.stringify(optionsData),
-      total_amount: calculateTotalAmount(),
-    };
-
-    onSubmit(submissionData);
+    onSubmit(formData);
   };
 
   const handleChange = (field: keyof BookingInsert, value: any) => {
@@ -283,14 +170,6 @@ export function BookingDialogEnhanced({
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-  };
-
-  const handleOptionToggle = (optionId: string) => {
-    setAdditionalOptions(prev =>
-      prev.map(opt =>
-        opt.id === optionId ? { ...opt, selected: !opt.selected } : opt
-      )
-    );
   };
 
   const calculateNights = () => {
@@ -303,20 +182,7 @@ export function BookingDialogEnhanced({
     return 0;
   };
 
-  const calculateOptionsTotal = () => {
-    return additionalOptions
-      .filter(opt => opt.selected)
-      .reduce((sum, opt) => sum + opt.price, 0);
-  };
-
-  const calculateTotalAmount = () => {
-    const optionsTotal = calculateOptionsTotal();
-    return (formData.total_amount || 0) + optionsTotal;
-  };
-
   const nights = calculateNights();
-  const optionsTotal = calculateOptionsTotal();
-  const grandTotal = calculateTotalAmount();
 
   const selectedProperty = properties.find(p => p.property_id === formData.property_id);
 
@@ -331,7 +197,7 @@ export function BookingDialogEnhanced({
           <DialogDescription>
             {isEditing
               ? 'Update the booking details below'
-              : 'Select property, fill in guest details, and choose additional options'}
+              : 'Select property and fill in guest details'}
           </DialogDescription>
         </DialogHeader>
 
@@ -498,66 +364,6 @@ export function BookingDialogEnhanced({
             )}
           </div>
 
-          {/* Additional Options */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" />
-              Additional Options
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Enhance your stay with these optional services
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {additionalOptions.map((option) => {
-                const Icon = option.icon;
-                return (
-                  <div
-                    key={option.id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                      option.selected
-                        ? 'border-primary bg-primary/5 shadow-sm'
-                        : 'border-muted-foreground/20 hover:border-primary/50'
-                    }`}
-                    onClick={() => handleOptionToggle(option.id)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={option.selected}
-                        onCheckedChange={() => handleOptionToggle(option.id)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4 text-primary" />
-                            <span className="font-medium text-sm">{option.label}</span>
-                          </div>
-                          <span className="text-sm font-semibold text-primary">
-                            +${option.price}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {option.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {optionsTotal > 0 && (
-              <Alert className="bg-green-50 border-green-200">
-                <Plus className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-800">
-                  <strong>{additionalOptions.filter(o => o.selected).length}</strong> option{additionalOptions.filter(o => o.selected).length > 1 ? 's' : ''} selected •
-                  Additional: <strong>${optionsTotal.toFixed(2)}</strong>
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-
           {/* Booking Details */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -623,30 +429,29 @@ export function BookingDialogEnhanced({
               </div>
             </div>
 
-            {/* Total Summary */}
-            <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-              <CardContent className="p-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Base Amount:</span>
-                    <span className="font-medium">${(formData.total_amount || 0).toFixed(2)}</span>
-                  </div>
-                  {optionsTotal > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>Additional Options:</span>
-                      <span className="font-medium text-primary">+${optionsTotal.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Grand Total:</span>
-                    <span className="text-primary">${grandTotal.toFixed(2)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="booking_channel">Booking Channel</Label>
+                <Select
+                  value={formData.booking_channel || ''}
+                  onValueChange={(value) => handleChange('booking_channel', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select channel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="direct">📞 Direct Booking</SelectItem>
+                    <SelectItem value="airbnb">🏠 Airbnb</SelectItem>
+                    <SelectItem value="booking">🏨 Booking.com</SelectItem>
+                    <SelectItem value="vrbo">🏖️ VRBO</SelectItem>
+                    <SelectItem value="expedia">✈️ Expedia</SelectItem>
+                    <SelectItem value="homeaway">🏡 HomeAway</SelectItem>
+                    <SelectItem value="tripadvisor">🔍 TripAdvisor</SelectItem>
+                    <SelectItem value="other">📋 Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="payment_method">Payment Method</Label>
                 <Select
@@ -668,22 +473,45 @@ export function BookingDialogEnhanced({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="booking_status">Status</Label>
+                <Label htmlFor="payment_status">Payment Status</Label>
                 <Select
-                  value={formData.booking_status || 'pending'}
-                  onValueChange={(value) => handleChange('booking_status', value)}
+                  value={formData.payment_status || 'pending'}
+                  onValueChange={(value) => handleChange('payment_status', value)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder="Payment status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">💳 Pending</SelectItem>
+                    <SelectItem value="paid">✅ Paid</SelectItem>
+                    <SelectItem value="partially_paid">⏳ Partially Paid</SelectItem>
+                    <SelectItem value="refunded">↩️ Refunded</SelectItem>
+                    <SelectItem value="cancelled">❌ Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="booking_status">Booking Status</Label>
+              <Select
+                value={formData.booking_status || 'pending'}
+                onValueChange={(value) => handleChange('booking_status', value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inquiry">💬 Inquiry</SelectItem>
+                  <SelectItem value="pending">⏳ Pending</SelectItem>
+                  <SelectItem value="confirmed">✅ Confirmed</SelectItem>
+                  <SelectItem value="checked_in">🔑 Checked In</SelectItem>
+                  <SelectItem value="checked_out">👋 Checked Out</SelectItem>
+                  <SelectItem value="completed">✔️ Completed</SelectItem>
+                  <SelectItem value="blocked">🚫 Blocked (Maintenance)</SelectItem>
+                  <SelectItem value="cancelled">❌ Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

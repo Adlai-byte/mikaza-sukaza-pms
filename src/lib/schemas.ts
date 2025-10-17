@@ -18,7 +18,7 @@ export const userSchema = z.object({
     .regex(passwordRegex.hasNumber, "Password must contain at least one number")
     .regex(passwordRegex.hasSpecialChar, "Password must contain at least one special character (!@#$%^&*...)"),
   confirmPassword: z.string().min(1, "Please confirm your password").optional(),
-  user_type: z.enum(["admin", "ops"], {
+  user_type: z.enum(["admin", "ops", "provider", "customer"], {
     required_error: "Please select a user type",
   }),
   is_active: z.boolean().default(true),
@@ -142,7 +142,7 @@ export type UserInsert = {
   email: string;
   password: string;
   confirmPassword?: string;
-  user_type: "admin" | "ops";
+  user_type: "admin" | "ops" | "provider" | "customer";
   is_active?: boolean;
   first_name: string;
   last_name: string;
@@ -309,10 +309,75 @@ export const bookingSchema = z.object({
   check_in_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
   check_out_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
   number_of_guests: z.number().min(1, "At least 1 guest required").optional(),
+
+  // Guest count breakdown
+  guest_count_adults: z.number().min(0).optional(),
+  guest_count_children: z.number().min(0).optional(),
+  guest_count_infants: z.number().min(0).optional(),
+
+  // Financial breakdown
+  base_amount: z.number().min(0).optional(),
+  extras_amount: z.number().min(0).optional(),
+  tax_amount: z.number().min(0).optional(),
+  cleaning_fee: z.number().min(0).optional(),
+  security_deposit: z.number().min(0).optional(),
   total_amount: z.number().min(0, "Amount must be non-negative").optional(),
   deposit_amount: z.number().min(0, "Deposit must be non-negative").optional(),
+
+  // Payment tracking
   payment_method: z.string().optional(),
-  booking_status: z.enum(["pending", "confirmed", "cancelled", "completed"]).default("pending"),
+  payment_status: z.enum([
+    "pending",
+    "paid",
+    "partially_paid",
+    "refunded",
+    "cancelled"
+  ]).default("pending").optional(),
+
+  // Booking status - EXPANDED
+  booking_status: z.enum([
+    "inquiry",      // Initial inquiry, not confirmed
+    "pending",      // Awaiting confirmation
+    "confirmed",    // Confirmed booking
+    "checked_in",   // Guest has checked in
+    "checked_out",  // Guest has checked out
+    "completed",    // Booking finished and finalized
+    "cancelled",    // Cancelled by guest or admin
+    "blocked"       // Dates blocked for maintenance
+  ]).default("pending").optional(),
+
+  // Channel tracking
+  booking_channel: z.enum([
+    "airbnb",
+    "booking",
+    "vrbo",
+    "direct",
+    "expedia",
+    "homeaway",
+    "tripadvisor",
+    "other"
+  ]).optional(),
+  booking_source: z.string().optional(),
+  channel_commission: z.number().min(0).max(100).optional(),
+
+  // Identifiers
+  confirmation_code: z.string().optional(),
+  external_booking_id: z.string().optional(),
+
+  // Timing
+  check_in_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).default("15:00:00").optional(),
+  check_out_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).default("11:00:00").optional(),
+
+  // Cancellation
+  cancellation_policy: z.string().optional(),
+  cancelled_at: z.string().optional(),
+  cancelled_by: z.string().uuid().optional(),
+  cancellation_reason: z.string().optional(),
+
+  // Actual check-in/out timestamps
+  checked_in_at: z.string().optional(),
+  checked_out_at: z.string().optional(),
+
   special_requests: z.string().optional(),
 });
 
@@ -325,10 +390,32 @@ export type Booking = {
   check_in_date: string;
   check_out_date: string;
   number_of_guests?: number | null;
+  guest_count_adults?: number | null;
+  guest_count_children?: number | null;
+  guest_count_infants?: number | null;
+  base_amount?: number | null;
+  extras_amount?: number | null;
+  tax_amount?: number | null;
+  cleaning_fee?: number | null;
+  security_deposit?: number | null;
   total_amount?: number | null;
   deposit_amount?: number | null;
   payment_method?: string | null;
+  payment_status?: string | null;
   booking_status?: string | null;
+  booking_channel?: string | null;
+  booking_source?: string | null;
+  channel_commission?: number | null;
+  confirmation_code?: string | null;
+  external_booking_id?: string | null;
+  check_in_time?: string | null;
+  check_out_time?: string | null;
+  cancellation_policy?: string | null;
+  cancelled_at?: string | null;
+  cancelled_by?: string | null;
+  cancellation_reason?: string | null;
+  checked_in_at?: string | null;
+  checked_out_at?: string | null;
   special_requests?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -509,3 +596,262 @@ export type NotificationPreferences = z.infer<typeof notificationPreferencesSche
 
 export type NotificationInsert = Omit<z.infer<typeof notificationSchema>, 'notification_id' | 'created_at' | 'is_read' | 'read_at'>;
 export type NotificationPreferencesInsert = Omit<z.infer<typeof notificationPreferencesSchema>, 'updated_at'>;
+
+// Service Provider schemas
+export const serviceProviderSchema = z.object({
+  provider_id: z.string().uuid().optional(),
+  user_id: z.string().uuid().optional().nullable(),
+  company_name: z.string().min(1, "Company name is required"),
+  contact_person: z.string().optional(),
+  email: z.string().email("Valid email is required").optional().or(z.literal("")),
+  phone_primary: z.string().optional(),
+  phone_secondary: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip: z.string().optional(),
+  country: z.string().default("USA"),
+  service_category: z.enum([
+    "Cleaning",
+    "Plumbing",
+    "Electrical",
+    "HVAC",
+    "Landscaping",
+    "Pool Service",
+    "Pest Control",
+    "Handyman",
+    "Painting",
+    "Roofing",
+    "Carpentry",
+    "Appliance Repair",
+    "Locksmith",
+    "Security",
+    "Moving",
+    "Other"
+  ]),
+  services_offered: z.array(z.string()).optional(),
+  hourly_rate: z.number().min(0, "Rate must be non-negative").optional().nullable(),
+  business_license: z.string().optional(),
+  insurance_certificate: z.string().optional(),
+  insurance_expiry: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional().nullable(),
+  tax_id: z.string().optional(),
+  website: z.string().url("Invalid website URL").optional().or(z.literal("")),
+  rating: z.number().min(0).max(5).optional().nullable(),
+  total_reviews: z.number().int().default(0),
+  is_active: z.boolean().default(true),
+  is_preferred: z.boolean().default(false),
+  payment_terms: z.string().optional(),
+  payment_methods: z.array(z.string()).optional(),
+  notes: z.string().optional(),
+  availability_schedule: z.record(z.any()).optional().nullable(),
+  emergency_contact: z.string().optional(),
+  emergency_phone: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  created_by: z.string().uuid().optional().nullable(),
+  last_job_date: z.string().optional().nullable(),
+});
+
+export const serviceProviderReviewSchema = z.object({
+  review_id: z.string().uuid().optional(),
+  provider_id: z.string().uuid(),
+  property_id: z.string().uuid().optional().nullable(),
+  job_id: z.string().uuid().optional().nullable(),
+  reviewer_id: z.string().uuid(),
+  rating: z.number().int().min(1).max(5),
+  review_text: z.string().optional(),
+  work_quality: z.number().int().min(1).max(5).optional().nullable(),
+  professionalism: z.number().int().min(1).max(5).optional().nullable(),
+  timeliness: z.number().int().min(1).max(5).optional().nullable(),
+  value_for_money: z.number().int().min(1).max(5).optional().nullable(),
+  would_recommend: z.boolean().optional().nullable(),
+  created_at: z.string().optional(),
+});
+
+export const serviceProviderDocumentSchema = z.object({
+  document_id: z.string().uuid().optional(),
+  provider_id: z.string().uuid(),
+  document_type: z.enum(["License", "Insurance", "Certificate", "Contract", "W9", "Other"]),
+  document_name: z.string().min(1, "Document name is required"),
+  document_url: z.string().url("Invalid document URL"),
+  expiry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional().nullable(),
+  uploaded_at: z.string().optional(),
+  uploaded_by: z.string().uuid().optional().nullable(),
+});
+
+// Service Provider types
+export type ServiceProvider = z.infer<typeof serviceProviderSchema> & {
+  properties?: Property[];
+  documents?: ServiceProviderDocument[];
+  reviews?: ServiceProviderReview[];
+};
+
+export type ServiceProviderReview = z.infer<typeof serviceProviderReviewSchema> & {
+  reviewer?: User;
+  property?: Property;
+};
+
+export type ServiceProviderDocument = z.infer<typeof serviceProviderDocumentSchema> & {
+  uploaded_user?: User;
+};
+
+export type ServiceProviderInsert = Omit<z.infer<typeof serviceProviderSchema>, 'provider_id' | 'created_at' | 'updated_at' | 'rating' | 'total_reviews' | 'last_job_date'>;
+export type ServiceProviderReviewInsert = Omit<z.infer<typeof serviceProviderReviewSchema>, 'review_id' | 'created_at'>;
+export type ServiceProviderDocumentInsert = Omit<z.infer<typeof serviceProviderDocumentSchema>, 'document_id' | 'uploaded_at'>;
+// Utility Provider schemas
+export const utilityProviderSchema = z.object({
+  provider_id: z.string().uuid().optional(),
+  provider_name: z.string().min(1, "Provider name is required"),
+  provider_type: z.enum([
+    "Electric",
+    "Internet",
+    "Gas",
+    "Water",
+    "Cable",
+    "Security",
+    "Parking",
+    "Maintenance",
+    "Management",
+    "Other"
+  ]),
+  phone_number: z.string().optional(),
+  website: z.string().url("Invalid website URL").optional().or(z.literal("")),
+  email: z.string().email("Valid email is required").optional().or(z.literal("")),
+  customer_service_hours: z.string().optional(),
+  emergency_contact: z.string().optional(),
+  emergency_phone: z.string().optional(),
+  service_area: z.array(z.string()).optional(),
+  notes: z.string().optional(),
+  is_active: z.boolean().default(true),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  created_by: z.string().uuid().optional().nullable(),
+});
+
+// Utility Provider types
+export type UtilityProvider = z.infer<typeof utilityProviderSchema> & {
+  properties?: Property[];
+};
+
+export type UtilityProviderInsert = Omit<z.infer<typeof utilityProviderSchema>, "provider_id" | "created_at" | "updated_at">;
+
+// ============================================
+// UNIFIED PROVIDER SCHEMA (Merges Service & Utility)
+// ============================================
+
+export const providerSchema = z.object({
+  provider_id: z.string().uuid().optional(),
+
+  // Basic Information
+  provider_name: z.string().min(1, "Provider name is required"),
+  category: z.enum(["service", "utility"], {
+    required_error: "Provider category is required"
+  }),
+  provider_type: z.string().min(1, "Provider type is required"),
+
+  // Contact Information (unified)
+  contact_person: z.string().optional(),
+  phone_primary: z.string().optional(),
+  phone_secondary: z.string().optional(),
+  email: z.string().email("Valid email is required").optional().or(z.literal("")),
+  website: z.string().url("Invalid website URL").optional().or(z.literal("")),
+
+  // Address (for service providers)
+  address_street: z.string().optional(),
+  address_city: z.string().optional(),
+  address_state: z.string().optional(),
+  address_zip: z.string().optional(),
+
+  // Utility-specific fields
+  customer_service_hours: z.string().optional(),
+  emergency_contact: z.string().optional(),
+  emergency_phone: z.string().optional(),
+  service_area: z.array(z.string()).optional(),
+
+  // Service provider-specific fields
+  license_number: z.string().optional(),
+  insurance_expiry: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional().nullable(),
+
+  // Ratings & Reviews (for service providers)
+  rating: z.number().min(0).max(5).optional().nullable(),
+  total_reviews: z.number().int().default(0),
+
+  // Status
+  is_active: z.boolean().default(true),
+  is_preferred: z.boolean().default(false),
+
+  // General notes
+  notes: z.string().optional(),
+
+  // Metadata
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  created_by: z.string().uuid().optional().nullable(),
+});
+
+export const providerDocumentSchema = z.object({
+  document_id: z.string().uuid().optional(),
+  provider_id: z.string().uuid(),
+  document_type: z.enum(["license", "insurance", "certification", "contract", "other"]),
+  document_name: z.string().min(1, "Document name is required"),
+  document_url: z.string().optional(),
+  issue_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional().nullable(),
+  expiry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional().nullable(),
+  notes: z.string().optional(),
+  uploaded_at: z.string().optional(),
+  uploaded_by: z.string().uuid().optional().nullable(),
+});
+
+export const providerReviewSchema = z.object({
+  review_id: z.string().uuid().optional(),
+  provider_id: z.string().uuid(),
+  property_id: z.string().uuid().optional().nullable(),
+  rating: z.number().int().min(1).max(5),
+  review_text: z.string().optional(),
+  work_completed: z.string().optional(),
+  would_recommend: z.boolean().default(true),
+  reviewed_at: z.string().optional(),
+  reviewer_id: z.string().uuid().optional().nullable(),
+});
+
+// Unified Provider Types
+export type Provider = z.infer<typeof providerSchema> & {
+  properties?: Property[];
+  documents?: ProviderDocument[];
+  reviews?: ProviderReview[];
+};
+
+export type ProviderDocument = z.infer<typeof providerDocumentSchema> & {
+  uploaded_user?: User;
+};
+
+export type ProviderReview = z.infer<typeof providerReviewSchema> & {
+  reviewer?: User;
+  property?: Property;
+};
+
+export type ProviderInsert = Omit<z.infer<typeof providerSchema>, 'provider_id' | 'created_at' | 'updated_at' | 'rating' | 'total_reviews'>;
+export type ProviderDocumentInsert = Omit<z.infer<typeof providerDocumentSchema>, 'document_id' | 'uploaded_at'>;
+export type ProviderReviewInsert = Omit<z.infer<typeof providerReviewSchema>, 'review_id' | 'reviewed_at'>;
+
+// Helper type for property-provider assignments
+export type PropertyProviderAssignment = {
+  id: string;
+  provider_id: string;
+  property_id: string;
+  // Service provider fields
+  is_preferred_for_property?: boolean;
+  assignment_notes?: string;
+  // Utility provider fields
+  account_number?: string;
+  billing_name?: string;
+  username?: string;
+  password?: string;
+  observations?: string;
+  // Metadata
+  assigned_at: string;
+  assigned_by?: string;
+  // Joined provider data
+  provider: Provider;
+};
+

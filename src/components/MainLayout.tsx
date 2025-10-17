@@ -21,7 +21,17 @@ export function MainLayout() {
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      console.log('🚪 Signing out...');
+      await signOut();
+      console.log('✅ Sign out successful');
+      // Navigate to auth page after logout
+      navigate('/auth', { replace: true });
+    } catch (error) {
+      console.error('❌ Sign out error:', error);
+      // Force navigation even if there's an error
+      navigate('/auth', { replace: true });
+    }
   };
 
   const getInitials = (firstName?: string | null, lastName?: string | null) => {

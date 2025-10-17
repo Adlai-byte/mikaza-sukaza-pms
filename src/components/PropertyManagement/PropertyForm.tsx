@@ -32,9 +32,10 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Combobox } from "@/components/ui/combobox";
-import { Upload, X, Loader2, Plus, Trash2 } from "lucide-react";
+import { Upload, X, Loader2, Plus, Trash2, MapPin } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { LocationMap } from "@/components/ui/location-map-new";
 
 interface PropertyFormProps {
   open: boolean;
@@ -67,6 +68,7 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [images, setImages] = useState<{ url: string; title?: string; is_primary?: boolean; file?: File }[]>([]);
   const [units, setUnits] = useState<{ property_name?: string; license_number?: string; folio?: string }[]>([]);
+  const [isMapOpen, setIsMapOpen] = useState(false);
   const { users } = useUsers();
   const { logActivity } = useActivityLogs();
   const { toast } = useToast();
@@ -130,6 +132,7 @@ const form = useForm<PropertyInsert>({
   useEffect(() => {
     if (open) {
       if (property) {
+        console.log('📝 [PropertyForm] Edit mode - populating form with property:', property.property_id);
         // Edit mode - populate with existing data
 form.reset({
   owner_id: property.owner_id,
@@ -189,17 +192,34 @@ form.reset({
         }
 
         setUnits(property.units || []);
-        setImages(property.images?.map(img => ({ 
-          url: img.image_url, 
-          title: img.image_title, 
+        setImages(property.images?.map(img => ({
+          url: img.image_url,
+          title: img.image_title,
           is_primary: img.is_primary,
           file: undefined // Existing images don't have files
         })) || []);
         setSelectedAmenities(property.amenities?.map(a => a.amenity_id!) || []);
         setSelectedRules(property.rules?.map(r => r.rule_id!) || []);
       } else {
-        // Create mode - reset to defaults
-        form.reset();
+        console.log('🆕 [PropertyForm] Create mode - resetting form to defaults');
+        // Create mode - reset to defaults with explicit values
+        form.reset({
+          owner_id: "",
+          property_name: "",
+          is_active: true,
+          is_booking: false,
+          is_pets_allowed: false,
+          property_type: "",
+          size_sqf: undefined,
+          capacity: undefined,
+          max_capacity: undefined,
+          num_bedrooms: undefined,
+          num_bathrooms: undefined,
+          num_half_bath: undefined,
+          num_wcs: undefined,
+          num_kitchens: undefined,
+          num_living_rooms: undefined,
+        });
         setLocationData({
           address: "",
           city: "",
@@ -230,6 +250,7 @@ form.reset({
         setImages([]);
         setSelectedAmenities([]);
         setSelectedRules([]);
+        console.log('✅ [PropertyForm] Form reset complete');
       }
     }
   }, [property, open, form]);
@@ -254,21 +275,25 @@ form.reset({
 
   const handleSubmit = async (data: PropertyInsert) => {
     try {
+      console.log('🎯 [PropertyForm] handleSubmit called with data:', data);
       setIsSubmitting(true);
-      
+
       // Upload images to Supabase storage
+      console.log('📸 [PropertyForm] Processing images, count:', images.length);
       const uploadedImages = await Promise.all(
         images.map(async (img) => {
           if (img.file) {
             // New image file needs to be uploaded
+            console.log('⬆️ [PropertyForm] Uploading new image file');
             const uploadedUrl = await uploadImageToStorage(img.file);
             return { url: uploadedUrl, title: img.title, is_primary: img.is_primary };
           }
           // Existing image, keep the URL
+          console.log('♻️ [PropertyForm] Keeping existing image URL');
           return { url: img.url, title: img.title, is_primary: img.is_primary };
         })
       );
-      
+
       const submissionData = {
         ...data,
         location: Object.keys(locationData).some(key => locationData[key as keyof typeof locationData]) ? locationData : undefined,
@@ -280,15 +305,17 @@ form.reset({
         rule_ids: selectedRules.length > 0 ? selectedRules : undefined,
         images: uploadedImages.length > 0 ? uploadedImages : undefined,
       };
-      
+
+      console.log('📦 [PropertyForm] Submitting data:', submissionData);
       await onSubmit(submissionData);
-      
+
+      console.log('✅ [PropertyForm] Property submission successful, closing form');
       onOpenChange(false);
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error('❌ [PropertyForm] Error submitting form:', error);
       toast({
         title: "Error",
-        description: "Failed to upload images or submit form",
+        description: error instanceof Error ? error.message : "Failed to upload images or submit form",
         variant: "destructive",
       });
     } finally {
@@ -329,6 +356,25 @@ form.reset({
     setUnits(prev => prev.map((unit, i) => i === index ? { ...unit, [field]: value } : unit));
   };
 
+  const handleLocationSelect = (
+    lat: number,
+    lng: number,
+    address?: string,
+    city?: string,
+    state?: string,
+    postal_code?: string,
+    country?: string
+  ) => {
+    setLocationData({
+      address: address || "",
+      city: city || "",
+      state: state || "",
+      postal_code: postal_code || "",
+      latitude: lat,
+      longitude: lng,
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -352,7 +398,11 @@ form.reset({
                   <TabsTrigger value="images">Images</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="basic" className="space-y-4">
+                <TabsContent value="basic" className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Basic Information</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Essential details about the property</p>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -463,76 +513,118 @@ form.reset({
                   </div>
                 </TabsContent>
 
-                <TabsContent value="location" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <TabsContent value="location" className="space-y-6">
+                  <div className="flex items-start justify-between">
                     <div>
-                      <label className="text-sm font-medium">Address</label>
-                      <Input
-                        value={locationData.address}
-                        onChange={(e) => setLocationData(prev => ({ ...prev, address: e.target.value }))}
-                        placeholder="Property address"
-                      />
+                      <h3 className="text-lg font-semibold mb-2">Location Details</h3>
+                      <p className="text-sm text-muted-foreground mb-4">Physical address and geographic coordinates</p>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium">City</label>
-                      <Input
-                        value={locationData.city}
-                        onChange={(e) => setLocationData(prev => ({ ...prev, city: e.target.value }))}
-                        placeholder="City"
-                      />
+                    <Button
+                      type="button"
+                      onClick={() => setIsMapOpen(true)}
+                      variant="outline"
+                      className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-300 hover:from-purple-100 hover:to-purple-200 text-purple-700 hover:text-purple-800"
+                    >
+                      <MapPin className="mr-2 h-4 w-4" />
+                      Select on Map
+                    </Button>
+                  </div>
+
+                  {/* Address Information Card */}
+                  <div className="rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50/50 to-white p-4 space-y-4">
+                    <div className="flex items-center gap-2 text-purple-700 font-medium mb-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>Address Information</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <label className="text-sm font-medium text-gray-700">Street Address</label>
+                        <Input
+                          value={locationData.address}
+                          onChange={(e) => setLocationData(prev => ({ ...prev, address: e.target.value }))}
+                          placeholder="123 Main Street"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">City</label>
+                        <Input
+                          value={locationData.city}
+                          onChange={(e) => setLocationData(prev => ({ ...prev, city: e.target.value }))}
+                          placeholder="Miami"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">State</label>
+                        <Input
+                          value={locationData.state}
+                          onChange={(e) => setLocationData(prev => ({ ...prev, state: e.target.value }))}
+                          placeholder="Florida"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">Postal Code</label>
+                        <Input
+                          value={locationData.postal_code}
+                          onChange={(e) => setLocationData(prev => ({ ...prev, postal_code: e.target.value }))}
+                          placeholder="33101"
+                          className="mt-1"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                   <div className="grid grid-cols-2 gap-4">
-                     <div>
-                       <label className="text-sm font-medium">State</label>
-                       <Input
-                         value={locationData.state}
-                         onChange={(e) => setLocationData(prev => ({ ...prev, state: e.target.value }))}
-                         placeholder="State"
-                       />
-                     </div>
-                     <div>
-                       <label className="text-sm font-medium">Postal Code</label>
-                       <Input
-                         value={locationData.postal_code}
-                         onChange={(e) => setLocationData(prev => ({ ...prev, postal_code: e.target.value }))}
-                         placeholder="Postal code"
-                       />
-                     </div>
-                   </div>
+                  {/* Coordinates Card */}
+                  <div className="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50/50 to-white p-4 space-y-4">
+                    <div className="flex items-center gap-2 text-blue-700 font-medium mb-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>Geographic Coordinates</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">Latitude</label>
+                        <Input
+                          type="number"
+                          value={locationData.latitude || ""}
+                          onChange={(e) => setLocationData(prev => ({
+                            ...prev,
+                            latitude: e.target.value ? parseFloat(e.target.value) : undefined
+                          }))}
+                          placeholder="25.7617"
+                          step="any"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">Longitude</label>
+                        <Input
+                          type="number"
+                          value={locationData.longitude || ""}
+                          onChange={(e) => setLocationData(prev => ({
+                            ...prev,
+                            longitude: e.target.value ? parseFloat(e.target.value) : undefined
+                          }))}
+                          placeholder="-80.1918"
+                          step="any"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                    {locationData.latitude && locationData.longitude && (
+                      <div className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded p-2 mt-2">
+                        📍 Coordinates: {locationData.latitude.toFixed(6)}, {locationData.longitude.toFixed(6)}
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
 
-                   <div className="grid grid-cols-2 gap-4">
-                     <div>
-                       <label className="text-sm font-medium">Latitude</label>
-                       <Input
-                         type="number"
-                         value={locationData.latitude || ""}
-                         onChange={(e) => setLocationData(prev => ({ 
-                           ...prev, 
-                           latitude: e.target.value ? parseFloat(e.target.value) : undefined 
-                         }))}
-                         placeholder="Latitude coordinates"
-                         step="any"
-                       />
-                     </div>
-                     <div>
-                       <label className="text-sm font-medium">Longitude</label>
-                       <Input
-                         type="number"
-                         value={locationData.longitude || ""}
-                         onChange={(e) => setLocationData(prev => ({ 
-                           ...prev, 
-                           longitude: e.target.value ? parseFloat(e.target.value) : undefined 
-                         }))}
-                         placeholder="Longitude coordinates"
-                         step="any"
-                       />
-                     </div>
-                   </div>
-                 </TabsContent>
-
-                <TabsContent value="details" className="space-y-4">
+                <TabsContent value="details" className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Property Details</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Size, capacity, and room specifications</p>
+                  </div>
                   <div className="grid grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
@@ -541,7 +633,11 @@ form.reset({
                         <FormItem>
                           <FormLabel>Size (sq ft)</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                            <Input
+                              type="number"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
                           </FormControl>
                         </FormItem>
                       )}
@@ -554,7 +650,11 @@ form.reset({
                         <FormItem>
                           <FormLabel>Capacity</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                            <Input
+                              type="number"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
                           </FormControl>
                         </FormItem>
                       )}
@@ -567,14 +667,18 @@ form.reset({
                         <FormItem>
                           <FormLabel>Max Capacity</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                            <Input
+                              type="number"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
                           </FormControl>
                         </FormItem>
                       )}
                     />
                   </div>
 
-                  <div className="grid grid-cols-5 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
                       name="num_bedrooms"
@@ -582,7 +686,11 @@ form.reset({
                         <FormItem>
                           <FormLabel>Bedrooms</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                            <Input
+                              type="number"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
                           </FormControl>
                         </FormItem>
                       )}
@@ -595,7 +703,11 @@ form.reset({
                         <FormItem>
                           <FormLabel>Bathrooms</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                            <Input
+                              type="number"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
                           </FormControl>
                         </FormItem>
                       )}
@@ -608,7 +720,11 @@ form.reset({
                         <FormItem>
                           <FormLabel>Half Baths</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                            <Input
+                              type="number"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
                           </FormControl>
                         </FormItem>
                       )}
@@ -621,7 +737,11 @@ form.reset({
                          <FormItem>
                            <FormLabel>WCs</FormLabel>
                            <FormControl>
-                             <Input {...field} type="number" onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                             <Input
+                               type="number"
+                               value={field.value ?? ""}
+                               onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                             />
                            </FormControl>
                          </FormItem>
                        )}
@@ -634,7 +754,11 @@ form.reset({
                         <FormItem>
                           <FormLabel>Kitchens</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                            <Input
+                              type="number"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
                           </FormControl>
                         </FormItem>
                       )}
@@ -647,7 +771,11 @@ form.reset({
                         <FormItem>
                           <FormLabel>Living Rooms</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                            <Input
+                              type="number"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
                           </FormControl>
                         </FormItem>
                       )}
@@ -655,9 +783,13 @@ form.reset({
                   </div>
 
                   {/* Units Section */}
-                  <div className="space-y-4">
+                  <div className="space-y-4 pt-4 border-t">
+                    <div>
+                      <h4 className="text-md font-semibold mb-2">Property Units</h4>
+                      <p className="text-sm text-muted-foreground mb-4">Manage individual units within this property (optional)</p>
+                    </div>
                     <div className="flex justify-between items-center">
-                      <h4 className="font-medium">Units</h4>
+                      <p className="text-sm font-medium">{units.length} {units.length === 1 ? 'unit' : 'units'} configured</p>
                       <Button type="button" onClick={addUnit} size="sm">
                         <Plus className="h-4 w-4 mr-2" />
                         Add Unit
@@ -694,123 +826,160 @@ form.reset({
                   </div>
                  </TabsContent>
 
-                 <TabsContent value="communication" className="space-y-4">
-                   <h3 className="text-lg font-medium mb-4">Communication Details</h3>
-                   <div className="grid grid-cols-1 gap-4">
+                 <TabsContent value="communication" className="space-y-6">
+                   <div>
+                     <h3 className="text-lg font-semibold mb-2">Communication Details</h3>
+                     <p className="text-sm text-muted-foreground mb-4">Contact information and internet access details for this property</p>
+                   </div>
+
+                   {/* Communication Card */}
+                   <div className="rounded-lg border border-green-200 bg-gradient-to-br from-green-50/50 to-white p-4 space-y-4">
+                     <div className="flex items-center gap-2 text-green-700 font-medium mb-2">
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                       <span>Contact Information</span>
+                     </div>
                      <div>
-                       <label className="text-sm font-medium">Phone Number</label>
+                       <label className="text-sm font-medium text-gray-700">Phone Number</label>
                        <Input
                          value={communicationData.phone_number}
                          onChange={(e) => setCommunicationData(prev => ({ ...prev, phone_number: e.target.value }))}
-                         placeholder="Contact phone number"
+                         placeholder="+1 (555) 123-4567"
+                         className="mt-1"
                        />
                      </div>
                      <div>
-                       <label className="text-sm font-medium">WiFi Network Name</label>
+                       <label className="text-sm font-medium text-gray-700">WiFi Network Name</label>
                        <Input
                          value={communicationData.wifi_name}
                          onChange={(e) => setCommunicationData(prev => ({ ...prev, wifi_name: e.target.value }))}
-                         placeholder="WiFi network name/SSID"
+                         placeholder="MyPropertyWiFi"
+                         className="mt-1"
                        />
                      </div>
                      <div>
-                       <label className="text-sm font-medium">WiFi Password</label>
+                       <label className="text-sm font-medium text-gray-700">WiFi Password</label>
                        <Input
                          type="password"
                          value={communicationData.wifi_password}
                          onChange={(e) => setCommunicationData(prev => ({ ...prev, wifi_password: e.target.value }))}
-                         placeholder="WiFi network password"
+                         placeholder="Enter WiFi password"
+                         className="mt-1"
                        />
                      </div>
                    </div>
                  </TabsContent>
 
-                 <TabsContent value="access" className="space-y-4">
-                   <h3 className="text-lg font-medium mb-4">Access Information</h3>
-                   <div className="grid grid-cols-1 gap-4">
+                 <TabsContent value="access" className="space-y-6">
+                   <div>
+                     <h3 className="text-lg font-semibold mb-2">Access Information</h3>
+                     <p className="text-sm text-muted-foreground mb-4">Security codes and entry information for property access</p>
+                   </div>
+
+                   {/* Security Access Card */}
+                   <div className="rounded-lg border border-red-200 bg-gradient-to-br from-red-50/50 to-white p-4 space-y-4">
+                     <div className="flex items-center gap-2 text-red-700 font-medium mb-2">
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                       <span>Security Access</span>
+                     </div>
                      <div>
-                       <label className="text-sm font-medium">Gate Code</label>
+                       <label className="text-sm font-medium text-gray-700">Gate Code</label>
                        <Input
                          value={accessData.gate_code}
                          onChange={(e) => setAccessData(prev => ({ ...prev, gate_code: e.target.value }))}
-                         placeholder="Gate access code"
+                         placeholder="1234#"
+                         className="mt-1"
                        />
                      </div>
                      <div>
-                       <label className="text-sm font-medium">Door Lock Password</label>
+                       <label className="text-sm font-medium text-gray-700">Door Lock Password</label>
                        <Input
                          value={accessData.door_lock_password}
                          onChange={(e) => setAccessData(prev => ({ ...prev, door_lock_password: e.target.value }))}
-                         placeholder="Door lock password/code"
+                         placeholder="Enter lock code"
+                         className="mt-1"
                        />
                      </div>
                      <div>
-                       <label className="text-sm font-medium">Alarm Passcode</label>
+                       <label className="text-sm font-medium text-gray-700">Alarm Passcode</label>
                        <Input
                          value={accessData.alarm_passcode}
                          onChange={(e) => setAccessData(prev => ({ ...prev, alarm_passcode: e.target.value }))}
-                         placeholder="Security alarm passcode"
+                         placeholder="Security alarm code"
+                         className="mt-1"
                        />
                      </div>
                    </div>
 
-                   <h4 className="text-md font-medium mt-6 mb-4">Additional Property Features</h4>
-                   <div className="grid grid-cols-2 gap-4">
-                     <div>
-                       <label className="text-sm font-medium">Storage Number</label>
-                       <Input
-                         value={extrasData.storage_number}
-                         onChange={(e) => setExtrasData(prev => ({ ...prev, storage_number: e.target.value }))}
-                         placeholder="Storage unit number"
-                       />
+                   {/* Additional Features Card */}
+                   <div className="rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50/50 to-white p-4 space-y-4">
+                     <div className="flex items-center gap-2 text-amber-700 font-medium mb-2">
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                       <span>Additional Property Features</span>
                      </div>
-                     <div>
-                       <label className="text-sm font-medium">Storage Code</label>
-                       <Input
-                         value={extrasData.storage_code}
-                         onChange={(e) => setExtrasData(prev => ({ ...prev, storage_code: e.target.value }))}
-                         placeholder="Storage access code"
-                       />
-                     </div>
-                     <div>
-                       <label className="text-sm font-medium">Garage Number</label>
-                       <Input
-                         value={extrasData.garage_number}
-                         onChange={(e) => setExtrasData(prev => ({ ...prev, garage_number: e.target.value }))}
-                         placeholder="Garage/parking number"
-                       />
-                     </div>
-                     <div>
-                       <label className="text-sm font-medium">Front Desk</label>
-                       <Input
-                         value={extrasData.front_desk}
-                         onChange={(e) => setExtrasData(prev => ({ ...prev, front_desk: e.target.value }))}
-                         placeholder="Front desk information"
-                       />
-                     </div>
-                     <div>
-                       <label className="text-sm font-medium">Mailing Box</label>
-                       <Input
-                         value={extrasData.mailing_box}
-                         onChange={(e) => setExtrasData(prev => ({ ...prev, mailing_box: e.target.value }))}
-                         placeholder="Mail box number/address"
-                       />
-                     </div>
-                     <div>
-                       <label className="text-sm font-medium">Pool Access Code</label>
-                       <Input
-                         value={extrasData.pool_access_code}
-                         onChange={(e) => setExtrasData(prev => ({ ...prev, pool_access_code: e.target.value }))}
-                         placeholder="Pool/amenities access code"
-                       />
+                     <div className="grid grid-cols-2 gap-4">
+                       <div>
+                         <label className="text-sm font-medium text-gray-700">Storage Number</label>
+                         <Input
+                           value={extrasData.storage_number}
+                           onChange={(e) => setExtrasData(prev => ({ ...prev, storage_number: e.target.value }))}
+                           placeholder="Storage unit #"
+                           className="mt-1"
+                         />
+                       </div>
+                       <div>
+                         <label className="text-sm font-medium text-gray-700">Storage Code</label>
+                         <Input
+                           value={extrasData.storage_code}
+                           onChange={(e) => setExtrasData(prev => ({ ...prev, storage_code: e.target.value }))}
+                           placeholder="Access code"
+                           className="mt-1"
+                         />
+                       </div>
+                       <div>
+                         <label className="text-sm font-medium text-gray-700">Garage Number</label>
+                         <Input
+                           value={extrasData.garage_number}
+                           onChange={(e) => setExtrasData(prev => ({ ...prev, garage_number: e.target.value }))}
+                           placeholder="Parking spot #"
+                           className="mt-1"
+                         />
+                       </div>
+                       <div>
+                         <label className="text-sm font-medium text-gray-700">Front Desk</label>
+                         <Input
+                           value={extrasData.front_desk}
+                           onChange={(e) => setExtrasData(prev => ({ ...prev, front_desk: e.target.value }))}
+                           placeholder="Front desk info"
+                           className="mt-1"
+                         />
+                       </div>
+                       <div>
+                         <label className="text-sm font-medium text-gray-700">Mailing Box</label>
+                         <Input
+                           value={extrasData.mailing_box}
+                           onChange={(e) => setExtrasData(prev => ({ ...prev, mailing_box: e.target.value }))}
+                           placeholder="Mailbox number"
+                           className="mt-1"
+                         />
+                       </div>
+                       <div>
+                         <label className="text-sm font-medium text-gray-700">Pool Access Code</label>
+                         <Input
+                           value={extrasData.pool_access_code}
+                           onChange={(e) => setExtrasData(prev => ({ ...prev, pool_access_code: e.target.value }))}
+                           placeholder="Pool code"
+                           className="mt-1"
+                         />
+                       </div>
                      </div>
                    </div>
                  </TabsContent>
 
-                <TabsContent value="features" className="space-y-4">
+                <TabsContent value="features" className="space-y-6">
                   {/* Amenities */}
                   <div>
-                    <h4 className="font-medium mb-4">Amenities</h4>
+                    <h4 className="text-lg font-semibold mb-2">Amenities</h4>
+                    <p className="text-sm text-muted-foreground mb-4">Select all amenities available at this property</p>
                     <div className="grid grid-cols-3 gap-4">
                       {(Array.isArray(amenities) ? amenities : []).map((amenity) => (
                         <div key={amenity.amenity_id} className="flex items-center space-x-2">
@@ -825,7 +994,7 @@ form.reset({
                               }
                             }}
                           />
-                          <label htmlFor={`amenity-${amenity.amenity_id}`} className="text-sm">
+                          <label htmlFor={`amenity-${amenity.amenity_id}`} className="text-sm cursor-pointer">
                             {amenity.amenity_name}
                           </label>
                         </div>
@@ -835,7 +1004,8 @@ form.reset({
 
                   {/* Rules */}
                   <div>
-                    <h4 className="font-medium mb-4">Rules</h4>
+                    <h4 className="text-lg font-semibold mb-2">Rules</h4>
+                    <p className="text-sm text-muted-foreground mb-4">Select all rules that apply to this property</p>
                     <div className="grid grid-cols-2 gap-4">
                       {(Array.isArray(rules) ? rules : []).map((rule) => (
                         <div key={rule.rule_id} className="flex items-center space-x-2">
@@ -850,7 +1020,7 @@ form.reset({
                               }
                             }}
                           />
-                          <label htmlFor={`rule-${rule.rule_id}`} className="text-sm">
+                          <label htmlFor={`rule-${rule.rule_id}`} className="text-sm cursor-pointer">
                             {rule.rule_name}
                           </label>
                         </div>
@@ -859,10 +1029,12 @@ form.reset({
                   </div>
                 </TabsContent>
 
-                <TabsContent value="images" className="space-y-4">
-                  <h3 className="text-lg font-medium mb-4">Property Profile Image</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Upload one profile image for this property</p>
-                  
+                <TabsContent value="images" className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Property Profile Image</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Upload one profile image to represent this property</p>
+                  </div>
+
                   <div className="space-y-4">
                     <div className="grid w-full max-w-sm items-center gap-1.5">
                       <label className="text-sm font-medium">Upload Profile Image</label>
@@ -872,13 +1044,13 @@ form.reset({
                         onChange={handleImageUpload}
                       />
                     </div>
-                    
+
                     {images.length > 0 && (
                       <div className="relative group max-w-sm">
                         <img
                           src={images[0].url}
                           alt={images[0].title || "Property profile image"}
-                          className="w-full h-48 object-cover rounded-lg"
+                          className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
                           <Button
@@ -887,15 +1059,18 @@ form.reset({
                             size="sm"
                             onClick={() => setImages([])}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Remove
                           </Button>
                         </div>
-                        <Input
-                          placeholder="Image title"
-                          value={images[0].title || ""}
-                          onChange={(e) => updateImageTitle(e.target.value)}
-                          className="mt-2"
-                        />
+                        <div className="mt-2">
+                          <label className="text-sm font-medium mb-1 block">Image Title (Optional)</label>
+                          <Input
+                            placeholder="Enter image title or description"
+                            value={images[0].title || ""}
+                            onChange={(e) => updateImageTitle(e.target.value)}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -926,6 +1101,16 @@ form.reset({
           </Form>
         </div>
       </DialogContent>
+
+      {/* Location Map Dialog */}
+      <LocationMap
+        isOpen={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        onLocationSelect={handleLocationSelect}
+        initialLat={locationData.latitude}
+        initialLng={locationData.longitude}
+        initialAddress={locationData.address}
+      />
     </Dialog>
   );
 }

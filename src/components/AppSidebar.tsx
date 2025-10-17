@@ -14,6 +14,8 @@ import {
   Image,
   Menu,
   Users,
+  Wrench,
+  Zap,
 } from "lucide-react";
 
 import {
@@ -34,6 +36,7 @@ import { PERMISSIONS, Permission } from "@/lib/rbac/permissions";
 const mainMenuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, permission: null }, // Everyone can access
   { title: "User Management", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
+  { title: "Providers", url: "/providers", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW }, // Unified providers (Services & Utilities)
   { title: "Properties", url: "/properties", icon: Building, permission: PERMISSIONS.PROPERTIES_VIEW },
   { title: "Active Jobs", url: "/jobs", icon: BriefcaseIcon, permission: PERMISSIONS.JOBS_VIEW },
   { title: "Calendar", url: "/calendar", icon: Calendar, permission: PERMISSIONS.BOOKINGS_VIEW },

@@ -54,9 +54,29 @@ export default function Auth() {
       const validatedData = loginSchema.parse(loginForm);
       setLoading(true);
 
+      console.log('🔐 [AUTH] Login attempt:', {
+        email: validatedData.email,
+        timestamp: new Date().toISOString(),
+        rememberMe: rememberMe
+      });
+
       const { error, data } = await signIn(validatedData.email, validatedData.password);
 
+      console.log('📊 [AUTH] Login response:', {
+        success: !error,
+        hasUser: !!data?.user,
+        email: validatedData.email,
+        timestamp: new Date().toISOString()
+      });
+
       if (error) {
+        console.error('❌ [AUTH] Login failed:', {
+          email: validatedData.email,
+          error: error.message,
+          errorCode: error.code,
+          timestamp: new Date().toISOString()
+        });
+
         if (error.message.includes("Invalid login credentials")) {
           toast({
             title: "Login Failed",
@@ -81,6 +101,12 @@ export default function Auth() {
 
       // Check if email is verified (Supabase returns user even if not verified)
       if (data?.user && !data.user.email_confirmed_at) {
+        console.warn('⚠️ [AUTH] Email not verified:', {
+          email: validatedData.email,
+          userId: data.user.id,
+          timestamp: new Date().toISOString()
+        });
+
         await signOut();
         toast({
           title: "Email Not Verified",
@@ -92,12 +118,23 @@ export default function Auth() {
 
       // Save credentials if remember me is checked
       if (rememberMe) {
+        console.log('💾 [AUTH] Saving credentials for remember me:', {
+          email: validatedData.email,
+          timestamp: new Date().toISOString()
+        });
         localStorage.setItem('rememberedEmail', validatedData.email);
         localStorage.setItem('rememberMe', 'true');
       } else {
+        console.log('🗑️ [AUTH] Clearing remembered credentials');
         localStorage.removeItem('rememberedEmail');
         localStorage.removeItem('rememberMe');
       }
+
+      console.log('✅ [AUTH] Login successful:', {
+        email: validatedData.email,
+        userId: data?.user?.id,
+        timestamp: new Date().toISOString()
+      });
 
       toast({
         title: "Welcome back!",
@@ -127,6 +164,7 @@ export default function Auth() {
 
   const handleResendVerification = async () => {
     if (!loginForm.email) {
+      console.warn('⚠️ [AUTH] Resend verification attempted without email');
       toast({
         title: "Email Required",
         description: "Please enter your email address to resend the verification link.",
@@ -139,12 +177,22 @@ export default function Auth() {
       const validatedEmail = loginSchema.pick({ email: true }).parse({ email: loginForm.email });
       setIsResendingEmail(true);
 
+      console.log('📧 [AUTH] Resending verification email:', {
+        email: validatedEmail.email,
+        timestamp: new Date().toISOString()
+      });
+
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: validatedEmail.email,
       });
 
       if (error) {
+        console.error('❌ [AUTH] Resend verification failed:', {
+          email: validatedEmail.email,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
         toast({
           title: "Resend Failed",
           description: error.message,
@@ -153,19 +201,25 @@ export default function Auth() {
         return;
       }
 
+      console.log('✅ [AUTH] Verification email resent successfully:', {
+        email: validatedEmail.email,
+        timestamp: new Date().toISOString()
+      });
+
       toast({
         title: "Verification Email Sent",
         description: "Please check your inbox for the verification link. If you don't see it, check your spam folder.",
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error('❌ [AUTH] Validation error on resend:', error.errors);
         toast({
           title: "Invalid Email",
           description: "Please enter a valid email address.",
           variant: "destructive",
         });
       } else {
-        console.error('Resend verification error:', error);
+        console.error('❌ [AUTH] Resend verification error:', error);
         toast({
           title: "Error",
           description: "Failed to resend verification email. Please try again.",
