@@ -74,7 +74,7 @@ export function useUsersOptimized() {
   } = useQuery({
     queryKey: userKeys.lists(),
     queryFn: fetchUsers,
-    staleTime: CACHE_CONFIG.LIST.staleTime, // 30 minutes
+    staleTime: 0, // Disabled caching - always fetch fresh data after RLS fix
     gcTime: CACHE_CONFIG.LIST.gcTime, // 2 hours
     refetchOnMount: true,
     refetchOnWindowFocus: false,
