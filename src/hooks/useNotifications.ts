@@ -16,6 +16,8 @@ export const notificationKeys = {
 
 // Fetch notifications for current user
 const fetchNotifications = async (userId: string, limit: number = 50): Promise<AppNotification[]> => {
+  console.log('🔔 [Notifications] Fetching notifications for userId:', userId);
+
   const { data, error } = await supabase
     .from('notifications')
     .select(`
@@ -28,7 +30,13 @@ const fetchNotifications = async (userId: string, limit: number = 50): Promise<A
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) {
+    console.error('❌ [Notifications] Fetch error:', error);
+    throw error;
+  }
+
+  console.log('✅ [Notifications] Fetched:', data?.length || 0, 'notifications');
+  console.log('📊 [Notifications] Sample data:', data?.[0]);
   return (data || []) as AppNotification[];
 };
 
@@ -143,11 +151,26 @@ export function useNotifications(limit: number = 50) {
   const queryClient = useQueryClient();
   const userId = profile?.user_id || user?.id || '';
 
+  console.log('🔔 [useNotifications] Hook initialized:', {
+    userId,
+    hasProfile: !!profile,
+    hasUser: !!user,
+    profileUserId: profile?.user_id,
+    userAuthId: user?.id,
+  });
+
   const { data: notifications = [], isLoading, error, refetch } = useQuery({
     queryKey: notificationKeys.lists(),
     queryFn: () => fetchNotifications(userId, limit),
     enabled: !!userId,
     staleTime: 30 * 1000, // 30 seconds
+  });
+
+  console.log('🔔 [useNotifications] Query result:', {
+    notificationCount: notifications.length,
+    isLoading,
+    hasError: !!error,
+    error: error?.message,
   });
 
   // Real-time subscription for new notifications

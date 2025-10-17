@@ -1,28 +1,28 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus,
   Clock,
-  MapPin,
-  User,
-  CheckCircle,
-  Calendar,
   AlertTriangle,
   RefreshCw,
-  DollarSign,
-  Timer,
   BriefcaseIcon,
   Search,
   Filter,
   XCircle,
-  CheckSquare
+  CheckCircle,
+  History,
+  List,
+  LayoutGrid,
 } from "lucide-react";
 import { useJobs, useJobStats, useCreateJob, useUpdateJob, useDeleteJob, JobFilters } from "@/hooks/useJobs";
 import { format, parseISO } from "date-fns";
 import { useState, useMemo } from "react";
 import { JobDialog } from "@/components/jobs/JobDialog";
 import { JobDetailsDialog } from "@/components/jobs/JobDetailsDialog";
+import { JobsTable } from "@/components/jobs/JobsTable";
+import { JobsKanban } from "@/components/jobs/JobsKanban";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateTask } from "@/hooks/useTasks";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function Jobs() {
   const { user } = useAuth();
   const { properties } = usePropertiesOptimized();
+  const queryClient = useQueryClient();
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,6 +74,7 @@ export default function Jobs() {
   const [editingJob, setEditingJob] = useState<any>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'active' | 'board' | 'history'>('active');
 
   // Fetch users for filter
   const { data: users = [] } = useQuery({
@@ -88,47 +90,67 @@ export default function Jobs() {
       return data || [];
     },
   });
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "in_progress":
-        return <Badge className="bg-blue-500 text-white">In Progress</Badge>;
-      case "pending":
-        return <Badge className="bg-orange-500 text-white">Pending</Badge>;
-      case "review":
-        return <Badge className="bg-purple-500 text-white">Review</Badge>;
-      case "completed":
-        return <Badge className="bg-green-600 text-white">Completed</Badge>;
-      case "cancelled":
-        return <Badge variant="destructive">Cancelled</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "urgent":
-        return "text-destructive";
-      case "high":
-        return "text-orange-500";
-      case "normal":
-        return "text-blue-500";
-      case "low":
-        return "text-accent";
-      default:
-        return "text-muted-foreground";
-    }
-  };
+  // Fetch history jobs separately (always fetch completed/cancelled regardless of filters)
+  const historyFilters: JobFilters = useMemo(() => ({
+    priority: priorityFilter.length > 0 ? priorityFilter[0] : undefined,
+    job_type: jobTypeFilter || undefined,
+    property_id: propertyFilter || undefined,
+    assigned_to: assignedFilter || undefined,
+    search: searchQuery || undefined,
+  }), [priorityFilter, jobTypeFilter, propertyFilter, assignedFilter, searchQuery]);
 
-  // Format dates
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return "No due date";
-    try {
-      return format(parseISO(dateString), "MMM dd, yyyy h:mm a");
-    } catch (error) {
-      return "Invalid date";
-    }
-  };
+  const { data: allHistoryJobs = [] } = useQuery({
+    queryKey: ['jobs-history', historyFilters],
+    queryFn: async () => {
+      let query = supabase
+        .from('jobs')
+        .select(`
+          *,
+          property:properties(property_id, property_name),
+          assigned_user:users!jobs_assigned_to_fkey(user_id, first_name, last_name, email),
+          created_user:users!jobs_created_by_fkey(user_id, first_name, last_name)
+        `)
+        .in('status', ['completed', 'cancelled'])
+        .order('created_at', { ascending: false });
+
+      // Apply non-status filters
+      if (historyFilters.priority) {
+        query = query.eq('priority', historyFilters.priority);
+      }
+      if (historyFilters.job_type) {
+        query = query.eq('job_type', historyFilters.job_type);
+      }
+      if (historyFilters.assigned_to) {
+        query = query.eq('assigned_to', historyFilters.assigned_to);
+      }
+      if (historyFilters.property_id) {
+        query = query.eq('property_id', historyFilters.property_id);
+      }
+      if (historyFilters.search) {
+        query = query.or(`title.ilike.%${historyFilters.search}%,description.ilike.%${historyFilters.search}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching history jobs:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  });
+
+  // Separate active jobs from history (completed/cancelled)
+  const activeJobs = useMemo(() =>
+    jobs.filter(job => job.status !== 'completed' && job.status !== 'cancelled'),
+    [jobs]
+  );
+
+  const historyJobs = allHistoryJobs;
 
   // Handlers
   const handleCreateJob = () => {
@@ -217,6 +239,12 @@ export default function Jobs() {
     assignedFilter ||
     searchQuery;
 
+  // Refresh both active and history jobs
+  const handleRefresh = () => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ['jobs-history'] });
+  };
+
   // Create Task from Job
   const handleCreateTaskFromJob = async (job: any) => {
     try {
@@ -282,7 +310,7 @@ export default function Jobs() {
         <div className="flex space-x-3">
           <Button
             variant="outline"
-            onClick={() => refetch()}
+            onClick={handleRefresh}
             disabled={isLoading || isFetching}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
@@ -516,113 +544,71 @@ export default function Jobs() {
         </CardContent>
       </Card>
 
-      {/* Active Jobs List */}
-      <div className="space-y-4">
-        {isLoading ? (
-          <Card>
-            <CardContent className="p-6 flex items-center justify-center">
-              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-              <span className="text-muted-foreground">Loading jobs...</span>
-            </CardContent>
-          </Card>
-        ) : jobs.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <BriefcaseIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="text-lg font-semibold mb-2">No Jobs Found</h3>
-              <p className="text-muted-foreground mb-4">
-                Get started by creating your first work order
-              </p>
-              <Button
-                className="bg-gradient-primary hover:bg-gradient-secondary"
-                onClick={handleCreateJob}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Job
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          jobs.map((job) => (
-            <Card key={job.job_id} className="hover:shadow-card transition-all duration-300">
-              <CardContent className="p-5">
-                {/* Header with Title and Badges */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold mb-2">{job.title}</h3>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {getStatusBadge(job.status)}
-                      <Badge variant="outline" className={getPriorityColor(job.priority)}>
-                        {job.priority.charAt(0).toUpperCase() + job.priority.slice(1)}
-                      </Badge>
-                      {job.job_type && (
-                        <Badge variant="secondary" className="text-xs">
-                          {job.job_type.replace(/_/g, ' ').toUpperCase()}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
+      {/* Main Content - Tabs for Active Jobs, Board View, and History */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'active' | 'board' | 'history')}>
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="active" className="flex items-center gap-2">
+            <List className="h-4 w-4" />
+            Active Jobs ({activeJobs.length})
+          </TabsTrigger>
+          <TabsTrigger value="board" className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            Board View
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Job History ({historyJobs.length})
+          </TabsTrigger>
+        </TabsList>
 
-                {/* Essential Info - Single Row */}
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4 flex-wrap">
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-1.5 text-primary" />
-                    <span className="font-medium">
-                      {job.property?.property_name || 'No property'}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <User className="h-4 w-4 mr-1.5" />
-                    <span>
-                      {job.assigned_user
-                        ? `${job.assigned_user.first_name} ${job.assigned_user.last_name}`
-                        : 'Unassigned'}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1.5" />
-                    <span>{formatDate(job.due_date)}</span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">
-                    ID: {job.job_id?.slice(0, 8)}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleViewJob(job)}
-                    >
-                      <BriefcaseIcon className="h-3.5 w-3.5 mr-1.5" />
-                      View Details
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEditJob(job)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCreateTaskFromJob(job)}
-                      disabled={createTask.isPending}
-                    >
-                      <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
-                      Create Task
-                    </Button>
-                  </div>
-                </div>
+        <TabsContent value="active" className="mt-0">
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-12 flex flex-col items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                <span className="text-muted-foreground">Loading jobs...</span>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ) : (
+            <JobsTable
+              jobs={activeJobs}
+              onEdit={handleEditJob}
+              onView={handleViewJob}
+              onConvertToTask={handleCreateTaskFromJob}
+              emptyMessage="No active jobs found. Create your first work order to get started."
+              isConvertingTask={createTask.isPending}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="board" className="mt-0">
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-12 flex flex-col items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                <span className="text-muted-foreground">Loading jobs...</span>
+              </CardContent>
+            </Card>
+          ) : (
+            <JobsKanban
+              jobs={jobs}
+              onEdit={handleEditJob}
+              onView={handleViewJob}
+              onConvertToTask={handleCreateTaskFromJob}
+              onStatusChange={handleStatusChange}
+              isConvertingTask={createTask.isPending}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-0">
+          <JobsTable
+            jobs={historyJobs}
+            onView={handleViewJob}
+            emptyMessage="No completed or cancelled jobs yet."
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Job Dialog */}
       <JobDialog

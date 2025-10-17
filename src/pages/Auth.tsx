@@ -20,6 +20,9 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const { signIn, signUp, signOut, user, profile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -231,6 +234,79 @@ export default function Auth() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!resetEmail) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address to reset your password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const validatedEmail = loginSchema.pick({ email: true }).parse({ email: resetEmail });
+      setIsResettingPassword(true);
+
+      console.log('🔐 [AUTH] Password reset requested:', {
+        email: validatedEmail.email,
+        timestamp: new Date().toISOString()
+      });
+
+      const { error } = await supabase.auth.resetPasswordForEmail(validatedEmail.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        console.error('❌ [AUTH] Password reset failed:', {
+          email: validatedEmail.email,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+        toast({
+          title: "Reset Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('✅ [AUTH] Password reset email sent:', {
+        email: validatedEmail.email,
+        timestamp: new Date().toISOString()
+      });
+
+      toast({
+        title: "Reset Email Sent",
+        description: "Please check your inbox for the password reset link. If you don't see it, check your spam folder.",
+      });
+
+      // Switch back to login mode after successful request
+      setIsForgotPassword(false);
+      setResetEmail("");
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('❌ [AUTH] Validation error on password reset:', error.errors);
+        toast({
+          title: "Invalid Email",
+          description: "Please enter a valid email address.",
+          variant: "destructive",
+        });
+      } else {
+        console.error('❌ [AUTH] Password reset error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send password reset email. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-4">
       {/* Enhanced gradient background */}
@@ -270,11 +346,61 @@ export default function Auth() {
         {/* Enhanced Login Form */}
         <Card className="bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl">
           <CardHeader className="text-center pb-6 pt-8">
-            <h2 className="text-2xl font-light text-white mb-2">Welcome Back</h2>
-            <p className="text-white/70 text-sm">Sign in to access your dashboard</p>
+            <h2 className="text-2xl font-light text-white mb-2">
+              {isForgotPassword ? "Reset Password" : "Welcome Back"}
+            </h2>
+            <p className="text-white/70 text-sm">
+              {isForgotPassword
+                ? "Enter your email to receive a password reset link"
+                : "Sign in to access your dashboard"}
+            </p>
           </CardHeader>
           <CardContent className="space-y-6 pb-8">
-            <form onSubmit={handleLogin} className="space-y-6">
+            {isForgotPassword ? (
+              <form onSubmit={handleForgotPassword} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email" className="text-white/90 font-light text-sm">
+                    Email Address
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      id="reset-email"
+                      name="reset-email"
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      className="bg-white/95 border-0 text-gray-900 placeholder:text-gray-400 h-12 pl-10 focus:bg-white transition-all"
+                      placeholder="Enter your email"
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-gradient-to-r from-accent to-accent-hover hover:from-accent-hover hover:to-accent text-accent-foreground font-medium text-base border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                  disabled={isResettingPassword}
+                >
+                  {isResettingPassword ? "Sending..." : "Send Reset Link"}
+                </Button>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    className="text-white/70 hover:text-white text-sm underline font-light"
+                    onClick={() => {
+                      setIsForgotPassword(false);
+                      setResetEmail("");
+                    }}
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white/90 font-light text-sm">
                   Email Address
@@ -347,6 +473,7 @@ export default function Auth() {
                 <button
                   type="button"
                   className="text-white/70 hover:text-white text-sm underline font-light"
+                  onClick={() => setIsForgotPassword(true)}
                 >
                   Forgot password?
                 </button>
@@ -378,6 +505,7 @@ export default function Auth() {
                 </Button>
               </div>
             </form>
+            )}
 
             <div className="text-center">
               <p className="text-white/50 text-xs font-light">

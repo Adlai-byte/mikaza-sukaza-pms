@@ -67,6 +67,7 @@ export function BookingsTable({
 }: BookingsTableProps) {
   const { deleteBooking, isDeleting, updateBooking, isUpdating } = useBookings();
   const [bookingToDelete, setBookingToDelete] = useState<Booking | null>(null);
+  const [bookingToCheckout, setBookingToCheckout] = useState<Booking | null>(null);
 
   const getStatusBadge = (status?: string | null) => {
     const statusValue = status || 'pending';
@@ -107,7 +108,23 @@ export function BookingsTable({
     }
   };
 
-  const handleStatusChange = (bookingId: string, newStatus: string) => {
+  const handleCheckoutConfirm = () => {
+    if (bookingToCheckout?.booking_id) {
+      updateBooking(bookingToCheckout.booking_id, { booking_status: 'checked_out' as any });
+      setBookingToCheckout(null);
+    }
+  };
+
+  const handleStatusChange = (bookingId: string, newStatus: string, booking?: Booking) => {
+    // Show confirmation dialog for checkout
+    if (newStatus === 'checked_out') {
+      const bookingToUpdate = booking || bookings.find(b => b.booking_id === bookingId);
+      if (bookingToUpdate) {
+        setBookingToCheckout(bookingToUpdate);
+        return;
+      }
+    }
+
     updateBooking(bookingId, { booking_status: newStatus as any });
   };
 
@@ -172,7 +189,7 @@ export function BookingsTable({
             size="sm"
             variant="outline"
             className="h-7 gap-1 bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200"
-            onClick={() => handleStatusChange(booking.booking_id!, 'checked_out')}
+            onClick={() => handleStatusChange(booking.booking_id!, 'checked_out', booking)}
             disabled={isUpdating}
           >
             <LogOut className="h-3 w-3" />
@@ -426,7 +443,7 @@ export function BookingsTable({
                               </DropdownMenuItem>
                             )}
                             {booking.booking_status !== 'checked_out' && (
-                              <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'checked_out')}>
+                              <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'checked_out', booking)}>
                                 <LogOut className="mr-2 h-4 w-4" />
                                 Mark as Checked Out
                               </DropdownMenuItem>
@@ -609,7 +626,7 @@ export function BookingsTable({
                             </DropdownMenuItem>
                           )}
                           {booking.booking_status !== 'checked_out' && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'checked_out')}>
+                            <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'checked_out', booking)}>
                               <LogOut className="mr-2 h-4 w-4" />
                               Mark as Checked Out
                             </DropdownMenuItem>
@@ -668,6 +685,46 @@ export function BookingsTable({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? 'Cancelling...' : 'Yes, Cancel Booking'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Checkout Confirmation Dialog */}
+      <AlertDialog open={!!bookingToCheckout} onOpenChange={() => setBookingToCheckout(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <LogOut className="h-5 w-5 text-purple-600" />
+              Confirm Guest Check-Out
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to check out <strong>{bookingToCheckout?.guest_name}</strong>?
+              <div className="mt-3 space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  <span>Check-out date: {bookingToCheckout && formatDate(bookingToCheckout.check_out_date)}</span>
+                </div>
+                {bookingToCheckout?.total_amount && (
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    <span>Total amount: {formatCurrency(bookingToCheckout.total_amount)}</span>
+                  </div>
+                )}
+              </div>
+              <p className="mt-3 text-muted-foreground">
+                This will move the booking to your history and mark it as checked out.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCheckoutConfirm}
+              disabled={isUpdating}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isUpdating ? 'Checking Out...' : 'Confirm Check-Out'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -25,20 +25,7 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
   const { data, error } = await supabase
     .from('properties')
     .select(`
-      property_id,
-      owner_id,
-      property_name,
-      property_type,
-      is_active,
-      is_booking,
-      is_pets_allowed,
-      capacity,
-      max_capacity,
-      num_bedrooms,
-      num_bathrooms,
-      size_sqf,
-      created_at,
-      updated_at,
+      *,
       owner:users!properties_owner_id_fkey(
         user_id,
         first_name,
@@ -62,7 +49,8 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
     throw error;
   }
 
-  console.log('✅ Fetched properties list:', data?.length || 0, 'properties (lightweight)');
+  console.log('✅ Fetched properties list:', data?.length || 0, 'properties');
+  console.log('📊 First property sample:', data?.[0]);
   return (data || []) as Property[];
 };
 

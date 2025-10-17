@@ -25,6 +25,7 @@ import {
   ChevronRight,
   LayoutGrid,
   List,
+  History,
 } from 'lucide-react';
 import { useBookings } from '@/hooks/useBookings';
 import { BookingDialogEnhanced } from '@/components/BookingDialogEnhanced';
@@ -42,10 +43,21 @@ export default function BookingManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'history'>('list');
+
+  // Separate active and completed bookings
+  const activeBookings = bookings.filter(b =>
+    b.booking_status !== 'completed' &&
+    b.booking_status !== 'checked_out'
+  );
+
+  const historyBookings = bookings.filter(b =>
+    b.booking_status === 'completed' ||
+    b.booking_status === 'checked_out'
+  );
 
   // Filter bookings based on search and status
-  const filteredBookings = bookings.filter((booking) => {
+  const filteredBookings = activeBookings.filter((booking) => {
     const matchesSearch =
       booking.guest_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       booking.guest_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -56,13 +68,24 @@ export default function BookingManagement() {
     return matchesSearch && matchesStatus;
   });
 
-  // Calculate statistics
-  const totalBookings = bookings.length;
-  const confirmedBookings = bookings.filter(b => b.booking_status === 'confirmed').length;
-  const pendingBookings = bookings.filter(b => b.booking_status === 'pending').length;
-  const totalRevenue = bookings
+  // Filter history bookings
+  const filteredHistoryBookings = historyBookings.filter((booking) => {
+    const matchesSearch =
+      booking.guest_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.guest_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.guest_phone?.includes(searchQuery);
+
+    return matchesSearch;
+  });
+
+  // Calculate statistics (only active bookings)
+  const totalActiveBookings = activeBookings.length;
+  const confirmedBookings = activeBookings.filter(b => b.booking_status === 'confirmed').length;
+  const pendingBookings = activeBookings.filter(b => b.booking_status === 'pending').length;
+  const totalRevenue = activeBookings
     .filter(b => b.booking_status !== 'cancelled')
     .reduce((sum, b) => sum + (b.total_amount || 0), 0);
+  const totalHistoryBookings = historyBookings.length;
 
   // Get booked dates for calendar
   const getBookedDates = () => {
@@ -164,57 +187,73 @@ export default function BookingManagement() {
 
         {/* Statistics Dashboard */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalBookings}</div>
-              <p className="text-xs text-muted-foreground">
-                All time bookings
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Confirmed</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{confirmedBookings}</div>
-              <p className="text-xs text-muted-foreground">
-                Active reservations
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{pendingBookings}</div>
-              <p className="text-xs text-muted-foreground">
-                Awaiting confirmation
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">
-                ${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-700">Active Bookings</p>
+                  <h3 className="text-3xl font-bold text-blue-900 mt-1">{totalActiveBookings}</h3>
+                  <p className="text-xs text-blue-600 mt-1">
+                    {totalHistoryBookings} in history
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <CalendarDays className="h-6 w-6 text-white" />
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                From active bookings
-              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-700">Confirmed</p>
+                  <h3 className="text-3xl font-bold text-green-900 mt-1">{confirmedBookings}</h3>
+                  <p className="text-xs text-green-600 mt-1">
+                    Active reservations
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md bg-gradient-to-br from-amber-50 to-amber-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-amber-700">Pending</p>
+                  <h3 className="text-3xl font-bold text-amber-900 mt-1">{pendingBookings}</h3>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Awaiting confirmation
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
+                  <CalendarIcon className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-700">Total Revenue</p>
+                  <h3 className="text-3xl font-bold text-purple-900 mt-1">
+                    ${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </h3>
+                  <p className="text-xs text-purple-600 mt-1">
+                    From active bookings
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -228,7 +267,7 @@ export default function BookingManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="search">Search Bookings</Label>
                 <div className="relative">
@@ -251,40 +290,24 @@ export default function BookingManagement() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="inquiry">Inquiry</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="checked_in">Checked In</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>View Mode</Label>
-                <div className="flex gap-2">
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'outline'}
-                    className="flex-1"
-                    onClick={() => setViewMode('list')}
-                  >
-                    <List className="mr-2 h-4 w-4" />
-                    List
-                  </Button>
-                  <Button
-                    variant={viewMode === 'calendar' ? 'default' : 'outline'}
-                    className="flex-1"
-                    onClick={() => setViewMode('calendar')}
-                  >
-                    <LayoutGrid className="mr-2 h-4 w-4" />
-                    Calendar
-                  </Button>
-                </div>
               </div>
             </div>
 
             <div className="mt-4 flex items-center gap-2">
               <Badge variant="secondary" className="text-sm">
-                {filteredBookings.length} result{filteredBookings.length !== 1 ? 's' : ''}
+                {viewMode === 'history'
+                  ? `${filteredHistoryBookings.length} result${filteredHistoryBookings.length !== 1 ? 's' : ''}`
+                  : viewMode === 'calendar'
+                  ? `${bookings.length} booking${bookings.length !== 1 ? 's' : ''}`
+                  : `${filteredBookings.length} result${filteredBookings.length !== 1 ? 's' : ''}`
+                }
               </Badge>
               {searchQuery && (
                 <Button
@@ -310,16 +333,20 @@ export default function BookingManagement() {
           </CardContent>
         </Card>
 
-        {/* Main Content - Tabs for Calendar and List View */}
-        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'calendar' | 'list')}>
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+        {/* Main Content - Tabs for List, Calendar, and History View */}
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'calendar' | 'list' | 'history')}>
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="list" className="flex items-center gap-2">
               <List className="h-4 w-4" />
-              List View
+              Active Bookings
             </TabsTrigger>
             <TabsTrigger value="calendar" className="flex items-center gap-2">
               <LayoutGrid className="h-4 w-4" />
               Calendar View
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Booking History
             </TabsTrigger>
           </TabsList>
 
@@ -381,17 +408,46 @@ export default function BookingManagement() {
                       Bookings for {format(selectedDate, 'MMMM dd, yyyy')}
                     </h3>
                     <BookingsTable
-                      bookings={filteredBookings.filter((booking) => {
+                      bookings={bookings.filter((booking) => {
                         const selectedDateStr = selectedDate.toISOString().split('T')[0];
                         const checkIn = new Date(booking.check_in_date).toISOString().split('T')[0];
                         const checkOut = new Date(booking.check_out_date).toISOString().split('T')[0];
-                        return selectedDateStr >= checkIn && selectedDateStr <= checkOut;
+                        const matchesDate = selectedDateStr >= checkIn && selectedDateStr <= checkOut;
+
+                        // Also apply search filter if there is one
+                        const matchesSearch = !searchQuery ||
+                          booking.guest_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          booking.guest_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          booking.guest_phone?.includes(searchQuery);
+
+                        return matchesDate && matchesSearch;
                       })}
                       onEdit={handleEditBooking}
                       emptyMessage="No bookings on this date"
                     />
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-0">
+            <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Booking History
+                </CardTitle>
+                <CardDescription>
+                  Completed and checked-out bookings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <BookingsTable
+                  bookings={filteredHistoryBookings}
+                  onEdit={handleEditBooking}
+                  emptyMessage="No completed bookings yet."
+                />
               </CardContent>
             </Card>
           </TabsContent>

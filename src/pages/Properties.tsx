@@ -28,6 +28,11 @@ export default function Properties() {
     error: propertiesError
   } = usePropertiesOptimized();
 
+  // Force refetch on mount to ensure fresh data with owner and images
+  useEffect(() => {
+    refetch();
+  }, []);
+
   const { logActivity } = useActivityLogs();
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
