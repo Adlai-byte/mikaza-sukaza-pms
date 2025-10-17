@@ -244,8 +244,10 @@ export function useUsersOptimized() {
       const rollback = OptimisticUpdates.updateUser(queryClient, userId, userData);
       return { rollback };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    onSuccess: async () => {
+      // Invalidate and immediately refetch to ensure fresh data
+      await queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      await refetch();
       toast({
         title: "Success",
         description: "User updated successfully",
