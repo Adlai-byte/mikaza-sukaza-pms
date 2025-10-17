@@ -52,7 +52,7 @@ export default function PropertyEdit() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Use the optimized detail hook that loads only this property's full data
-  let { property, loading, error } = usePropertyDetail(propertyId);
+  let { property, loading, error, refetch } = usePropertyDetail(propertyId);
 
   // Safety check: Handle raw Supabase response from cache
   if (property && typeof property === 'object' && 'data' in property && 'error' in property && 'status' in property) {
@@ -102,6 +102,18 @@ export default function PropertyEdit() {
     window.addEventListener('property-edit-unsaved-changes', handleUnsavedChanges as EventListener);
     return () => window.removeEventListener('property-edit-unsaved-changes', handleUnsavedChanges as EventListener);
   }, []);
+
+  // Listen for property updates from tabs (to refresh header)
+  React.useEffect(() => {
+    const handlePropertyUpdate = () => {
+      console.log('🔄 [PropertyEdit] Received property update event, refetching...');
+      if (refetch) {
+        refetch();
+      }
+    };
+    window.addEventListener('property-updated', handlePropertyUpdate);
+    return () => window.removeEventListener('property-updated', handlePropertyUpdate);
+  }, [refetch]);
 
   if (loading) {
     return (

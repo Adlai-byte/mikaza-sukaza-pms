@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { User } from "@/lib/schemas";
 import {
   Table,
@@ -74,12 +74,45 @@ export function UserTable({
   isLoading = false,
   isFetching = false,
 }: UserTableProps) {
-  console.log('👥 UserTable render - users:', users);
-  console.log('👥 UserTable render - users.length:', users.length);
-  
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Reset to page 1 when filters change - MUST be before early returns
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, typeFilter, statusFilter]);
+
+  // Memoize filtered users to avoid unnecessary recalculations
+  // MUST be called before any early returns
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const matchesSearch = (user.first_name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (user.last_name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (user.email || '').toLowerCase().includes(search.toLowerCase()) ||
+        (user.user_type || '').toLowerCase().includes(search.toLowerCase());
+
+      const matchesType = typeFilter === "all" || user.user_type === typeFilter;
+      const matchesStatus = statusFilter === "all" ||
+        (statusFilter === "active" && user.is_active) ||
+        (statusFilter === "inactive" && !user.is_active);
+
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [users, search, typeFilter, statusFilter]);
+
+  // Memoize pagination calculations
+  // MUST be called before any early returns
+  const { totalPages, startIndex, endIndex, paginatedUsers } = useMemo(() => {
+    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+    return { totalPages, startIndex, endIndex, paginatedUsers };
+  }, [filteredUsers, currentPage, itemsPerPage]);
 
   const getUserTypeBadge = (userType: string) => {
     switch (userType) {
@@ -109,6 +142,7 @@ export function UserTable({
   };
 
   // Show full loading skeleton on initial load
+  // Early returns MUST come after ALL hooks
   if (isLoading) {
     return <UserTableLoadingState />;
   }
@@ -117,20 +151,6 @@ export function UserTable({
   if (!isLoading && users.length === 0) {
     return <UserLoadingSpinner message="No users found" />;
   }
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = (user.first_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (user.last_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (user.email || '').toLowerCase().includes(search.toLowerCase()) ||
-      (user.user_type || '').toLowerCase().includes(search.toLowerCase());
-
-    const matchesType = typeFilter === "all" || user.user_type === typeFilter;
-    const matchesStatus = statusFilter === "all" ||
-      (statusFilter === "active" && user.is_active) ||
-      (statusFilter === "inactive" && !user.is_active);
-
-    return matchesSearch && matchesType && matchesStatus;
-  });
 
   const exportToCSV = () => {
     const headers = ["Name", "Email", "Type", "Status", "Company", "Phone", "Address", "City", "State", "ZIP", "Country"];
@@ -227,7 +247,7 @@ export function UserTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.map((user) => (
+            {paginatedUsers.map((user) => (
               <TableRow key={user.user_id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center space-x-3">
@@ -381,7 +401,7 @@ export function UserTable({
 
       {/* Mobile Card View */}
       <div className="lg:hidden space-y-4">
-        {filteredUsers.map((user) => (
+        {paginatedUsers.map((user) => (
           <Card key={user.user_id} className="w-full">
             <CardContent className="p-4">
               <div className="flex space-x-4">
@@ -551,6 +571,59 @@ export function UserTable({
           </Card>
         ))}
       </div>
+
+      {/* Pagination Controls */}
+      {filteredUsers.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} users
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 per page</SelectItem>
+                <SelectItem value="25">25 per page</SelectItem>
+                <SelectItem value="50">50 per page</SelectItem>
+                <SelectItem value="100">100 per page</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm px-2">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
