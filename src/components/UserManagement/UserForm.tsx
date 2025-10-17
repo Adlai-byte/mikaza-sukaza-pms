@@ -401,7 +401,7 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>User Type *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select user type" />
