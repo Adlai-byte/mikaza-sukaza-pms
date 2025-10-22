@@ -35,7 +35,6 @@ coverage
 # Development files
 .prettierrc
 .eslintrc
-tsconfig.node.json
 
 # Supabase migrations (optional - comment out if you need them on Vercel)
 supabase/migrations/*.sql
