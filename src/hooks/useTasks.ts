@@ -369,6 +369,29 @@ export function useUpdateTask() {
       // Update the task
       const updatedTask = await updateTask({ taskId, updates });
 
+      // If task is completed and linked to a job, update job status
+      if (oldTask && updatedTask && updates.status === 'completed' && oldTask.status !== 'completed' && updatedTask.job_id) {
+        try {
+          console.log('🔗 [Tasks] Task completed, updating linked job:', updatedTask.job_id);
+
+          // Update job status to 'review' when task is completed
+          const { error: jobUpdateError } = await supabase
+            .from('jobs')
+            .update({ status: 'review' })
+            .eq('job_id', updatedTask.job_id);
+
+          if (jobUpdateError) {
+            console.error('❌ [Tasks] Failed to update job status:', jobUpdateError);
+          } else {
+            console.log('✅ [Tasks] Job status updated to review');
+            // Invalidate jobs cache
+            queryClient.invalidateQueries({ queryKey: ['jobs'] });
+          }
+        } catch (error) {
+          console.error('❌ [Tasks] Error updating job status:', error);
+        }
+      }
+
       // Create notifications based on changes
       if (oldTask && updatedTask) {
         try {

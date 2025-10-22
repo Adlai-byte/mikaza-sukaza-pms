@@ -41,6 +41,7 @@ interface UserFormProps {
 export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(user?.photo_url || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { logActivity } = useActivityLogs();
@@ -150,7 +151,7 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
     }
   };
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -178,25 +179,92 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
       return;
     }
 
-    // Read and preview the file
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setPhotoPreview(result);
-      form.setValue('photo_url', result);
-    };
-    reader.onerror = () => {
+    try {
+      setIsUploadingPhoto(true);
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(7);
+      const fileExt = file.name.split('.').pop();
+      const userId = user?.user_id || 'new';
+      const fileName = `${userId}/${timestamp}-${randomStr}.${fileExt}`;
+
+      console.log('📤 [UserForm] Uploading avatar to Supabase Storage:', fileName);
+
+      // Upload to Supabase Storage
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('user-avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('❌ [UserForm] Upload failed:', uploadError);
+        throw new Error(uploadError.message || 'Failed to upload photo');
+      }
+
+      console.log('✅ [UserForm] Upload successful:', uploadData);
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-avatars')
+        .getPublicUrl(fileName);
+
+      console.log('🔗 [UserForm] Public URL:', publicUrl);
+
+      // Set preview and form value
+      setPhotoPreview(publicUrl);
+      form.setValue('photo_url', publicUrl);
+
+      toast({
+        title: "Photo Uploaded",
+        description: "Avatar uploaded successfully",
+      });
+    } catch (error) {
+      console.error('❌ [UserForm] Photo upload error:', error);
       toast({
         title: "Upload Failed",
-        description: "Failed to read the image file. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to upload photo. Please try again.",
         variant: "destructive",
       });
       event.target.value = ''; // Reset input
-    };
-    reader.readAsDataURL(file);
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
-  const removePhoto = () => {
+  const removePhoto = async () => {
+    // If there's an existing photo URL from Supabase Storage, delete it
+    if (photoPreview && photoPreview.includes('supabase.co')) {
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+
+        // Extract file path from URL
+        const urlParts = photoPreview.split('/storage/v1/object/public/user-avatars/');
+        if (urlParts.length > 1) {
+          const filePath = urlParts[1];
+
+          console.log('🗑️ [UserForm] Deleting photo from storage:', filePath);
+
+          const { error } = await supabase.storage
+            .from('user-avatars')
+            .remove([filePath]);
+
+          if (error) {
+            console.error('❌ [UserForm] Failed to delete photo:', error);
+            // Don't throw - still allow removing from UI
+          } else {
+            console.log('✅ [UserForm] Photo deleted from storage');
+          }
+        }
+      } catch (error) {
+        console.error('❌ [UserForm] Error deleting photo:', error);
+        // Don't throw - still allow removing from UI
+      }
+    }
+
     setPhotoPreview(null);
     form.setValue('photo_url', '');
   };
@@ -231,10 +299,19 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
                 
                 <div className="flex flex-col space-y-2">
                   <label className="cursor-pointer">
-                    <Button type="button" variant="outline" size="sm" asChild>
+                    <Button type="button" variant="outline" size="sm" asChild disabled={isUploadingPhoto}>
                       <span>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Photo
+                        {isUploadingPhoto ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 mr-2" />
+                            Upload Photo
+                          </>
+                        )}
                       </span>
                     </Button>
                     <input
@@ -242,6 +319,7 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
                       accept="image/*"
                       onChange={handlePhotoUpload}
                       className="hidden"
+                      disabled={isUploadingPhoto}
                     />
                   </label>
                   

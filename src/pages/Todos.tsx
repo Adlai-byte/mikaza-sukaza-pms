@@ -51,7 +51,6 @@ export default function Todos() {
   const [showOverdue, setShowOverdue] = useState(false);
 
   // Build filters object
-  // Show all tasks by default for both admin and ops users
   const filters: TaskFilters = useMemo(() => {
     const baseFilters: TaskFilters = {
       status: statusFilter.length > 0 ? statusFilter : undefined,
@@ -65,8 +64,14 @@ export default function Todos() {
     // If manual assignee filter is set, use it
     if (assignedFilter) {
       baseFilters.assigned_to = assignedFilter;
+    } else {
+      // For ops users, only show tasks assigned to them by default
+      // For admin users, show all tasks
+      if (user?.user_type === 'ops' && user?.user_id) {
+        baseFilters.assigned_to = user.user_id;
+      }
+      // Admin users see all tasks (no filter)
     }
-    // Otherwise show all tasks (no filter)
 
     return baseFilters;
   }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery, showOverdue, user]);

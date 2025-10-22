@@ -431,6 +431,7 @@ export const taskSchema = z.object({
   property_id: z.string().uuid().optional().nullable(),
   assigned_to: z.string().uuid().optional().nullable(),
   created_by: z.string().uuid().optional(),
+  job_id: z.string().uuid().optional().nullable(),
   status: z.enum(["pending", "in_progress", "completed", "cancelled"]).default("pending"),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
   category: z.enum(["cleaning", "maintenance", "check_in_prep", "check_out_prep", "inspection", "repair", "other"]).default("other"),
@@ -559,6 +560,10 @@ export const notificationSchema = z.object({
     'booking_check_in_reminder',
     'booking_check_out_reminder',
     'booking_payment_received',
+    'job_assigned',
+    'job_status_changed',
+    'job_completed',
+    'job_comment',
     'mention'
   ]),
   title: z.string().min(1, "Title is required"),
@@ -567,6 +572,7 @@ export const notificationSchema = z.object({
   task_id: z.string().uuid().optional().nullable(),
   issue_id: z.string().uuid().optional().nullable(),
   booking_id: z.string().uuid().optional().nullable(),
+  job_id: z.string().uuid().optional().nullable(),
   action_by: z.string().uuid().optional().nullable(),
   metadata: z.record(z.any()).optional().nullable(),
   is_read: z.boolean().default(false),
@@ -602,12 +608,22 @@ export const notificationPreferencesSchema = z.object({
   updated_at: z.string().optional(),
 });
 
+// Job type forward declaration (will be properly typed when jobs schema is added)
+export type Job = {
+  job_id: string;
+  title: string;
+  status: string;
+  priority: string;
+  [key: string]: any;
+};
+
 // Notification types (renamed to avoid conflict with browser Notification API)
 export type AppNotification = z.infer<typeof notificationSchema> & {
   action_user?: User;
   task?: Task;
   issue?: Issue;
   booking?: Booking;
+  job?: Job;
 };
 
 export type NotificationPreferences = z.infer<typeof notificationPreferencesSchema>;
@@ -872,4 +888,452 @@ export type PropertyProviderAssignment = {
   // Joined provider data
   provider: Provider;
 };
+
+// ============================================
+// ACCOUNTING & BILLING SCHEMAS
+// Essential accounting system with complete audit trail
+// ============================================
+
+// Invoice schemas
+export const invoiceSchema = z.object({
+  invoice_id: z.string().uuid().optional(),
+  invoice_number: z.string().optional(), // Auto-generated
+
+  // Booking reference
+  booking_id: z.string().uuid().optional().nullable(),
+  property_id: z.string().uuid("Property is required"),
+
+  // Guest information
+  guest_name: z.string().min(1, "Guest name is required"),
+  guest_email: z.string().email("Valid email is required").optional().or(z.literal("")),
+  guest_phone: z.string().optional(),
+  guest_address: z.string().optional(),
+
+  // Invoice dates
+  issue_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  paid_date: z.string().optional().nullable(),
+
+  // Status
+  status: z.enum(["draft", "sent", "paid", "overdue", "cancelled", "refunded"]).default("draft"),
+
+  // Amounts (calculated from line items, but can be set manually)
+  subtotal: z.number().min(0).default(0),
+  tax_amount: z.number().min(0).default(0),
+  total_amount: z.number().min(0).default(0),
+  amount_paid: z.number().min(0).default(0),
+
+  // Additional details
+  notes: z.string().optional(),
+  terms: z.string().optional(),
+  payment_method: z.string().optional(),
+
+  // Metadata
+  created_by: z.string().uuid().optional().nullable(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+export const invoiceLineItemSchema = z.object({
+  line_item_id: z.string().uuid().optional(),
+  invoice_id: z.string().uuid(),
+
+  // Line item details
+  line_number: z.number().int().min(1),
+  description: z.string().min(1, "Description is required"),
+  quantity: z.number().min(0).default(1),
+  unit_price: z.number().min(0).default(0),
+
+  // Tax
+  tax_rate: z.number().min(0).max(100).default(0),
+  tax_amount: z.number().min(0).default(0),
+
+  // Item type for categorization
+  item_type: z.enum([
+    "accommodation",
+    "cleaning",
+    "extras",
+    "tax",
+    "commission",
+    "other"
+  ]).optional(),
+
+  // Metadata
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+// Expense schema
+export const expenseSchema = z.object({
+  expense_id: z.string().uuid().optional(),
+
+  // Property reference
+  property_id: z.string().uuid("Property is required"),
+
+  // Job reference (optional - links expense to a specific job)
+  job_id: z.string().uuid().optional().nullable(),
+
+  // Expense details
+  expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  vendor_name: z.string().optional(),
+  vendor_id: z.string().uuid().optional().nullable(),
+
+  // Category and description
+  category: z.enum([
+    "maintenance",
+    "utilities",
+    "cleaning",
+    "supplies",
+    "marketing",
+    "channel_commission",
+    "insurance",
+    "property_tax",
+    "hoa_fees",
+    "professional_services",
+    "repairs",
+    "landscaping",
+    "pest_control",
+    "other"
+  ]),
+  subcategory: z.string().optional(),
+  description: z.string().min(1, "Description is required"),
+
+  // Amount
+  amount: z.number().min(0, "Amount must be non-negative"),
+  tax_amount: z.number().min(0).default(0),
+
+  // Payment details
+  payment_method: z.enum(["cash", "credit_card", "bank_transfer", "check", "other"]).optional(),
+  payment_status: z.enum(["unpaid", "paid", "partially_paid", "refunded"]).default("unpaid"),
+  paid_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional().nullable(),
+
+  // References
+  reference_number: z.string().optional(),
+  receipt_url: z.string().url("Invalid receipt URL").optional().or(z.literal("")),
+
+  // Recurring expense tracking
+  is_recurring: z.boolean().default(false),
+  recurring_frequency: z.enum(["monthly", "quarterly", "yearly"]).optional(),
+
+  // Notes
+  notes: z.string().optional(),
+
+  // Metadata
+  created_by: z.string().uuid().optional().nullable(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+// Financial audit log schema (read-only)
+export const financialAuditLogSchema = z.object({
+  audit_id: z.string().uuid(),
+  table_name: z.string(),
+  record_id: z.string().uuid(),
+  action: z.enum(["INSERT", "UPDATE", "DELETE"]),
+  old_values: z.record(z.any()).optional().nullable(),
+  new_values: z.record(z.any()).optional().nullable(),
+  changed_fields: z.array(z.string()).optional().nullable(),
+  user_id: z.string().uuid().optional().nullable(),
+  user_email: z.string().optional().nullable(),
+  ip_address: z.string().optional().nullable(),
+  user_agent: z.string().optional().nullable(),
+  created_at: z.string(),
+  action_context: z.string().optional().nullable(),
+});
+
+// Accounting & Billing Types
+export type Invoice = z.infer<typeof invoiceSchema> & {
+  property?: Property;
+  booking?: Booking;
+  line_items?: InvoiceLineItem[];
+  balance_due?: number; // Computed: total_amount - amount_paid
+  created_user?: User;
+};
+
+export type InvoiceLineItem = z.infer<typeof invoiceLineItemSchema> & {
+  subtotal?: number; // Computed: quantity * unit_price
+  total_amount?: number; // Computed: subtotal + tax_amount
+};
+
+export type Expense = z.infer<typeof expenseSchema> & {
+  property?: Property;
+  vendor?: ServiceProvider;
+  total_amount?: number; // Computed: amount + tax_amount
+  created_user?: User;
+};
+
+export type FinancialAuditLog = z.infer<typeof financialAuditLogSchema> & {
+  user?: User;
+};
+
+// Insert types (for creating new records)
+export type InvoiceInsert = Omit<z.infer<typeof invoiceSchema>, 'invoice_id' | 'invoice_number' | 'created_at' | 'updated_at'>;
+export type InvoiceLineItemInsert = Omit<z.infer<typeof invoiceLineItemSchema>, 'line_item_id' | 'created_at' | 'updated_at'>;
+export type ExpenseInsert = Omit<z.infer<typeof expenseSchema>, 'expense_id' | 'created_at' | 'updated_at'>;
+
+// Helper types for financial reporting
+export type PropertyFinancialSummary = {
+  property_id: string;
+  property_name: string;
+  period: string; // e.g., "2025-01" for January 2025
+  total_revenue: number;
+  total_expenses: number;
+  net_income: number;
+  invoice_count: number;
+  expense_count: number;
+};
+
+export type ExpenseByCategory = {
+  property_id: string;
+  category: string;
+  month: string;
+  expense_count: number;
+  total_amount: number;
+  total_tax: number;
+  grand_total: number;
+};
+
+export type InvoiceSummary = Invoice & {
+  line_item_count: number;
+};
+
+// =============================================
+// BILL TEMPLATES SCHEMAS
+// =============================================
+
+export const billTemplateSchema = z.object({
+  property_id: z.string().uuid().optional().nullable(), // Optional - null for global templates
+  template_name: z.string().min(1, "Template name is required").max(255),
+  description: z.string().optional(),
+  is_active: z.boolean().default(true),
+  is_global: z.boolean().default(false), // If true, can be assigned to multiple properties
+  display_order: z.number().int().default(0),
+});
+
+export const billTemplateItemSchema = z.object({
+  template_id: z.string().uuid("Template ID is required"),
+  line_number: z.number().int().min(1, "Line number must be positive"),
+  description: z.string().min(1, "Description is required").max(500),
+  quantity: z.number().min(0.01, "Quantity must be positive"),
+  unit_price: z.number().min(0, "Unit price cannot be negative"),
+  tax_rate: z.number().min(0).max(100, "Tax rate must be between 0 and 100").default(0),
+  tax_amount: z.number().min(0).default(0),
+  item_type: z.enum(['accommodation', 'cleaning', 'extras', 'tax', 'commission', 'other']).default('other'),
+});
+
+// Schema for property assignments
+export const billTemplatePropertyAssignmentSchema = z.object({
+  template_id: z.string().uuid("Template ID is required"),
+  property_id: z.string().uuid("Property ID is required"),
+});
+
+export type BillTemplate = z.infer<typeof billTemplateSchema> & {
+  template_id?: string;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+  items?: BillTemplateItem[];
+  assigned_properties?: Array<{ property_id: string; property_name: string }>; // From view
+};
+
+export type BillTemplateItem = z.infer<typeof billTemplateItemSchema> & {
+  template_item_id?: string;
+  created_at?: string;
+};
+
+export interface BillTemplatePropertyAssignment {
+  assignment_id: string;
+  template_id: string;
+  property_id: string;
+  created_at: string;
+}
+
+export type BillTemplateInsert = Omit<z.infer<typeof billTemplateSchema>, 'template_id' | 'created_at' | 'updated_at'>;
+export type BillTemplateItemInsert = Omit<z.infer<typeof billTemplateItemSchema>, 'template_item_id' | 'created_at'>;
+export type BillTemplatePropertyAssignmentInsert = z.infer<typeof billTemplatePropertyAssignmentSchema>;
+
+export type BillTemplateWithItems = BillTemplate & {
+  items: BillTemplateItem[];
+  total_amount: number;
+};
+
+// ============================================
+// INVOICE PAYMENTS
+// ============================================
+
+export const invoicePaymentSchema = z.object({
+  invoice_id: z.string().uuid("Invoice is required"),
+  payment_date: z.string().min(1, "Payment date is required"),
+  amount: z.number().positive("Amount must be greater than 0"),
+  payment_method: z.string().min(1, "Payment method is required"),
+  reference_number: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export interface InvoicePayment {
+  payment_id: string;
+  invoice_id: string;
+  payment_date: string;
+  amount: number;
+  payment_method: string;
+  reference_number?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type InvoicePaymentInsert = Omit<z.infer<typeof invoicePaymentSchema>, 'payment_id' | 'created_at' | 'updated_at'>;
+
+// ============================================
+// DOCUMENTS MANAGEMENT SYSTEM
+// Document storage with versioning and approvals
+// ============================================
+
+// Document schema
+export const documentSchema = z.object({
+  category: z.enum(['contracts', 'employee', 'access', 'coi', 'service', 'messages'], {
+    required_error: "Document category is required"
+  }),
+  document_name: z.string().min(1, "Document name is required").max(255),
+  description: z.string().optional(),
+  file_url: z.string().min(1, "File URL is required"),
+  file_name: z.string().min(1, "File name is required").max(255),
+  file_type: z.string().min(1, "File type is required"),
+  file_size: z.number().positive("File size must be positive"),
+  property_id: z.string().uuid().optional().nullable(),
+  status: z.enum(['draft', 'active', 'archived', 'expired']).default('active'),
+  expiry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional().nullable(),
+  tags: z.array(z.string()).optional(),
+});
+
+// Document approval schema
+export const documentApprovalSchema = z.object({
+  document_id: z.string().uuid("Document ID is required"),
+  requested_by: z.string().uuid().optional(), // Will be set automatically
+  status: z.enum(['pending', 'approved', 'rejected']).default('pending'),
+  rejection_reason: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+// Document share schema
+export const documentShareSchema = z.object({
+  document_id: z.string().uuid("Document ID is required"),
+  shared_with: z.string().uuid("User to share with is required"),
+  permission_level: z.enum(['view', 'download', 'edit']).default('view'),
+  expires_at: z.string().optional().nullable(),
+});
+
+// Document access log schema (read-only)
+export const documentAccessLogSchema = z.object({
+  access_log_id: z.string().uuid(),
+  document_id: z.string().uuid(),
+  user_id: z.string().uuid().optional().nullable(),
+  user_email: z.string().optional().nullable(),
+  action: z.enum(['viewed', 'downloaded', 'uploaded', 'deleted', 'updated', 'shared', 'unshared']),
+  ip_address: z.string().optional().nullable(),
+  user_agent: z.string().optional().nullable(),
+  accessed_at: z.string(),
+});
+
+// Document types
+export type Document = z.infer<typeof documentSchema> & {
+  document_id: string;
+  version_number: number;
+  is_current_version: boolean;
+  parent_document_id?: string | null;
+  uploaded_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  // Joined data
+  property?: Property;
+  uploaded_user?: User;
+};
+
+export type DocumentApproval = z.infer<typeof documentApprovalSchema> & {
+  approval_id: string;
+  approved_by?: string | null;
+  request_date?: string;
+  approval_date?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  // Joined data
+  document?: Document;
+  requested_user?: User;
+  approved_user?: User;
+};
+
+export type DocumentShare = z.infer<typeof documentShareSchema> & {
+  share_id: string;
+  shared_by?: string | null;
+  created_at?: string;
+  // Joined data
+  document?: Document;
+  shared_by_user?: User;
+  shared_with_user?: User;
+};
+
+export type DocumentAccessLog = z.infer<typeof documentAccessLogSchema> & {
+  document?: Document;
+  user?: User;
+};
+
+// Insert types
+export type DocumentInsert = Omit<z.infer<typeof documentSchema>, 'status'>;
+export type DocumentApprovalInsert = Omit<z.infer<typeof documentApprovalSchema>, 'status'>;
+export type DocumentShareInsert = z.infer<typeof documentShareSchema>;
+
+// Extended document with summary data
+export type DocumentSummary = Document & {
+  property_name?: string;
+  uploaded_by_name?: string;
+  share_count?: number;
+  expiring_soon?: boolean;
+};
+
+// Document stats type
+export type DocumentStats = {
+  category: string;
+  total_documents: number;
+  current_versions: number;
+  active_documents: number;
+  expired_documents: number;
+  expiring_soon: number;
+  total_storage_bytes: number;
+  avg_file_size_bytes: number;
+};
+
+// Document category labels for UI
+export const DOCUMENT_CATEGORIES = {
+  contracts: 'Contracts',
+  employee: 'Employee Documents',
+  access: 'Access Authorization',
+  coi: 'Building COIs',
+  service: 'Service Authorization',
+  messages: 'Message Templates',
+} as const;
+
+// Document status labels for UI
+export const DOCUMENT_STATUS = {
+  draft: 'Draft',
+  active: 'Active',
+  archived: 'Archived',
+  expired: 'Expired',
+} as const;
+
+// File type categories for validation
+export const ALLOWED_DOCUMENT_TYPES = {
+  pdf: ['application/pdf'],
+  image: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'],
+  word: ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  excel: ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+  text: ['text/plain', 'text/csv', 'text/html'],
+} as const;
+
+// Max file sizes (in bytes)
+export const MAX_FILE_SIZES = {
+  'property-documents': 52428800, // 50MB
+  'employee-documents': 20971520, // 20MB
+  'message-templates': 10485760,  // 10MB
+} as const;
 

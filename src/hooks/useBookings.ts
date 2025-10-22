@@ -210,6 +210,7 @@ export function useBookings() {
       // Invalidate and refetch bookings
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id) });
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'calendar'] }); // Invalidate all calendar views
 
       // Get property name for notification
       const { data: property } = await supabase
@@ -310,6 +311,7 @@ export function useBookings() {
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id) });
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(data.booking_id!) });
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'calendar'] }); // Invalidate all calendar views
 
       // Get property name for notification
       const { data: property } = await supabase
@@ -403,6 +405,7 @@ export function useBookings() {
       // Invalidate and refetch bookings
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id) });
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'calendar'] }); // Invalidate all calendar views
 
       // Get property name for notification
       const { data: property } = await supabase

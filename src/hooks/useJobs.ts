@@ -206,6 +206,16 @@ export function useUpdateJob() {
 
   return useMutation({
     mutationFn: async ({ jobId, updates }: { jobId: string; updates: JobUpdate }) => {
+      // Fetch the current job to compare status changes
+      const { data: currentJob, error: fetchError } = await supabase
+        .from('jobs')
+        .select('job_id, title, status, created_by, property_id')
+        .eq('job_id', jobId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update the job
       const { data, error } = await supabase
         .from('jobs')
         .update(updates)
@@ -214,6 +224,39 @@ export function useUpdateJob() {
         .single();
 
       if (error) throw error;
+
+      // Check if status changed and notify the admin who created the job
+      if (updates.status && currentJob.status !== updates.status && currentJob.created_by) {
+        console.log('🔔 [Jobs] Status changed, creating notification for admin:', currentJob.created_by);
+
+        // Format status for display
+        const formatStatus = (status: string) => status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+        // Create notification for the admin who assigned/created the job
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: currentJob.created_by,
+            type: 'job_status_changed',
+            title: 'Job Status Updated',
+            message: `Job "${currentJob.title}" status changed from ${formatStatus(currentJob.status)} to ${formatStatus(updates.status)}`,
+            link: '/jobs',
+            job_id: jobId,
+            metadata: {
+              old_status: currentJob.status,
+              new_status: updates.status,
+              property_id: currentJob.property_id,
+            },
+            is_read: false,
+          });
+
+        if (notificationError) {
+          console.error('❌ [Jobs] Failed to create notification:', notificationError);
+        } else {
+          console.log('✅ [Jobs] Notification created successfully');
+        }
+      }
+
       return data;
     },
     onSuccess: (data) => {

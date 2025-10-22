@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,17 +27,20 @@ import {
   LayoutGrid,
   List,
   History,
+  RefreshCw,
 } from 'lucide-react';
 import { useBookings } from '@/hooks/useBookings';
 import { BookingDialogEnhanced } from '@/components/BookingDialogEnhanced';
 import { BookingsTable } from '@/components/BookingsTable';
+import { Pagination } from '@/components/Pagination';
 import { Booking, BookingInsert } from '@/lib/schemas';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function BookingManagement() {
-  const { bookings, loading, createBooking, updateBooking, isCreating, isUpdating } = useBookings();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { bookings, loading, createBooking, updateBooking, isCreating, isUpdating, refetch } = useBookings();
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,6 +48,19 @@ export default function BookingManagement() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'history'>('list');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Auto-open booking dialog if navigated from dashboard
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setShowBookingDialog(true);
+      // Remove the query parameter
+      searchParams.delete('new');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Separate active and completed bookings
   const activeBookings = bookings.filter(b =>
@@ -101,6 +118,27 @@ export default function BookingManagement() {
   };
 
   const bookedDates = getBookedDates();
+
+  // Pagination calculations for active bookings
+  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedBookings = filteredBookings.slice(startIndex, endIndex);
+
+  // Pagination calculations for history bookings
+  const totalHistoryPages = Math.ceil(filteredHistoryBookings.length / itemsPerPage);
+  const historyStartIndex = (historyPage - 1) * itemsPerPage;
+  const historyEndIndex = historyStartIndex + itemsPerPage;
+  const paginatedHistoryBookings = filteredHistoryBookings.slice(historyStartIndex, historyEndIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [searchQuery]);
 
   const handleCreateBooking = () => {
     setEditingBooking(null);
@@ -174,6 +212,10 @@ export default function BookingManagement() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => refetch()} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             <Button variant="outline" onClick={handleExportBookings}>
               <Download className="mr-2 h-4 w-4" />
               Export
@@ -351,11 +393,22 @@ export default function BookingManagement() {
           </TabsList>
 
           <TabsContent value="list" className="mt-0">
-            <BookingsTable
-              bookings={filteredBookings}
-              onEdit={handleEditBooking}
-              emptyMessage="No bookings found. Create your first booking to get started."
-            />
+            <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
+              <CardContent className="p-0">
+                <BookingsTable
+                  bookings={paginatedBookings}
+                  onEdit={handleEditBooking}
+                  emptyMessage="No bookings found. Create your first booking to get started."
+                />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  itemsPerPage={itemsPerPage}
+                  totalItems={filteredBookings.length}
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="calendar" className="mt-0">
@@ -442,11 +495,20 @@ export default function BookingManagement() {
                   Completed and checked-out bookings
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <BookingsTable
-                  bookings={filteredHistoryBookings}
-                  onEdit={handleEditBooking}
-                  emptyMessage="No completed bookings yet."
+              <CardContent className="p-0">
+                <div className="p-6 pt-0">
+                  <BookingsTable
+                    bookings={paginatedHistoryBookings}
+                    onEdit={handleEditBooking}
+                    emptyMessage="No completed bookings yet."
+                  />
+                </div>
+                <Pagination
+                  currentPage={historyPage}
+                  totalPages={totalHistoryPages}
+                  onPageChange={setHistoryPage}
+                  itemsPerPage={itemsPerPage}
+                  totalItems={filteredHistoryBookings.length}
                 />
               </CardContent>
             </Card>

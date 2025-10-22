@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -46,11 +47,14 @@ import {
   LogOut,
   CheckCheck,
   Clock,
+  FileText,
+  Eye,
 } from 'lucide-react';
 import { Booking } from '@/lib/schemas';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { useBookings } from '@/hooks/useBookings';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { InvoiceGenerationDialog } from '@/components/InvoiceGenerationDialog';
 
 interface BookingsTableProps {
   bookings: Booking[];
@@ -65,9 +69,11 @@ export function BookingsTable({
   showPropertyColumn = false,
   emptyMessage = 'No bookings found',
 }: BookingsTableProps) {
+  const navigate = useNavigate();
   const { deleteBooking, isDeleting, updateBooking, isUpdating } = useBookings();
   const [bookingToDelete, setBookingToDelete] = useState<Booking | null>(null);
   const [bookingToCheckout, setBookingToCheckout] = useState<Booking | null>(null);
+  const [invoiceDialogBooking, setInvoiceDialogBooking] = useState<Booking | null>(null);
 
   const getStatusBadge = (status?: string | null) => {
     const statusValue = status || 'pending';
@@ -87,6 +93,36 @@ export function BookingsTable({
 
     return (
       <Badge variant={config.variant} className={config.className}>
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const getInvoiceStatusBadge = (booking: Booking) => {
+    const invoiceStatus = (booking as any).invoice_status;
+
+    if (!invoiceStatus || invoiceStatus === 'not_generated') {
+      return (
+        <Badge variant="outline" className="gap-1">
+          <FileText className="h-3 w-3" />
+          No Invoice
+        </Badge>
+      );
+    }
+
+    const statusConfig: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+      draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700', icon: <FileText className="h-3 w-3" /> },
+      sent: { label: 'Sent', className: 'bg-blue-100 text-blue-700', icon: <FileText className="h-3 w-3" /> },
+      paid: { label: 'Paid', className: 'bg-green-100 text-green-700', icon: <CheckCircle className="h-3 w-3" /> },
+      overdue: { label: 'Overdue', className: 'bg-red-100 text-red-700', icon: <AlertCircle className="h-3 w-3" /> },
+      cancelled: { label: 'Cancelled', className: 'bg-gray-200 text-gray-600', icon: <XCircle className="h-3 w-3" /> },
+    };
+
+    const config = statusConfig[invoiceStatus] || statusConfig.draft;
+
+    return (
+      <Badge variant="outline" className={`gap-1 ${config.className}`}>
+        {config.icon}
         {config.label}
       </Badge>
     );
@@ -309,6 +345,7 @@ export function BookingsTable({
                   <TableHead className="text-center">Guests</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Invoice</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -397,6 +434,9 @@ export function BookingsTable({
                           </div>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        {getInvoiceStatusBadge(booking)}
+                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -458,6 +498,19 @@ export function BookingsTable({
                               <DropdownMenuItem onClick={() => handleStatusChange(booking.booking_id!, 'blocked')}>
                                 <XCircle className="mr-2 h-4 w-4" />
                                 Mark as Blocked
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel>Billing</DropdownMenuLabel>
+                            {!(booking as any).invoice_id ? (
+                              <DropdownMenuItem onClick={() => setInvoiceDialogBooking(booking)}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Generate Invoice
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => navigate(`/invoices/${(booking as any).invoice_id}`)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Invoice
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
@@ -573,6 +626,12 @@ export function BookingsTable({
                       </div>
                     </div>
 
+                    {/* Invoice Status */}
+                    <div className="flex items-center gap-2 py-2 border-t">
+                      <span className="text-sm text-muted-foreground">Invoice:</span>
+                      {getInvoiceStatusBadge(booking)}
+                    </div>
+
                     {/* Quick Actions */}
                     <div className="flex gap-2 flex-wrap">
                       {getQuickActions(booking)}
@@ -644,6 +703,19 @@ export function BookingsTable({
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
+                          <DropdownMenuLabel>Billing</DropdownMenuLabel>
+                          {!(booking as any).invoice_id ? (
+                            <DropdownMenuItem onClick={() => setInvoiceDialogBooking(booking)}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Generate Invoice
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => navigate(`/invoices/${(booking as any).invoice_id}`)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Invoice
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => setBookingToDelete(booking)}
@@ -662,6 +734,13 @@ export function BookingsTable({
           </div>
         </CardContent>
       </Card>
+
+      {/* Invoice Generation Dialog */}
+      <InvoiceGenerationDialog
+        open={!!invoiceDialogBooking}
+        onOpenChange={(open) => !open && setInvoiceDialogBooking(null)}
+        booking={invoiceDialogBooking}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!bookingToDelete} onOpenChange={() => setBookingToDelete(null)}>

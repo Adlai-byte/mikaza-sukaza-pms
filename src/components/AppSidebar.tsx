@@ -17,6 +17,12 @@ import {
   Wrench,
   Zap,
   Activity,
+  Receipt,
+  FileBarChart,
+  LayoutGrid,
+  BarChart3,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 import {
@@ -34,31 +40,39 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS, Permission } from "@/lib/rbac/permissions";
 
 // Define menu items with their required permissions
+// Organized by frequency of use: Daily → Weekly → Occasional
 const mainMenuItems = [
+  // Daily Operations (High Frequency)
   { title: "Dashboard", url: "/", icon: LayoutDashboard, permission: null }, // Everyone can access
-  { title: "User Management", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
-  { title: "Activity Logs", url: "/activity-logs", icon: Activity, permission: PERMISSIONS.SYSTEM_AUDIT }, // Admin only
-  { title: "Providers", url: "/providers", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW }, // Unified providers (Services & Utilities)
+  { title: "Bookings", url: "/bookings", icon: CalendarDays, permission: PERMISSIONS.BOOKINGS_VIEW },
+  { title: "Calendar", url: "/calendar", icon: Calendar, permission: PERMISSIONS.BOOKINGS_VIEW },
   { title: "Properties", url: "/properties", icon: Building, permission: PERMISSIONS.PROPERTIES_VIEW },
   { title: "Active Jobs", url: "/jobs", icon: BriefcaseIcon, permission: PERMISSIONS.JOBS_VIEW },
-  { title: "Calendar", url: "/calendar", icon: Calendar, permission: PERMISSIONS.BOOKINGS_VIEW },
-  { title: "Bookings", url: "/bookings", icon: CalendarDays, permission: PERMISSIONS.BOOKINGS_VIEW },
   { title: "To-Do List", url: "/todos", icon: CheckSquare, permission: PERMISSIONS.TODOS_VIEW_OWN },
+
+  // Weekly Operations (Medium Frequency)
   { title: "Issues & Photos", url: "/issues", icon: AlertTriangle, permission: PERMISSIONS.ISSUES_VIEW },
+  { title: "Providers", url: "/providers", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+
+  // Admin & System (Low Frequency)
+  { title: "User Management", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
+  { title: "Activity Logs", url: "/activity-logs", icon: Activity, permission: PERMISSIONS.SYSTEM_AUDIT },
 ];
 
 const documentMenuItems = [
-  { title: "Contracts", url: "/documents/contracts", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
-  { title: "Employee Documents", url: "/documents/employee", icon: FileText, permission: PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW },
-  { title: "Access Authorization", url: "/documents/access", icon: FileText, permission: PERMISSIONS.DOCUMENTS_ACCESS_VIEW },
-  { title: "Building COIs", url: "/documents/building", icon: FileText, permission: PERMISSIONS.DOCUMENTS_COI_VIEW },
-  { title: "Service Authorization", url: "/documents/service", icon: FileText, permission: PERMISSIONS.DOCUMENTS_SERVICE_VIEW },
-  { title: "Messages Templates", url: "/documents/messages", icon: FileText, permission: PERMISSIONS.DOCUMENTS_MESSAGES_VIEW },
+  { title: "Documents", url: "/documents", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
 ];
 
 const financeMenuItems = [
+  // Daily/Weekly Financial Operations
+  { title: "Invoices", url: "/invoices", icon: FileText, permission: PERMISSIONS.FINANCE_VIEW },
+  { title: "Expenses", url: "/expenses", icon: Receipt, permission: PERMISSIONS.FINANCE_VIEW },
+  { title: "Bill Templates", url: "/bill-templates", icon: LayoutGrid, permission: PERMISSIONS.FINANCE_VIEW },
+
+  // Periodic Reports & Analysis
+  { title: "Financial Dashboard", url: "/financial-dashboard", icon: BarChart3, permission: PERMISSIONS.FINANCE_VIEW },
+  { title: "Owner Statement", url: "/owner-statement", icon: FileBarChart, permission: PERMISSIONS.FINANCE_VIEW },
   { title: "Service Pipeline", url: "/finance/pipeline", icon: DollarSign, permission: PERMISSIONS.PIPELINE_VIEW },
-  { title: "Invoices", url: "/finance/invoices", icon: DollarSign, permission: PERMISSIONS.INVOICES_VIEW },
   { title: "Commissions", url: "/finance/commissions", icon: DollarSign, permission: PERMISSIONS.COMMISSIONS_VIEW_ALL },
   { title: "My Commissions", url: "/finance/commissions", icon: DollarSign, permission: PERMISSIONS.COMMISSIONS_VIEW_OWN },
 ];
@@ -77,6 +91,22 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
   const { hasPermission, userRole, getPermissions } = usePermissions();
+
+  // State for collapsible sections
+  const [expandedSections, setExpandedSections] = useState({
+    main: true,
+    finance: true,
+    documents: false,
+    media: false,
+    highlights: false,
+  });
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
 
   // Filter menu items based on permissions
   const visibleMainMenuItems = useMemo(
@@ -124,6 +154,11 @@ export function AppSidebar() {
         : "bg-green-50/50 hover:bg-green-100 hover:text-green-700 text-muted-foreground border-l-4 border-transparent"
     }`;
 
+  // Check if any item in a menu group is active
+  const hasActiveItem = (items: typeof mainMenuItems) => {
+    return items.some(item => isActive(item.url));
+  };
+
   return (
     <Sidebar
       className={`${
@@ -150,49 +185,41 @@ export function AppSidebar() {
         {visibleMainMenuItems.length > 0 && (
           <SidebarGroup>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
-                Main
-              </SidebarGroupLabel>
+              <button
+                onClick={() => toggleSection('main')}
+                className={`w-full flex items-center justify-between text-xs uppercase tracking-wider px-6 mb-2 hover:text-white transition-colors cursor-pointer ${
+                  hasActiveItem(visibleMainMenuItems) ? 'text-white font-semibold' : 'text-white/70'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>Main</span>
+                  {hasActiveItem(visibleMainMenuItems) && (
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  )}
+                </div>
+                {expandedSections.main ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
             )}
-            <SidebarGroupContent className="px-3">
-              <SidebarMenu className="space-y-1">
-                {visibleMainMenuItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="h-10">
-                      <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                        <item.icon className="h-5 w-5 min-w-5" />
-                        {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* Documents */}
-        {visibleDocumentMenuItems.length > 0 && (
-          <SidebarGroup>
-            {!isCollapsed && (
-              <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
-                Documents
-              </SidebarGroupLabel>
+            {expandedSections.main && (
+              <SidebarGroupContent className="px-3">
+                <SidebarMenu className="space-y-1">
+                  {visibleMainMenuItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild className="h-10">
+                        <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                          <item.icon className="h-5 w-5 min-w-5" />
+                          {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
             )}
-            <SidebarGroupContent className="px-3">
-              <SidebarMenu className="space-y-1">
-                {visibleDocumentMenuItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="h-10">
-                      <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                        <item.icon className="h-5 w-5 min-w-5" />
-                        {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
           </SidebarGroup>
         )}
 
@@ -200,24 +227,83 @@ export function AppSidebar() {
         {visibleFinanceMenuItems.length > 0 && (
           <SidebarGroup>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
-                Finance
-              </SidebarGroupLabel>
+              <button
+                onClick={() => toggleSection('finance')}
+                className={`w-full flex items-center justify-between text-xs uppercase tracking-wider px-6 mb-2 hover:text-white transition-colors cursor-pointer ${
+                  hasActiveItem(visibleFinanceMenuItems) ? 'text-white font-semibold' : 'text-white/70'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>Finance</span>
+                  {hasActiveItem(visibleFinanceMenuItems) && (
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  )}
+                </div>
+                {expandedSections.finance ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
             )}
-            <SidebarGroupContent className="px-3">
-              <SidebarMenu className="space-y-1">
-                {visibleFinanceMenuItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="h-10">
-                      <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                        <item.icon className="h-5 w-5 min-w-5" />
-                        {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
+            {expandedSections.finance && (
+              <SidebarGroupContent className="px-3">
+                <SidebarMenu className="space-y-1">
+                  {visibleFinanceMenuItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild className="h-10">
+                        <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                          <item.icon className="h-5 w-5 min-w-5" />
+                          {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            )}
+          </SidebarGroup>
+        )}
+
+        {/* Documents */}
+        {visibleDocumentMenuItems.length > 0 && (
+          <SidebarGroup>
+            {!isCollapsed && (
+              <button
+                onClick={() => toggleSection('documents')}
+                className={`w-full flex items-center justify-between text-xs uppercase tracking-wider px-6 mb-2 hover:text-white transition-colors cursor-pointer ${
+                  hasActiveItem(visibleDocumentMenuItems) ? 'text-white font-semibold' : 'text-white/70'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>Documents</span>
+                  {hasActiveItem(visibleDocumentMenuItems) && (
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  )}
+                </div>
+                {expandedSections.documents ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+            )}
+            {expandedSections.documents && (
+              <SidebarGroupContent className="px-3">
+                <SidebarMenu className="space-y-1">
+                  {visibleDocumentMenuItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild className="h-10">
+                        <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                          <item.icon className="h-5 w-5 min-w-5" />
+                          {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            )}
           </SidebarGroup>
         )}
 
@@ -225,24 +311,41 @@ export function AppSidebar() {
         {visibleMediaMenuItems.length > 0 && (
           <SidebarGroup>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
-                Media
-              </SidebarGroupLabel>
+              <button
+                onClick={() => toggleSection('media')}
+                className={`w-full flex items-center justify-between text-xs uppercase tracking-wider px-6 mb-2 hover:text-white transition-colors cursor-pointer ${
+                  hasActiveItem(visibleMediaMenuItems) ? 'text-white font-semibold' : 'text-white/70'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>Media</span>
+                  {hasActiveItem(visibleMediaMenuItems) && (
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  )}
+                </div>
+                {expandedSections.media ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
             )}
-            <SidebarGroupContent className="px-3">
-              <SidebarMenu className="space-y-1">
-                {visibleMediaMenuItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="h-10">
-                      <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                        <item.icon className="h-5 w-5 min-w-5" />
-                        {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
+            {expandedSections.media && (
+              <SidebarGroupContent className="px-3">
+                <SidebarMenu className="space-y-1">
+                  {visibleMediaMenuItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild className="h-10">
+                        <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                          <item.icon className="h-5 w-5 min-w-5" />
+                          {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            )}
           </SidebarGroup>
         )}
 
@@ -250,24 +353,41 @@ export function AppSidebar() {
         {visibleHighlightsMenuItems.length > 0 && (
           <SidebarGroup>
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-white/70 text-xs uppercase tracking-wider px-6 mb-2">
-                Highlights
-              </SidebarGroupLabel>
+              <button
+                onClick={() => toggleSection('highlights')}
+                className={`w-full flex items-center justify-between text-xs uppercase tracking-wider px-6 mb-2 hover:text-white transition-colors cursor-pointer ${
+                  hasActiveItem(visibleHighlightsMenuItems) ? 'text-white font-semibold' : 'text-white/70'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>Highlights</span>
+                  {hasActiveItem(visibleHighlightsMenuItems) && (
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  )}
+                </div>
+                {expandedSections.highlights ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
             )}
-            <SidebarGroupContent className="px-3">
-              <SidebarMenu className="space-y-1">
-                {visibleHighlightsMenuItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="h-10">
-                      <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                        <item.icon className="h-5 w-5 min-w-5" />
-                        {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
+            {expandedSections.highlights && (
+              <SidebarGroupContent className="px-3">
+                <SidebarMenu className="space-y-1">
+                  {visibleHighlightsMenuItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild className="h-10">
+                        <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                          <item.icon className="h-5 w-5 min-w-5" />
+                          {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            )}
           </SidebarGroup>
         )}
       </SidebarContent>

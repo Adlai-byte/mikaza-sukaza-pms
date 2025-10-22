@@ -193,10 +193,7 @@ export default function Jobs() {
       if (editingJob) {
         await updateJob.mutateAsync({
           jobId: editingJob.job_id,
-          updates: {
-            ...jobData,
-            created_by: user?.user_id,
-          },
+          updates: jobData, // Don't modify created_by on update
         });
       } else {
         await createJob.mutateAsync({
@@ -274,6 +271,7 @@ export default function Jobs() {
         description: `Task created from Job ${job.job_id?.slice(0, 8)}:\n\n${job.description || 'No description'}\n\n---\nJob Details:\n- Type: ${job.job_type}\n- Location: ${job.location_notes || 'N/A'}\n- Estimated Hours: ${job.estimated_hours || 'N/A'}\n- Estimated Cost: $${job.estimated_cost || '0'}`,
         property_id: job.property_id,
         assigned_to: job.assigned_to || null,
+        job_id: job.job_id, // Link task to job
         status: 'pending' as const,
         priority: (priorityMap[job.priority] || 'medium') as 'low' | 'medium' | 'high' | 'urgent',
         category: (categoryMap[job.job_type] || 'other') as any,

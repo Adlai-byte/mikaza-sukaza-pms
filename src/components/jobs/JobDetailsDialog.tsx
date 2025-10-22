@@ -24,6 +24,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface JobDetailsDialogProps {
   open: boolean;
@@ -42,6 +43,9 @@ export function JobDetailsDialog({
   onCreateTask,
   onStatusChange,
 }: JobDetailsDialogProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.user_type === 'admin';
+
   if (!job) return null;
 
   const formatDate = (dateString: string | null | undefined) => {
@@ -292,32 +296,36 @@ export function JobDetailsDialog({
                 </Button>
               )}
 
-              {/* Other Actions */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onEdit(job);
-                  onOpenChange(false);
-                }}
-                className="w-full"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Job
-              </Button>
+              {/* Other Actions - Only for Admin users */}
+              {isAdmin && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onEdit(job);
+                      onOpenChange(false);
+                    }}
+                    className="w-full"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Job
+                  </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onCreateTask(job);
-                  onOpenChange(false);
-                }}
-                className="w-full"
-              >
-                <CheckSquare className="h-4 w-4 mr-2" />
-                Create Task
-              </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onCreateTask(job);
+                      onOpenChange(false);
+                    }}
+                    className="w-full"
+                  >
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Create Task
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

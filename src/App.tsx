@@ -17,12 +17,21 @@ import Providers from "./pages/Providers";
 import ServiceProviders from "./pages/ServiceProviders";
 import UtilityProviders from "./pages/UtilityProviders";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import Calendar from "./pages/Calendar";
 import BookingManagement from "./pages/BookingManagement";
 import Todos from "./pages/Todos";
 import Issues from "./pages/Issues";
 import ActivityLogs from "./pages/ActivityLogs";
+import Invoices from "./pages/Invoices";
+import InvoiceForm from "./pages/InvoiceForm";
+import BookingSelector from "./pages/BookingSelector";
+import Expenses from "./pages/Expenses";
+import OwnerStatement from "./pages/OwnerStatement";
+import BillTemplates from "./pages/BillTemplates";
+import FinancialDashboard from "./pages/FinancialDashboard";
+import Documents from "./pages/Documents";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
@@ -139,6 +148,7 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
 
               <Route path="/" element={
@@ -268,8 +278,89 @@ const App = () => (
                   }
                 />
 
-                {/* Documents - Various permissions */}
-                <Route path="/documents/*" element={<div className="p-8 text-center text-muted-foreground">Documents - Coming Soon</div>} />
+                {/* Documents - Various permissions based on category */}
+                <Route
+                  path="/documents"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW}>
+                      <Documents />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Accounting & Billing - View permissions required */}
+                <Route
+                  path="/invoices"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <Invoices />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices/new"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <BookingSelector />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices/new/from-booking/:bookingId"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <InvoiceForm />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices/new/manual"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <InvoiceForm />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices/:invoiceId"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <InvoiceForm />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/expenses"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <Expenses />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/owner-statement"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <OwnerStatement />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/bill-templates"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <BillTemplates />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/financial-dashboard"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <FinancialDashboard />
+                    </RBACProtectedRoute>
+                  }
+                />
 
                 {/* Finance - View permissions required */}
                 <Route

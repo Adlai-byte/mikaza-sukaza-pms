@@ -131,10 +131,13 @@ export function usePropertyProviders(propertyId: string, category?: 'service' | 
   const {
     data: availableProviders = [],
     isLoading: isLoadingAvailable,
+    refetch: refetchAvailable,
   } = useQuery({
     queryKey: propertyProviderKeys.available(category),
     queryFn: () => fetchAvailableProviders(category),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 30 * 1000, // Cache for 30 seconds (reduced from 5 minutes)
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   // Assign provider to property
@@ -350,6 +353,7 @@ export function usePropertyProviders(propertyId: string, category?: 'service' | 
     // Available providers for assignment
     availableProviders,
     isLoadingAvailable,
+    refetchAvailable,
 
     // Mutations
     assignProvider: assignProviderMutation.mutate,

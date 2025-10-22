@@ -679,29 +679,28 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
   ) => {
     console.log('📍 handleLocationSelect called with:', { lat, lng, address, city, state, postal_code, country });
 
-    // Always update coordinates
-    handleInputChange('latitude', lat.toString());
-    handleInputChange('longitude', lng.toString());
+    // CRITICAL FIX: Update all fields in a single state update to prevent React batching issues
+    setFormData(prev => ({
+      ...prev,
+      latitude: lat.toString(),
+      longitude: lng.toString(),
+      ...(address && { address }),
+      ...(city && { city }),
+      ...(state && { state }),
+      ...(postal_code && { postal_code })
+    }));
 
-    // CRITICAL FIX: Always update address fields when provided (not just when empty)
-    if (address) {
-      console.log('📍 Setting address to:', address);
-      handleInputChange('address', address);
-    }
-    if (city) {
-      console.log('📍 Setting city to:', city);
-      handleInputChange('city', city);
-    }
-    if (state) {
-      console.log('📍 Setting state to:', state);
-      handleInputChange('state', state);
-    }
-    if (postal_code) {
-      console.log('📍 Setting postal_code to:', postal_code);
-      handleInputChange('postal_code', postal_code);
-    }
+    setHasUnsavedChanges(true);
 
-    console.log('📍 Location selected - form data will be updated');
+    console.log('📍 Location selected - form data updated with:', {
+      latitude: lat.toString(),
+      longitude: lng.toString(),
+      address,
+      city,
+      state,
+      postal_code
+    });
+
     setShowLocationMap(false);
   };
 

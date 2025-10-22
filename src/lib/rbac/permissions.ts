@@ -233,12 +233,26 @@ export const ROLES = {
       PERMISSIONS.DOCUMENTS_MESSAGES_VIEW,
       PERMISSIONS.DOCUMENTS_MESSAGES_MANAGE, // Full access
 
-      // ========== FINANCE - View only ==========
+      // ========== FINANCE - Full access to daily operations ==========
       PERMISSIONS.FINANCE_VIEW,
+      PERMISSIONS.FINANCE_CREATE,
+      PERMISSIONS.FINANCE_EDIT,
+      PERMISSIONS.FINANCE_EXPORT,
+      // NOT: FINANCE_DELETE (admin only)
+
+      // Invoices - Full CRUD except delete
       PERMISSIONS.INVOICES_VIEW,
-      PERMISSIONS.COMMISSIONS_VIEW_OWN, // Own commission only
+      PERMISSIONS.INVOICES_CREATE,
+      PERMISSIONS.INVOICES_EDIT,
+      PERMISSIONS.INVOICES_SEND,
+
+      // Own commissions only
+      PERMISSIONS.COMMISSIONS_VIEW_OWN,
+
+      // Pipeline - View only
       PERMISSIONS.PIPELINE_VIEW,
-      // NOT: Any finance editing/creating/deleting
+      // NOT: PIPELINE_MANAGE (admin only)
+      // NOT: COMMISSIONS_VIEW_ALL, COMMISSIONS_MANAGE (admin only)
 
       // ========== MEDIA - Full access ==========
       PERMISSIONS.MEDIA_VIEW,
