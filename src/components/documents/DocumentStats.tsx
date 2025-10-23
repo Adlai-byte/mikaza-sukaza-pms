@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Archive, AlertTriangle, HardDrive } from "lucide-react";
 import { useDocumentStats } from "@/hooks/useDocuments";
-import { MikasaSpinner } from "@/components/ui/mikasa-loader";
+import { CasaSpinner } from "@/components/ui/casa-loader";
 
 interface DocumentStatsProps {
   category?: string;
@@ -26,7 +26,7 @@ export function DocumentStats({ category }: DocumentStatsProps) {
           <Card key={i} className="border-0 shadow-md">
             <CardContent className="pt-6">
               <div className="flex items-center justify-center h-20">
-                <MikasaSpinner />
+                <CasaSpinner />
               </div>
             </CardContent>
           </Card>

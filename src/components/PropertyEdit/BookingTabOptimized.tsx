@@ -288,7 +288,7 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
     let icalContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//Mikaza Sukaza PMS//EN',
+      'PRODID:-//Casa & Concierge PMS//EN',
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
     ];
@@ -299,7 +299,7 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
 
       icalContent.push(
         'BEGIN:VEVENT',
-        `UID:${booking.booking_id}@mikaza-sukaza.com`,
+        `UID:${booking.booking_id}@casaconcierge.com`,
         `DTSTAMP:${startDate}`,
         `DTSTART:${startDate}`,
         `DTEND:${endDate}`,

@@ -338,7 +338,7 @@ export default function Auth() {
             <div className="w-16 h-16 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl flex items-center justify-center mr-4 shadow-lg">
               <User className="text-white w-8 h-8" />
             </div>
-            <h1 className="text-4xl font-light text-white tracking-wide">mikazasukaza</h1>
+            <h1 className="text-4xl font-light text-white tracking-wide">Casa & Concierge</h1>
           </div>
           <p className="text-white/80 text-sm font-light">Property Management System</p>
         </div>

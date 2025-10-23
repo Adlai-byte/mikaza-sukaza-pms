@@ -7,7 +7,7 @@ import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { UtilityProvider, UtilityProviderInsert } from "@/lib/schemas";
-import { MikasaSpinner } from "@/components/ui/mikasa-loader";
+import { CasaSpinner } from "@/components/ui/casa-loader";
 
 export default function UtilityProviders() {
   const { providers, loading, isFetching, createProvider, updateProvider, deleteProvider, refetch } = useUtilityProviders();
@@ -77,7 +77,7 @@ export default function UtilityProviders() {
   if (loading && providers.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-subtle">
-        <MikasaSpinner />
+        <CasaSpinner />
       </div>
     );
   }

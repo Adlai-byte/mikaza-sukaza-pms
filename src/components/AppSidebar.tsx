@@ -171,11 +171,11 @@ export function AppSidebar() {
         <div className={`flex items-center p-6 ${isCollapsed ? "justify-center" : ""}`}>
           <div className={`flex items-center space-x-3 ${isCollapsed ? "justify-center" : ""}`}>
             <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-primary font-bold text-lg">MS</span>
+              <span className="text-primary font-bold text-lg">C&C</span>
             </div>
             {!isCollapsed && (
               <div>
-                <h1 className="text-white font-bold text-lg">mikaza sukaza</h1>
+                <h1 className="text-white font-bold text-lg">Casa & Concierge</h1>
               </div>
             )}
           </div>

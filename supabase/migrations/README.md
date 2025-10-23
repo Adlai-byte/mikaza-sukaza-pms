@@ -1,6 +1,6 @@
 # Supabase Database Migrations
 
-This directory contains SQL migration files for the Mikaza Sukaza Property Management System database.
+This directory contains SQL migration files for the Casa & Concierge Property Management System database.
 
 ## Migration Files
 
@@ -292,5 +292,5 @@ For questions about these migrations, refer to the system documentation or conta
 
 ---
 **Migration Created:** 2025-01-15
-**System:** Mikaza Sukaza Property Management System
+**System:** Casa & Concierge Property Management System
 **Author:** Claude Code Implementation

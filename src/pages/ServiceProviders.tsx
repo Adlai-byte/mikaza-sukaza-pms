@@ -10,7 +10,7 @@ import { ServiceProviderTable } from "@/components/ServiceProviders/ServiceProvi
 import { ServiceProviderForm } from "@/components/ServiceProviders/ServiceProviderForm";
 import { ServiceProviderDetailsDialog } from "@/components/ServiceProviders/ServiceProviderDetailsDialog";
 import { ServiceProvider, ServiceProviderInsert } from "@/lib/schemas";
-import { MikasaSpinner } from "@/components/ui/mikasa-loader";
+import { CasaSpinner } from "@/components/ui/casa-loader";
 
 export default function ServiceProviders() {
   const { providers, loading, isFetching, createProvider, updateProvider, deleteProvider, refetch } = useServiceProviders();
@@ -81,7 +81,7 @@ export default function ServiceProviders() {
   if (loading && providers.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-subtle">
-        <MikasaSpinner />
+        <CasaSpinner />
       </div>
     );
   }

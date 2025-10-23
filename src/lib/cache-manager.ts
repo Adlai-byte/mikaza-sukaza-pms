@@ -35,16 +35,16 @@ const createSimplePersister = () => {
         // Check if cache is too large
         if (serialized.length > MAX_CACHE_SIZE) {
           console.warn('⚠️ Cache too large, clearing to prevent quota errors');
-          localStorage.removeItem('mikaza-query-cache');
+          localStorage.removeItem('casa-query-cache');
           return;
         }
 
-        localStorage.setItem('mikaza-query-cache', serialized);
+        localStorage.setItem('casa-query-cache', serialized);
       } catch (error) {
         // Handle quota exceeded error
         if (error instanceof DOMException && error.name === 'QuotaExceededError') {
           console.warn('⚠️ LocalStorage quota exceeded, clearing cache');
-          localStorage.removeItem('mikaza-query-cache');
+          localStorage.removeItem('casa-query-cache');
         } else {
           console.warn('Failed to persist query cache:', error);
         }
@@ -52,7 +52,7 @@ const createSimplePersister = () => {
     },
     restoreClient: async () => {
       try {
-        const cached = localStorage.getItem('mikaza-query-cache');
+        const cached = localStorage.getItem('casa-query-cache');
         if (!cached) return undefined;
 
         const parsed = JSON.parse(cached);
@@ -61,7 +61,7 @@ const createSimplePersister = () => {
         const cacheAge = Date.now() - (parsed.cachedAt || 0);
         if (cacheAge > CACHE_TTL) {
           console.log('⏰ Cache expired, clearing old data');
-          localStorage.removeItem('mikaza-query-cache');
+          localStorage.removeItem('casa-query-cache');
           return undefined;
         }
 
@@ -70,13 +70,13 @@ const createSimplePersister = () => {
       } catch (error) {
         console.warn('Failed to restore query cache:', error);
         // Clear corrupted cache
-        localStorage.removeItem('mikaza-query-cache');
+        localStorage.removeItem('casa-query-cache');
         return undefined;
       }
     },
     removeClient: async () => {
       try {
-        localStorage.removeItem('mikaza-query-cache');
+        localStorage.removeItem('casa-query-cache');
       } catch (error) {
         console.warn('Failed to remove query cache:', error);
       }

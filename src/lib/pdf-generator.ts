@@ -53,12 +53,12 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('MS', margin + 5, yPos + 7);
+  doc.text('C&C', margin + 5, yPos + 7);
 
   doc.setTextColor(...textColor);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text('mikaza sukaza', margin + 45, yPos + 7);
+  doc.text('Casa & Concierge', margin + 45, yPos + 7);
 
   // Company tagline
   doc.setFontSize(9);
@@ -375,12 +375,12 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('MS', margin + 5, yPos + 7);
+  doc.text('C&C', margin + 5, yPos + 7);
 
   doc.setTextColor(...textColor);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text('mikaza sukaza', margin + 45, yPos + 7);
+  doc.text('Casa & Concierge', margin + 45, yPos + 7);
 
   // Company tagline
   doc.setFontSize(9);

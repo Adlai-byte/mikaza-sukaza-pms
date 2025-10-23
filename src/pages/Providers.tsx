@@ -13,7 +13,7 @@ import { ServiceProviderForm } from "@/components/ServiceProviders/ServiceProvid
 import { UtilityProviderForm } from "@/components/ServiceProviders/UtilityProviderForm";
 import { ServiceProviderDetailsDialog } from "@/components/ServiceProviders/ServiceProviderDetailsDialog";
 import { Provider, ProviderInsert } from "@/lib/schemas";
-import { MikasaSpinner } from "@/components/ui/mikasa-loader";
+import { CasaSpinner } from "@/components/ui/casa-loader";
 
 export default function Providers() {
   const [activeTab, setActiveTab] = useState<'service' | 'utility'>('service');
@@ -168,7 +168,7 @@ export default function Providers() {
   if (loading && serviceProviders.length === 0 && utilityProviders.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-subtle">
-        <MikasaSpinner />
+        <CasaSpinner />
       </div>
     );
   }

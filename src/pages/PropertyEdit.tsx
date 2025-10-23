@@ -18,7 +18,7 @@ import {
   FileText,
   Zap
 } from 'lucide-react';
-import { MikasaSpinner } from '@/components/ui/mikasa-loader';
+import { CasaSpinner } from '@/components/ui/casa-loader';
 import { usePropertyDetail } from '@/hooks/usePropertiesOptimized';
 import {
   AlertDialog,
@@ -118,7 +118,7 @@ export default function PropertyEdit() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-subtle">
-        <MikasaSpinner />
+        <CasaSpinner />
       </div>
     );
   }

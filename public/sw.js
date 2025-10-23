@@ -1,9 +1,9 @@
 // Service Worker for advanced caching strategies
 const CACHE_VERSION = 'v1.0.0';
-const STATIC_CACHE = `mikaza-static-${CACHE_VERSION}`;
-const DYNAMIC_CACHE = `mikaza-dynamic-${CACHE_VERSION}`;
-const IMAGE_CACHE = `mikaza-images-${CACHE_VERSION}`;
-const API_CACHE = `mikaza-api-${CACHE_VERSION}`;
+const STATIC_CACHE = `casa-static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `casa-dynamic-${CACHE_VERSION}`;
+const IMAGE_CACHE = `casa-images-${CACHE_VERSION}`;
+const API_CACHE = `casa-api-${CACHE_VERSION}`;
 
 // Cache strategies
 const CACHE_STRATEGIES = {
@@ -96,7 +96,7 @@ self.addEventListener('activate', (event) => {
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName.startsWith('mikaza-') &&
+            if (cacheName.startsWith('casa-') &&
                 cacheName !== STATIC_CACHE &&
                 cacheName !== DYNAMIC_CACHE &&
                 cacheName !== IMAGE_CACHE &&
@@ -288,7 +288,7 @@ function getOfflineFallback(request) {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Offline - Mikaza PMS</title>
+          <title>Offline - Casa PMS</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body {
@@ -411,7 +411,7 @@ self.addEventListener('push', (event) => {
   const data = event.data?.json() || {};
 
   const options = {
-    body: data.body || 'New notification from Mikaza PMS',
+    body: data.body || 'New notification from Casa & Concierge PMS',
     icon: '/icon-192x192.png',
     badge: '/badge-72x72.png',
     tag: data.tag || 'default',
@@ -421,7 +421,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Mikaza PMS', options)
+    self.registration.showNotification(data.title || 'Casa & Concierge PMS', options)
   );
 });
 
