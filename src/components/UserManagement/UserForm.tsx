@@ -207,16 +207,25 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
 
       console.log('✅ [UserForm] Upload successful:', uploadData);
 
-      // Get public URL
+      // Get public URL with cache-busting parameter
       const { data: { publicUrl } } = supabase.storage
         .from('user-avatars')
         .getPublicUrl(fileName);
 
-      console.log('🔗 [UserForm] Public URL:', publicUrl);
+      // Add timestamp to prevent caching issues
+      const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
+
+      console.log('🔗 [UserForm] Public URL:', urlWithTimestamp);
+      console.log('🔗 [UserForm] Setting preview to:', urlWithTimestamp);
 
       // Set preview and form value
-      setPhotoPreview(publicUrl);
-      form.setValue('photo_url', publicUrl);
+      setPhotoPreview(urlWithTimestamp);
+      form.setValue('photo_url', publicUrl); // Store without timestamp for database
+
+      // Force a small delay to ensure state updates
+      setTimeout(() => {
+        console.log('✅ [UserForm] Preview state updated:', photoPreview);
+      }, 100);
 
       toast({
         title: "Photo Uploaded",
@@ -289,7 +298,11 @@ export function UserForm({ open, onOpenChange, user, onSubmit }: UserFormProps) 
               <div className="flex flex-col items-center space-y-4 animate-scale-in">
                 <div className="flex items-center space-x-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={photoPreview || undefined} />
+                  <AvatarImage
+                    src={photoPreview || undefined}
+                    alt="User avatar"
+                    className="object-cover"
+                  />
                   <AvatarFallback className="text-lg">
                     {form.watch('first_name') && form.watch('last_name')
                       ? getInitials(form.watch('first_name'), form.watch('last_name'))

@@ -11,6 +11,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -79,22 +85,29 @@ export function BookingsTable({
     const statusValue = status || 'pending';
 
     const statusConfig = {
-      inquiry: { label: 'Inquiry', variant: 'secondary' as const, className: 'bg-purple-100 text-purple-800 hover:bg-purple-200' },
-      pending: { label: 'Pending', variant: 'secondary' as const, className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' },
-      confirmed: { label: 'Confirmed', variant: 'default' as const, className: 'bg-green-100 text-green-800 hover:bg-green-200' },
-      checked_in: { label: 'Checked In', variant: 'default' as const, className: 'bg-blue-100 text-blue-800 hover:bg-blue-200' },
-      checked_out: { label: 'Checked Out', variant: 'outline' as const, className: 'bg-gray-100 text-gray-800 hover:bg-gray-200' },
-      completed: { label: 'Completed', variant: 'outline' as const, className: 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200' },
-      blocked: { label: 'Blocked', variant: 'secondary' as const, className: 'bg-gray-400 text-white hover:bg-gray-500' },
-      cancelled: { label: 'Cancelled', variant: 'destructive' as const, className: 'bg-red-100 text-red-800 hover:bg-red-200' },
+      inquiry: { label: 'Inquiry', variant: 'secondary' as const, className: 'bg-purple-100 text-purple-800 hover:bg-purple-200', tooltip: 'Booking is in inquiry stage' },
+      pending: { label: 'Pending', variant: 'secondary' as const, className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200', tooltip: 'Awaiting confirmation from guest or host' },
+      confirmed: { label: 'Confirmed', variant: 'default' as const, className: 'bg-green-100 text-green-800 hover:bg-green-200', tooltip: 'Booking has been confirmed' },
+      checked_in: { label: 'Checked In', variant: 'default' as const, className: 'bg-blue-100 text-blue-800 hover:bg-blue-200', tooltip: 'Guest has checked in to the property' },
+      checked_out: { label: 'Checked Out', variant: 'outline' as const, className: 'bg-gray-100 text-gray-800 hover:bg-gray-200', tooltip: 'Guest has checked out from the property' },
+      completed: { label: 'Completed', variant: 'outline' as const, className: 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200', tooltip: 'Booking has been completed' },
+      blocked: { label: 'Blocked', variant: 'secondary' as const, className: 'bg-gray-400 text-white hover:bg-gray-500', tooltip: 'Property is blocked for these dates' },
+      cancelled: { label: 'Cancelled', variant: 'destructive' as const, className: 'bg-red-100 text-red-800 hover:bg-red-200', tooltip: 'Booking has been cancelled' },
     };
 
     const config = statusConfig[statusValue as keyof typeof statusConfig] || statusConfig.pending;
 
     return (
-      <Badge variant={config.variant} className={config.className}>
-        {config.label}
-      </Badge>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant={config.variant} className={config.className}>
+            {config.label}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{config.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
     );
   };
 
@@ -103,28 +116,42 @@ export function BookingsTable({
 
     if (!invoiceStatus || invoiceStatus === 'not_generated') {
       return (
-        <Badge variant="outline" className="gap-1">
-          <FileText className="h-3 w-3" />
-          No Invoice
-        </Badge>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="gap-1">
+              <FileText className="h-3 w-3" />
+              No Invoice
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Invoice has not been generated for this booking</p>
+          </TooltipContent>
+        </Tooltip>
       );
     }
 
-    const statusConfig: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-      draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700', icon: <FileText className="h-3 w-3" /> },
-      sent: { label: 'Sent', className: 'bg-blue-100 text-blue-700', icon: <FileText className="h-3 w-3" /> },
-      paid: { label: 'Paid', className: 'bg-green-100 text-green-700', icon: <CheckCircle className="h-3 w-3" /> },
-      overdue: { label: 'Overdue', className: 'bg-red-100 text-red-700', icon: <AlertCircle className="h-3 w-3" /> },
-      cancelled: { label: 'Cancelled', className: 'bg-gray-200 text-gray-600', icon: <XCircle className="h-3 w-3" /> },
+    const statusConfig: Record<string, { label: string; className: string; icon: React.ReactNode; tooltip: string }> = {
+      draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700', icon: <FileText className="h-3 w-3" />, tooltip: 'Invoice is in draft status' },
+      sent: { label: 'Sent', className: 'bg-blue-100 text-blue-700', icon: <FileText className="h-3 w-3" />, tooltip: 'Invoice has been sent to the guest' },
+      paid: { label: 'Paid', className: 'bg-green-100 text-green-700', icon: <CheckCircle className="h-3 w-3" />, tooltip: 'Invoice has been paid' },
+      overdue: { label: 'Overdue', className: 'bg-red-100 text-red-700', icon: <AlertCircle className="h-3 w-3" />, tooltip: 'Invoice payment is overdue' },
+      cancelled: { label: 'Cancelled', className: 'bg-gray-200 text-gray-600', icon: <XCircle className="h-3 w-3" />, tooltip: 'Invoice has been cancelled' },
     };
 
     const config = statusConfig[invoiceStatus] || statusConfig.draft;
 
     return (
-      <Badge variant="outline" className={`gap-1 ${config.className}`}>
-        {config.icon}
-        {config.label}
-      </Badge>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant="outline" className={`gap-1 ${config.className}`}>
+            {config.icon}
+            {config.label}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{config.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
     );
   };
 
@@ -321,8 +348,9 @@ export function BookingsTable({
   }
 
   return (
-    <>
-      <Card>
+    <TooltipProvider delayDuration={200}>
+      <>
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5" />
@@ -808,6 +836,7 @@ export function BookingsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+      </>
+    </TooltipProvider>
   );
 }

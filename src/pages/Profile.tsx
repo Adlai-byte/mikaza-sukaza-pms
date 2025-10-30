@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,16 +10,26 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Camera, Lock, User, Mail, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { validateFile } from '@/lib/file-validation';
 
 export default function Profile() {
   const { profile, updateProfile } = useAuth();
   const { toast } = useToast();
-  
+
   const [isUpdating, setIsUpdating] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  
+  const [avatarKey, setAvatarKey] = useState(Date.now()); // Force re-render of avatar
+
+  // Log profile photo_url changes
+  useEffect(() => {
+    console.log('🔍 [Profile] Profile data loaded:', {
+      user_id: profile?.user_id,
+      email: profile?.email,
+      photo_url: profile?.photo_url,
+      has_photo: !!profile?.photo_url,
+    });
+  }, [profile?.photo_url]);
+
   // Profile form state
   const [profileForm, setProfileForm] = useState({
     first_name: profile?.first_name || '',
@@ -126,95 +136,97 @@ export default function Profile() {
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !profile) return;
+
+    console.log('🖼️ [Profile] Avatar upload started');
+    console.log('📋 [Profile] File:', file?.name, file?.size, file?.type);
+    console.log('👤 [Profile] Profile:', profile?.user_id, profile?.email);
+
+    if (!file || !profile) {
+      console.error('❌ [Profile] Missing file or profile');
+      return;
+    }
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a valid image file (JPEG, PNG, GIF, or WebP)",
+        variant: "destructive",
+      });
+      event.target.value = '';
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      event.target.value = '';
+      return;
+    }
 
     setIsUploadingAvatar(true);
 
     try {
-      // Validate file
-      const validation = await validateFile(file, 'IMAGE');
-      if (!validation.isValid) {
-        toast({
-          title: "Invalid File",
-          description: validation.errors[0] || "Please select a valid image file.",
-          variant: "destructive",
-        });
-        setIsUploadingAvatar(false);
-        return;
-      }
+      // Generate unique filename
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(7);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${profile.user_id}/${timestamp}-${randomStr}.${fileExt}`;
 
-      // Show warnings if any
-      if (validation.warnings.length > 0) {
-        console.warn('File validation warnings:', validation.warnings);
-      }
+      console.log('📤 [Profile] Uploading avatar to Supabase Storage:', fileName);
 
-      // Check if we have a real session for storage upload
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (session) {
-        // Real upload to Supabase Storage
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${profile.user_id}-${Date.now()}.${fileExt}`;
-        const filePath = `avatars/${fileName}`;
-
-        console.log('📤 Uploading avatar to Supabase Storage:', filePath);
-
-        const { error: uploadError } = await supabase.storage
-          .from('property-images')
-          .upload(filePath, file, {
-            upsert: true,
-            contentType: file.type
-          });
-
-        if (uploadError) {
-          console.error('Storage upload error:', uploadError);
-          throw new Error(`Upload failed: ${uploadError.message}`);
-        }
-
-        const { data: urlData } = supabase.storage
-          .from('property-images')
-          .getPublicUrl(filePath);
-
-        console.log('✅ Avatar uploaded, updating profile with URL:', urlData.publicUrl);
-
-        // Update user profile in database
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ photo_url: urlData.publicUrl })
-          .eq('user_id', profile.user_id);
-
-        if (updateError) {
-          console.error('Profile update error:', updateError);
-          throw new Error(`Failed to update profile: ${updateError.message}`);
-        }
-
-        // Also update profile in AuthContext
-        await updateProfile({
-          photo_url: urlData.publicUrl,
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('user-avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
         });
 
-        toast({
-          title: "Profile Picture Updated",
-          description: "Your profile picture has been successfully updated.",
-        });
-      } else {
-        // For development without auth - use local file URL
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const photoUrl = e.target?.result as string;
-          await updateProfile({
-            photo_url: photoUrl,
-          });
-
-          toast({
-            title: "Profile Picture Updated",
-            description: "Your profile picture has been successfully updated.",
-          });
-        };
-        reader.readAsDataURL(file);
+      if (uploadError) {
+        console.error('❌ [Profile] Upload failed:', uploadError);
+        throw new Error(uploadError.message || 'Failed to upload photo');
       }
+
+      console.log('✅ [Profile] Upload successful:', uploadData);
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-avatars')
+        .getPublicUrl(fileName);
+
+      console.log('🔗 [Profile] Public URL:', publicUrl);
+
+      // Update user profile in database
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ photo_url: publicUrl })
+        .eq('user_id', profile.user_id);
+
+      if (updateError) {
+        console.error('❌ [Profile] Database update failed:', updateError);
+        throw new Error(`Failed to update profile: ${updateError.message}`);
+      }
+
+      console.log('✅ [Profile] Database updated successfully');
+
+      toast({
+        title: "Profile Picture Updated",
+        description: "Your profile picture has been successfully updated. Refreshing page...",
+      });
+
+      // Wait a moment for the toast to show, then reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error: any) {
-      console.error('Error uploading avatar:', error);
+      console.error('❌ [Profile] Photo upload error:', error);
       toast({
         title: "Upload Failed",
         description: error.message || "Failed to update profile picture. Please try again.",
@@ -257,8 +269,19 @@ export default function Profile() {
               {/* Profile Picture Section */}
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={profile?.photo_url} alt={profile?.first_name || 'User'} />
+                  <Avatar className="h-24 w-24" key={avatarKey}>
+                    <AvatarImage
+                      src={profile?.photo_url ? `${profile.photo_url}?v=${avatarKey}` : undefined}
+                      alt={profile?.first_name || 'User'}
+                      className="object-cover"
+                      onError={(e) => {
+                        console.error('❌ [Profile] Avatar image failed to load:', profile?.photo_url);
+                        console.error('❌ [Profile] Image error:', e);
+                      }}
+                      onLoad={() => {
+                        console.log('✅ [Profile] Avatar image loaded successfully');
+                      }}
+                    />
                     <AvatarFallback className="bg-primary text-primary-foreground text-xl">
                       {getInitials(profile?.first_name, profile?.last_name)}
                     </AvatarFallback>

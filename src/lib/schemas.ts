@@ -1205,6 +1205,18 @@ export const documentSchema = z.object({
   status: z.enum(['draft', 'active', 'archived', 'expired']).default('active'),
   expiry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional().nullable(),
   tags: z.array(z.string()).optional(),
+  contract_type: z.enum([
+    'lease_agreement',
+    'service_contract',
+    'vendor_agreement',
+    'employment_contract',
+    'nda',
+    'maintenance_contract',
+    'insurance_policy',
+    'partnership_agreement',
+    'purchase_agreement',
+    'other'
+  ]).optional(),
 });
 
 // Document approval schema
@@ -1313,6 +1325,20 @@ export const DOCUMENT_CATEGORIES = {
   messages: 'Message Templates',
 } as const;
 
+// Contract type labels for UI
+export const CONTRACT_TYPES = {
+  lease_agreement: 'Lease Agreement',
+  service_contract: 'Service Contract',
+  vendor_agreement: 'Vendor Agreement',
+  employment_contract: 'Employment Contract',
+  nda: 'NDA / Confidentiality Agreement',
+  maintenance_contract: 'Maintenance Contract',
+  insurance_policy: 'Insurance Policy',
+  partnership_agreement: 'Partnership Agreement',
+  purchase_agreement: 'Purchase Agreement',
+  other: 'Other',
+} as const;
+
 // Document status labels for UI
 export const DOCUMENT_STATUS = {
   draft: 'Draft',
@@ -1336,4 +1362,194 @@ export const MAX_FILE_SIZES = {
   'employee-documents': 20971520, // 20MB
   'message-templates': 10485760,  // 10MB
 } as const;
+
+// =====================================================
+// COI (Certificate of Insurance) Management
+// =====================================================
+
+// Coverage type options
+export const COI_COVERAGE_TYPES = {
+  general_liability: 'General Liability',
+  workers_compensation: 'Workers Compensation',
+  auto_liability: 'Auto Liability',
+  professional_liability: 'Professional Liability',
+  umbrella: 'Umbrella Coverage',
+  other: 'Other',
+} as const;
+
+export type CoverageType = keyof typeof COI_COVERAGE_TYPES;
+
+// COI Status options
+export const COI_STATUS = {
+  active: 'Active',
+  expiring_soon: 'Expiring Soon',
+  expired: 'Expired',
+  renewed: 'Renewed',
+  cancelled: 'Cancelled',
+} as const;
+
+export type COIStatus = keyof typeof COI_STATUS;
+
+// Access Authorization Status
+export const ACCESS_AUTH_STATUS = {
+  requested: 'Requested',
+  approved: 'Approved',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  expired: 'Expired',
+} as const;
+
+export type AccessAuthStatus = keyof typeof ACCESS_AUTH_STATUS;
+
+// Vendor COI Schema
+export const vendorCOISchema = z.object({
+  coi_id: z.string().uuid().optional(),
+  vendor_id: z.string().uuid('Vendor is required'),
+  property_id: z.string().uuid().optional().nullable(),
+  insurance_company: z.string().optional(),
+  policy_number: z.string().optional(),
+  coverage_type: z.enum([
+    'general_liability',
+    'workers_compensation',
+    'auto_liability',
+    'professional_liability',
+    'umbrella',
+    'other',
+  ]),
+  coverage_amount: z.number().positive('Coverage amount must be positive'),
+  valid_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  valid_through: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  file_url: z.string().url().optional(),
+  file_name: z.string().optional(),
+  status: z.enum(['active', 'expiring_soon', 'expired', 'renewed', 'cancelled']).default('active'),
+  notes: z.string().optional(),
+  verified_by: z.string().uuid().optional().nullable(),
+  verified_at: z.string().optional().nullable(),
+}).refine((data) => {
+  const from = new Date(data.valid_from);
+  const through = new Date(data.valid_through);
+  return through > from;
+}, {
+  message: 'Valid through date must be after valid from date',
+  path: ['valid_through'],
+});
+
+export type VendorCOI = z.infer<typeof vendorCOISchema> & {
+  vendor?: any; // Provider type
+  uploaded_user?: any; // User type
+  verified_user?: any; // User type
+  created_at?: string;
+  updated_at?: string;
+  alert_30_days_sent?: boolean;
+  alert_15_days_sent?: boolean;
+  alert_7_days_sent?: boolean;
+  alert_expired_sent?: boolean;
+};
+
+// Building COI Schema
+export const buildingCOISchema = z.object({
+  building_coi_id: z.string().uuid().optional(),
+  property_id: z.string().uuid('Property is required'),
+  required_coverages: z.record(z.object({
+    min_amount: z.number().positive(),
+    required: z.boolean(),
+  })).optional(),
+  access_policies: z.string().optional(),
+  service_elevator_rules: z.string().optional(),
+  loading_dock_rules: z.string().optional(),
+  parking_instructions: z.string().optional(),
+  building_manager_name: z.string().optional(),
+  building_manager_email: z.string().email().optional().or(z.literal('')),
+  building_manager_phone: z.string().optional(),
+  building_management_company: z.string().optional(),
+  emergency_contact: z.array(z.object({
+    name: z.string(),
+    role: z.string(),
+    phone: z.string(),
+    email: z.string().email().optional(),
+  })).optional(),
+  office_hours: z.string().optional(),
+  after_hours_contact: z.string().optional(),
+  security_requirements: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type BuildingCOI = z.infer<typeof buildingCOISchema> & {
+  property?: any; // Property type
+  created_user?: any; // User type
+  created_at?: string;
+  updated_at?: string;
+};
+
+// Access Authorization Schema
+export const accessAuthorizationSchema = z.object({
+  access_auth_id: z.string().uuid().optional(),
+  vendor_id: z.string().uuid('Vendor is required'),
+  property_id: z.string().uuid('Property is required'),
+  unit_id: z.string().uuid().optional().nullable(),
+  job_id: z.string().uuid().optional().nullable(),
+  coi_id: z.string().uuid().optional().nullable(),
+  access_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  access_time_start: z.string().optional().nullable(),
+  access_time_end: z.string().optional().nullable(),
+  authorized_areas: z.array(z.string()).optional(),
+  status: z.enum(['requested', 'approved', 'in_progress', 'completed', 'cancelled', 'expired']).default('requested'),
+  access_code: z.string().optional(),
+  qr_code_url: z.string().optional(),
+  key_pickup_location: z.string().optional(),
+  vendor_contact_name: z.string().optional(),
+  vendor_contact_phone: z.string().optional(),
+  number_of_personnel: z.number().positive().default(1),
+  vehicle_info: z.string().optional(),
+  building_contact_notified: z.boolean().default(false),
+  building_contact_name: z.string().optional(),
+  authorization_message: z.string().optional(),
+  special_instructions: z.string().optional(),
+  completion_notes: z.string().optional(),
+});
+
+export type AccessAuthorization = z.infer<typeof accessAuthorizationSchema> & {
+  vendor?: any; // Provider type
+  property?: any; // Property type
+  unit?: any; // Unit type
+  job?: any; // Job type
+  coi?: VendorCOI;
+  requested_user?: any; // User type
+  approved_user?: any; // User type
+  completed_user?: any; // User type
+  created_at?: string;
+  updated_at?: string;
+  approved_at?: string;
+  actual_arrival_time?: string;
+  actual_departure_time?: string;
+  building_notification_sent_at?: string;
+};
+
+// COI Dashboard Stats
+export type COIDashboardStats = {
+  active_cois: number;
+  expiring_soon: number;
+  expired_cois: number;
+  vendors_with_cois: number;
+  past_due: number;
+};
+
+// Expiring COI Info
+export type ExpiringCOI = {
+  coi_id: string;
+  vendor_id: string;
+  vendor_name: string;
+  coverage_type: CoverageType;
+  valid_through: string;
+  days_until_expiry: number;
+  alert_sent: boolean;
+};
+
+// COI Validation Result
+export type COIValidationResult = {
+  is_valid: boolean;
+  missing_coverages: CoverageType[];
+  expiring_soon: CoverageType[];
+};
 

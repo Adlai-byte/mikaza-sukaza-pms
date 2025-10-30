@@ -39,6 +39,7 @@ import { useInvoices, useDeleteInvoice, useMarkInvoiceAsSent, useMarkInvoiceAsPa
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { usePaymentSummary } from '@/hooks/useInvoicePayments';
 import { InvoicePaymentDialog } from '@/components/InvoicePaymentDialog';
+import { SendInvoiceEmailDialog } from '@/components/SendInvoiceEmailDialog';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { generateInvoicePDF } from '@/lib/pdf-generator';
@@ -53,6 +54,7 @@ export default function Invoices() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [paymentDialogInvoice, setPaymentDialogInvoice] = useState<any>(null);
+  const [emailDialogInvoice, setEmailDialogInvoice] = useState<any>(null);
 
   // Build filters
   const filters = {
@@ -400,8 +402,9 @@ export default function Invoices() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleMarkAsSent(invoice.invoice_id!)}
-                              title="Mark as Sent"
+                              onClick={() => setEmailDialogInvoice(invoice)}
+                              title="Send via Email"
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             >
                               <Send className="h-4 w-4" />
                             </Button>
@@ -444,6 +447,13 @@ export default function Invoices() {
           onOpenChange={(open) => !open && setPaymentDialogInvoice(null)}
         />
       )}
+
+      {/* Send Email Dialog */}
+      <SendInvoiceEmailDialog
+        invoice={emailDialogInvoice}
+        open={!!emailDialogInvoice}
+        onOpenChange={(open) => !open && setEmailDialogInvoice(null)}
+      />
     </div>
   );
 }

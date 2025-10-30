@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -167,9 +168,11 @@ export function useJob(jobId: string | undefined) {
 export function useCreateJob() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (newJob: JobInsert) => {
+      // Create the job
       const { data, error } = await supabase
         .from('jobs')
         .insert(newJob)
@@ -177,13 +180,124 @@ export function useCreateJob() {
         .single();
 
       if (error) throw error;
+
+      // Automatically create a corresponding task for the job
+      console.log('🔍 [Jobs] Job created, checking if should create task:', {
+        hasData: !!data,
+        hasAssignedTo: !!data?.assigned_to,
+        hasUser: !!user,
+        assignedTo: data?.assigned_to,
+        userId: user?.id,
+      });
+
+      if (data && data.assigned_to && user) {
+        console.log('📋 [Jobs] Creating task for job:', {
+          jobId: data.job_id,
+          title: data.title,
+          assignedTo: data.assigned_to,
+          createdBy: user.id,
+        });
+
+        // Map job type to task category
+        const taskCategory = (() => {
+          switch (newJob.job_type) {
+            case 'cleaning':
+              return 'cleaning';
+            case 'maintenance':
+            case 'repair':
+              return 'maintenance';
+            case 'inspection':
+              return 'inspection';
+            default:
+              return 'other';
+          }
+        })();
+
+        // Map job priority to task priority (jobs use 'normal', tasks use 'medium')
+        const taskPriority = (() => {
+          switch (data.priority) {
+            case 'urgent': return 'urgent';
+            case 'high': return 'high';
+            case 'normal': return 'medium'; // Map 'normal' to 'medium'
+            case 'low': return 'low';
+            default: return 'medium';
+          }
+        })();
+
+        const taskInsert: any = {
+          title: data.title,
+          description: data.description || `Task for job: ${data.title}`,
+          assigned_to: data.assigned_to,
+          created_by: user.id, // Add the creator (admin who created the job)
+          property_id: data.property_id,
+          due_date: data.due_date,
+          priority: taskPriority,
+          category: taskCategory,
+          status: 'pending',
+        };
+
+        // Only add job_id if the column exists (will be added via migration)
+        // For now, we'll skip it to avoid schema errors
+        // taskInsert.job_id = data.job_id;
+
+        console.log('📋 [Jobs] Task insert data:', taskInsert);
+
+        const { data: taskData, error: taskError } = await supabase
+          .from('tasks')
+          .insert(taskInsert)
+          .select()
+          .single();
+
+        if (taskError) {
+          console.error('❌ [Jobs] Failed to create task for job:', taskError);
+          // Don't throw error - job was created successfully, task is optional
+        } else {
+          console.log('✅ [Jobs] Task created successfully:', taskData);
+
+          // Create notification for the assigned user
+          const notificationData: any = {
+            user_id: data.assigned_to,
+            type: 'task_assigned',
+            title: 'New Task Assigned',
+            message: `You have been assigned a new task: "${data.title}"`,
+            link: '/todos',
+            task_id: taskData.task_id,
+            action_by: user.id,
+            metadata: {
+              property_id: data.property_id,
+              priority: data.priority,
+              due_date: data.due_date,
+            },
+            is_read: false,
+          };
+
+          const { error: notificationError } = await supabase
+            .from('notifications')
+            .insert(notificationData);
+
+          if (notificationError) {
+            console.error('❌ [Jobs] Failed to create notification:', notificationError);
+          } else {
+            console.log('✅ [Jobs] Notification created for assigned user');
+          }
+        }
+      } else {
+        if (!data.assigned_to) {
+          console.log('⚠️ [Jobs] No assigned_to user, skipping task creation');
+        } else if (!user) {
+          console.log('⚠️ [Jobs] No authenticated user, skipping task creation');
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: jobKeys.lists() });
+      // Also invalidate tasks since we created a task
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast({
         title: 'Success',
-        description: 'Job created successfully',
+        description: 'Job and task created successfully',
       });
     },
     onError: (error: Error) => {

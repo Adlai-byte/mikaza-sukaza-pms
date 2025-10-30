@@ -24,6 +24,8 @@ import { JobDetailsDialog } from "@/components/jobs/JobDetailsDialog";
 import { JobsTable } from "@/components/jobs/JobsTable";
 import { JobsKanban } from "@/components/jobs/JobsKanban";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -36,13 +38,32 @@ import {
 import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateTask } from "@/hooks/useTasks";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Jobs() {
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const { properties } = usePropertiesOptimized();
   const queryClient = useQueryClient();
+
+  // Permission check - Jobs is admin only
+  if (!hasPermission(PERMISSIONS.JOBS_VIEW)) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <XCircle className="h-6 w-6 text-red-500" />
+              Access Denied
+            </CardTitle>
+            <CardDescription>
+              You don't have permission to access the Jobs module. This feature is restricted to administrators only.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,7 +88,6 @@ export default function Jobs() {
   const createJob = useCreateJob();
   const updateJob = useUpdateJob();
   const deleteJob = useDeleteJob();
-  const createTask = useCreateTask();
   const { toast } = useToast();
 
   const [showJobDialog, setShowJobDialog] = useState(false);
@@ -240,59 +260,6 @@ export default function Jobs() {
   const handleRefresh = () => {
     refetch();
     queryClient.invalidateQueries({ queryKey: ['jobs-history'] });
-  };
-
-  // Create Task from Job
-  const handleCreateTaskFromJob = async (job: any) => {
-    try {
-      // Map job type to task category
-      const categoryMap: Record<string, string> = {
-        'cleaning': 'cleaning',
-        'maintenance': 'maintenance',
-        'check_in': 'check_in_prep',
-        'check_out': 'check_out_prep',
-        'inspection': 'inspection',
-        'repair': 'repair',
-        'general': 'other',
-        'emergency': 'repair',
-        'preventive': 'maintenance',
-      };
-
-      // Map priority (job priorities: urgent, high, normal, low -> task priorities: low, medium, high, urgent)
-      const priorityMap: Record<string, string> = {
-        'urgent': 'urgent',
-        'high': 'high',
-        'normal': 'medium',
-        'low': 'low',
-      };
-
-      const taskData = {
-        title: `[JOB] ${job.title}`,
-        description: `Task created from Job ${job.job_id?.slice(0, 8)}:\n\n${job.description || 'No description'}\n\n---\nJob Details:\n- Type: ${job.job_type}\n- Location: ${job.location_notes || 'N/A'}\n- Estimated Hours: ${job.estimated_hours || 'N/A'}\n- Estimated Cost: $${job.estimated_cost || '0'}`,
-        property_id: job.property_id,
-        assigned_to: job.assigned_to || null,
-        job_id: job.job_id, // Link task to job
-        status: 'pending' as const,
-        priority: (priorityMap[job.priority] || 'medium') as 'low' | 'medium' | 'high' | 'urgent',
-        category: (categoryMap[job.job_type] || 'other') as any,
-        due_date: job.due_date ? format(parseISO(job.due_date), 'yyyy-MM-dd') : null,
-        due_time: job.due_date ? format(parseISO(job.due_date), 'HH:mm:ss') : null,
-      };
-
-      await createTask.mutateAsync(taskData);
-
-      toast({
-        title: "Task Created",
-        description: `Task "${taskData.title}" created successfully from job`,
-      });
-    } catch (error) {
-      console.error('Error creating task from job:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create task from job",
-        variant: "destructive",
-      });
-    }
   };
 
   return (
@@ -572,9 +539,7 @@ export default function Jobs() {
               jobs={activeJobs}
               onEdit={handleEditJob}
               onView={handleViewJob}
-              onConvertToTask={handleCreateTaskFromJob}
               emptyMessage="No active jobs found. Create your first work order to get started."
-              isConvertingTask={createTask.isPending}
             />
           )}
         </TabsContent>
@@ -592,9 +557,7 @@ export default function Jobs() {
               jobs={jobs}
               onEdit={handleEditJob}
               onView={handleViewJob}
-              onConvertToTask={handleCreateTaskFromJob}
               onStatusChange={handleStatusChange}
-              isConvertingTask={createTask.isPending}
             />
           )}
         </TabsContent>
@@ -623,7 +586,6 @@ export default function Jobs() {
         onOpenChange={setShowDetailsDialog}
         job={selectedJob}
         onEdit={handleEditJob}
-        onCreateTask={handleCreateTaskFromJob}
         onStatusChange={handleStatusChange}
       />
     </div>

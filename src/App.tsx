@@ -31,7 +31,17 @@ import Expenses from "./pages/Expenses";
 import OwnerStatement from "./pages/OwnerStatement";
 import BillTemplates from "./pages/BillTemplates";
 import FinancialDashboard from "./pages/FinancialDashboard";
-import Documents from "./pages/Documents";
+import ServicePipeline from "./pages/ServicePipeline";
+import Contracts from "./pages/Contracts";
+import EmployeeDocuments from "./pages/EmployeeDocuments";
+import ServiceDocuments from "./pages/ServiceDocuments";
+import MessageTemplates from "./pages/MessageTemplates";
+import Commissions from "./pages/Commissions";
+import CommissionsAnalytics from "./pages/CommissionsAnalytics";
+import MyCommissions from "./pages/MyCommissions";
+import Help from "./pages/Help";
+import VendorCOIs from "./pages/VendorCOIs";
+import AccessAuthorizations from "./pages/AccessAuthorizations";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
@@ -258,6 +268,9 @@ const App = () => (
                 {/* Profile - Everyone can access */}
                 <Route path="/profile" element={<Profile />} />
 
+                {/* Help - Everyone can access */}
+                <Route path="/help" element={<Help />} />
+
                 {/* Issues & Photos - Both can access */}
                 <Route
                   path="/issues"
@@ -278,12 +291,62 @@ const App = () => (
                   }
                 />
 
-                {/* Documents - Various permissions based on category */}
+                {/* Contracts - Finance team */}
                 <Route
-                  path="/documents"
+                  path="/contracts"
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW}>
-                      <Documents />
+                      <Contracts />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Employee Documents - HR/Admin */}
+                <Route
+                  path="/employee-documents"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW}>
+                      <EmployeeDocuments />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Service Documents - Operations */}
+                <Route
+                  path="/service-documents"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.DOCUMENTS_SERVICE_VIEW}>
+                      <ServiceDocuments />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Message Templates - Communications */}
+                <Route
+                  path="/message-templates"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.DOCUMENTS_MESSAGES_VIEW}>
+                      <MessageTemplates />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Vendor COIs - Admin and Ops can access */}
+                <Route
+                  path="/vendor-cois"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.SERVICE_PROVIDERS_VIEW}>
+                      <VendorCOIs />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Access Authorizations - Admin and Ops can access */}
+                <Route
+                  path="/access-authorizations"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.SERVICE_PROVIDERS_VIEW}>
+                      <AccessAuthorizations />
                     </RBACProtectedRoute>
                   }
                 />
@@ -362,12 +425,32 @@ const App = () => (
                   }
                 />
 
-                {/* Finance - View permissions required */}
+                {/* Finance - Service Pipeline */}
                 <Route
-                  path="/finance/*"
+                  path="/finance/pipeline"
                   element={
-                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
-                      <div className="p-8 text-center text-muted-foreground">Finance - Coming Soon</div>
+                    <RBACProtectedRoute permission={PERMISSIONS.PIPELINE_VIEW}>
+                      <ServicePipeline />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Finance - Commissions (Admin view with analytics) */}
+                <Route
+                  path="/finance/commissions"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.COMMISSIONS_VIEW_ALL}>
+                      <CommissionsAnalytics />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Finance - My Commissions (Individual staff view) */}
+                <Route
+                  path="/finance/my-commissions"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.COMMISSIONS_VIEW_OWN}>
+                      <MyCommissions />
                     </RBACProtectedRoute>
                   }
                 />

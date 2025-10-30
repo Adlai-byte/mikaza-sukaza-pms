@@ -3,6 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { StatusBadge } from "@/components/StatusBadge";
+import {
   Building,
   BriefcaseIcon,
   CalendarClock,
@@ -78,8 +85,9 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
+    <TooltipProvider delayDuration={300}>
+      <div className="space-y-6">
+        {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
@@ -88,22 +96,36 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-          <Button
-            variant="outline"
-            className="w-full sm:w-auto"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button
-            className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
-            onClick={() => navigate('/calendar')}
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            View Calendar
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => refetch()}
+                disabled={isLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Refresh dashboard data</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
+                onClick={() => navigate('/calendar')}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                View Calendar
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Open property calendar view</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -266,14 +288,21 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <Button
-                  className="w-full"
-                  variant="outline"
-                  onClick={() => navigate('/jobs')}
-                >
-                  View All Jobs
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => navigate('/jobs')}
+                    >
+                      View All Jobs
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>See all active and completed jobs</p>
+                  </TooltipContent>
+                </Tooltip>
               </>
             )}
           </CardContent>
@@ -320,20 +349,28 @@ export default function Dashboard() {
                         {format(parseISO(booking.check_in_date), 'MMM dd')} - {format(parseISO(booking.check_out_date), 'MMM dd')}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      {booking.booking_status}
-                    </Badge>
+                    <StatusBadge
+                      status={booking.booking_status}
+                      className="text-xs"
+                    />
                   </div>
                 ))}
                 {upcomingBookings.length >= 5 && (
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/bookings')}
-                  >
-                    View All Bookings
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate('/bookings')}
+                      >
+                        View All Bookings
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>See all property bookings</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             )}
@@ -411,36 +448,58 @@ export default function Dashboard() {
             {/* Quick Actions */}
             <div className="space-y-2 pt-4 border-t">
               <p className="text-sm font-semibold mb-2">Quick Actions</p>
-              <Button
-                size="sm"
-                className="w-full bg-gradient-primary hover:bg-gradient-secondary"
-                onClick={() => navigate('/bookings?new=true')}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Booking
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full"
-                onClick={() => navigate('/todos')}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Create Task
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full"
-                onClick={() => navigate('/issues')}
-              >
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Report Issue
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    className="w-full bg-gradient-primary hover:bg-gradient-secondary"
+                    onClick={() => navigate('/bookings?new=true')}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Booking
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Create a new property booking</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate('/todos')}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Create Task
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add a new task to your to-do list</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate('/issues')}
+                  >
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Report Issue
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Report a property issue or problem</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
+    </TooltipProvider>
   );
 }

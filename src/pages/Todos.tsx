@@ -47,7 +47,6 @@ export default function Todos() {
   const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [propertyFilter, setPropertyFilter] = useState<string>('');
-  const [assignedFilter, setAssignedFilter] = useState<string>('');
   const [showOverdue, setShowOverdue] = useState(false);
 
   // Build filters object
@@ -61,22 +60,38 @@ export default function Todos() {
       overdue: showOverdue || undefined,
     };
 
-    // If manual assignee filter is set, use it
-    if (assignedFilter) {
-      baseFilters.assigned_to = assignedFilter;
+    // Always filter by current user - only show tasks assigned to them
+    // Users can only see their own tasks
+    if (user?.id) {
+      baseFilters.assigned_to = user.id;
+      console.log('🔍 [Todos] Filtering tasks for user:', {
+        userId: user.id,
+        userEmail: user.email,
+        filters: baseFilters,
+      });
     } else {
-      // For ops users, only show tasks assigned to them by default
-      // For admin users, show all tasks
-      if (user?.user_type === 'ops' && user?.user_id) {
-        baseFilters.assigned_to = user.user_id;
-      }
-      // Admin users see all tasks (no filter)
+      console.warn('⚠️ [Todos] No user ID found, cannot filter tasks');
     }
 
     return baseFilters;
-  }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery, showOverdue, user]);
+  }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, searchQuery, showOverdue, user]);
 
   const { tasks, loading } = useTasks(filters);
+
+  // Debug logging for tasks
+  React.useEffect(() => {
+    if (!loading && tasks) {
+      console.log('📊 [Todos] Tasks fetched:', {
+        count: tasks.length,
+        tasks: tasks.map(t => ({
+          id: t.task_id,
+          title: t.title,
+          assigned_to: t.assigned_to,
+          status: t.status,
+        })),
+      });
+    }
+  }, [tasks, loading]);
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
@@ -181,7 +196,6 @@ export default function Todos() {
     setPriorityFilter([]);
     setCategoryFilter([]);
     setPropertyFilter('');
-    setAssignedFilter('');
     setSearchQuery('');
     setShowOverdue(false);
   };
@@ -190,7 +204,6 @@ export default function Todos() {
     priorityFilter.length > 0 ||
     categoryFilter.length > 0 ||
     propertyFilter ||
-    assignedFilter ||
     searchQuery ||
     showOverdue;
 
@@ -285,7 +298,7 @@ export default function Todos() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Search */}
               <div className="space-y-2 lg:col-span-2">
                 <Label htmlFor="search">Search Tasks</Label>
@@ -312,27 +325,6 @@ export default function Todos() {
                     {properties.map(property => (
                       <SelectItem key={property.property_id} value={property.property_id!}>
                         {property.property_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Assignee Filter - Show for all users */}
-              <div className="space-y-2">
-                <Label htmlFor="assignee">Assigned To</Label>
-                <Select value={assignedFilter || 'all'} onValueChange={(value) => setAssignedFilter(value === 'all' ? '' : value)}>
-                  <SelectTrigger id="assignee">
-                    <SelectValue placeholder="All users" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Tasks</SelectItem>
-                    {user?.user_id && (
-                      <SelectItem value={user.user_id}>My Tasks</SelectItem>
-                    )}
-                    {users.map(u => (
-                      <SelectItem key={u.user_id} value={u.user_id}>
-                        {u.first_name} {u.last_name}
                       </SelectItem>
                     ))}
                   </SelectContent>

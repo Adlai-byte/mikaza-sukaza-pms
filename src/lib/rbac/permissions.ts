@@ -182,13 +182,8 @@ export const ROLES = {
       PERMISSIONS.UTILITY_PROVIDERS_EXPORT,
       // NOT: UTILITY_PROVIDERS_DELETE (admin only)
 
-      // ========== JOBS - Full access ==========
-      PERMISSIONS.JOBS_VIEW,
-      PERMISSIONS.JOBS_CREATE,
-      PERMISSIONS.JOBS_EDIT,
-      PERMISSIONS.JOBS_DELETE, // Can delete own jobs
-      PERMISSIONS.JOBS_ASSIGN,
-      PERMISSIONS.JOBS_COMPLETE,
+      // NOT: JOBS - Admin only
+      // NOT: JOBS_VIEW, JOBS_CREATE, JOBS_EDIT, JOBS_DELETE, JOBS_ASSIGN, JOBS_COMPLETE
 
       // ========== BOOKINGS - Full access ==========
       PERMISSIONS.BOOKINGS_VIEW,
@@ -284,10 +279,8 @@ export const ROLES = {
     name: 'Service Provider',
     description: 'External vendor or service provider with limited access',
     permissions: [
-      // Can only view jobs assigned to them
-      PERMISSIONS.JOBS_VIEW,
-      PERMISSIONS.JOBS_EDIT, // Can update job status and notes
-      PERMISSIONS.JOBS_COMPLETE,
+      // NOT: JOBS - Admin only
+      // NOT: JOBS_VIEW, JOBS_EDIT, JOBS_COMPLETE
 
       // Can view bookings related to their jobs
       PERMISSIONS.BOOKINGS_VIEW,

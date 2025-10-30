@@ -1,3 +1,4 @@
+import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -171,13 +172,65 @@ const deleteLineItem = async (lineItemId: string): Promise<void> => {
 const markInvoiceAsSent = async (invoiceId: string): Promise<Invoice> => {
   const { data, error } = await supabase
     .from('invoices')
-    .update({ status: 'sent' })
+    .update({ status: 'sent', sent_date: new Date().toISOString() })
     .eq('invoice_id', invoiceId)
     .select()
     .single();
 
   if (error) throw error;
   return data as Invoice;
+};
+
+// Send invoice email via Edge Function
+interface SendInvoiceEmailParams {
+  invoiceId: string;
+  recipientEmail: string;
+  subject?: string;
+  message?: string;
+  ccEmails?: string[];
+  pdfAttachment?: string; // Base64 encoded PDF
+}
+
+const sendInvoiceEmail = async (params: SendInvoiceEmailParams): Promise<void> => {
+  console.log('📧 [sendInvoiceEmail] Starting email send with params:', {
+    invoiceId: params.invoiceId,
+    recipientEmail: params.recipientEmail,
+    hasSubject: !!params.subject,
+    hasMessage: !!params.message,
+    ccEmailsCount: params.ccEmails?.length || 0,
+  });
+
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    console.error('❌ [sendInvoiceEmail] Not authenticated');
+    throw new Error('Not authenticated');
+  }
+
+  console.log('✅ [sendInvoiceEmail] Session valid, calling edge function...');
+
+  const response = await supabase.functions.invoke('send-invoice-email', {
+    body: params,
+  });
+
+  console.log('📬 [sendInvoiceEmail] Edge function response:', {
+    hasError: !!response.error,
+    error: response.error,
+    data: response.data,
+    status: (response as any).status,
+  });
+
+  if (response.error) {
+    console.error('❌ [sendInvoiceEmail] Edge function error:', response.error);
+    throw new Error(response.error.message || 'Failed to send email');
+  }
+
+  if (!response.data?.success) {
+    console.error('❌ [sendInvoiceEmail] Email send failed:', response.data);
+    throw new Error(response.data?.error || 'Failed to send email');
+  }
+
+  console.log('✅ [sendInvoiceEmail] Email sent successfully!');
 };
 
 // Mark invoice as paid
@@ -321,16 +374,31 @@ export function useInvoices(filters?: InvoiceFilters) {
 }
 
 export function useInvoice(invoiceId: string) {
-  const { data: invoice, isLoading, error, refetch } = useQuery({
+  const { data: invoice, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: invoiceKeys.detail(invoiceId),
     queryFn: () => fetchInvoice(invoiceId),
-    enabled: !!invoiceId,
+    enabled: !!invoiceId && invoiceId.length > 0,
     staleTime: 30 * 1000,
+    retry: 2,
   });
+
+  // Debug logging for invoice loading
+  React.useEffect(() => {
+    if (invoiceId) {
+      console.log('🔍 [useInvoice] Loading invoice:', {
+        invoiceId,
+        isLoading,
+        isFetching,
+        hasData: !!invoice,
+        error: error?.message,
+      });
+    }
+  }, [invoiceId, isLoading, isFetching, invoice, error]);
 
   return {
     invoice,
     loading: isLoading,
+    isFetching,
     error,
     refetch,
   };
@@ -543,6 +611,30 @@ export function useCreateInvoiceFromBooking() {
       toast({
         title: 'Error',
         description: error.message || 'Failed to create invoice from booking',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useSendInvoiceEmail() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: sendInvoiceEmail,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(variables.invoiceId) });
+      toast({
+        title: 'Email Sent Successfully',
+        description: `Invoice email sent to ${variables.recipientEmail}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to Send Email',
+        description: error.message || 'An error occurred while sending the email. Please try again.',
         variant: 'destructive',
       });
     },

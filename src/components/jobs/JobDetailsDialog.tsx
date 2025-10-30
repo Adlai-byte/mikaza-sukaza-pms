@@ -31,7 +31,6 @@ interface JobDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   job: any;
   onEdit: (job: any) => void;
-  onCreateTask: (job: any) => void;
   onStatusChange: (jobId: string, status: string) => void;
 }
 
@@ -40,7 +39,6 @@ export function JobDetailsDialog({
   onOpenChange,
   job,
   onEdit,
-  onCreateTask,
   onStatusChange,
 }: JobDetailsDialogProps) {
   const { user } = useAuth();
@@ -298,33 +296,18 @@ export function JobDetailsDialog({
 
               {/* Other Actions - Only for Admin users */}
               {isAdmin && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      onEdit(job);
-                      onOpenChange(false);
-                    }}
-                    className="w-full"
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Job
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      onCreateTask(job);
-                      onOpenChange(false);
-                    }}
-                    className="w-full"
-                  >
-                    <CheckSquare className="h-4 w-4 mr-2" />
-                    Create Task
-                  </Button>
-                </>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onEdit(job);
+                    onOpenChange(false);
+                  }}
+                  className="w-full"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Job
+                </Button>
               )}
             </div>
           </div>

@@ -39,9 +39,7 @@ interface JobsTableProps {
   jobs: JobWithRelations[];
   onEdit?: (job: JobWithRelations) => void;
   onView?: (job: JobWithRelations) => void;
-  onConvertToTask?: (job: JobWithRelations) => void;
   emptyMessage?: string;
-  isConvertingTask?: boolean;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -50,9 +48,7 @@ export function JobsTable({
   jobs,
   onEdit,
   onView,
-  onConvertToTask,
   emptyMessage = 'No jobs found',
-  isConvertingTask = false,
 }: JobsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -220,15 +216,6 @@ export function JobsTable({
                             <DropdownMenuItem onClick={() => onEdit(job)}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit Job
-                            </DropdownMenuItem>
-                          )}
-                          {onConvertToTask && (
-                            <DropdownMenuItem
-                              onClick={() => onConvertToTask(job)}
-                              disabled={isConvertingTask}
-                            >
-                              <CheckSquare className="mr-2 h-4 w-4" />
-                              Convert to Task
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>

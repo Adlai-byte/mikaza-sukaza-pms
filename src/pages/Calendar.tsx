@@ -1269,7 +1269,7 @@ const Calendar = () => {
         {/* ========================================
             CALENDAR GRID: Timeline View
             ======================================== */}
-        <Card className="shadow-lg flex-1 flex flex-col min-h-0 border-0">
+        <Card className="shadow-lg flex-1 flex flex-col min-h-0 border-0 overflow-hidden">
           <CardHeader className="pb-3 border-b bg-gray-50">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -1282,7 +1282,7 @@ const Calendar = () => {
             </div>
           </CardHeader>
 
-          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
             {filteredProperties.length === 0 ? (
               <div className="flex-1 flex items-center justify-center p-12">
                 <div className="text-center max-w-md">

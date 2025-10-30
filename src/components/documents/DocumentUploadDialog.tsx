@@ -19,10 +19,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, X, AlertCircle, CheckCircle } from "lucide-react";
+import { Upload, FileText, X, AlertCircle, CheckCircle, User } from "lucide-react";
 import { useDocumentUpload } from "@/hooks/useDocumentUpload";
 import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
-import { DocumentInsert, DOCUMENT_CATEGORIES } from "@/lib/schemas";
+import { useUsers } from "@/hooks/useUsers";
+import { DocumentInsert, DOCUMENT_CATEGORIES, CONTRACT_TYPES } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
 
 interface DocumentUploadDialogProps {
@@ -42,6 +43,7 @@ export function DocumentUploadDialog({
 }: DocumentUploadDialogProps) {
   const { uploadFile, uploadProgress, isUploading } = useDocumentUpload();
   const { properties } = usePropertiesOptimized();
+  const { users = [] } = useUsers();
 
   // Form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -50,6 +52,8 @@ export function DocumentUploadDialog({
   const [propertyId, setPropertyId] = useState<string>(defaultPropertyId || "");
   const [expiryDate, setExpiryDate] = useState("");
   const [tags, setTags] = useState("");
+  const [assignedUserId, setAssignedUserId] = useState("");
+  const [contractType, setContractType] = useState("");
   const [dragActive, setDragActive] = useState(false);
 
   // Whether this category requires property selection
@@ -64,6 +68,8 @@ export function DocumentUploadDialog({
     setPropertyId(defaultPropertyId || "");
     setExpiryDate("");
     setTags("");
+    setAssignedUserId("");
+    setContractType("");
   };
 
   // Handle file selection
@@ -106,13 +112,26 @@ export function DocumentUploadDialog({
       return;
     }
 
+    // Auto-add user name to tags if user is assigned
+    let finalTags = tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+    if (assignedUserId && category === 'employee') {
+      const selectedUser = users.find(u => u.user_id === assignedUserId);
+      if (selectedUser) {
+        const userName = `${selectedUser.first_name} ${selectedUser.last_name}`;
+        if (!finalTags.includes(userName)) {
+          finalTags.push(userName);
+        }
+      }
+    }
+
     const documentData: Omit<DocumentInsert, 'file_url' | 'file_name' | 'file_type' | 'file_size'> = {
       category,
       document_name: documentName,
       description: description || undefined,
       property_id: propertyId || null,
       expiry_date: expiryDate || null,
-      tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+      tags: finalTags.length > 0 ? finalTags : undefined,
+      contract_type: (category === 'contracts' && contractType) ? contractType as any : undefined,
     };
 
     uploadFile(
@@ -223,6 +242,25 @@ export function DocumentUploadDialog({
             />
           </div>
 
+          {/* Contract Type selection */}
+          {category === 'contracts' && (
+            <div className="space-y-2">
+              <Label htmlFor="contract-type">Contract Type *</Label>
+              <Select value={contractType} onValueChange={setContractType} disabled={isUploading}>
+                <SelectTrigger id="contract-type">
+                  <SelectValue placeholder="Select contract type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CONTRACT_TYPES).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Property selection */}
           {requiresProperty && (
             <div className="space-y-2">
@@ -253,6 +291,34 @@ export function DocumentUploadDialog({
                 onChange={(e) => setExpiryDate(e.target.value)}
                 disabled={isUploading}
               />
+            </div>
+          )}
+
+          {/* Employee Assignment */}
+          {category === 'employee' && (
+            <div className="space-y-2">
+              <Label htmlFor="assigned-user">Assign to Employee (Optional)</Label>
+              <Select value={assignedUserId || "none"} onValueChange={(value) => setAssignedUserId(value === "none" ? "" : value)} disabled={isUploading}>
+                <SelectTrigger id="assigned-user">
+                  <SelectValue placeholder="Select an employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    <span className="text-muted-foreground">None</span>
+                  </SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.user_id} value={user.user_id}>
+                      <div className="flex items-center gap-2">
+                        <User className="h-3 w-3" />
+                        {user.first_name} {user.last_name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Automatically organizes the document in the employee's folder
+              </p>
             </div>
           )}
 
@@ -312,6 +378,7 @@ export function DocumentUploadDialog({
               !selectedFile ||
               !documentName ||
               (requiresProperty && !propertyId) ||
+              (category === 'contracts' && !contractType) ||
               isUploading
             }
           >

@@ -30,8 +30,9 @@ import {
   FileCheck,
   Archive,
 } from "lucide-react";
-import { DocumentSummary } from "@/lib/schemas";
+import { DocumentSummary, CONTRACT_TYPES } from "@/lib/schemas";
 import { useDocumentDownload } from "@/hooks/useDocuments";
+import { DocumentViewer } from "./DocumentViewer";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +44,7 @@ interface DocumentsTableProps {
   onShare?: (document: DocumentSummary) => void;
   canDelete?: boolean;
   canShare?: boolean;
+  showContractType?: boolean;
 }
 
 // Status badge styling
@@ -80,9 +82,17 @@ export function DocumentsTable({
   onShare,
   canDelete = false,
   canShare = false,
+  showContractType = false,
 }: DocumentsTableProps) {
   const { downloadDocument } = useDocumentDownload();
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentSummary | null>(null);
+
+  const handleViewDocument = (document: DocumentSummary) => {
+    setSelectedDocument(document);
+    setViewerOpen(true);
+  };
 
   // Filter documents by search
   const filteredDocuments = documents.filter((doc) =>
@@ -148,6 +158,7 @@ export function DocumentsTable({
           <TableHeader>
             <TableRow>
               <TableHead>Document</TableHead>
+              {showContractType && <TableHead>Contract Type</TableHead>}
               <TableHead>Property</TableHead>
               <TableHead>Version</TableHead>
               <TableHead>Status</TableHead>
@@ -159,7 +170,7 @@ export function DocumentsTable({
           <TableBody>
             {filteredDocuments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={showContractType ? 8 : 7} className="text-center py-8 text-muted-foreground">
                   No documents match your search
                 </TableCell>
               </TableRow>
@@ -188,6 +199,19 @@ export function DocumentsTable({
                       </p>
                     </div>
                   </TableCell>
+
+                  {/* Contract Type */}
+                  {showContractType && (
+                    <TableCell>
+                      {document.contract_type ? (
+                        <Badge variant="outline" className="text-xs">
+                          {CONTRACT_TYPES[document.contract_type as keyof typeof CONTRACT_TYPES]}
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  )}
 
                   {/* Property */}
                   <TableCell>
@@ -250,12 +274,10 @@ export function DocumentsTable({
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
 
-                        {onViewDetails && (
-                          <DropdownMenuItem onClick={() => onViewDetails(document)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem onClick={() => handleViewDocument(document)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Document
+                        </DropdownMenuItem>
 
                         <DropdownMenuItem onClick={() => downloadDocument(document)}>
                           <Download className="mr-2 h-4 w-4" />
@@ -304,6 +326,13 @@ export function DocumentsTable({
           )}
         </div>
       )}
+
+      {/* Document Viewer */}
+      <DocumentViewer
+        document={selectedDocument}
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+      />
     </div>
   );
 }

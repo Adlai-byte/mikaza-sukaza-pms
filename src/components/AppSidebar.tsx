@@ -23,6 +23,10 @@ import {
   BarChart3,
   ChevronDown,
   ChevronRight,
+  HelpCircle,
+  Shield,
+  KeyRound,
+  MessageSquare,
 } from "lucide-react";
 
 import {
@@ -36,8 +40,16 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS, Permission } from "@/lib/rbac/permissions";
+import { useUnseenExpiringCounts } from "@/hooks/useExpiringDocumentsCount";
+import { Badge } from "@/components/ui/badge";
 
 // Define menu items with their required permissions
 // Organized by frequency of use: Daily → Weekly → Occasional
@@ -56,25 +68,31 @@ const mainMenuItems = [
 
   // Admin & System (Low Frequency)
   { title: "User Management", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
+  { title: "Employee Docs", url: "/employee-documents", icon: FileText, permission: PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW },
   { title: "Activity Logs", url: "/activity-logs", icon: Activity, permission: PERMISSIONS.SYSTEM_AUDIT },
+  { title: "Help & Support", url: "/help", icon: HelpCircle, permission: null }, // Everyone can access
 ];
 
 const documentMenuItems = [
-  { title: "Documents", url: "/documents", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
+  { title: "Vendor COIs", url: "/vendor-cois", icon: Shield, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+  { title: "Access Control", url: "/access-authorizations", icon: KeyRound, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+  { title: "Service Docs", url: "/service-documents", icon: Wrench, permission: PERMISSIONS.DOCUMENTS_SERVICE_VIEW },
+  { title: "Message Templates", url: "/message-templates", icon: MessageSquare, permission: PERMISSIONS.DOCUMENTS_MESSAGES_VIEW },
 ];
 
 const financeMenuItems = [
   // Daily/Weekly Financial Operations
-  { title: "Invoices", url: "/invoices", icon: FileText, permission: PERMISSIONS.FINANCE_VIEW },
-  { title: "Expenses", url: "/expenses", icon: Receipt, permission: PERMISSIONS.FINANCE_VIEW },
+  { title: "Contracts", url: "/contracts", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
+  { title: "Invoices", url: "/invoices", icon: Receipt, permission: PERMISSIONS.FINANCE_VIEW },
+  { title: "Expenses", url: "/expenses", icon: DollarSign, permission: PERMISSIONS.FINANCE_VIEW },
   { title: "Bill Templates", url: "/bill-templates", icon: LayoutGrid, permission: PERMISSIONS.FINANCE_VIEW },
 
   // Periodic Reports & Analysis
   { title: "Financial Dashboard", url: "/financial-dashboard", icon: BarChart3, permission: PERMISSIONS.FINANCE_VIEW },
   { title: "Owner Statement", url: "/owner-statement", icon: FileBarChart, permission: PERMISSIONS.FINANCE_VIEW },
   { title: "Service Pipeline", url: "/finance/pipeline", icon: DollarSign, permission: PERMISSIONS.PIPELINE_VIEW },
-  { title: "Commissions", url: "/finance/commissions", icon: DollarSign, permission: PERMISSIONS.COMMISSIONS_VIEW_ALL },
-  { title: "My Commissions", url: "/finance/commissions", icon: DollarSign, permission: PERMISSIONS.COMMISSIONS_VIEW_OWN },
+  { title: "Commissions", url: "/finance/commissions", icon: BarChart3, permission: PERMISSIONS.COMMISSIONS_VIEW_ALL },
+  { title: "My Earnings", url: "/finance/my-commissions", icon: DollarSign, permission: PERMISSIONS.COMMISSIONS_VIEW_OWN },
 ];
 
 const mediaMenuItems = [
@@ -91,6 +109,7 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
   const { hasPermission, userRole, getPermissions } = usePermissions();
+  const { unseenCounts } = useUnseenExpiringCounts(30);
 
   // State for collapsible sections
   const [expandedSections, setExpandedSections] = useState({
@@ -147,6 +166,13 @@ export function AppSidebar() {
     return currentPath.startsWith(path);
   };
 
+  // Get notification count for a specific menu item
+  const getNotificationCount = (url: string): number => {
+    if (url === "/contracts") return unseenCounts.contracts;
+    if (url === "/vendor-cois") return unseenCounts.coi;
+    return 0;
+  };
+
   const getNavCls = (isActive: boolean) =>
     `transition-all duration-200 rounded-none ${
       isActive
@@ -160,13 +186,14 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar
-      className={`${
-        isCollapsed ? "w-16" : "w-64"
-      } bg-gradient-primary border-r-0 transition-all duration-300`}
-      collapsible="icon"
-    >
-      <SidebarContent className="bg-gradient-primary">
+    <TooltipProvider delayDuration={300}>
+      <Sidebar
+        className={`${
+          isCollapsed ? "w-16" : "w-64"
+        } bg-gradient-primary border-r-0 transition-all duration-300`}
+        collapsible="icon"
+      >
+        <SidebarContent className="bg-gradient-primary">
         {/* Brand Header */}
         <div className={`flex items-center p-6 ${isCollapsed ? "justify-center" : ""}`}>
           <div className={`flex items-center space-x-3 ${isCollapsed ? "justify-center" : ""}`}>
@@ -207,16 +234,43 @@ export function AppSidebar() {
             {expandedSections.main && (
               <SidebarGroupContent className="px-3">
                 <SidebarMenu className="space-y-1">
-                  {visibleMainMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild className="h-10">
-                        <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                          <item.icon className="h-5 w-5 min-w-5" />
-                          {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+                  {visibleMainMenuItems.map((item) => {
+                    const notificationCount = getNotificationCount(item.url);
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <SidebarMenuButton asChild className="h-10">
+                              <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                                <item.icon className="h-5 w-5 min-w-5" />
+                                {!isCollapsed && (
+                                  <span className="ml-3 flex items-center gap-2 flex-1">
+                                    {item.title}
+                                    {notificationCount > 0 && (
+                                      <Badge className="ml-auto bg-red-500 hover:bg-red-600 text-white">
+                                        {notificationCount}
+                                      </Badge>
+                                    )}
+                                  </span>
+                                )}
+                                {isCollapsed && notificationCount > 0 && (
+                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                    {notificationCount}
+                                  </div>
+                                )}
+                              </NavLink>
+                            </SidebarMenuButton>
+                          </TooltipTrigger>
+                          {isCollapsed && (
+                            <TooltipContent side="right" className="font-medium">
+                              {item.title}
+                              {notificationCount > 0 && ` (${notificationCount})`}
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </SidebarMenuItem>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             )}
@@ -249,16 +303,43 @@ export function AppSidebar() {
             {expandedSections.finance && (
               <SidebarGroupContent className="px-3">
                 <SidebarMenu className="space-y-1">
-                  {visibleFinanceMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild className="h-10">
-                        <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                          <item.icon className="h-5 w-5 min-w-5" />
-                          {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+                  {visibleFinanceMenuItems.map((item) => {
+                    const notificationCount = getNotificationCount(item.url);
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <SidebarMenuButton asChild className="h-10">
+                              <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                                <item.icon className="h-5 w-5 min-w-5" />
+                                {!isCollapsed && (
+                                  <span className="ml-3 flex items-center gap-2 flex-1">
+                                    {item.title}
+                                    {notificationCount > 0 && (
+                                      <Badge className="ml-auto bg-red-500 hover:bg-red-600 text-white">
+                                        {notificationCount}
+                                      </Badge>
+                                    )}
+                                  </span>
+                                )}
+                                {isCollapsed && notificationCount > 0 && (
+                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                    {notificationCount}
+                                  </div>
+                                )}
+                              </NavLink>
+                            </SidebarMenuButton>
+                          </TooltipTrigger>
+                          {isCollapsed && (
+                            <TooltipContent side="right" className="font-medium">
+                              {item.title}
+                              {notificationCount > 0 && ` (${notificationCount})`}
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </SidebarMenuItem>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             )}
@@ -291,16 +372,43 @@ export function AppSidebar() {
             {expandedSections.documents && (
               <SidebarGroupContent className="px-3">
                 <SidebarMenu className="space-y-1">
-                  {visibleDocumentMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild className="h-10">
-                        <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                          <item.icon className="h-5 w-5 min-w-5" />
-                          {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+                  {visibleDocumentMenuItems.map((item) => {
+                    const notificationCount = getNotificationCount(item.url);
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <SidebarMenuButton asChild className="h-10">
+                              <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                                <item.icon className="h-5 w-5 min-w-5" />
+                                {!isCollapsed && (
+                                  <span className="ml-3 flex items-center gap-2 flex-1">
+                                    {item.title}
+                                    {notificationCount > 0 && (
+                                      <Badge className="ml-auto bg-red-500 hover:bg-red-600 text-white">
+                                        {notificationCount}
+                                      </Badge>
+                                    )}
+                                  </span>
+                                )}
+                                {isCollapsed && notificationCount > 0 && (
+                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                    {notificationCount}
+                                  </div>
+                                )}
+                              </NavLink>
+                            </SidebarMenuButton>
+                          </TooltipTrigger>
+                          {isCollapsed && (
+                            <TooltipContent side="right" className="font-medium">
+                              {item.title}
+                              {notificationCount > 0 && ` (${notificationCount})`}
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </SidebarMenuItem>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             )}
@@ -335,12 +443,21 @@ export function AppSidebar() {
                 <SidebarMenu className="space-y-1">
                   {visibleMediaMenuItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild className="h-10">
-                        <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                          <item.icon className="h-5 w-5 min-w-5" />
-                          {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton asChild className="h-10">
+                            <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                              <item.icon className="h-5 w-5 min-w-5" />
+                              {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        {isCollapsed && (
+                          <TooltipContent side="right" className="font-medium">
+                            {item.title}
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>
@@ -377,12 +494,21 @@ export function AppSidebar() {
                 <SidebarMenu className="space-y-1">
                   {visibleHighlightsMenuItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild className="h-10">
-                        <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                          <item.icon className="h-5 w-5 min-w-5" />
-                          {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton asChild className="h-10">
+                            <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                              <item.icon className="h-5 w-5 min-w-5" />
+                              {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        {isCollapsed && (
+                          <TooltipContent side="right" className="font-medium">
+                            {item.title}
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>
@@ -392,5 +518,6 @@ export function AppSidebar() {
         )}
       </SidebarContent>
     </Sidebar>
+    </TooltipProvider>
   );
 }

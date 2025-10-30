@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Download, Calendar } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Download, Calendar, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,8 +25,11 @@ import { Separator } from '@/components/ui/separator';
 import { useCreateInvoice, useUpdateInvoice, useInvoice } from '@/hooks/useInvoices';
 import { useBookingDetail } from '@/hooks/useBookings';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
+import { useUsers } from '@/hooks/useUsers';
+import { useInvoiceTips, useCreateInvoiceTip, useDeleteInvoiceTip } from '@/hooks/useInvoiceTips';
 import { InvoiceInsert, InvoiceLineItemInsert, BillTemplateWithItems } from '@/lib/schemas';
 import BillTemplateSelector from '@/components/BillTemplateSelector';
+import { SendInvoiceEmailDialog } from '@/components/SendInvoiceEmailDialog';
 import { differenceInDays } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,14 +53,25 @@ export default function InvoiceForm() {
   const { toast } = useToast();
 
   const { properties } = usePropertiesOptimized();
+  const { users } = useUsers();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
   const { invoice, loading } = useInvoice(invoiceId || '');
   const { booking, loading: bookingLoading } = useBookingDetail(bookingId);
+  const { tips: existingTips } = useInvoiceTips(invoiceId ? { invoice_id: invoiceId } : undefined);
+  const createTip = useCreateInvoiceTip();
+  const deleteTip = useDeleteInvoiceTip();
 
   const [lineItems, setLineItems] = useState<InvoiceLineItemInsert[]>([]);
   const [nextLineNumber, setNextLineNumber] = useState(1);
   const [linkedBookingId, setLinkedBookingId] = useState<string | undefined>(bookingId);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+
+  // Tip form state
+  const [tipRecipient, setTipRecipient] = useState('');
+  const [tipAmount, setTipAmount] = useState('');
+  const [tipReason, setTipReason] = useState('');
+  const [tipNotes, setTipNotes] = useState('');
 
   const form = useForm({
     resolver: zodResolver(invoiceSchema),
@@ -79,6 +93,15 @@ export default function InvoiceForm() {
   // Load invoice data if editing
   useEffect(() => {
     if (invoice && isEditing) {
+      console.log('📝 [InvoiceForm] Loading invoice data:', {
+        invoice_id: invoice.invoice_id,
+        invoice_number: invoice.invoice_number,
+        property_id: invoice.property_id,
+        guest_name: invoice.guest_name,
+        line_items_count: invoice.line_items?.length || 0,
+        fullInvoice: invoice,
+      });
+
       form.reset({
         property_id: invoice.property_id,
         guest_name: invoice.guest_name,
@@ -93,7 +116,7 @@ export default function InvoiceForm() {
         payment_method: invoice.payment_method || '',
       });
 
-      if (invoice.line_items) {
+      if (invoice.line_items && Array.isArray(invoice.line_items)) {
         const items = invoice.line_items.map((item: any) => ({
           line_number: item.line_number,
           description: item.description,
@@ -104,7 +127,12 @@ export default function InvoiceForm() {
           item_type: item.item_type,
         }));
         setLineItems(items);
-        setNextLineNumber(Math.max(...items.map((i: any) => i.line_number)) + 1);
+        if (items.length > 0) {
+          setNextLineNumber(Math.max(...items.map((i: any) => i.line_number)) + 1);
+        }
+        console.log('✅ [InvoiceForm] Line items loaded:', items.length);
+      } else {
+        console.warn('⚠️ [InvoiceForm] No line items found or line_items is not an array');
       }
     }
   }, [invoice, isEditing]);
@@ -294,6 +322,60 @@ export default function InvoiceForm() {
     setLineItems(updated);
   };
 
+  // Tip handlers
+  const handleAddTip = () => {
+    if (!invoiceId) {
+      toast({
+        title: 'Save Invoice First',
+        description: 'Please save the invoice before adding tips',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!tipRecipient || !tipAmount) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please select a staff member and enter a tip amount',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const amount = parseFloat(tipAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: 'Invalid Amount',
+        description: 'Please enter a valid tip amount',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    createTip.mutate({
+      invoice_id: invoiceId,
+      recipient_user_id: tipRecipient,
+      tip_amount: amount,
+      tip_reason: tipReason || undefined,
+      guest_notes: tipNotes || undefined,
+      status: 'pending',
+    }, {
+      onSuccess: () => {
+        // Reset form
+        setTipRecipient('');
+        setTipAmount('');
+        setTipReason('');
+        setTipNotes('');
+      },
+    });
+  };
+
+  const handleRemoveTip = (tipId: string) => {
+    if (confirm('Are you sure you want to remove this tip?')) {
+      deleteTip.mutate(tipId);
+    }
+  };
+
   const calculateTotals = () => {
     const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
     const taxAmount = lineItems.reduce((sum, item) => sum + (item.tax_amount || 0), 0);
@@ -381,10 +463,27 @@ export default function InvoiceForm() {
 
   const totals = calculateTotals();
 
+  // Show loading state
   if (isEditing && loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground">Loading invoice data...</p>
+      </div>
+    );
+  }
+
+  // Show error if invoice not found when editing
+  if (isEditing && !loading && !invoice) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <div className="text-destructive text-xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Invoice Not Found</h2>
+        <p className="text-muted-foreground">The invoice you're trying to edit doesn't exist or you don't have permission to view it.</p>
+        <Button onClick={() => navigate('/invoices')} variant="outline">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Invoices
+        </Button>
       </div>
     );
   }
@@ -416,14 +515,27 @@ export default function InvoiceForm() {
         </div>
         <div className="flex gap-2">
           {isEditing && invoice && (
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleDownloadPDF}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleDownloadPDF}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
+              </Button>
+              {invoice.guest_email && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setEmailDialogOpen(true)}
+                  className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Send via Email
+                </Button>
+              )}
+            </>
           )}
           <Button onClick={handleSubmit} size="lg" disabled={createInvoice.isPending || updateInvoice.isPending}>
             <Save className="h-4 w-4 mr-2" />
@@ -691,6 +803,135 @@ export default function InvoiceForm() {
           </CardContent>
         </Card>
 
+        {/* Tips for Staff */}
+        {isEditing && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Tips for Staff</CardTitle>
+              <CardDescription>
+                Add gratuities for staff members who provided exceptional service
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Add Tip Form */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-muted rounded-lg">
+                  <div className="space-y-2">
+                    <Label>Staff Member</Label>
+                    <Select value={tipRecipient} onValueChange={setTipRecipient}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users
+                          .filter(u => ['ops_staff', 'property_manager', 'admin'].includes(u.user_type || ''))
+                          .map((user) => (
+                            <SelectItem key={user.user_id} value={user.user_id!}>
+                              {user.first_name} {user.last_name} ({user.user_type?.replace('_', ' ')})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Tip Amount ($)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={tipAmount}
+                      onChange={(e) => setTipAmount(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Reason (Optional)</Label>
+                    <Input
+                      placeholder="E.g., Excellent cleaning"
+                      value={tipReason}
+                      onChange={(e) => setTipReason(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Notes (Optional)</Label>
+                    <Input
+                      placeholder="Additional notes"
+                      value={tipNotes}
+                      onChange={(e) => setTipNotes(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2 flex items-end">
+                    <Button
+                      type="button"
+                      onClick={handleAddTip}
+                      disabled={!tipRecipient || !tipAmount}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Tip
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Existing Tips List */}
+                {existingTips && existingTips.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Added Tips</Label>
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Staff Member</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Reason</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="w-[50px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {existingTips.map((tip) => (
+                            <TableRow key={tip.tip_id}>
+                              <TableCell>
+                                {tip.recipient?.first_name} {tip.recipient?.last_name}
+                              </TableCell>
+                              <TableCell className="font-semibold">
+                                ${tip.tip_amount.toFixed(2)}
+                              </TableCell>
+                              <TableCell>{tip.tip_reason || '-'}</TableCell>
+                              <TableCell>
+                                <span className="capitalize">{tip.status}</span>
+                              </TableCell>
+                              <TableCell>
+                                {tip.status === 'pending' && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleRemoveTip(tip.tip_id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Tips will be converted to commissions when processed
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Totals */}
         <Card>
           <CardContent className="pt-6">
@@ -723,6 +964,15 @@ export default function InvoiceForm() {
           </Button>
         </div>
       </form>
+
+      {/* Send Email Dialog */}
+      {isEditing && invoice && (
+        <SendInvoiceEmailDialog
+          invoice={invoice}
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+        />
+      )}
     </div>
   );
 }

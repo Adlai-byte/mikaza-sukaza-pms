@@ -32,9 +32,7 @@ interface JobsKanbanProps {
   jobs: JobWithRelations[];
   onEdit?: (job: JobWithRelations) => void;
   onView?: (job: JobWithRelations) => void;
-  onConvertToTask?: (job: JobWithRelations) => void;
   onStatusChange?: (jobId: string, newStatus: string) => void;
-  isConvertingTask?: boolean;
 }
 
 type JobStatus = 'pending' | 'in_progress' | 'review' | 'completed' | 'cancelled';
@@ -89,9 +87,7 @@ export function JobsKanban({
   jobs,
   onEdit,
   onView,
-  onConvertToTask,
   onStatusChange,
-  isConvertingTask = false,
 }: JobsKanbanProps) {
   const [draggedJob, setDraggedJob] = useState<JobWithRelations | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<JobStatus | null>(null);
@@ -279,15 +275,6 @@ export function JobsKanban({
                                     <DropdownMenuItem onClick={() => onEdit(job)}>
                                       <Edit className="mr-2 h-4 w-4" />
                                       Edit Job
-                                    </DropdownMenuItem>
-                                  )}
-                                  {onConvertToTask && (
-                                    <DropdownMenuItem
-                                      onClick={() => onConvertToTask(job)}
-                                      disabled={isConvertingTask}
-                                    >
-                                      <CheckSquare className="mr-2 h-4 w-4" />
-                                      Convert to Task
                                     </DropdownMenuItem>
                                   )}
 

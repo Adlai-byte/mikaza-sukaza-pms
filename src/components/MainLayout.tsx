@@ -61,7 +61,11 @@ export function MainLayout() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center space-x-2 h-8 sm:h-10 px-2 sm:px-3">
                       <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
-                        <AvatarImage src={profile?.photo_url} alt={profile?.first_name || 'User'} />
+                        <AvatarImage
+                          src={profile?.photo_url ? `${profile.photo_url}?t=${Date.now()}` : undefined}
+                          alt={profile?.first_name || 'User'}
+                          className="object-cover"
+                        />
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
                           {getInitials(profile?.first_name, profile?.last_name)}
                         </AvatarFallback>
