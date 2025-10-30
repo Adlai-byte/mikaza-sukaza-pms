@@ -41,6 +41,7 @@ import { cn } from '@/lib/utils';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { formatUserDisplay } from '@/lib/user-display';
 
 // Job form schema
 const jobFormSchema = z.object({
@@ -80,7 +81,7 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
     queryFn: async () => {
       const { data, error } = await supabase
         .from('users')
-        .select('user_id, first_name, last_name, email')
+        .select('user_id, first_name, last_name, email, user_type')
         .eq('is_active', true)
         .order('first_name', { ascending: true });
 
@@ -377,7 +378,7 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                       <SelectItem value="unassigned">Unassigned</SelectItem>
                       {users.map((user) => (
                         <SelectItem key={user.user_id} value={user.user_id}>
-                          {user.first_name} {user.last_name} ({user.email})
+                          {formatUserDisplay(user)}
                         </SelectItem>
                       ))}
                     </SelectContent>

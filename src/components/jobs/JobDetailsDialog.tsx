@@ -229,6 +229,40 @@ export function JobDetailsDialog({
             </>
           )}
 
+          {/* Linked Tasks History */}
+          {job.linked_tasks && job.linked_tasks.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <CheckSquare className="h-4 w-4" />
+                  Task History ({job.linked_tasks.length})
+                </h4>
+                <div className="space-y-2">
+                  {job.linked_tasks.map((task: any) => (
+                    <div
+                      key={task.task_id}
+                      className="flex items-center justify-between p-3 border rounded-md bg-muted/30"
+                    >
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{task.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Assigned to: {task.assigned_user?.first_name} {task.assigned_user?.last_name}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={task.status === 'completed' ? 'default' : 'secondary'}
+                        className={task.status === 'completed' ? 'bg-green-600 text-white' : ''}
+                      >
+                        {task.status?.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Action Buttons */}
           <div className="space-y-3">
             <h4 className="text-sm font-semibold">Actions</h4>

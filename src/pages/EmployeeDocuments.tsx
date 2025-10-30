@@ -5,7 +5,6 @@ import { RefreshCw, Plus, Users, Shield, List, FolderTree } from "lucide-react";
 import { DocumentsTable } from "@/components/documents/DocumentsTable";
 import { DocumentUploadDialog } from "@/components/documents/DocumentUploadDialog";
 import { EmployeeDocumentTree } from "@/components/documents/EmployeeDocumentTree";
-import { DocumentViewer } from "@/components/documents/DocumentViewer";
 import { useDocuments, useDocumentDownload } from "@/hooks/useDocuments";
 import { useUsers } from "@/hooks/useUsers";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -18,8 +17,6 @@ import type { DocumentSummary } from "@/lib/schemas";
 export default function EmployeeDocuments() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<DocumentSummary | null>(null);
   const { hasPermission } = usePermissions();
   const { downloadDocument } = useDocumentDownload();
 
@@ -33,15 +30,18 @@ export default function EmployeeDocuments() {
   } = useDocuments({ category: 'employee' });
 
   // Fetch users for folder structure
-  const { users = [], isLoading: usersLoading } = useUsers();
+  const { users: allUsers = [], isLoading: usersLoading } = useUsers();
+
+  // Filter to show only active employees (Ops and Admin)
+  // Note: user_type enum is: "admin" | "ops" | "provider" | "customer"
+  const users = allUsers.filter(user =>
+    user.is_active &&
+    user.user_type &&
+    ['ops', 'admin'].includes(user.user_type)
+  );
 
   // Permission checks
   const canManage = hasPermission(PERMISSIONS.DOCUMENTS_EMPLOYEE_MANAGE);
-
-  const handleViewDocument = (document: DocumentSummary) => {
-    setSelectedDocument(document);
-    setViewerOpen(true);
-  };
 
   const handleDownloadDocument = (document: DocumentSummary) => {
     downloadDocument(document);
@@ -177,7 +177,6 @@ export default function EmployeeDocuments() {
             <EmployeeDocumentTree
               documents={employeeDocs}
               users={users}
-              onViewDocument={handleViewDocument}
               onDownloadDocument={handleDownloadDocument}
               onDeleteDocument={canManage ? deleteDocument : undefined}
               canDelete={canManage}
@@ -200,13 +199,6 @@ export default function EmployeeDocuments() {
         onOpenChange={setUploadDialogOpen}
         category="employee"
         onSuccess={() => refetch()}
-      />
-
-      {/* Document Viewer */}
-      <DocumentViewer
-        document={selectedDocument}
-        open={viewerOpen}
-        onOpenChange={setViewerOpen}
       />
     </div>
   );

@@ -5,16 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import {
   ArrowLeft,
-  Save,
   Home,
-  Building,
   Users,
   Car,
-  Camera,
-  QrCode,
-  DollarSign,
-  CheckSquare,
-  Calendar,
   FileText,
   Zap
 } from 'lucide-react';
@@ -34,13 +27,8 @@ import {
 // Tab Components
 import { GeneralTabOptimized } from '@/components/PropertyEdit/GeneralTabOptimized';
 import { ProvidersTabOptimized } from '@/components/PropertyEdit/ProvidersTabOptimized';
-import { PhotosTabOptimized } from '@/components/PropertyEdit/PhotosTabOptimized';
 import { UnitOwnersTabOptimized } from '@/components/PropertyEdit/UnitOwnersTabOptimized';
 import { VehiclesTabOptimized } from '@/components/PropertyEdit/VehiclesTabOptimized';
-import { QRCodeTab } from '@/components/PropertyEdit/QRCodeTab';
-import { FinancialTabOptimized } from '@/components/PropertyEdit/FinancialTabOptimized';
-import { CheckListsTabOptimized } from '@/components/PropertyEdit/CheckListsTabOptimized';
-import { BookingTabOptimized } from '@/components/PropertyEdit/BookingTabOptimized';
 import { NotesTabOptimized } from '@/components/PropertyEdit/NotesTabOptimized';
 
 export default function PropertyEdit() {
@@ -216,7 +204,7 @@ export default function PropertyEdit() {
           <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={handleTabChange}>
               <div className="bg-gradient-secondary p-1 m-6 rounded-lg overflow-x-auto">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 bg-transparent gap-1 min-w-max">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 bg-transparent gap-1 min-w-max">
                   <TabsTrigger value="general" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
                     <Home className="h-4 w-4" />
                     <span className="hidden sm:inline">General</span>
@@ -232,26 +220,6 @@ export default function PropertyEdit() {
                   <TabsTrigger value="vehicles" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
                     <Car className="h-4 w-4" />
                     <span className="hidden sm:inline">Vehicles</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="photos" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
-                    <Camera className="h-4 w-4" />
-                    <span className="hidden sm:inline">Photos</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="qrcode" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
-                    <QrCode className="h-4 w-4" />
-                    <span className="hidden sm:inline">QRCode</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="financial" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    <span className="hidden sm:inline">Financial</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="checklists" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
-                    <CheckSquare className="h-4 w-4" />
-                    <span className="hidden sm:inline">Checklists</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="booking" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span className="hidden sm:inline">Booking</span>
                   </TabsTrigger>
                   <TabsTrigger value="notes" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
                     <FileText className="h-4 w-4" />
@@ -275,26 +243,6 @@ export default function PropertyEdit() {
 
                 <TabsContent value="vehicles" className="mt-0">
                   <VehiclesTabOptimized propertyId={property.property_id} />
-                </TabsContent>
-
-                <TabsContent value="photos" className="mt-0">
-                  <PhotosTabOptimized propertyId={property.property_id} />
-                </TabsContent>
-
-                <TabsContent value="qrcode" className="mt-0">
-                  <QRCodeTab propertyId={property.property_id} qrCodes={[]} property={property} />
-                </TabsContent>
-
-                <TabsContent value="financial" className="mt-0">
-                  <FinancialTabOptimized propertyId={property.property_id} />
-                </TabsContent>
-
-                <TabsContent value="checklists" className="mt-0">
-                  <CheckListsTabOptimized propertyId={property.property_id} />
-                </TabsContent>
-
-                <TabsContent value="booking" className="mt-0">
-                  <BookingTabOptimized propertyId={property.property_id} />
                 </TabsContent>
 
                 <TabsContent value="notes" className="mt-0">

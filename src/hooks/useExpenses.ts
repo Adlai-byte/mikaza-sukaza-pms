@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Expense, ExpenseInsert } from '@/lib/schemas';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActivityLogs } from '@/hooks/useActivityLogs';
 
 // Query keys
 export const expenseKeys = {
@@ -112,13 +113,21 @@ const updateExpense = async ({ expenseId, updates }: { expenseId: string; update
 };
 
 // Delete expense
-const deleteExpense = async (expenseId: string): Promise<void> => {
+const deleteExpense = async (expenseId: string): Promise<{ expenseId: string; expense: any }> => {
+  // Fetch expense details before deleting for logging
+  const { data: expense } = await supabase
+    .from('expenses')
+    .select('expense_id, description, amount, category, vendor_name, property_id')
+    .eq('expense_id', expenseId)
+    .single();
+
   const { error } = await supabase
     .from('expenses')
     .delete()
     .eq('expense_id', expenseId);
 
   if (error) throw error;
+  return { expenseId, expense };
 };
 
 // Mark expense as paid
@@ -267,10 +276,21 @@ export function useUpdateExpense() {
 export function useDeleteExpense() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { logActivity } = useActivityLogs();
 
   return useMutation({
     mutationFn: deleteExpense,
-    onSuccess: () => {
+    onSuccess: ({ expenseId, expense }) => {
+      // Log the delete action
+      logActivity('expense_deleted', {
+        expense_id: expenseId,
+        description: expense?.description || 'Unknown Expense',
+        amount: expense?.amount,
+        category: expense?.category,
+        vendor_name: expense?.vendor_name,
+        property_id: expense?.property_id,
+      });
+
       queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
       toast({
         title: 'Success',

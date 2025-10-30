@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Trash2, Search, Eye, Download, Filter, Home, Images, Camera, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit, Trash2, Search, Eye, Download, Filter, Home, Images, Camera, ChevronLeft, ChevronRight, QrCode } from "lucide-react";
 import { PropertyTableLoadingState, LoadingOverlay, InlineLoadingSpinner } from "./PropertyTableSkeleton";
 import { useNavigate } from "react-router-dom";
 import {
@@ -43,6 +43,7 @@ interface PropertyTableOptimizedProps {
   onDeleteProperty: (propertyId: string) => void;
   onViewDetails: (property: Property) => void;
   onViewImages: (property: Property) => void;
+  onViewQRCodes: (property: Property) => void;
   isLoading?: boolean;
   isFetching?: boolean;
 }
@@ -57,6 +58,7 @@ const PropertyTableRow = ({
   onDeleteProperty,
   onViewDetails,
   onViewImages,
+  onViewQRCodes,
   onImageClick
 }: {
   property: Property;
@@ -64,6 +66,7 @@ const PropertyTableRow = ({
   onDeleteProperty: (propertyId: string) => void;
   onViewDetails: (property: Property) => void;
   onViewImages: (property: Property) => void;
+  onViewQRCodes: (property: Property) => void;
   onImageClick: (image: { url: string; title?: string }) => void;
 }) => {
   const navigate = useNavigate();
@@ -154,6 +157,14 @@ const PropertyTableRow = ({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => onViewQRCodes(property)}
+            title="View QR Codes"
+          >
+            <QrCode className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => navigate(`/properties/${property.property_id}/edit`)}
             title="Edit Property"
           >
@@ -198,6 +209,7 @@ export function PropertyTableOptimized({
   onDeleteProperty,
   onViewDetails,
   onViewImages,
+  onViewQRCodes,
   isLoading = false,
   isFetching = false,
 }: PropertyTableOptimizedProps) {
@@ -435,6 +447,7 @@ export function PropertyTableOptimized({
                 onDeleteProperty={onDeleteProperty}
                 onViewDetails={onViewDetails}
                 onViewImages={onViewImages}
+                onViewQRCodes={onViewQRCodes}
                 onImageClick={handleImageClick}
               />
             ))}
@@ -527,6 +540,14 @@ export function PropertyTableOptimized({
                           className="h-8 w-8 p-0"
                         >
                           <Images className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onViewQRCodes(property)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <QrCode className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"

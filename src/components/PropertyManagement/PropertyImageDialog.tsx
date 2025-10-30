@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
-import { Upload, X, Loader2, Star, StarOff, Edit, Check } from "lucide-react";
+import { Upload, X, Loader2, Star, StarOff, Edit, Check, ChevronLeft, ChevronRight, ZoomIn, Download } from "lucide-react";
 
 interface PropertyImageDialogProps {
   open: boolean;
@@ -24,6 +24,8 @@ export function PropertyImageDialog({ open, onOpenChange, property }: PropertyIm
   const [loading, setLoading] = useState(false);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
   const [tempTitle, setTempTitle] = useState("");
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { toast } = useToast();
   const { logActivity } = useActivityLogs();
 
@@ -51,49 +53,65 @@ export function PropertyImageDialog({ open, onOpenChange, property }: PropertyIm
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
     try {
       setLoading(true);
-      
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const result = reader.result as string;
-        
-        const { data, error } = await supabase
-          .from('property_images')
-          .insert([{
-            property_id: property.property_id,
-            image_url: result,
-            image_title: file.name,
-            is_primary: images.length === 0
-          }])
-          .select()
-          .single();
+      const fileArray = Array.from(files);
+      let uploadedCount = 0;
 
-        if (error) throw error;
+      for (const file of fileArray) {
+        const reader = new FileReader();
 
-        await logActivity(
-          'PROPERTY_IMAGE_ADDED',
-          { propertyId: property.property_id, imageTitle: file.name },
-          undefined,
-          'Admin'
-        );
+        await new Promise((resolve, reject) => {
+          reader.onloadend = async () => {
+            try {
+              const result = reader.result as string;
 
-        toast({
-          title: "Success",
-          description: "Image uploaded successfully",
+              const { error } = await supabase
+                .from('property_images')
+                .insert([{
+                  property_id: property.property_id,
+                  image_url: result,
+                  image_title: file.name,
+                  is_primary: images.length === 0 && uploadedCount === 0
+                }]);
+
+              if (error) throw error;
+
+              await logActivity(
+                'PROPERTY_IMAGE_ADDED',
+                { propertyId: property.property_id, imageTitle: file.name },
+                undefined,
+                'Admin'
+              );
+
+              uploadedCount++;
+              resolve(true);
+            } catch (error) {
+              reject(error);
+            }
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
         });
+      }
 
-        await fetchImages();
-      };
-      reader.readAsDataURL(file);
+      toast({
+        title: "Success",
+        description: `${uploadedCount} image${uploadedCount > 1 ? 's' : ''} uploaded successfully`,
+      });
+
+      await fetchImages();
+
+      // Reset the input
+      event.target.value = '';
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('Error uploading images:', error);
       toast({
         title: "Error",
-        description: "Failed to upload image",
+        description: "Failed to upload some images",
         variant: "destructive",
       });
     } finally {
@@ -219,11 +237,55 @@ export function PropertyImageDialog({ open, onOpenChange, property }: PropertyIm
     handleUpdateTitle(imageId, tempTitle);
   };
 
+  const openViewer = (index: number) => {
+    setCurrentImageIndex(index);
+    setViewerOpen(true);
+  };
+
+  const closeViewer = () => {
+    setViewerOpen(false);
+  };
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const previousImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const downloadImage = (imageUrl: string, imageName: string) => {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = imageName || 'property-image.jpg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   useEffect(() => {
     if (open && property.property_id) {
       fetchImages();
     }
   }, [open, property.property_id]);
+
+  // Keyboard navigation for image viewer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!viewerOpen) return;
+
+      if (e.key === 'ArrowLeft') {
+        previousImage();
+      } else if (e.key === 'ArrowRight') {
+        nextImage();
+      } else if (e.key === 'Escape') {
+        closeViewer();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewerOpen, images.length]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -241,12 +303,13 @@ export function PropertyImageDialog({ open, onOpenChange, property }: PropertyIm
               <Button size="sm" disabled={loading} asChild>
                 <span>
                   <Upload className="h-4 w-4 mr-2" />
-                  Upload Image
+                  Upload Images
                 </span>
               </Button>
               <input
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleImageUpload}
                 className="hidden"
               />
@@ -266,16 +329,25 @@ export function PropertyImageDialog({ open, onOpenChange, property }: PropertyIm
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {images.map((image) => (
+              {images.map((image, index) => (
                 <div
                   key={image.image_id}
                   className="relative group bg-muted rounded-lg overflow-hidden"
                 >
-                  <img
-                    src={image.image_url}
-                    alt={image.image_title || "Property image"}
-                    className="w-full h-48 object-cover"
-                  />
+                  <div
+                    className="cursor-pointer relative"
+                    onClick={() => openViewer(index)}
+                  >
+                    <img
+                      src={image.image_url}
+                      alt={image.image_title || "Property image"}
+                      className="w-full h-48 object-cover transition-transform group-hover:scale-105"
+                    />
+                    {/* Zoom icon overlay */}
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
+                      <ZoomIn className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </div>
                   
                   {/* Primary badge */}
                   {image.is_primary && (
@@ -360,6 +432,117 @@ export function PropertyImageDialog({ open, onOpenChange, property }: PropertyIm
           )}
         </div>
       </DialogContent>
+
+      {/* Image Viewer/Lightbox */}
+      {viewerOpen && images.length > 0 && (
+        <Dialog open={viewerOpen} onOpenChange={closeViewer}>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none">
+            <div className="relative w-full h-[95vh] flex items-center justify-center">
+              {/* Close button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-4 right-4 z-50 text-white hover:bg-white/20"
+                onClick={closeViewer}
+              >
+                <X className="h-6 w-6" />
+              </Button>
+
+              {/* Download button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-4 right-16 z-50 text-white hover:bg-white/20"
+                onClick={() => downloadImage(images[currentImageIndex].image_url, images[currentImageIndex].image_title || 'property-image')}
+              >
+                <Download className="h-6 w-6" />
+              </Button>
+
+              {/* Previous button */}
+              {images.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-50 text-white hover:bg-white/20 h-12 w-12"
+                  onClick={previousImage}
+                >
+                  <ChevronLeft className="h-8 w-8" />
+                </Button>
+              )}
+
+              {/* Main image */}
+              <div className="flex items-center justify-center w-full h-full p-4">
+                <img
+                  src={images[currentImageIndex].image_url}
+                  alt={images[currentImageIndex].image_title || "Property image"}
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+
+              {/* Next button */}
+              {images.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-50 text-white hover:bg-white/20 h-12 w-12"
+                  onClick={nextImage}
+                >
+                  <ChevronRight className="h-8 w-8" />
+                </Button>
+              )}
+
+              {/* Image info and navigation */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 text-white">
+                <div className="flex items-center justify-between max-w-6xl mx-auto">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold mb-1">
+                      {images[currentImageIndex].image_title || "Untitled"}
+                    </h3>
+                    <p className="text-sm text-white/70">
+                      Image {currentImageIndex + 1} of {images.length}
+                      {images[currentImageIndex].is_primary && (
+                        <span className="ml-2 inline-flex items-center">
+                          <Star className="h-3 w-3 fill-current mr-1" />
+                          Primary Image
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Thumbnail navigation */}
+                  {images.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto max-w-md">
+                      {images.map((image, index) => (
+                        <button
+                          key={image.image_id}
+                          onClick={() => setCurrentImageIndex(index)}
+                          className={`flex-shrink-0 w-16 h-16 rounded border-2 transition-all ${
+                            index === currentImageIndex
+                              ? 'border-white scale-110'
+                              : 'border-transparent opacity-50 hover:opacity-100'
+                          }`}
+                        >
+                          <img
+                            src={image.image_url}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-full object-cover rounded"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Keyboard hints */}
+              <div className="absolute top-4 left-4 z-50 text-white/50 text-xs space-y-1">
+                <div>← → Navigate</div>
+                <div>ESC Close</div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   );
 }

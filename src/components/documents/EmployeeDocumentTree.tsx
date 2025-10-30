@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronRight, ChevronDown, User, Folder, FolderOpen, File, Eye, Download, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronDown, User, Folder, FolderOpen, File, Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DocumentSummary } from "@/lib/schemas";
@@ -22,7 +22,6 @@ interface User {
 interface EmployeeDocumentTreeProps {
   documents: DocumentSummary[];
   users: User[];
-  onViewDocument: (document: DocumentSummary) => void;
   onDownloadDocument: (document: DocumentSummary) => void;
   onDeleteDocument?: (documentId: string) => void;
   canDelete?: boolean;
@@ -48,7 +47,6 @@ const formatFileSize = (bytes: number): string => {
 export function EmployeeDocumentTree({
   documents,
   users,
-  onViewDocument,
   onDownloadDocument,
   onDeleteDocument,
   canDelete = false,
@@ -251,22 +249,6 @@ export function EmployeeDocumentTree({
         {/* Actions */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={() => onViewDocument(doc)}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>View document</p>
-              </TooltipContent>
-            </Tooltip>
-
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button

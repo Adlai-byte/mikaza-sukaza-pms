@@ -27,6 +27,7 @@ import {
   Shield,
   KeyRound,
   MessageSquare,
+  LogIn,
 } from "lucide-react";
 
 import {
@@ -64,12 +65,17 @@ const mainMenuItems = [
 
   // Weekly Operations (Medium Frequency)
   { title: "Issues & Photos", url: "/issues", icon: AlertTriangle, permission: PERMISSIONS.ISSUES_VIEW },
+  { title: "Check-In / Check-Out", url: "/check-in-out", icon: LogIn, permission: PERMISSIONS.PROPERTIES_VIEW },
+  { title: "Checklist Templates", url: "/checklist-templates", icon: CheckSquare, permission: PERMISSIONS.PROPERTIES_VIEW },
   { title: "Providers", url: "/providers", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
 
   // Admin & System (Low Frequency)
   { title: "User Management", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
   { title: "Employee Docs", url: "/employee-documents", icon: FileText, permission: PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW },
   { title: "Activity Logs", url: "/activity-logs", icon: Activity, permission: PERMISSIONS.SYSTEM_AUDIT },
+];
+
+const supportMenuItems = [
   { title: "Help & Support", url: "/help", icon: HelpCircle, permission: null }, // Everyone can access
 ];
 
@@ -118,6 +124,7 @@ export function AppSidebar() {
     documents: false,
     media: false,
     highlights: false,
+    support: true,
   });
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -150,6 +157,11 @@ export function AppSidebar() {
 
   const visibleHighlightsMenuItems = useMemo(
     () => highlightsMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
+    [hasPermission, userRole]
+  );
+
+  const visibleSupportMenuItems = useMemo(
+    () => supportMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
     [hasPermission, userRole]
   );
 
@@ -514,6 +526,35 @@ export function AppSidebar() {
                 </SidebarMenu>
               </SidebarGroupContent>
             )}
+          </SidebarGroup>
+        )}
+
+        {/* Support - Always at the bottom */}
+        {visibleSupportMenuItems.length > 0 && (
+          <SidebarGroup className="mt-auto">
+            <SidebarGroupContent className="px-3">
+              <SidebarMenu className="space-y-1">
+                {visibleSupportMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuButton asChild className="h-10">
+                          <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                            <item.icon className="h-5 w-5 min-w-5" />
+                            {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </TooltipTrigger>
+                      {isCollapsed && (
+                        <TooltipContent side="right" className="font-medium">
+                          {item.title}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
           </SidebarGroup>
         )}
       </SidebarContent>

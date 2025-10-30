@@ -5,6 +5,27 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import {
   Search,
   BookOpen,
   Users,
@@ -25,10 +46,77 @@ import {
   BarChart3,
   Workflow,
   Eye,
+  Bug,
+  Send,
+  X,
 } from 'lucide-react';
 
 export default function Help() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [bugReportOpen, setBugReportOpen] = useState(false);
+  const [bugTitle, setBugTitle] = useState('');
+  const [bugDescription, setBugDescription] = useState('');
+  const [bugSteps, setBugSteps] = useState('');
+  const [bugPriority, setBugPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
+  const [isSendingBugReport, setIsSendingBugReport] = useState(false);
+  const { user, profile } = useAuth();
+
+  const handleBugReportSubmit = async () => {
+    if (!bugTitle.trim() || !bugDescription.trim()) {
+      toast.error('Please fill in bug title and description');
+      return;
+    }
+
+    setIsSendingBugReport(true);
+
+    try {
+      // Call Supabase Edge Function to send bug report email
+      const reporterName = profile?.first_name && profile?.last_name
+        ? `${profile.first_name} ${profile.last_name}`
+        : profile?.first_name || 'Anonymous User';
+
+      const { data, error } = await supabase.functions.invoke('send-bug-report', {
+        body: {
+          title: bugTitle,
+          description: bugDescription,
+          stepsToReproduce: bugSteps,
+          priority: bugPriority,
+          reporterEmail: user?.email || 'anonymous',
+          reporterName: reporterName,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending bug report:', error);
+        // Fallback to mailto if edge function fails
+        const mailtoLink = `mailto:vinzlloydalferez@gmail.com?subject=Bug Report: ${encodeURIComponent(bugTitle)}&body=${encodeURIComponent(
+          `Bug Report\n\n` +
+          `Title: ${bugTitle}\n\n` +
+          `Priority: ${bugPriority}\n\n` +
+          `Description:\n${bugDescription}\n\n` +
+          `Steps to Reproduce:\n${bugSteps}\n\n` +
+          `Reported by: ${reporterName} (${user?.email || 'N/A'})\n` +
+          `Date: ${new Date().toLocaleString()}`
+        )}`;
+        window.open(mailtoLink, '_blank');
+        toast.info('Opening email client as fallback. Please send the pre-filled email.');
+      } else {
+        toast.success('Bug report sent successfully! Thank you for your feedback.');
+      }
+
+      // Reset form
+      setBugTitle('');
+      setBugDescription('');
+      setBugSteps('');
+      setBugPriority('medium');
+      setBugReportOpen(false);
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast.error('Failed to send bug report. Please try again.');
+    } finally {
+      setIsSendingBugReport(false);
+    }
+  };
 
   const helpSections = [
     {
@@ -1748,7 +1836,7 @@ If multiple people involved:
   const quickLinks = [
     { icon: Video, title: 'Video Tutorials', description: 'Watch step-by-step guides', badge: 'Coming Soon', onClick: null },
     { icon: BookOpen, title: 'User Manual', description: 'Download PDF guide', badge: 'PDF', onClick: () => window.open('/user-manual.pdf', '_blank') },
-    { icon: AlertCircle, title: 'Report an Issue', description: 'Submit bug reports', badge: 'GitHub', onClick: null },
+    { icon: Bug, title: 'Report a Bug', description: 'Submit bug reports to our team', badge: 'Email', onClick: () => setBugReportOpen(true) },
   ];
 
   const filteredSections = searchQuery
@@ -1826,14 +1914,20 @@ If multiple people involved:
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="getting-started" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5 xl:grid-cols-10 mb-6 overflow-x-auto">
-              {helpSections.map((section) => (
-                <TabsTrigger key={section.id} value={section.id} className="flex items-center gap-2 whitespace-nowrap">
-                  <section.icon className={`h-4 w-4 ${section.color}`} />
-                  <span className="hidden sm:inline">{section.title}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <div className="w-full overflow-x-auto mb-6">
+              <TabsList className="inline-flex w-auto min-w-full h-auto flex-wrap gap-2 p-2">
+                {helpSections.map((section) => (
+                  <TabsTrigger
+                    key={section.id}
+                    value={section.id}
+                    className="flex items-center gap-2 whitespace-nowrap px-4 py-2"
+                  >
+                    <section.icon className={`h-4 w-4 ${section.color}`} />
+                    <span>{section.title}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
             {filteredSections.map((section) => (
               <TabsContent key={section.id} value={section.id}>
@@ -1914,6 +2008,127 @@ If multiple people involved:
           </CardContent>
         </Card>
       </div>
+
+      {/* Bug Report Dialog */}
+      <Dialog open={bugReportOpen} onOpenChange={setBugReportOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bug className="h-5 w-5 text-red-500" />
+              Report a Bug
+            </DialogTitle>
+            <DialogDescription>
+              Help us improve Casa & Concierge by reporting bugs. Your feedback is valuable!
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Bug Title */}
+            <div className="space-y-2">
+              <Label htmlFor="bugTitle">
+                Bug Title <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="bugTitle"
+                type="text"
+                placeholder="Brief description of the bug"
+                value={bugTitle}
+                onChange={(e) => setBugTitle(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* Priority */}
+            <div className="space-y-2">
+              <Label htmlFor="bugPriority">Priority</Label>
+              <Select value={bugPriority} onValueChange={(value: any) => setBugPriority(value)}>
+                <SelectTrigger id="bugPriority">
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low - Minor issue, workaround available</SelectItem>
+                  <SelectItem value="medium">Medium - Affects functionality but not critical</SelectItem>
+                  <SelectItem value="high">High - Significant impact on usage</SelectItem>
+                  <SelectItem value="critical">Critical - System unusable or data loss</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Bug Description */}
+            <div className="space-y-2">
+              <Label htmlFor="bugDescription">
+                Description <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="bugDescription"
+                placeholder="Describe what happened, what you expected to happen, and any error messages you saw..."
+                value={bugDescription}
+                onChange={(e) => setBugDescription(e.target.value)}
+                rows={6}
+                className="resize-none"
+                required
+              />
+            </div>
+
+            {/* Steps to Reproduce */}
+            <div className="space-y-2">
+              <Label htmlFor="bugSteps">Steps to Reproduce (Optional)</Label>
+              <Textarea
+                id="bugSteps"
+                placeholder="1. Go to...\n2. Click on...\n3. See error..."
+                value={bugSteps}
+                onChange={(e) => setBugSteps(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Help us reproduce the bug by listing the exact steps you took
+              </p>
+            </div>
+
+            {/* Reporter Info Display */}
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800">
+                <strong>Your information:</strong> This report will be sent from{' '}
+                <strong>
+                  {profile?.first_name && profile?.last_name
+                    ? `${profile.first_name} ${profile.last_name}`
+                    : profile?.first_name || 'Anonymous'}
+                </strong>{' '}
+                ({user?.email || 'No email'}) to the development team at{' '}
+                <strong>vinzlloydalferez@gmail.com</strong>
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setBugReportOpen(false)}
+              disabled={isSendingBugReport}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBugReportSubmit}
+              disabled={!bugTitle.trim() || !bugDescription.trim() || isSendingBugReport}
+            >
+              {isSendingBugReport ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Bug Report
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

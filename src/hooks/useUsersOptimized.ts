@@ -302,8 +302,10 @@ export function useUsersOptimized() {
 
       return { rollback: () => queryClient.setQueryData(userKeys.lists(), previousUsers) };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    onSuccess: async () => {
+      // Invalidate and immediately refetch to ensure fresh data
+      await queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      await refetch();
       toast({
         title: "Success",
         description: "User deleted successfully",

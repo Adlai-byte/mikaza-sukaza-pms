@@ -39,6 +39,7 @@ import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatUserDisplay } from '@/lib/user-display';
 
 export default function Issues() {
   const { user } = useAuth();
@@ -55,14 +56,32 @@ export default function Issues() {
   const [assignedFilter, setAssignedFilter] = useState<string>('');
 
   // Build filters object
-  const filters: IssueFilters = useMemo(() => ({
-    status: statusFilter.length > 0 ? statusFilter : undefined,
-    priority: priorityFilter.length > 0 ? priorityFilter : undefined,
-    category: categoryFilter.length > 0 ? categoryFilter : undefined,
-    property_id: propertyFilter || undefined,
-    assigned_to: assignedFilter || undefined,
-    search: searchQuery || undefined,
-  }), [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery]);
+  const filters: IssueFilters = useMemo(() => {
+    const baseFilters: IssueFilters = {
+      status: statusFilter.length > 0 ? statusFilter : undefined,
+      priority: priorityFilter.length > 0 ? priorityFilter : undefined,
+      category: categoryFilter.length > 0 ? categoryFilter : undefined,
+      property_id: propertyFilter || undefined,
+      search: searchQuery || undefined,
+    };
+
+    // If user explicitly selects an assignee filter, use that
+    if (assignedFilter) {
+      baseFilters.assigned_to = assignedFilter;
+    } else if (user?.id) {
+      // Otherwise, automatically filter to show:
+      // 1. Issues assigned to current user (assigned_to)
+      // 2. Issues reported by current user (reported_by)
+      // This is handled by passing current_user_id to the hook
+      baseFilters.current_user_id = user.id;
+      console.log('🔍 [Issues] Filtering issues for user:', {
+        userId: user.id,
+        filters: baseFilters,
+      });
+    }
+
+    return baseFilters;
+  }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery, user?.id]);
 
   const { issues, loading } = useIssues(filters);
   const createIssue = useCreateIssue();
@@ -327,17 +346,15 @@ export default function Issues() {
               {/* Assignee Filter */}
               <div className="space-y-2">
                 <Label htmlFor="assignee">Assigned To</Label>
-                <Select value={assignedFilter || undefined} onValueChange={(value) => setAssignedFilter(value || '')}>
+                <Select value={assignedFilter || "default"} onValueChange={(value) => setAssignedFilter(value === "default" ? '' : value)}>
                   <SelectTrigger id="assignee">
-                    <SelectValue placeholder="All users" />
+                    <SelectValue placeholder="My Issues (assigned or reported)" />
                   </SelectTrigger>
                   <SelectContent>
-                    {user?.user_id && (
-                      <SelectItem value={user.user_id}>My Issues</SelectItem>
-                    )}
+                    <SelectItem value="default">My Issues (assigned or reported)</SelectItem>
                     {users.map(u => (
                       <SelectItem key={u.user_id} value={u.user_id}>
-                        {u.first_name} {u.last_name}
+                        {formatUserDisplay(u)}
                       </SelectItem>
                     ))}
                   </SelectContent>

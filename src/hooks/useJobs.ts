@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActivityLogs } from '@/hooks/useActivityLogs';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -138,7 +139,11 @@ export function useJob(jobId: string | undefined) {
           property:properties(property_id, property_name, property_type),
           assigned_user:users!jobs_assigned_to_fkey(user_id, first_name, last_name, email, photo_url),
           created_user:users!jobs_created_by_fkey(user_id, first_name, last_name),
-          tasks:job_tasks(*),
+          job_tasks(*),
+          linked_tasks:tasks!tasks_job_id_fkey(
+            *,
+            assigned_user:users!tasks_assigned_to_fkey(user_id, first_name, last_name)
+          ),
           comments:job_comments(
             *,
             user:users(user_id, first_name, last_name, photo_url)
@@ -234,11 +239,8 @@ export function useCreateJob() {
           priority: taskPriority,
           category: taskCategory,
           status: 'pending',
+          job_id: data.job_id, // Link task to job for two-way synchronization
         };
-
-        // Only add job_id if the column exists (will be added via migration)
-        // For now, we'll skip it to avoid schema errors
-        // taskInsert.job_id = data.job_id;
 
         console.log('📋 [Jobs] Task insert data:', taskInsert);
 
@@ -317,13 +319,14 @@ export function useCreateJob() {
 export function useUpdateJob() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ jobId, updates }: { jobId: string; updates: JobUpdate }) => {
-      // Fetch the current job to compare status changes
+      // Fetch the current job to compare changes
       const { data: currentJob, error: fetchError } = await supabase
         .from('jobs')
-        .select('job_id, title, status, created_by, property_id')
+        .select('job_id, title, status, priority, assigned_to, created_by, property_id, due_date, description')
         .eq('job_id', jobId)
         .single();
 
@@ -338,6 +341,120 @@ export function useUpdateJob() {
         .single();
 
       if (error) throw error;
+
+      // Handle assignment changes
+      if (updates.assigned_to && currentJob.assigned_to !== updates.assigned_to && user) {
+        console.log('🔄 [Jobs] Assignment changed, updating/creating task:', {
+          oldAssignee: currentJob.assigned_to,
+          newAssignee: updates.assigned_to,
+          jobId: jobId,
+        });
+
+        // Check if there's an existing task linked to this job
+        const { data: existingTask } = await supabase
+          .from('tasks')
+          .select('task_id, status')
+          .eq('job_id', jobId)
+          .single();
+
+        if (existingTask) {
+          // Update existing task assignment
+          console.log('📝 [Jobs] Updating existing task assignment');
+          const { error: taskUpdateError } = await supabase
+            .from('tasks')
+            .update({
+              assigned_to: updates.assigned_to,
+              status: 'pending' // Reset to pending when reassigned
+            })
+            .eq('task_id', existingTask.task_id);
+
+          if (taskUpdateError) {
+            console.error('❌ [Jobs] Failed to update task assignment:', taskUpdateError);
+          } else {
+            console.log('✅ [Jobs] Task assignment updated successfully');
+            // Create notification for new assignee
+            await supabase.from('notifications').insert({
+              user_id: updates.assigned_to,
+              type: 'task_assigned',
+              title: 'Task Reassigned to You',
+              message: `You have been assigned a task: "${data.title}"`,
+              link: '/todos',
+              task_id: existingTask.task_id,
+              action_by: user.id,
+              metadata: {
+                property_id: data.property_id,
+                priority: data.priority,
+                due_date: data.due_date,
+              },
+              is_read: false,
+            });
+          }
+        } else {
+          // Create new task for the newly assigned user
+          console.log('➕ [Jobs] Creating new task for assignee');
+
+          const taskCategory = (() => {
+            switch (data.job_type) {
+              case 'cleaning': return 'cleaning';
+              case 'maintenance':
+              case 'repair': return 'maintenance';
+              case 'inspection': return 'inspection';
+              default: return 'other';
+            }
+          })();
+
+          const taskPriority = (() => {
+            switch (data.priority) {
+              case 'urgent': return 'urgent';
+              case 'high': return 'high';
+              case 'normal': return 'medium';
+              case 'low': return 'low';
+              default: return 'medium';
+            }
+          })();
+
+          const { data: newTask, error: taskCreateError } = await supabase
+            .from('tasks')
+            .insert({
+              title: data.title,
+              description: data.description || `Task for job: ${data.title}`,
+              assigned_to: updates.assigned_to,
+              created_by: user.id,
+              property_id: data.property_id,
+              due_date: data.due_date,
+              priority: taskPriority,
+              category: taskCategory,
+              status: 'pending',
+              job_id: jobId,
+            })
+            .select()
+            .single();
+
+          if (taskCreateError) {
+            console.error('❌ [Jobs] Failed to create task:', taskCreateError);
+          } else {
+            console.log('✅ [Jobs] Task created successfully');
+            // Create notification for new assignee
+            await supabase.from('notifications').insert({
+              user_id: updates.assigned_to,
+              type: 'task_assigned',
+              title: 'New Task Assigned',
+              message: `You have been assigned a new task: "${data.title}"`,
+              link: '/todos',
+              task_id: newTask.task_id,
+              action_by: user.id,
+              metadata: {
+                property_id: data.property_id,
+                priority: data.priority,
+                due_date: data.due_date,
+              },
+              is_read: false,
+            });
+            // Invalidate tasks cache
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          }
+        }
+      }
 
       // Check if status changed and notify the admin who created the job
       if (updates.status && currentJob.status !== updates.status && currentJob.created_by) {
@@ -398,18 +515,35 @@ export function useUpdateJob() {
 export function useDeleteJob() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { logActivity } = useActivityLogs();
 
   return useMutation({
     mutationFn: async (jobId: string) => {
+      // Fetch job details before deleting for logging
+      const { data: job } = await supabase
+        .from('jobs')
+        .select('job_id, title, status, priority, property_id')
+        .eq('job_id', jobId)
+        .single();
+
       const { error } = await supabase
         .from('jobs')
         .delete()
         .eq('job_id', jobId);
 
       if (error) throw error;
-      return jobId;
+      return { jobId, job };
     },
-    onSuccess: () => {
+    onSuccess: ({ jobId, job }) => {
+      // Log the delete action
+      logActivity('job_deleted', {
+        job_id: jobId,
+        title: job?.title || 'Unknown Job',
+        status: job?.status,
+        priority: job?.priority,
+        property_id: job?.property_id,
+      });
+
       queryClient.invalidateQueries({ queryKey: jobKeys.lists() });
       toast({
         title: 'Success',
@@ -516,18 +650,34 @@ export function useUpdateJobTask() {
 export function useDeleteJobTask() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { logActivity } = useActivityLogs();
 
   return useMutation({
     mutationFn: async ({ taskId, jobId }: { taskId: string; jobId: string }) => {
+      // Fetch task details before deleting for logging
+      const { data: task } = await supabase
+        .from('job_tasks')
+        .select('task_id, task_title, is_completed')
+        .eq('task_id', taskId)
+        .single();
+
       const { error } = await supabase
         .from('job_tasks')
         .delete()
         .eq('task_id', taskId);
 
       if (error) throw error;
-      return jobId;
+      return { jobId, task };
     },
-    onSuccess: (jobId) => {
+    onSuccess: ({ jobId, task }) => {
+      // Log the delete action
+      logActivity('job_task_deleted', {
+        task_id: task?.task_id,
+        task_title: task?.task_title || 'Unknown Task',
+        is_completed: task?.is_completed,
+        job_id: jobId,
+      });
+
       queryClient.invalidateQueries({ queryKey: jobKeys.tasks(jobId) });
       queryClient.invalidateQueries({ queryKey: jobKeys.detail(jobId) });
       toast({
@@ -661,18 +811,33 @@ export function useUploadJobAttachment() {
 export function useDeleteJobAttachment() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { logActivity } = useActivityLogs();
 
   return useMutation({
     mutationFn: async ({ attachmentId, jobId }: { attachmentId: string; jobId: string }) => {
+      // Fetch attachment details before deleting for logging
+      const { data: attachment } = await supabase
+        .from('job_attachments')
+        .select('attachment_id, file_name, file_url')
+        .eq('attachment_id', attachmentId)
+        .single();
+
       const { error } = await supabase
         .from('job_attachments')
         .delete()
         .eq('attachment_id', attachmentId);
 
       if (error) throw error;
-      return jobId;
+      return { jobId, attachment };
     },
-    onSuccess: (jobId) => {
+    onSuccess: ({ jobId, attachment }) => {
+      // Log the delete action
+      logActivity('job_attachment_deleted', {
+        attachment_id: attachment?.attachment_id,
+        file_name: attachment?.file_name || 'Unknown File',
+        job_id: jobId,
+      });
+
       queryClient.invalidateQueries({ queryKey: jobKeys.attachments(jobId) });
       queryClient.invalidateQueries({ queryKey: jobKeys.detail(jobId) });
       toast({

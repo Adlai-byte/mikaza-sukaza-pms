@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, TaskFilters } from '@/hooks/useTasks';
 import { TaskDialog } from '@/components/tasks/TaskDialog';
+import { TaskViewDialog } from '@/components/tasks/TaskViewDialog';
 import { TasksTable } from '@/components/tasks/TasksTable';
 import { TasksKanban } from '@/components/tasks/TasksKanban';
 import { Task, TaskInsert, TaskChecklistInsert } from '@/lib/schemas';
@@ -38,7 +39,9 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function Todos() {
   const { user } = useAuth();
   const [showTaskDialog, setShowTaskDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -52,7 +55,11 @@ export default function Todos() {
   // Build filters object
   const filters: TaskFilters = useMemo(() => {
     const baseFilters: TaskFilters = {
-      status: statusFilter.length > 0 ? statusFilter : undefined,
+      // Default: show only non-completed tasks (pending, in_progress)
+      // Unless user explicitly selects completed in status filter
+      status: statusFilter.length > 0
+        ? statusFilter
+        : ['pending', 'in_progress'], // Automatically exclude completed and cancelled
       priority: priorityFilter.length > 0 ? priorityFilter : undefined,
       category: categoryFilter.length > 0 ? categoryFilter : undefined,
       property_id: propertyFilter || undefined,
@@ -114,7 +121,8 @@ export default function Todos() {
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const total = tasks.length;
+    const total = tasks.length; // Active tasks (pending + in_progress)
+    const pending = tasks.filter(t => t.status === 'pending').length;
     const overdue = tasks.filter(t =>
       t.due_date &&
       isPast(parseISO(t.due_date)) &&
@@ -122,19 +130,19 @@ export default function Todos() {
       t.status !== 'completed' &&
       t.status !== 'cancelled'
     ).length;
-    const completedToday = tasks.filter(t =>
-      t.status === 'completed' &&
-      t.completed_at &&
-      isToday(parseISO(t.completed_at))
-    ).length;
     const inProgress = tasks.filter(t => t.status === 'in_progress').length;
 
-    return { total, overdue, completedToday, inProgress };
+    return { total, pending, overdue, inProgress };
   }, [tasks]);
 
   const handleCreateTask = () => {
     setEditingTask(null);
     setShowTaskDialog(true);
+  };
+
+  const handleViewTask = (task: Task) => {
+    setViewingTask(task);
+    setShowViewDialog(true);
   };
 
   const handleEditTask = (task: Task) => {
@@ -217,13 +225,9 @@ export default function Todos() {
               Task Management
             </h1>
             <p className="text-muted-foreground mt-2">
-              Manage tasks, track progress, and organize your workflow
+              Tasks are created from Active Jobs. View and manage your assigned tasks here.
             </p>
           </div>
-          <Button onClick={handleCreateTask} className="bg-primary hover:bg-primary/90">
-            <Plus className="mr-2 h-4 w-4" />
-            New Task
-          </Button>
         </div>
 
         {/* Statistics Dashboard */}
@@ -232,9 +236,9 @@ export default function Todos() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">Total Tasks</p>
+                  <p className="text-sm font-medium text-blue-700">Active Tasks</p>
                   <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
-                  <p className="text-xs text-blue-600 mt-1">All tasks</p>
+                  <p className="text-xs text-blue-600 mt-1">Pending & in progress</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
                   <CheckSquare className="h-6 w-6 text-white" />
@@ -258,16 +262,16 @@ export default function Todos() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="border-0 shadow-md bg-gradient-to-br from-yellow-50 to-yellow-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-700">Completed Today</p>
-                  <h3 className="text-3xl font-bold text-green-900 mt-1">{stats.completedToday}</h3>
-                  <p className="text-xs text-green-600 mt-1">Today's achievements</p>
+                  <p className="text-sm font-medium text-yellow-700">Pending Tasks</p>
+                  <h3 className="text-3xl font-bold text-yellow-900 mt-1">{stats.pending}</h3>
+                  <p className="text-xs text-yellow-600 mt-1">Waiting to start</p>
                 </div>
-                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                  <CheckCircle2 className="h-6 w-6 text-white" />
+                <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -439,6 +443,7 @@ export default function Todos() {
           <TabsContent value="list" className="mt-0">
             <TasksTable
               tasks={tasks}
+              onView={handleViewTask}
               onEdit={handleEditTask}
               onDelete={handleDeleteTask}
               onStatusChange={handleStatusChange}
@@ -463,6 +468,13 @@ export default function Todos() {
           onSubmit={handleTaskSubmit}
           isSubmitting={createTask.isPending || updateTask.isPending}
           task={editingTask}
+        />
+
+        {/* Task View Dialog */}
+        <TaskViewDialog
+          open={showViewDialog}
+          onOpenChange={setShowViewDialog}
+          task={viewingTask}
         />
     </div>
   );

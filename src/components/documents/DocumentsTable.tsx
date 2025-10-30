@@ -22,7 +22,6 @@ import {
   FileText,
   MoreHorizontal,
   Download,
-  Eye,
   Trash2,
   Share2,
   Clock,
@@ -32,7 +31,6 @@ import {
 } from "lucide-react";
 import { DocumentSummary, CONTRACT_TYPES } from "@/lib/schemas";
 import { useDocumentDownload } from "@/hooks/useDocuments";
-import { DocumentViewer } from "./DocumentViewer";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -86,13 +84,6 @@ export function DocumentsTable({
 }: DocumentsTableProps) {
   const { downloadDocument } = useDocumentDownload();
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<DocumentSummary | null>(null);
-
-  const handleViewDocument = (document: DocumentSummary) => {
-    setSelectedDocument(document);
-    setViewerOpen(true);
-  };
 
   // Filter documents by search
   const filteredDocuments = documents.filter((doc) =>
@@ -274,11 +265,6 @@ export function DocumentsTable({
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
 
-                        <DropdownMenuItem onClick={() => handleViewDocument(document)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Document
-                        </DropdownMenuItem>
-
                         <DropdownMenuItem onClick={() => downloadDocument(document)}>
                           <Download className="mr-2 h-4 w-4" />
                           Download
@@ -326,13 +312,6 @@ export function DocumentsTable({
           )}
         </div>
       )}
-
-      {/* Document Viewer */}
-      <DocumentViewer
-        document={selectedDocument}
-        open={viewerOpen}
-        onOpenChange={setViewerOpen}
-      />
     </div>
   );
 }

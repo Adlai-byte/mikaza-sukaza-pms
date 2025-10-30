@@ -23,6 +23,7 @@ export interface IssueFilters {
   property_id?: string;
   assigned_to?: string;
   reported_by?: string;
+  current_user_id?: string; // Filter for issues assigned to OR reported by this user
   search?: string;
 }
 
@@ -61,6 +62,11 @@ const fetchIssues = async (filters?: IssueFilters): Promise<Issue[]> => {
 
   if (filters?.reported_by) {
     query = query.eq('reported_by', filters.reported_by);
+  }
+
+  // Filter for issues assigned to OR reported by current user
+  if (filters?.current_user_id && !filters?.assigned_to && !filters?.reported_by) {
+    query = query.or(`assigned_to.eq.${filters.current_user_id},reported_by.eq.${filters.current_user_id}`);
   }
 
   if (filters?.search) {

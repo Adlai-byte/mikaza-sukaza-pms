@@ -36,6 +36,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { invoiceSchema } from '@/lib/schemas';
 import { generateInvoicePDF } from '@/lib/pdf-generator';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { formatUserDisplay } from '@/lib/user-display';
 
 const INVOICE_STATUSES = ['draft', 'sent', 'paid', 'overdue', 'cancelled', 'refunded'];
 const LINE_ITEM_TYPES = ['accommodation', 'cleaning', 'extras', 'tax', 'commission', 'other'];
@@ -424,7 +426,7 @@ export default function InvoiceForm() {
     }
   };
 
-  const handleSubmit = form.handleSubmit((data) => {
+  const handleSubmit = form.handleSubmit(async (data) => {
     if (lineItems.length === 0) {
       alert('Please add at least one line item');
       return;
@@ -436,19 +438,52 @@ export default function InvoiceForm() {
       subtotal: totals.subtotal,
       tax_amount: totals.taxAmount,
       total_amount: totals.total,
-      amount_paid: 0,
+      amount_paid: invoice?.amount_paid || 0,
       booking_id: linkedBookingId || undefined, // Link to booking if created from booking
     };
 
     if (isEditing) {
-      updateInvoice.mutate(
-        { invoiceId: invoiceId!, updates: invoiceData },
-        {
-          onSuccess: () => {
-            navigate('/invoices');
-          },
-        }
-      );
+      try {
+        // Step 1: Update invoice
+        console.log('📝 Updating invoice:', invoiceId);
+        await updateInvoice.mutateAsync({ invoiceId: invoiceId!, updates: invoiceData });
+
+        // Step 2: Delete existing line items
+        console.log('🗑️ Deleting old line items');
+        const { error: deleteError } = await supabase
+          .from('invoice_line_items')
+          .delete()
+          .eq('invoice_id', invoiceId!);
+
+        if (deleteError) throw deleteError;
+
+        // Step 3: Insert new line items
+        console.log('✨ Inserting new line items:', lineItems.length);
+        const lineItemsWithInvoiceId = lineItems.map((item) => ({
+          ...item,
+          invoice_id: invoiceId!,
+        }));
+
+        const { error: insertError } = await supabase
+          .from('invoice_line_items')
+          .insert(lineItemsWithInvoiceId);
+
+        if (insertError) throw insertError;
+
+        toast({
+          title: 'Success',
+          description: 'Invoice updated successfully with all line items',
+        });
+
+        navigate('/invoices');
+      } catch (error: any) {
+        console.error('❌ Error updating invoice:', error);
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to update invoice',
+          variant: 'destructive',
+        });
+      }
     } else {
       createInvoice.mutate(
         { invoice: invoiceData, lineItems },
@@ -681,7 +716,7 @@ export default function InvoiceForm() {
         </Card>
 
         {/* Bill Template Selector - Quick Add */}
-        {!isEditing && form.watch('property_id') && (
+        {form.watch('property_id') && (
           <BillTemplateSelector
             propertyId={form.watch('property_id')}
             onTemplatesSelected={handleTemplatesSelected}
@@ -714,10 +749,10 @@ export default function InvoiceForm() {
                     <TableRow>
                       <TableHead className="w-12">#</TableHead>
                       <TableHead className="min-w-[200px]">Description</TableHead>
-                      <TableHead className="w-24">Type</TableHead>
-                      <TableHead className="w-24">Qty</TableHead>
-                      <TableHead className="w-32">Unit Price</TableHead>
-                      <TableHead className="w-24">Tax %</TableHead>
+                      <TableHead className="w-32">Type</TableHead>
+                      <TableHead className="w-32">Qty</TableHead>
+                      <TableHead className="w-36">Unit Price</TableHead>
+                      <TableHead className="w-32">Tax %</TableHead>
                       <TableHead className="w-32">Tax Amount</TableHead>
                       <TableHead className="w-32">Total</TableHead>
                       <TableHead className="w-16"></TableHead>
@@ -824,10 +859,10 @@ export default function InvoiceForm() {
                       </SelectTrigger>
                       <SelectContent>
                         {users
-                          .filter(u => ['ops_staff', 'property_manager', 'admin'].includes(u.user_type || ''))
+                          .filter(u => ['ops', 'admin'].includes(u.user_type || ''))
                           .map((user) => (
                             <SelectItem key={user.user_id} value={user.user_id!}>
-                              {user.first_name} {user.last_name} ({user.user_type?.replace('_', ' ')})
+                              {formatUserDisplay(user)}
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -848,10 +883,30 @@ export default function InvoiceForm() {
 
                   <div className="space-y-2">
                     <Label>Reason (Optional)</Label>
+                    <Select
+                      value={tipReason}
+                      onValueChange={setTipReason}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select or type reason" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Excellent cleaning service">Excellent cleaning service</SelectItem>
+                        <SelectItem value="Outstanding guest communication">Outstanding guest communication</SelectItem>
+                        <SelectItem value="Quick response time">Quick response time</SelectItem>
+                        <SelectItem value="Professional maintenance work">Professional maintenance work</SelectItem>
+                        <SelectItem value="Exceptional hospitality">Exceptional hospitality</SelectItem>
+                        <SelectItem value="Property walkthrough service">Property walkthrough service</SelectItem>
+                        <SelectItem value="Guest amenities setup">Guest amenities setup</SelectItem>
+                        <SelectItem value="Emergency response">Emergency response</SelectItem>
+                        <SelectItem value="Above and beyond service">Above and beyond service</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Input
-                      placeholder="E.g., Excellent cleaning"
+                      placeholder="Or type custom reason"
                       value={tipReason}
                       onChange={(e) => setTipReason(e.target.value)}
+                      className="mt-2"
                     />
                   </div>
 
@@ -896,7 +951,7 @@ export default function InvoiceForm() {
                           {existingTips.map((tip) => (
                             <TableRow key={tip.tip_id}>
                               <TableCell>
-                                {tip.recipient?.first_name} {tip.recipient?.last_name}
+                                {formatUserDisplay(tip.recipient)}
                               </TableCell>
                               <TableCell className="font-semibold">
                                 ${tip.tip_amount.toFixed(2)}

@@ -36,11 +36,23 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
   const fetchActivityLogs = useCallback(async () => {
     if (user.user_id) {
       setLoading(true);
-      const logs = await getActivityLogs(user.user_id);
-      setActivityLogs(logs.slice(0, 10)); // Show last 10 activities
-      setLoading(false);
+      try {
+        // Fetch all activity logs related to this user
+        // This includes both:
+        // 1. Logs where user_id matches (actions done TO this user)
+        // 2. Logs performed by this user (in performed_by field)
+        const logs = await getActivityLogs(user.user_id);
+
+        console.log('📋 [UserDetails] Fetched activity logs for user:', user.email, logs.length);
+        setActivityLogs(logs.slice(0, 10)); // Show last 10 activities
+      } catch (error) {
+        console.error('Failed to fetch activity logs:', error);
+        setActivityLogs([]);
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [user.user_id, getActivityLogs]);
+  }, [user.user_id, user.email, getActivityLogs]);
 
   useEffect(() => {
     if (open && user.user_id) {
@@ -52,32 +64,69 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
+  const formatActionType = (actionType: string): string => {
+    // Convert action types to human-readable format
+    const typeMap: Record<string, string> = {
+      'USER_CREATED': 'User Created',
+      'USER_UPDATED': 'User Updated',
+      'USER_DELETED': 'User Deleted',
+      'USER_LOGIN': 'Logged In',
+      'USER_LOGOUT': 'Logged Out',
+      'PROPERTY_CREATED': 'Property Created',
+      'PROPERTY_UPDATED': 'Property Updated',
+      'PROPERTY_DELETED': 'Property Deleted',
+      'BOOKING_CREATED': 'Booking Created',
+      'BOOKING_UPDATED': 'Booking Updated',
+      'BOOKING_CANCELLED': 'Booking Cancelled',
+      'TASK_CREATED': 'Task Created',
+      'TASK_UPDATED': 'Task Updated',
+      'TASK_COMPLETED': 'Task Completed',
+      'ISSUE_CREATED': 'Issue Created',
+      'ISSUE_RESOLVED': 'Issue Resolved',
+      'INVOICE_CREATED': 'Invoice Created',
+      'INVOICE_SENT': 'Invoice Sent',
+      'PAYMENT_RECEIVED': 'Payment Received',
+    };
+
+    return typeMap[actionType] || actionType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   const formatActionDetails = (details: Record<string, any> | undefined) => {
     if (!details || Object.keys(details).length === 0) return null;
 
     const formattedDetails: string[] = [];
 
     // Format different fields in a user-friendly way
-    if (details.userEmail) formattedDetails.push(`Email: ${details.userEmail}`);
-    if (details.userType) formattedDetails.push(`Type: ${details.userType}`);
-    if (details.isActive !== undefined) formattedDetails.push(`Active: ${details.isActive ? 'Yes' : 'No'}`);
+    if (details.userEmail) formattedDetails.push(`${details.userEmail}`);
+    if (details.userName) formattedDetails.push(`${details.userName}`);
+    if (details.userType) formattedDetails.push(`Role: ${details.userType}`);
+    if (details.isActive !== undefined) formattedDetails.push(details.isActive ? 'Activated' : 'Deactivated');
     if (details.propertyName) formattedDetails.push(`Property: ${details.propertyName}`);
-    if (details.bookingId) formattedDetails.push(`Booking ID: ${details.bookingId}`);
-    if (details.taskId) formattedDetails.push(`Task ID: ${details.taskId}`);
-    if (details.issueId) formattedDetails.push(`Issue ID: ${details.issueId}`);
+    if (details.propertyId) formattedDetails.push(`Property ID: ${details.propertyId.substring(0, 8)}...`);
+    if (details.bookingId) formattedDetails.push(`Booking #${details.bookingId.substring(0, 8)}`);
+    if (details.taskId) formattedDetails.push(`Task #${details.taskId.substring(0, 8)}`);
+    if (details.taskTitle) formattedDetails.push(`"${details.taskTitle}"`);
+    if (details.issueId) formattedDetails.push(`Issue #${details.issueId.substring(0, 8)}`);
+    if (details.issueTitle) formattedDetails.push(`"${details.issueTitle}"`);
     if (details.status) formattedDetails.push(`Status: ${details.status}`);
     if (details.priority) formattedDetails.push(`Priority: ${details.priority}`);
+    if (details.amount) formattedDetails.push(`$${details.amount}`);
+    if (details.invoiceNumber) formattedDetails.push(`Invoice #${details.invoiceNumber}`);
 
     // If there are other details not explicitly handled, add them
-    const handledKeys = ['userEmail', 'userType', 'isActive', 'propertyName', 'bookingId', 'taskId', 'issueId', 'status', 'priority'];
+    const handledKeys = [
+      'userEmail', 'userName', 'userType', 'isActive', 'propertyName', 'propertyId',
+      'bookingId', 'taskId', 'taskTitle', 'issueId', 'issueTitle',
+      'status', 'priority', 'amount', 'invoiceNumber'
+    ];
     Object.entries(details).forEach(([key, value]) => {
-      if (!handledKeys.includes(key) && value !== null && value !== undefined) {
+      if (!handledKeys.includes(key) && value !== null && value !== undefined && value !== '') {
         const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
         formattedDetails.push(`${formattedKey}: ${value}`);
       }
     });
 
-    return formattedDetails.join(' • ');
+    return formattedDetails.length > 0 ? formattedDetails.join(' • ') : null;
   };
 
   return (
@@ -226,29 +275,37 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
                     const formattedDetails = formatActionDetails(log.action_details);
                     return (
                       <div key={log.log_id || index}>
-                        <div className="flex items-center justify-between py-2">
+                        <div className="flex items-start justify-between py-3">
                           <div className="flex-1">
-                            <p className="font-medium capitalize">
-                              {log.action_type.replace(/_/g, ' ').toLowerCase()}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">
+                                {formatActionType(log.action_type)}
+                              </p>
+                              <Badge variant="outline" className="text-xs">
+                                {log.action_type}
+                              </Badge>
+                            </div>
                             {formattedDetails && (
                               <p className="text-sm text-muted-foreground mt-1">
                                 {formattedDetails}
                               </p>
                             )}
-                            <p className="text-xs text-muted-foreground mt-1">
-                              by {log.performed_by}
-                            </p>
-                          </div>
-                          <div className="text-sm text-muted-foreground whitespace-nowrap ml-4">
-                            {log.created_at && (() => {
-                              try {
-                                return format(new Date(log.created_at), 'MMM dd, HH:mm');
-                              } catch (error) {
-                                console.error('Error formatting log date:', error);
-                                return log.created_at;
-                              }
-                            })()}
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs text-muted-foreground">
+                                by <span className="font-medium">{log.performed_by || 'System'}</span>
+                              </p>
+                              <span className="text-xs text-muted-foreground">•</span>
+                              <p className="text-xs text-muted-foreground">
+                                {log.created_at && (() => {
+                                  try {
+                                    return format(new Date(log.created_at), 'MMM dd, yyyy HH:mm');
+                                  } catch (error) {
+                                    console.error('Error formatting log date:', error);
+                                    return log.created_at;
+                                  }
+                                })()}
+                              </p>
+                            </div>
                           </div>
                         </div>
                         {index < activityLogs.length - 1 && <Separator />}

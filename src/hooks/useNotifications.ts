@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AppNotification, NotificationPreferences } from '@/lib/schemas';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActivityLogs } from '@/hooks/useActivityLogs';
 
 // Query keys
 export const notificationKeys = {
@@ -76,7 +77,15 @@ const markAllAsRead = async (userId: string): Promise<void> => {
 };
 
 // Delete notification
-const deleteNotification = async (notificationId: string, userId: string): Promise<void> => {
+const deleteNotification = async (notificationId: string, userId: string): Promise<{ notificationId: string; notification: any }> => {
+  // Fetch notification details before deleting for logging
+  const { data: notification } = await supabase
+    .from('notifications')
+    .select('notification_id, type, title, message')
+    .eq('notification_id', notificationId)
+    .eq('user_id', userId)
+    .single();
+
   const { error } = await supabase
     .from('notifications')
     .delete()
@@ -84,6 +93,7 @@ const deleteNotification = async (notificationId: string, userId: string): Promi
     .eq('user_id', userId);
 
   if (error) throw error;
+  return { notificationId, notification };
 };
 
 // Delete all read notifications
@@ -358,6 +368,7 @@ export function useDeleteNotification() {
   const queryClient = useQueryClient();
   const { user, profile } = useAuth();
   const userId = profile?.user_id || user?.id || '';
+  const { logActivity } = useActivityLogs();
 
   return useMutation({
     mutationFn: (notificationId: string) => deleteNotification(notificationId, userId),
@@ -390,6 +401,15 @@ export function useDeleteNotification() {
 
       // Return context with previous values for rollback
       return { previousNotifications, previousCount };
+    },
+    onSuccess: ({ notificationId, notification }) => {
+      // Log the delete action
+      logActivity('notification_deleted', {
+        notification_id: notificationId,
+        type: notification?.type,
+        title: notification?.title || 'Unknown Notification',
+        message: notification?.message,
+      });
     },
     onError: (error: Error, notificationId, context) => {
       // Rollback on error

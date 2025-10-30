@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Invoice, InvoiceInsert, InvoiceLineItem, InvoiceLineItemInsert } from '@/lib/schemas';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActivityLogs } from '@/hooks/useActivityLogs';
 
 // Query keys
 export const invoiceKeys = {
@@ -124,13 +125,21 @@ const updateInvoice = async ({ invoiceId, updates }: { invoiceId: string; update
 };
 
 // Delete invoice (cascade deletes line items)
-const deleteInvoice = async (invoiceId: string): Promise<void> => {
+const deleteInvoice = async (invoiceId: string): Promise<{ invoiceId: string; invoice: any }> => {
+  // Fetch invoice details before deleting for logging
+  const { data: invoice } = await supabase
+    .from('invoices')
+    .select('invoice_id, invoice_number, guest_name, total_amount, status, property_id')
+    .eq('invoice_id', invoiceId)
+    .single();
+
   const { error } = await supabase
     .from('invoices')
     .delete()
     .eq('invoice_id', invoiceId);
 
   if (error) throw error;
+  return { invoiceId, invoice };
 };
 
 // Add line item to invoice
@@ -159,13 +168,21 @@ const updateLineItem = async ({ lineItemId, updates }: { lineItemId: string; upd
 };
 
 // Delete line item
-const deleteLineItem = async (lineItemId: string): Promise<void> => {
+const deleteLineItem = async (lineItemId: string): Promise<{ lineItemId: string; lineItem: any }> => {
+  // Fetch line item details before deleting for logging
+  const { data: lineItem } = await supabase
+    .from('invoice_line_items')
+    .select('line_item_id, description, quantity, unit_price, invoice_id')
+    .eq('line_item_id', lineItemId)
+    .single();
+
   const { error } = await supabase
     .from('invoice_line_items')
     .delete()
     .eq('line_item_id', lineItemId);
 
   if (error) throw error;
+  return { lineItemId, lineItem };
 };
 
 // Mark invoice as sent
@@ -276,64 +293,112 @@ const createInvoiceFromBooking = async (bookingId: string): Promise<Invoice> => 
   const checkOut = new Date(booking.check_out_date);
   const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
 
-  // Create line items from booking
-  const lineItems: InvoiceLineItemInsert[] = [];
+  // Create line items - check if booking has a bill template
+  let lineItems: InvoiceLineItemInsert[] = [];
   let lineNumber = 1;
 
-  // Accommodation charges
-  if (booking.base_amount && booking.base_amount > 0) {
-    lineItems.push({
-      invoice_id: '', // Will be set after invoice creation
-      line_number: lineNumber++,
-      description: `Accommodation - ${nights} night${nights > 1 ? 's' : ''} (${booking.check_in_date} to ${booking.check_out_date})`,
-      quantity: nights,
-      unit_price: booking.base_amount / nights,
-      tax_rate: 0,
-      tax_amount: 0,
-      item_type: 'accommodation',
-    });
+  // If booking has a bill template, use it for line items
+  if (booking.bill_template_id) {
+    console.log('📋 [useInvoices] Using bill template for invoice:', booking.bill_template_id);
+
+    const { data: template, error: templateError } = await supabase
+      .from('bill_templates')
+      .select(`
+        *,
+        items:bill_template_items(*)
+      `)
+      .eq('template_id', booking.bill_template_id)
+      .single();
+
+    if (!templateError && template && template.items) {
+      // Use template items with booking-specific context
+      template.items.forEach((item: any) => {
+        const lineTotal = item.quantity * item.unit_price;
+        const itemTaxAmount = item.tax_amount || (lineTotal * (item.tax_rate / 100));
+
+        // For accommodation items, adjust description to include dates and nights
+        let description = item.description;
+        if (item.item_type === 'accommodation') {
+          description = `${item.description} - ${nights} night${nights > 1 ? 's' : ''} (${booking.check_in_date} to ${booking.check_out_date})`;
+        }
+
+        lineItems.push({
+          invoice_id: '',
+          line_number: lineNumber++,
+          description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          tax_rate: item.tax_rate || 0,
+          tax_amount: itemTaxAmount,
+          item_type: item.item_type || 'other',
+        });
+      });
+
+      console.log(`✅ [useInvoices] Created ${lineItems.length} line items from template`);
+    } else {
+      console.log('⚠️ [useInvoices] Template not found or has no items, falling back to booking fields');
+    }
   }
 
-  // Cleaning fee
-  if (booking.cleaning_fee && booking.cleaning_fee > 0) {
-    lineItems.push({
-      invoice_id: '',
-      line_number: lineNumber++,
-      description: 'Cleaning Fee',
-      quantity: 1,
-      unit_price: booking.cleaning_fee,
-      tax_rate: 0,
-      tax_amount: 0,
-      item_type: 'cleaning',
-    });
-  }
+  // Fallback: If no template or template failed, use booking fields (existing behavior)
+  if (lineItems.length === 0) {
+    console.log('📋 [useInvoices] Using booking fields for line items (no template)');
 
-  // Extra charges
-  if (booking.extras_amount && booking.extras_amount > 0) {
-    lineItems.push({
-      invoice_id: '',
-      line_number: lineNumber++,
-      description: 'Additional Services',
-      quantity: 1,
-      unit_price: booking.extras_amount,
-      tax_rate: 0,
-      tax_amount: 0,
-      item_type: 'extras',
-    });
-  }
+    // Accommodation charges
+    if (booking.base_amount && booking.base_amount > 0) {
+      lineItems.push({
+        invoice_id: '',
+        line_number: lineNumber++,
+        description: `Accommodation - ${nights} night${nights > 1 ? 's' : ''} (${booking.check_in_date} to ${booking.check_out_date})`,
+        quantity: nights,
+        unit_price: booking.base_amount / nights,
+        tax_rate: 0,
+        tax_amount: 0,
+        item_type: 'accommodation',
+      });
+    }
 
-  // Taxes
-  if (booking.tax_amount && booking.tax_amount > 0) {
-    lineItems.push({
-      invoice_id: '',
-      line_number: lineNumber++,
-      description: 'Taxes',
-      quantity: 1,
-      unit_price: booking.tax_amount,
-      tax_rate: 0,
-      tax_amount: 0,
-      item_type: 'tax',
-    });
+    // Cleaning fee
+    if (booking.cleaning_fee && booking.cleaning_fee > 0) {
+      lineItems.push({
+        invoice_id: '',
+        line_number: lineNumber++,
+        description: 'Cleaning Fee',
+        quantity: 1,
+        unit_price: booking.cleaning_fee,
+        tax_rate: 0,
+        tax_amount: 0,
+        item_type: 'cleaning',
+      });
+    }
+
+    // Extra charges
+    if (booking.extras_amount && booking.extras_amount > 0) {
+      lineItems.push({
+        invoice_id: '',
+        line_number: lineNumber++,
+        description: 'Additional Services',
+        quantity: 1,
+        unit_price: booking.extras_amount,
+        tax_rate: 0,
+        tax_amount: 0,
+        item_type: 'extras',
+      });
+    }
+
+    // Taxes
+    if (booking.tax_amount && booking.tax_amount > 0) {
+      lineItems.push({
+        invoice_id: '',
+        line_number: lineNumber++,
+        description: 'Taxes',
+        quantity: 1,
+        unit_price: booking.tax_amount,
+        tax_rate: 0,
+        tax_amount: 0,
+        item_type: 'tax',
+      });
+    }
   }
 
   // Create invoice
@@ -455,10 +520,21 @@ export function useUpdateInvoice() {
 export function useDeleteInvoice() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { logActivity } = useActivityLogs();
 
   return useMutation({
     mutationFn: deleteInvoice,
-    onSuccess: () => {
+    onSuccess: ({ invoiceId, invoice }) => {
+      // Log the delete action
+      logActivity('invoice_deleted', {
+        invoice_id: invoiceId,
+        invoice_number: invoice?.invoice_number || 'N/A',
+        guest_name: invoice?.guest_name || 'Unknown Guest',
+        total_amount: invoice?.total_amount,
+        status: invoice?.status,
+        property_id: invoice?.property_id,
+      });
+
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast({
         title: 'Success',
@@ -526,10 +602,20 @@ export function useUpdateLineItem() {
 export function useDeleteLineItem() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { logActivity } = useActivityLogs();
 
   return useMutation({
     mutationFn: deleteLineItem,
-    onSuccess: () => {
+    onSuccess: ({ lineItemId, lineItem }) => {
+      // Log the delete action
+      logActivity('invoice_line_item_deleted', {
+        line_item_id: lineItemId,
+        description: lineItem?.description || 'Unknown Item',
+        quantity: lineItem?.quantity,
+        unit_price: lineItem?.unit_price,
+        invoice_id: lineItem?.invoice_id,
+      });
+
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast({
         title: 'Success',

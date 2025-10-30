@@ -111,7 +111,7 @@ import {
   parseISO,
 } from 'date-fns';
 import { Tables } from '@/integrations/supabase/types';
-import { BookingDialog } from '@/components/BookingDialog';
+import { BookingDialogEnhanced } from '@/components/BookingDialogEnhanced';
 import { BookingInsert } from '@/lib/schemas';
 import { useToast } from '@/hooks/use-toast';
 import { bookingKeys } from '@/hooks/useBookings';
@@ -333,11 +333,13 @@ const Calendar = () => {
       const endDate = format(dateRange[dateRange.length - 1], 'yyyy-MM-dd');
 
       console.log('🔍 Fetching bookings from', startDate, 'to', endDate);
+      // Fetch bookings that overlap with the date range
+      // A booking overlaps if: check_in_date <= endDate AND check_out_date >= startDate
       const { data, error } = await supabase
         .from('property_bookings')
         .select('*')
-        .gte('check_in_date', startDate)
-        .lte('check_out_date', endDate);
+        .lte('check_in_date', endDate)
+        .gte('check_out_date', startDate);
 
       if (error) {
         console.error('❌ Bookings fetch error:', error);
@@ -531,17 +533,28 @@ const Calendar = () => {
    * HANDLER: Open booking dialog for date
    */
   const handleDateClick = (propertyId: string, date: Date, booking?: PropertyBooking) => {
+    console.log('📅 Date clicked:', {
+      propertyId,
+      date: format(date, 'yyyy-MM-dd'),
+      hasBooking: !!booking,
+      booking: booking ? { id: booking.booking_id, guest: booking.guest_name } : null
+    });
+
     if (booking) {
+      console.log('✏️ Opening dialog to edit booking');
       setEditingBooking(booking);
       setBookingPropertyId(propertyId);
       setShowBookingDialog(true);
     } else {
+      console.log('➕ Opening dialog to create new booking');
       setEditingBooking(null);
       setBookingPropertyId(propertyId);
       setBookingCheckIn(format(date, 'yyyy-MM-dd'));
       setBookingCheckOut(format(addDays(date, 1), 'yyyy-MM-dd'));
       setShowBookingDialog(true);
     }
+
+    console.log('🎭 Dialog state set to:', true);
   };
 
   /**
@@ -1326,7 +1339,7 @@ const Calendar = () => {
                         <div
                           key={property.property_id}
                           className={`
-                            p-4 border-b transition-all cursor-pointer
+                            h-32 p-4 border-b transition-all cursor-pointer overflow-hidden flex items-center
                             ${selectedProperty === property.property_id
                               ? 'bg-blue-50 border-l-4 border-l-blue-500'
                               : index % 2 === 0
@@ -1354,7 +1367,7 @@ const Calendar = () => {
 
                             {/* Property Info */}
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 truncate text-sm">
+                              <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 leading-tight">
                                 {property.property_name}
                               </h4>
                               <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
@@ -1463,7 +1476,7 @@ const Calendar = () => {
                         <div
                           key={property.property_id}
                           className={`
-                            border-b flex-shrink-0 h-24 flex
+                            border-b flex-shrink-0 h-32 flex
                             ${selectedProperty === property.property_id ? 'bg-blue-50' :
                               propIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                             }
@@ -1646,8 +1659,8 @@ const Calendar = () => {
             DIALOGS: Booking, Delete, Block, Details
             ======================================== */}
 
-        {/* Booking Dialog */}
-        <BookingDialog
+        {/* Booking Dialog - Enhanced with Conflict Detection & Template Integration */}
+        <BookingDialogEnhanced
           open={showBookingDialog}
           onOpenChange={(open) => {
             setShowBookingDialog(open);

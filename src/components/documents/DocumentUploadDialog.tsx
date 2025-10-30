@@ -25,6 +25,7 @@ import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
 import { useUsers } from "@/hooks/useUsers";
 import { DocumentInsert, DOCUMENT_CATEGORIES, CONTRACT_TYPES } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
+import { formatUserDisplay } from "@/lib/user-display";
 
 interface DocumentUploadDialogProps {
   open: boolean;
@@ -43,7 +44,20 @@ export function DocumentUploadDialog({
 }: DocumentUploadDialogProps) {
   const { uploadFile, uploadProgress, isUploading } = useDocumentUpload();
   const { properties } = usePropertiesOptimized();
-  const { users = [] } = useUsers();
+  const { users: allUsers = [], loading: usersLoading } = useUsers();
+
+  // Filter to show only active employees (Ops and Admin)
+  // Note: user_type enum is: "admin" | "ops" | "provider" | "customer"
+  const users = allUsers.filter(user =>
+    user.is_active &&
+    user.user_type &&
+    ['ops', 'admin'].includes(user.user_type)
+  );
+
+  // Debug logging
+  console.log('📋 [DocumentUploadDialog] All users:', allUsers.length);
+  console.log('📋 [DocumentUploadDialog] Filtered users:', users.length);
+  console.log('📋 [DocumentUploadDialog] User types:', allUsers.map(u => ({ name: `${u.first_name} ${u.last_name}`, type: u.user_type, active: u.is_active })));
 
   // Form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -310,7 +324,7 @@ export function DocumentUploadDialog({
                     <SelectItem key={user.user_id} value={user.user_id}>
                       <div className="flex items-center gap-2">
                         <User className="h-3 w-3" />
-                        {user.first_name} {user.last_name}
+                        {formatUserDisplay(user)}
                       </div>
                     </SelectItem>
                   ))}

@@ -6,8 +6,21 @@ import { Loader2, MapPin } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix Leaflet's default icon path issues
+// Fix Leaflet's default icon path issues with proper configuration
 delete (L.Icon.Default.prototype as any)._getIconUrl;
+
+// Create a custom icon with explicit paths
+const customIcon = new L.Icon({
+  iconUrl: '/marker-icon.png',
+  iconRetinaUrl: '/marker-icon-2x.png',
+  shadowUrl: '/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+// Also set as default
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: '/marker-icon-2x.png',
   iconUrl: '/marker-icon.png',
@@ -50,6 +63,7 @@ export function LocationMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const circleMarkerRef = useRef<L.CircleMarker | null>(null);
 
   // Initialize map when dialog opens
   useEffect(() => {
@@ -154,6 +168,9 @@ export function LocationMap({
       if (markerRef.current) {
         markerRef.current = null;
       }
+      if (circleMarkerRef.current) {
+        circleMarkerRef.current = null;
+      }
     };
   }, [isOpen, initialLat, initialLng]);
 
@@ -211,17 +228,40 @@ export function LocationMap({
 
     console.log('📍 Updating marker at:', lat, lng);
 
-    // Remove existing marker
+    // Remove existing markers
     if (markerRef.current) {
       markerRef.current.remove();
       console.log('🗑️ Removed old marker');
     }
+    if (circleMarkerRef.current) {
+      circleMarkerRef.current.remove();
+      console.log('🗑️ Removed old circle marker');
+    }
 
     try {
-      // Add new marker
-      markerRef.current = L.marker([lat, lng]).addTo(leafletMapRef.current);
+      // Try using the custom icon, fallback to default if it fails
+      try {
+        markerRef.current = L.marker([lat, lng], { icon: customIcon }).addTo(leafletMapRef.current);
+        console.log('✅ Marker added with custom icon');
+      } catch (iconError) {
+        console.warn('⚠️ Custom icon failed, using default:', iconError);
+        // Fallback to default marker
+        markerRef.current = L.marker([lat, lng]).addTo(leafletMapRef.current);
+        console.log('✅ Marker added with default icon');
+      }
+
+      // Also add a circle marker as a backup visual indicator
+      circleMarkerRef.current = L.circleMarker([lat, lng], {
+        radius: 8,
+        fillColor: '#3B82F6',
+        color: '#FFFFFF',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8
+      }).addTo(leafletMapRef.current);
+
       leafletMapRef.current.setView([lat, lng], 15);
-      console.log('✅ Marker added and view updated');
+      console.log('✅ Marker and circle added, view updated');
 
       // Fetch address details via reverse geocoding
       if (!skipReverseGeocode) {

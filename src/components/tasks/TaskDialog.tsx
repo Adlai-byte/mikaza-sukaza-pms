@@ -39,6 +39,7 @@ import { Task, TaskInsert, TaskChecklistInsert } from '@/lib/schemas';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { formatUserDisplay } from '@/lib/user-display';
 
 interface TaskDialogProps {
   open: boolean;
@@ -64,7 +65,7 @@ export function TaskDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('users')
-        .select('user_id, first_name, last_name, email, photo_url')
+        .select('user_id, first_name, last_name, email, photo_url, user_type')
         .eq('is_active', true)
         .order('first_name', { ascending: true });
 
@@ -286,7 +287,7 @@ export function TaskDialog({
                   <SelectItem value="none">Unassigned</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.user_id} value={user.user_id}>
-                      {user.first_name} {user.last_name}
+                      {formatUserDisplay(user)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -295,7 +296,7 @@ export function TaskDialog({
                 <Card className="bg-green-50 border-green-200">
                   <CardContent className="p-2">
                     <p className="text-sm text-green-800">
-                      {selectedUser.first_name} {selectedUser.last_name}
+                      {formatUserDisplay(selectedUser)}
                     </p>
                   </CardContent>
                 </Card>

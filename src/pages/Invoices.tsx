@@ -15,6 +15,7 @@ import {
   Trash2,
   Calendar,
   CreditCard,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -148,10 +149,20 @@ export default function Invoices() {
             Manage guest invoices and billing
           </p>
         </div>
-        <Button onClick={() => navigate('/invoices/new')} size="lg">
-          <Plus className="h-4 w-4 mr-2" />
-          New Invoice
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => navigate('/bill-templates')}
+            size="lg"
+            variant="outline"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Manage Templates
+          </Button>
+          <Button onClick={() => navigate('/invoices/new')} size="lg">
+            <Plus className="h-4 w-4 mr-2" />
+            New Invoice
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}

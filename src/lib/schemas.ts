@@ -379,6 +379,9 @@ export const bookingSchema = z.object({
   checked_out_at: z.string().optional(),
 
   special_requests: z.string().optional(),
+
+  // Bill template reference for pricing consistency
+  bill_template_id: z.string().uuid().optional().nullable(),
 });
 
 export type Booking = {
@@ -417,6 +420,7 @@ export type Booking = {
   checked_in_at?: string | null;
   checked_out_at?: string | null;
   special_requests?: string | null;
+  bill_template_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -1551,5 +1555,180 @@ export type COIValidationResult = {
   is_valid: boolean;
   missing_coverages: CoverageType[];
   expiring_soon: CoverageType[];
+};
+
+// ============================================
+// MEDIA / PROPERTY IMAGES
+// ============================================
+
+export const propertyImageSchema = z.object({
+  image_id: z.string().uuid().optional(),
+  property_id: z.string().uuid("Property is required"),
+  image_url: z.string().url("Invalid image URL"),
+  image_title: z.string().optional(),
+  image_description: z.string().optional(),
+  is_primary: z.boolean().default(false),
+  display_order: z.number().int().min(0).optional(),
+  tags: z.array(z.string()).optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+export type PropertyImage = z.infer<typeof propertyImageSchema>;
+
+export type PropertyImageWithDetails = PropertyImage & {
+  property?: {
+    property_id: string;
+    property_name: string;
+    property_type: string;
+  };
+  uploaded_by?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
+};
+
+export const mediaUploadSchema = z.object({
+  property_id: z.string().uuid("Please select a property"),
+  image_title: z.string().min(1, "Image title is required"),
+  image_description: z.string().optional(),
+  is_primary: z.boolean().default(false),
+  tags: z.array(z.string()).optional(),
+});
+
+export type MediaUploadInput = z.infer<typeof mediaUploadSchema>;
+
+// Media filter options
+export type MediaFilters = {
+  property_id?: string;
+  search?: string;
+  is_primary?: boolean;
+  tags?: string[];
+};
+
+// Media category for organization
+export const MEDIA_CATEGORIES = {
+  exterior: 'Exterior',
+  interior: 'Interior',
+  bedroom: 'Bedroom',
+  bathroom: 'Bathroom',
+  kitchen: 'Kitchen',
+  living_room: 'Living Room',
+  amenities: 'Amenities',
+  pool: 'Pool',
+  garden: 'Garden/Yard',
+  view: 'View',
+  other: 'Other',
+} as const;
+
+export type MediaCategory = keyof typeof MEDIA_CATEGORIES;
+
+// ============================================
+// CHECK-IN/CHECK-OUT SCHEMAS
+// ============================================
+
+// Checklist item structure for templates
+export const checklistItemSchema = z.object({
+  id: z.string(),
+  label: z.string().min(1, "Label is required"),
+  type: z.enum(['checkbox', 'text', 'photo', 'number']),
+  required: z.boolean().default(false),
+  order: z.number().default(0),
+  options: z.array(z.string()).optional(), // For select/radio types
+});
+
+export type ChecklistItem = z.infer<typeof checklistItemSchema>;
+
+// Checklist response structure
+export const checklistResponseSchema = z.object({
+  item_id: z.string(),
+  response: z.union([z.string(), z.boolean(), z.number()]),
+  notes: z.string().optional(),
+  photo_urls: z.array(z.string()).optional(),
+});
+
+export type ChecklistResponse = z.infer<typeof checklistResponseSchema>;
+
+// Checklist Template Schema
+export const checklistTemplateSchema = z.object({
+  property_id: z.string().uuid("Invalid property ID"),
+  template_name: z.string().min(1, "Template name is required").max(255),
+  template_type: z.enum(['check_in', 'check_out', 'inspection']),
+  description: z.string().optional(),
+  checklist_items: z.array(checklistItemSchema),
+  is_active: z.boolean().default(true),
+});
+
+export type ChecklistTemplateInsert = z.infer<typeof checklistTemplateSchema>;
+
+export type ChecklistTemplate = ChecklistTemplateInsert & {
+  template_id: string;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// Photo/Document attachment structure
+export const attachmentSchema = z.object({
+  url: z.string().url(),
+  caption: z.string().optional(),
+  name: z.string().optional(),
+  type: z.string().optional(),
+  size: z.number().optional(),
+  timestamp: z.string().optional(),
+});
+
+export type Attachment = z.infer<typeof attachmentSchema>;
+
+// Check-in/Out Record Schema
+export const checkInOutRecordSchema = z.object({
+  property_id: z.string().uuid("Invalid property ID"),
+  record_type: z.enum(['check_in', 'check_out']),
+  record_date: z.string().or(z.date()),
+  agent_id: z.string().uuid("Invalid agent ID").optional().nullable(),
+  resident_name: z.string().min(1, "Resident name is required").max(255),
+  resident_contact: z.string().optional(),
+  template_id: z.string().uuid().optional().nullable(),
+  checklist_responses: z.array(checklistResponseSchema).default([]),
+  photos: z.array(attachmentSchema).default([]),
+  documents: z.array(attachmentSchema).default([]),
+  signature_data: z.string().optional().nullable(), // Base64 encoded image
+  signature_name: z.string().optional(),
+  signature_date: z.string().or(z.date()).optional().nullable(),
+  notes: z.string().optional(),
+  status: z.enum(['draft', 'completed', 'archived']).default('draft'),
+  pdf_url: z.string().url().optional().nullable(),
+});
+
+export type CheckInOutRecordInsert = z.infer<typeof checkInOutRecordSchema>;
+
+export type CheckInOutRecord = CheckInOutRecordInsert & {
+  record_id: string;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  property?: {
+    property_id: string;
+    property_name: string;
+  };
+  agent?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    user_type: string;
+  };
+  template?: ChecklistTemplate;
+};
+
+// Check-in/Out filters
+export type CheckInOutFilters = {
+  property_id?: string;
+  record_type?: 'check_in' | 'check_out';
+  agent_id?: string;
+  status?: 'draft' | 'completed' | 'archived';
+  date_from?: string;
+  date_to?: string;
+  search?: string;
 };
 

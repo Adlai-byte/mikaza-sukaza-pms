@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Task, TaskInsert, TaskChecklist, TaskChecklistInsert } from '@/lib/schemas';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActivityLogs } from '@/hooks/useActivityLogs';
 
 // Query keys
 export const taskKeys = {
@@ -161,13 +162,21 @@ const updateTask = async ({ taskId, updates }: { taskId: string; updates: Partia
 };
 
 // Delete task
-const deleteTask = async (taskId: string): Promise<void> => {
+const deleteTask = async (taskId: string): Promise<{ taskId: string; task: any }> => {
+  // Fetch task details before deleting for logging
+  const { data: task } = await supabase
+    .from('tasks')
+    .select('task_id, title, status, priority, category, assigned_to, property_id')
+    .eq('task_id', taskId)
+    .single();
+
   const { error } = await supabase
     .from('tasks')
     .delete()
     .eq('task_id', taskId);
 
   if (error) throw error;
+  return { taskId, task };
 };
 
 // Bulk update tasks
@@ -216,13 +225,21 @@ const toggleChecklistItem = async (itemId: string, isCompleted: boolean): Promis
   return data;
 };
 
-const deleteChecklistItem = async (itemId: string): Promise<void> => {
+const deleteChecklistItem = async (itemId: string): Promise<{ itemId: string; item: any }> => {
+  // Fetch checklist item details before deleting for logging
+  const { data: item } = await supabase
+    .from('task_checklists')
+    .select('checklist_item_id, task_id, item_text, is_completed')
+    .eq('checklist_item_id', itemId)
+    .single();
+
   const { error } = await supabase
     .from('task_checklists')
     .delete()
     .eq('checklist_item_id', itemId);
 
   if (error) throw error;
+  return { itemId, item };
 };
 
 // Hooks
@@ -483,10 +500,22 @@ export function useUpdateTask() {
 export function useDeleteTask() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { logActivity } = useActivityLogs();
 
   return useMutation({
     mutationFn: deleteTask,
-    onSuccess: () => {
+    onSuccess: ({ taskId, task }) => {
+      // Log the delete action
+      logActivity('task_deleted', {
+        task_id: taskId,
+        title: task?.title || 'Unknown Task',
+        status: task?.status,
+        priority: task?.priority,
+        category: task?.category,
+        assigned_to: task?.assigned_to,
+        property_id: task?.property_id,
+      });
+
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
       toast({
         title: 'Success',
@@ -580,10 +609,19 @@ export function useToggleChecklistItem() {
 export function useDeleteChecklistItem() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { logActivity } = useActivityLogs();
 
   return useMutation({
     mutationFn: deleteChecklistItem,
-    onSuccess: (_, itemId) => {
+    onSuccess: ({ itemId, item }) => {
+      // Log the delete action
+      logActivity('task_checklist_item_deleted', {
+        checklist_item_id: itemId,
+        item_text: item?.item_text || 'Unknown Item',
+        is_completed: item?.is_completed,
+        task_id: item?.task_id,
+      });
+
       // Invalidate all checklist queries
       queryClient.invalidateQueries({ queryKey: taskKeys.all });
       toast({

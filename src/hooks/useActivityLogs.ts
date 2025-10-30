@@ -67,18 +67,45 @@ export function useActivityLogs() {
 
   const getActivityLogs = useCallback(async (userId?: string): Promise<ActivityLog[]> => {
     try {
+      console.log('🔍 [ACTIVITY LOG] Fetching logs for user:', userId);
+
       let query = supabase
         .from('activity_logs')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (userId) {
-        query = query.eq('user_id', userId);
+        // Get logs where this user is the subject (user_id matches)
+        // OR logs performed by this user (check performed_by field)
+        // We need to fetch the user details first to match the performed_by name
+        const { data: userData } = await supabase
+          .from('users')
+          .select('first_name, last_name, email')
+          .eq('user_id', userId)
+          .single();
+
+        if (userData) {
+          const fullName = `${userData.first_name} ${userData.last_name}`.trim();
+          console.log('👤 [ACTIVITY LOG] User details:', { fullName, email: userData.email });
+
+          // Fetch logs where:
+          // 1. user_id matches (actions done TO/ABOUT this user)
+          // 2. performed_by matches the user's full name or email
+          query = query.or(`user_id.eq.${userId},performed_by.eq.${fullName},performed_by.eq.${userData.email}`);
+        } else {
+          // Fallback to just user_id if we can't get user details
+          query = query.eq('user_id', userId);
+        }
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query.limit(50); // Limit to 50 most recent logs
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [ACTIVITY LOG] Fetch error:', error);
+        throw error;
+      }
+
+      console.log('✅ [ACTIVITY LOG] Fetched', data?.length || 0, 'logs');
       return (data || []) as ActivityLog[];
     } catch (error) {
       console.error('Error fetching activity logs:', error);

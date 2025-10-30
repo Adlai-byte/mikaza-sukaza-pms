@@ -44,6 +44,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, useMarkExpenseAsPaid } from '@/hooks/useExpenses';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
+import { useProviders } from '@/hooks/useProviders';
 import { ExpenseInsert } from '@/lib/schemas';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -93,6 +94,7 @@ export default function Expenses() {
 
   const { expenses, loading } = useExpenses(filters);
   const { properties } = usePropertiesOptimized();
+  const { providers } = useProviders('service');
   const createExpense = useCreateExpense();
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
@@ -523,10 +525,32 @@ export default function Expenses() {
 
               <div className="space-y-2">
                 <Label htmlFor="vendor_name">Vendor</Label>
-                <Input
-                  {...form.register('vendor_name')}
-                  placeholder="Vendor name"
-                />
+                <Select
+                  value={form.watch('vendor_name')}
+                  onValueChange={(value) => form.setValue('vendor_name', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a vendor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {providers?.map((provider) => (
+                      <SelectItem
+                        key={provider.provider_id}
+                        value={provider.provider_name}
+                      >
+                        {provider.provider_name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="other">Other (Custom Vendor)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.watch('vendor_name') === 'other' && (
+                  <Input
+                    placeholder="Enter custom vendor name"
+                    onChange={(e) => form.setValue('vendor_name', e.target.value)}
+                    className="mt-2"
+                  />
+                )}
               </div>
             </div>
 

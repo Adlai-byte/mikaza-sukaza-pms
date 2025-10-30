@@ -8,6 +8,7 @@ import { PropertyTableOptimized } from "@/components/PropertyManagement/Property
 import { PropertyForm } from "@/components/PropertyManagement/PropertyForm";
 import { PropertyDetailsDialog } from "@/components/PropertyManagement/PropertyDetailsDialog";
 import { PropertyImageDialog } from "@/components/PropertyManagement/PropertyImageDialog";
+import { PropertyQRCodeDialog } from "@/components/PropertyManagement/PropertyQRCodeDialog";
 import { Property, PropertyInsert } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,6 +40,7 @@ export default function Properties() {
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [viewingProperty, setViewingProperty] = useState<Property | null>(null);
   const [imageDialogProperty, setImageDialogProperty] = useState<Property | null>(null);
+  const [qrCodeDialogProperty, setQrCodeDialogProperty] = useState<Property | null>(null);
 
   // Show error message if properties failed to load
   useEffect(() => {
@@ -120,6 +122,10 @@ export default function Properties() {
 
   const handleViewImages = (property: Property) => {
     setImageDialogProperty(property);
+  };
+
+  const handleViewQRCodes = (property: Property) => {
+    setQrCodeDialogProperty(property);
   };
 
   const handleFormClose = () => {
@@ -230,6 +236,7 @@ export default function Properties() {
               onDeleteProperty={handleDeleteProperty}
               onViewDetails={handleViewDetails}
               onViewImages={handleViewImages}
+              onViewQRCodes={handleViewQRCodes}
               isLoading={loading}
               isFetching={isFetching}
             />
@@ -262,6 +269,15 @@ export default function Properties() {
           open={!!imageDialogProperty}
           onOpenChange={(open) => !open && setImageDialogProperty(null)}
           property={imageDialogProperty}
+        />
+      )}
+
+      {/* Property QR Code Dialog */}
+      {qrCodeDialogProperty && (
+        <PropertyQRCodeDialog
+          open={!!qrCodeDialogProperty}
+          onOpenChange={(open) => !open && setQrCodeDialogProperty(null)}
+          property={qrCodeDialogProperty}
         />
       )}
     </div>

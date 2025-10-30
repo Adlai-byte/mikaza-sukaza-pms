@@ -27,11 +27,27 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+// Extended activity log with user information
+interface ActivityLogWithUser extends ActivityLog {
+  user?: {
+    first_name: string;
+    last_name: string;
+    user_type: string;
+  } | null;
+}
+
 // Fetch activity logs with React Query
-const fetchActivityLogs = async (): Promise<ActivityLog[]> => {
+const fetchActivityLogs = async (): Promise<ActivityLogWithUser[]> => {
   const { data, error } = await supabase
     .from('activity_logs')
-    .select('*')
+    .select(`
+      *,
+      user:user_id (
+        first_name,
+        last_name,
+        user_type
+      )
+    `)
     .order('created_at', { ascending: false })
     .limit(1000); // Limit to last 1000 logs
 
@@ -40,7 +56,7 @@ const fetchActivityLogs = async (): Promise<ActivityLog[]> => {
     throw error;
   }
 
-  return (data || []) as ActivityLog[];
+  return (data || []) as ActivityLogWithUser[];
 };
 
 // Action type categories for filtering
@@ -155,7 +171,7 @@ export default function ActivityLogs() {
       format(new Date(log.created_at), 'yyyy-MM-dd'),
       format(new Date(log.created_at), 'HH:mm:ss'),
       log.action_type,
-      log.performed_by || 'System',
+      formatPerformedBy(log),
       JSON.stringify(log.action_details || {}),
     ]);
 
@@ -175,6 +191,23 @@ export default function ActivityLogs() {
 
   // Get unique action types for filter
   const uniqueActionTypes = Array.from(new Set(logs.map(log => log.action_type))).sort();
+
+  // Format "Performed by" display as "Full Name/Role"
+  const formatPerformedBy = (log: ActivityLogWithUser) => {
+    if (log.user) {
+      const fullName = `${log.user.first_name} ${log.user.last_name}`;
+      const role = log.user.user_type?.replace('_', ' ') || 'User';
+      const roleDisplay = role.charAt(0).toUpperCase() + role.slice(1);
+      return `${fullName} / ${roleDisplay}`;
+    }
+
+    // Fallback to performed_by field if user data not available
+    if (log.performed_by) {
+      return log.performed_by;
+    }
+
+    return 'System';
+  };
 
   // Format action details for display
   const formatActionDetails = (details: Record<string, any> | undefined) => {
@@ -375,7 +408,7 @@ export default function ActivityLogs() {
                             </Badge>
                           </TableCell>
                           <TableCell className="font-medium">
-                            {log.performed_by || 'System'}
+                            {formatPerformedBy(log)}
                           </TableCell>
                           <TableCell>
                             {formatActionDetails(log.action_details)}
@@ -415,7 +448,7 @@ export default function ActivityLogs() {
                           {/* Performed By */}
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{log.performed_by || 'System'}</span>
+                            <span className="font-medium">{formatPerformedBy(log)}</span>
                           </div>
 
                           {/* Details */}
