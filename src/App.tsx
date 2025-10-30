@@ -43,7 +43,7 @@ import MyCommissions from "./pages/MyCommissions";
 import Help from "./pages/Help";
 import VendorCOIs from "./pages/VendorCOIs";
 import AccessAuthorizations from "./pages/AccessAuthorizations";
-import Media from "./pages/Media";
+import CheckInOut from "./pages/CheckInOut";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
@@ -463,7 +463,17 @@ const App = () => (
                   path="/media"
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.MEDIA_VIEW}>
-                      <Media />
+                      <div className="p-8 text-center text-muted-foreground">Media - Coming Soon</div>
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Check-In / Check-Out - Both can access */}
+                <Route
+                  path="/check-in-out"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.PROPERTIES_VIEW}>
+                      <CheckInOut />
                     </RBACProtectedRoute>
                   }
                 />
