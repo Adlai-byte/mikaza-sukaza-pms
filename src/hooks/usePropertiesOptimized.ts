@@ -195,9 +195,9 @@ export function usePropertiesOptimized() {
   } = useQuery({
     queryKey: propertyKeys.lists(),
     queryFn: fetchPropertiesList,
-    staleTime: 2 * 60 * 1000, // 2 minutes - data considered fresh
+    staleTime: 1 * 60 * 1000, // 1 minute - data considered fresh
     gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache
-    refetchOnMount: false, // Don't refetch if data is fresh
+    refetchOnMount: 'always', // Always refetch on mount to ensure fresh data
     refetchOnWindowFocus: false, // Don't refetch on window focus (reduces load)
   });
 

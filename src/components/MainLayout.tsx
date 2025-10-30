@@ -15,10 +15,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { useProfileImage } from "@/hooks/useProfileImage";
 
 export function MainLayout() {
   const { profile, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
+
+  // Use cached profile image
+  const { imageUrl } = useProfileImage();
 
   const handleSignOut = async () => {
     try {
@@ -62,7 +66,7 @@ export function MainLayout() {
                     <Button variant="ghost" className="flex items-center space-x-2 h-8 sm:h-10 px-2 sm:px-3">
                       <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
                         <AvatarImage
-                          src={profile?.photo_url ? `${profile.photo_url}?t=${Date.now()}` : undefined}
+                          src={imageUrl || undefined}
                           alt={profile?.first_name || 'User'}
                           className="object-cover"
                         />

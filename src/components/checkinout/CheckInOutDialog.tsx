@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -49,10 +49,32 @@ interface CheckInOutDialogProps {
 
 export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProps) {
   const { user } = useAuth();
-  const { data: properties = [], isLoading: propertiesLoading, error: propertiesError } = useProperties();
-  const { data: users = [] } = useUsersOptimized({ user_types: ['ops', 'admin'] });
+  const { properties = [], loading: propertiesLoading, error: propertiesError } = useProperties();
+  const { users: allUsers = [], loading: usersLoading } = useUsersOptimized();
 
-  // Debug logging
+  // Filter to show only ops and admin users for the agent selection
+  const users = useMemo(() => {
+    return allUsers.filter(u => u.user_type === 'ops' || u.user_type === 'admin');
+  }, [allUsers]);
+
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+  const [selectedRecordType, setSelectedRecordType] = useState<'check_in' | 'check_out'>('check_in');
+
+  // Fetch templates - don't filter by property initially to show all available templates
+  const { data: allTemplates = [], isLoading: templatesLoading } = useChecklistTemplates({
+    template_type: selectedRecordType,
+    is_active: true,
+  });
+
+  // Filter templates to show those matching the selected property OR templates without a property (available for all)
+  const templates = useMemo(() => {
+    if (!selectedPropertyId) return allTemplates;
+    return allTemplates.filter(t =>
+      t.property_id === selectedPropertyId || t.property_id === null
+    );
+  }, [allTemplates, selectedPropertyId]);
+
+  // Debug logging - AFTER all declarations
   useEffect(() => {
     console.log('🏢 CheckInOutDialog - Properties:', {
       count: properties.length,
@@ -62,13 +84,26 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
     });
   }, [properties, propertiesLoading, propertiesError]);
 
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
-  const [selectedRecordType, setSelectedRecordType] = useState<'check_in' | 'check_out'>('check_in');
-  const { data: templates = [] } = useChecklistTemplates({
-    property_id: selectedPropertyId || undefined,
-    template_type: selectedRecordType,
-    is_active: true,
-  });
+  useEffect(() => {
+    console.log('📋 CheckInOutDialog - Templates:', {
+      allTemplatesCount: allTemplates.length,
+      filteredTemplatesCount: templates.length,
+      loading: templatesLoading,
+      selectedPropertyId,
+      selectedRecordType,
+      allTemplates,
+      filteredTemplates: templates
+    });
+  }, [allTemplates, templates, templatesLoading, selectedPropertyId, selectedRecordType]);
+
+  useEffect(() => {
+    console.log('👥 CheckInOutDialog - Users:', {
+      allUsersCount: allUsers.length,
+      filteredUsersCount: users.length,
+      loading: usersLoading,
+      users
+    });
+  }, [allUsers, users, usersLoading]);
 
   const [checklistResponses, setChecklistResponses] = useState<ChecklistResponse[]>([]);
   const [photos, setPhotos] = useState<Attachment[]>([]);
@@ -323,22 +358,32 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
               </div>
 
               <div>
-                <Label htmlFor="agent_id">Agent</Label>
+                <Label htmlFor="agent_id">Agent (Staff Member)</Label>
                 <Select
                   value={watch('agent_id')}
                   onValueChange={(value) => setValue('agent_id', value)}
+                  disabled={usersLoading}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select agent" />
+                    <SelectValue placeholder={usersLoading ? "Loading staff members..." : "Select staff member performing inspection"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.map((user) => (
-                      <SelectItem key={user.user_id} value={user.user_id!}>
-                        {formatUserDisplay(user)}
-                      </SelectItem>
-                    ))}
+                    {users.length === 0 && !usersLoading ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        No staff members available
+                      </div>
+                    ) : (
+                      users.map((user) => (
+                        <SelectItem key={user.user_id} value={user.user_id!}>
+                          {formatUserDisplay(user)}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  The staff member conducting this check-in/out ({users.length} available)
+                </p>
               </div>
 
               <div>
@@ -346,19 +391,32 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
                 <Select
                   value={watchTemplateId || 'none'}
                   onValueChange={(value) => setValue('template_id', value === 'none' ? '' : value)}
+                  disabled={templatesLoading}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select template" />
+                    <SelectValue placeholder={templatesLoading ? "Loading templates..." : "Select template"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {templates.map((template) => (
-                      <SelectItem key={template.template_id} value={template.template_id}>
-                        {template.template_name}
-                      </SelectItem>
-                    ))}
+                    {templates.length === 0 && !templatesLoading ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        {selectedPropertyId
+                          ? `No ${selectedRecordType.replace('_', '-')} templates for this property`
+                          : `No ${selectedRecordType.replace('_', '-')} templates available`}
+                      </div>
+                    ) : (
+                      templates.map((template) => (
+                        <SelectItem key={template.template_id} value={template.template_id}>
+                          {template.template_name}
+                          {!template.property_id && " (All Properties)"}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Available templates: {templates.length} {selectedRecordType.replace('_', '-')} template(s)
+                </p>
               </div>
 
               <div>

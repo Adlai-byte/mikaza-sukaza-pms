@@ -40,7 +40,7 @@ interface ChecklistTemplateDialogProps {
 
 export function ChecklistTemplateDialog({ open, onClose, template }: ChecklistTemplateDialogProps) {
   const { user } = useAuth();
-  const { data: properties = [] } = useProperties();
+  const { properties = [] } = useProperties();
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
 
   const createMutation = useCreateChecklistTemplate();

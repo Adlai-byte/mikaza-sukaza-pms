@@ -115,6 +115,7 @@ import { BookingDialogEnhanced } from '@/components/BookingDialogEnhanced';
 import { BookingInsert } from '@/lib/schemas';
 import { useToast } from '@/hooks/use-toast';
 import { bookingKeys } from '@/hooks/useBookings';
+import { CalendarSyncDialog } from '@/components/calendar/CalendarSyncDialog';
 
 type Property = Tables<'properties'>;
 type PropertyBooking = Tables<'property_bookings'>;
@@ -250,6 +251,9 @@ const Calendar = () => {
   // State: Bulk Operations
   const [selectedProperties, setSelectedProperties] = useState<Set<string>>(new Set());
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
+
+  // State: Calendar Sync Dialog
+  const [showCalendarSyncDialog, setShowCalendarSyncDialog] = useState(false);
 
   // State: Drag-to-Create Booking
   const [isDragging, setIsDragging] = useState(false);
@@ -922,9 +926,18 @@ const Calendar = () => {
                     {bulkSelectMode ? 'Exit Bulk Mode' : 'Bulk Select'}
                   </Button>
 
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setShowCalendarSyncDialog(true)}
+                  >
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    Sync Calendar
+                  </Button>
+
                   <Button variant="outline" size="sm" onClick={exportToCSV}>
                     <Download className="h-4 w-4 mr-2" />
-                    Export
+                    Export CSV
                   </Button>
 
                   <Button
@@ -1899,6 +1912,13 @@ const Calendar = () => {
             )}
           </SheetContent>
         </Sheet>
+
+        {/* Calendar Sync Dialog */}
+        <CalendarSyncDialog
+          open={showCalendarSyncDialog}
+          onOpenChange={setShowCalendarSyncDialog}
+          properties={properties as Property[]}
+        />
       </div>
     </TooltipProvider>
   );

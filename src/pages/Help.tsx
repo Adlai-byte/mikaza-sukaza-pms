@@ -157,11 +157,26 @@ The left sidebar contains all main modules organized by function:
 • Expenses - Track costs
 • Financial Dashboard - Revenue analytics
 • Owner Statement - Generate owner reports
+• Service Pipeline - Track service requests
+• My Commissions - View your earnings
+• Bill Templates - Recurring billing
+
+**Operations Section:**
+• Check-In/Check-Out - Property inspections
+• Checklist Templates - Reusable checklists
+• Vendor COIs - Insurance certificates
+• Access Authorizations - Property access control
+
+**Documents Section:**
+• Contracts - Contract management
+• Service Documents - Vendor documentation
+• Employee Documents - HR files
+• Message Templates - Guest communications
 
 **Additional Sections:**
-• Documents - Contract management
-• Media - Photos & videos
+• Media - Photos & videos (with tree view)
 • User Management - Team administration (Admin only)
+• Activity Logs - System audit trail (Admin only)
 
 Click any menu item to navigate to that module. The active page is highlighted in green.`,
         },
@@ -1828,6 +1843,3481 @@ If multiple people involved:
 • Higher per-cleaning rate
 • Preferred scheduling
 • Recognition in team meetings`,
+        },
+      ],
+    },
+    {
+      id: 'media',
+      title: 'Media Management',
+      icon: Video,
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-50',
+      topics: [
+        {
+          question: 'How do I upload property photos and videos?',
+          answer: `**Uploading Media to Properties:**
+
+**Step 1: Navigate to Media Module**
+1. Click "Media" in the main sidebar
+2. Or access via property details page
+
+**Step 2: Upload Files**
+1. Click "Upload Media" button
+2. Select property from dropdown
+3. Choose files:
+   • **Photos:** JPG, PNG, WEBP (max 10MB each)
+   • **Videos:** MP4, MOV (max 100MB each)
+   • **360° Tours:** Special panoramic format
+4. Drag & drop or click to browse
+5. Add captions/descriptions
+6. Set visibility (Public/Private)
+7. Click "Upload"
+
+**Bulk Upload:**
+• Select multiple files at once
+• Up to 50 files per batch
+• Progress bar shows upload status
+• Auto-thumbnail generation
+
+**Organization:**
+📁 **By Property** - All media grouped by property
+📁 **By Type** - Photos, Videos, Documents
+📁 **By Date** - Chronological view
+📁 **Featured** - Highlighted images
+
+**Best Practices:**
+✅ Use high-resolution photos (min 1920x1080)
+✅ Take photos in good lighting
+✅ Show all rooms and amenities
+✅ Include exterior and neighborhood shots
+✅ Keep videos under 2 minutes
+✅ Add descriptive captions for SEO`,
+        },
+        {
+          question: 'How do I organize media with tree view?',
+          answer: `**Tree View Navigation:**
+
+The Media module uses a hierarchical tree structure for easy organization.
+
+**Folder Structure:**
+🗂️ **All Properties**
+  └─ 📁 Sunset Villa
+      ├─ 📸 Photos (45)
+      │   ├─ Living Room (8)
+      │   ├─ Bedrooms (12)
+      │   ├─ Kitchen (6)
+      │   ├─ Bathrooms (5)
+      │   └─ Exterior (14)
+      ├─ 🎥 Videos (3)
+      └─ 📄 Virtual Tours (1)
+
+**How to Use Tree View:**
+1. Click folder icons to expand/collapse
+2. See file counts in badges
+3. Filter by property or media type
+4. Search across all media
+5. Quick actions on hover
+
+**Benefits:**
+✓ Visual organization
+✓ Easy navigation
+✓ Quick file location
+✓ Batch operations
+✓ Drag-and-drop support`,
+        },
+        {
+          question: 'How do I link media to bookings and listings?',
+          answer: `**Connecting Media to Bookings:**
+
+**Method 1: From Media Module**
+1. Select photo/video
+2. Click "Link to Booking"
+3. Choose booking from list
+4. Media appears in booking details
+
+**Method 2: From Booking**
+1. Open booking details
+2. Go to "Attached Media" section
+3. Click "Add Media"
+4. Select from property media library
+5. Or upload new media directly
+
+**Use Cases:**
+• Guest check-in photos
+• Move-in condition documentation
+• Issue reporting with photos
+• Guest experience highlights
+• Damage documentation
+
+**Linking to Listings:**
+**External Platforms:**
+• Generate public links
+• Copy media URLs
+• Sync with Airbnb/VRBO
+• Auto-resize for platforms
+• SEO-optimized names
+
+**Public Gallery:**
+• Create guest-facing galleries
+• Share via link
+• Embed in website
+• No login required
+• Watermark option`,
+        },
+        {
+          question: 'How do I manage media storage and compression?',
+          answer: `**Storage Management:**
+
+**Storage Limits:**
+• **Free Tier:** 5GB
+• **Standard:** 50GB
+• **Premium:** 500GB
+• **Enterprise:** Unlimited
+
+**Check Usage:**
+1. Go to Media dashboard
+2. View storage meter
+3. See breakdown by property
+4. View largest files
+5. Export usage report
+
+**Compression Options:**
+
+**Automatic Compression:**
+• Enabled by default
+• Reduces file size by 60-80%
+• Maintains visual quality
+• Faster loading times
+• Saves storage space
+
+**Manual Optimization:**
+1. Select large files
+2. Click "Optimize"
+3. Choose quality level:
+   • High (minimal compression)
+   • Medium (balanced)
+   • Low (maximum compression)
+4. Preview before/after
+5. Apply changes
+
+**Cleanup Tools:**
+• Find duplicate files
+• Remove unused media
+• Archive old media
+• Bulk delete options
+• Recycle bin (30-day recovery)
+
+**Best Practices:**
+✅ Compress before upload
+✅ Delete duplicates monthly
+✅ Archive old booking photos
+✅ Use external links for large videos
+✅ Enable auto-cleanup`,
+        },
+        {
+          question: 'How do I share media with guests and owners?',
+          answer: `**Sharing Options:**
+
+**1. PUBLIC GALLERIES** 📸
+Create shareable photo galleries:
+1. Select photos to share
+2. Click "Create Gallery"
+3. Add title and description
+4. Set expiration (optional)
+5. Generate public link
+6. Share via email or copy link
+
+**Features:**
+• No login required
+• Mobile-friendly
+• Download options
+• Password protection available
+• View tracking
+
+**2. OWNER PORTALS** 👤
+Share media with property owners:
+1. Tag photos for owner
+2. Set visibility to "Owner"
+3. Owner receives notification
+4. Accessible in their portal
+5. Download full resolution
+
+**Types:**
+• Monthly property reports
+• Maintenance updates
+• Inspection photos
+• Turnover documentation
+• Upgrade progress
+
+**3. GUEST CHECK-IN PACKAGES** 🗝️
+Send arrival information:
+• Property exterior photo
+• Parking instructions image
+• Entry door close-up
+• Keypad/lockbox photo
+• Welcome guide PDF
+• Area map
+
+**4. EMAIL ATTACHMENTS** 📧
+Direct sharing:
+1. Select media
+2. Click "Share via Email"
+3. Enter recipient email
+4. Add message
+5. Send
+
+**Limits:**
+• Max 25MB per email
+• Use gallery links for large batches
+
+**5. DOWNLOAD PACKAGES** 📦
+Create ZIP downloads:
+1. Select multiple files
+2. Click "Download All"
+3. System creates ZIP
+4. Download link generated
+5. Link expires in 7 days`,
+        },
+        {
+          question: 'How do I use media for marketing and listings?',
+          answer: `**Marketing Use Cases:**
+
+**1. LISTING OPTIMIZATION** 🏠
+**Professional Photos:**
+• First photo is most important
+• Show best room first
+• Natural lighting preferred
+• Wide-angle lenses
+• Staging and decluttering
+
+**Photo Order Strategy:**
+1. Hero shot (best exterior/room)
+2. Living room
+3. Kitchen
+4. Master bedroom
+5. Bathrooms
+6. Other bedrooms
+7. Amenities (pool, gym, etc.)
+8. View/outdoor spaces
+9. Neighborhood highlights
+
+**2. SOCIAL MEDIA** 📱
+**Quick Sharing:**
+1. Select property photo
+2. Click "Share to Social"
+3. Choose platform:
+   • Instagram (1:1 square)
+   • Facebook (16:9)
+   • Pinterest (2:3 vertical)
+4. Auto-sized for platform
+5. Add caption template
+6. Schedule or post now
+
+**Content Ideas:**
+• Guest testimonials with photos
+• Before/after renovations
+• Seasonal decorations
+• Local attractions
+• Behind-the-scenes
+• Special offers
+
+**3. WEBSITE INTEGRATION** 🌐
+**Embed Options:**
+• Property slideshow widget
+• Featured properties carousel
+• Availability calendar with photos
+• Guest testimonial gallery
+
+**Export Formats:**
+• HTML embed code
+• WordPress plugin
+• Wix/Squarespace compatible
+• Custom API access
+
+**4. VIDEO TOURS** 🎥
+**Virtual Walkthroughs:**
+• Record property tour
+• Add narration
+• Include key features
+• 2-3 minutes ideal
+• Share on YouTube/Vimeo
+• Embed in listings
+
+**5. EMAIL CAMPAIGNS** 📧
+**Template Integration:**
+• Property showcase emails
+• Seasonal promotions
+• Last-minute deals
+• Owner updates
+
+**Analytics:**
+📊 Track media performance:
+• Views per photo
+• Click-through rates
+• Conversion from media
+• Most viewed properties
+• Engagement metrics`,
+        },
+      ],
+    },
+    {
+      id: 'documents',
+      title: 'Document Management',
+      icon: FileText,
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50',
+      topics: [
+        {
+          question: 'How do I manage contracts and agreements?',
+          answer: `**Contract Management System:**
+
+**CONTRACT TYPES:**
+• **Property Management Agreements** - Owner contracts
+• **Service Provider Agreements** - Vendor contracts
+• **Lease Agreements** - Long-term tenant contracts
+• **Guest Rental Agreements** - Short-term booking terms
+• **Employment Contracts** - Staff agreements
+• **Partnership Agreements** - Business partnerships
+
+**Creating a New Contract:**
+
+**Step 1: Navigate to Contracts**
+1. Go to Documents → Contracts
+2. Click "Add Contract"
+
+**Step 2: Enter Contract Details**
+📝 **Required Information:**
+• Contract Type (select from dropdown)
+• Contract Title
+• Parties Involved (names)
+• Effective Date
+• Expiration Date
+• Contract Value (if applicable)
+• Renewal Terms
+
+**Step 3: Upload Contract File**
+• Click "Upload Document"
+• Supported: PDF, DOCX, DOC
+• Max file size: 25MB
+• System auto-extracts key dates
+
+**Step 4: Set Reminders**
+• Expiration alerts (30/60/90 days)
+• Renewal reminders
+• Payment due dates
+• Review milestones
+
+**Tree View Organization:**
+📁 **Contracts**
+  ├─ 📂 Property Management (12)
+  ├─ 📂 Service Providers (24)
+  ├─ 📂 Leases (8)
+  ├─ 📂 Guest Agreements (156)
+  ├─ 📂 Employment (6)
+  └─ 📂 Partnerships (3)
+
+**Contract Tracking:**
+🟢 **Active** - Currently in effect
+🟡 **Expiring Soon** - Within 90 days
+🔴 **Expired** - Past expiration
+⚪ **Draft** - Not yet signed
+✅ **Completed** - Term fulfilled
+
+**Features:**
+✓ Digital signatures
+✓ Version control
+✓ Auto-reminders
+✓ Audit trail
+✓ Quick search
+✓ Export to PDF`,
+        },
+        {
+          question: 'How do I organize service and employee documents?',
+          answer: `**Service Documents Management:**
+
+**Purpose:**
+Store and organize vendor-related documentation.
+
+**Document Types:**
+• Service quotes and proposals
+• Work orders and invoices
+• Insurance certificates (COIs)
+• Business licenses
+• Safety certifications
+• Warranty documents
+• Product manuals
+• Inspection reports
+
+**Organization:**
+
+**By Service Type:**
+📁 Plumbing
+  └─ ABC Plumbing
+      ├─ Business License
+      ├─ Insurance (COI)
+      ├─ Service Agreement
+      └─ Past Invoices (24)
+
+📁 HVAC
+📁 Electrical
+📁 Cleaning
+📁 Landscaping
+
+**Tree View:**
+• Group by vendor
+• Filter by document type
+• Quick search
+• Status indicators
+• Expiration tracking
+
+**Employee Documents Management:**
+
+**Purpose:**
+Maintain all staff HR documentation.
+
+**Document Categories:**
+
+**1. ONBOARDING DOCUMENTS:**
+• Employment application
+• Resume/CV
+• Background check results
+• Drug test results (if required)
+• Signed offer letter
+• Employee handbook acknowledgment
+
+**2. PERSONAL INFORMATION:**
+• Photo ID copy
+• Social Security card (encrypted)
+• Emergency contact form
+• Direct deposit authorization
+• Tax forms (W-4, I-9)
+
+**3. TRAINING & CERTIFICATIONS:**
+• Safety training certificates
+• Specialized skills certifications
+• License copies (if required)
+• Training completion records
+• Continuing education
+
+**4. PERFORMANCE & REVIEWS:**
+• Performance evaluations
+• Disciplinary notices
+• Commendations and awards
+• Attendance records
+• Time-off requests
+
+**5. TERMINATION DOCUMENTS:**
+• Resignation letters
+• Termination notices
+• Exit interview forms
+• Final pay stubs
+• COBRA notices
+
+**Access Control:**
+⚠️ **Highly Sensitive**
+• Only admins can access
+• Encrypted storage
+• Audit log of all views
+• Automatic redaction of SSN
+• GDPR/privacy compliant
+
+**Organization by Employee:**
+👤 **John Smith**
+  ├─ 📄 Onboarding (6 docs)
+  ├─ 📄 Personal Info (5 docs)
+  ├─ 📄 Certifications (3 docs)
+  ├─ 📄 Performance (8 docs)
+  └─ 📄 Payroll (24 docs)
+
+**Retention Policies:**
+• Active employees: Keep all
+• Terminated: 7 years
+• Auto-archive after termination
+• Secure deletion after retention period`,
+        },
+        {
+          question: 'How do I use message templates for guest communication?',
+          answer: `**Message Template System:**
+
+**Purpose:**
+Create reusable message templates for consistent, professional guest communications.
+
+**TEMPLATE CATEGORIES:**
+
+**1. PRE-ARRIVAL MESSAGES** ✈️
+• Booking confirmation
+• Pre-arrival checklist (1 week out)
+• Check-in instructions (24 hours)
+• Parking and access details
+• Wi-Fi and amenity information
+
+**2. DURING-STAY MESSAGES** 🏠
+• Welcome message (after check-in)
+• Mid-stay check-in
+• Service reminder (trash, cleaning)
+• Upsell opportunities
+• Issue response templates
+
+**3. POST-DEPARTURE MESSAGES** 🚪
+• Thank you and review request
+• Feedback survey
+• Return guest discount
+• Referral program
+• Holiday greetings
+
+**4. OPERATIONAL MESSAGES** ⚙️
+• Maintenance notifications
+• Emergency communications
+• Policy reminders
+• Late checkout options
+• Early check-in confirmations
+
+**Creating a Template:**
+
+**Step 1: Access Templates**
+1. Go to Documents → Message Templates
+2. Click "Create Template"
+
+**Step 2: Template Details**
+📝 **Required Fields:**
+• Template Name (internal use)
+• Category (select from dropdown)
+• Subject Line (for emails)
+• Message Body
+
+**Step 3: Use Variables**
+Insert dynamic content:
+\`\`\`
+Hi {{guest_name}},
+
+Your reservation at {{property_name}} is confirmed!
+
+Check-in: {{checkin_date}} at {{checkin_time}}
+Check-out: {{checkout_date}} at {{checkout_time}}
+Confirmation #: {{booking_id}}
+
+Address:
+{{property_address}}
+
+Access Code: {{access_code}}
+Wi-Fi Password: {{wifi_password}}
+
+...
+\`\`\`
+
+**Available Variables:**
+• {{guest_name}}
+• {{property_name}}
+• {{property_address}}
+• {{checkin_date}}
+• {{checkout_date}}
+• {{checkin_time}}
+• {{checkout_time}}
+• {{booking_id}}
+• {{access_code}}
+• {{wifi_password}}
+• {{total_amount}}
+• {{guest_count}}
+• {{parking_instructions}}
+
+**Step 4: Formatting**
+• Rich text editor
+• Add images/logos
+• Bullet points and lists
+• Bold/italic/underline
+• Hyperlinks
+• Buttons (call-to-action)
+
+**Using Templates:**
+
+**Manual Send:**
+1. Go to booking details
+2. Click "Send Message"
+3. Select template
+4. Preview with actual data
+5. Edit if needed
+6. Send via email/SMS
+
+**Automated Sending:**
+1. Go to Settings → Automation
+2. Create trigger:
+   • Event: "24 hours before check-in"
+   • Action: "Send template"
+   • Template: "Check-in Instructions"
+3. System auto-sends when triggered
+
+**Best Practices:**
+✅ Keep messages concise
+✅ Use friendly, professional tone
+✅ Include all essential info
+✅ Proofread carefully
+✅ Test with real data
+✅ Update seasonally
+✅ Personalize when possible`,
+        },
+        {
+          question: 'How does the tree view help organize documents?',
+          answer: `**Tree View Document Organization:**
+
+**What is Tree View?**
+A hierarchical, folder-based system for organizing documents visually.
+
+**Visual Structure:**
+\`\`\`
+📁 All Documents
+├─ 📂 Contracts
+│  ├─ 📂 Property Management Agreements (12)
+│  │  ├─ 📄 Sunset Villa Agreement.pdf
+│  │  ├─ 📄 Beach House Contract.pdf
+│  │  └─ ...
+│  ├─ 📂 Service Provider Agreements (24)
+│  ├─ 📂 Lease Agreements (8)
+│  └─ 📂 Guest Agreements (156)
+├─ 📂 Service Documents
+│  ├─ 📂 Plumbing (18)
+│  ├─ 📂 HVAC (12)
+│  ├─ 📂 Electrical (9)
+│  └─ 📂 Cleaning (34)
+├─ 📂 Employee Documents
+│  ├─ 👤 John Smith (23 docs)
+│  ├─ 👤 Jane Doe (19 docs)
+│  └─ ...
+└─ 📂 Message Templates
+   ├─ 📂 Pre-Arrival (8)
+   ├─ 📂 During Stay (12)
+   └─ 📂 Post-Departure (6)
+\`\`\`
+
+**How to Use Tree View:**
+
+**1. EXPAND/COLLAPSE FOLDERS**
+• Click folder icon to expand
+• See all documents inside
+• Click again to collapse
+• Maintains your view preference
+
+**2. FOLDER BADGES**
+• Number in parentheses = document count
+• Color coding:
+  🟢 All current
+  🟡 Some expiring soon
+  🔴 Expired items present
+
+**3. QUICK ACTIONS**
+Hover over documents for:
+• 👁️ Preview
+• 📥 Download
+• ✏️ Edit details
+• 🗑️ Delete
+• 🔗 Share link
+
+**4. FILTERING**
+• Search within tree
+• Filter by date
+• Filter by status
+• Filter by type
+
+**5. BULK OPERATIONS**
+• Select multiple documents
+• Checkbox selection
+• Bulk download
+• Bulk delete
+• Bulk move to folder
+
+**Benefits of Tree View:**
+
+✅ **Visual Organization** - See structure at a glance
+✅ **Easy Navigation** - Click to drill down
+✅ **Intuitive** - Familiar folder metaphor
+✅ **Scalable** - Works with 1000s of documents
+✅ **Fast** - Quick folder expansion
+✅ **Mobile Friendly** - Touch-friendly interface
+
+**vs. List View:**
+• Tree View: Better for browsing
+• List View: Better for searching
+• Switch between views anytime
+• Preference saved per user
+
+**Customization:**
+• Create custom folders
+• Rename folders
+• Reorder folders
+• Set default view
+• Pin frequently used folders`,
+        },
+        {
+          question: 'How do I set document expiration reminders?',
+          answer: `**Document Expiration Management:**
+
+**Why Track Expirations?**
+Critical for:
+• Insurance certificates (COIs)
+• Business licenses
+• Employee certifications
+• Contract renewals
+• Permits and approvals
+
+**Setting Up Expiration Tracking:**
+
+**Step 1: Add Expiration Date**
+When uploading document:
+1. Enter "Expiration Date" field
+2. System calculates days until expiry
+3. Auto-categorizes status
+
+**Step 2: Configure Reminders**
+1. Go to document details
+2. Click "Reminders"
+3. Set alert schedule:
+   • 90 days before (Yellow alert)
+   • 30 days before (Orange alert)
+   • 7 days before (Red alert)
+   • On expiration day (Critical)
+   • Daily after expiration
+4. Choose notification method:
+   ✓ Email notification
+   ✓ In-app notification
+   ✓ SMS alert (for critical docs)
+
+**Step 3: Assign Responsibility**
+• Set "responsible person"
+• They receive all reminders
+• Escalate to manager if no action
+
+**Expiration Status Indicators:**
+
+🟢 **CURRENT** (>90 days)
+• Document is valid
+• No action needed
+• Regular review
+
+🟡 **EXPIRING SOON** (30-90 days)
+• Yellow highlight
+• Email reminder sent
+• Begin renewal process
+
+🟠 **CRITICAL** (<30 days)
+• Orange highlight
+• Daily email reminders
+• Urgent action required
+
+🔴 **EXPIRED**
+• Red highlight
+• Cannot use vendor/service
+• Immediate action required
+• Auto-flags related records
+
+**Automated Actions:**
+
+**When Document Expires:**
+• Email to responsible person
+• Manager notification
+• Related services suspended
+• Dashboard alert
+• Report added to weekly summary
+
+**Example: Vendor COI Expiration**
+• 30 days out: Email to vendor
+• 15 days: Second reminder
+• 7 days: Phone call recommended
+• Expiration: Vendor deactivated
+• Cannot book new jobs
+• In-progress jobs flagged
+
+**Dashboard View:**
+
+**Expirations Widget:**
+• Shows all expiring docs
+• Grouped by urgency
+• Click to take action
+• Sort by date or type
+
+**Reports:**
+• Weekly expiration report
+• Monthly compliance report
+• Vendor compliance status
+• Employee certification status
+
+**Renewal Workflow:**
+
+**Step 1: Receive Reminder**
+• Email notification with details
+
+**Step 2: Request Renewal**
+• Contact vendor/employee
+• Request updated document
+• Set follow-up date
+
+**Step 3: Upload New Document**
+• Upload replacement
+• Old document archived
+• New expiration date set
+• Reminders reset
+
+**Step 4: Verify & Approve**
+• Review new document
+• Verify coverage/validity
+• Approve and activate
+• Notify relevant parties
+
+**Best Practices:**
+✅ Set 90-day advance reminders
+✅ Assign clear responsibility
+✅ Track renewal progress
+✅ Keep renewal notes
+✅ Archive old versions
+✅ Verify before approval
+✅ Update all related records`,
+        },
+        {
+          question: 'How do I search and filter documents?',
+          answer: `**Document Search & Filtering:**
+
+**SEARCH METHODS:**
+
+**1. QUICK SEARCH** 🔍
+• Search bar at top
+• Searches across all fields:
+  - Document name
+  - Description
+  - File contents (PDF text)
+  - Tags
+  - Uploader name
+• Real-time results
+• Highlights matching text
+
+**2. ADVANCED FILTERS** 🎯
+
+**Filter by Document Type:**
+☑️ Contracts
+☑️ Service Documents
+☑️ Employee Documents
+☑️ Message Templates
+☑️ Certificates
+☑️ Licenses
+☑️ Invoices
+
+**Filter by Date Range:**
+• Upload date
+• Expiration date
+• Last modified
+• Custom range picker
+
+**Filter by Status:**
+☑️ Current/Active
+☑️ Expiring Soon (< 90 days)
+☑️ Expired
+☑️ Pending Approval
+☑️ Archived
+
+**Filter by Property:**
+• Select specific property
+• Or "All Properties"
+• Shows property-linked docs
+
+**Filter by Uploader:**
+• See who uploaded
+• Filter by team member
+• Track document source
+
+**Filter by File Type:**
+• PDF
+• Word (DOCX, DOC)
+• Excel (XLSX, XLS)
+• Images (JPG, PNG)
+• Other
+
+**3. SAVED FILTERS** 💾
+Create reusable filter combinations:
+
+**Example: "Expiring Insurance"**
+• Type: COI/Insurance
+• Status: Expiring Soon
+• Sort: Expiration date (ascending)
+
+**How to Save:**
+1. Set your filters
+2. Click "Save Filter"
+3. Name it
+4. Access from dropdown
+
+**Common Saved Filters:**
+• "Contracts Expiring This Quarter"
+• "Employee Certifications Due"
+• "Pending Service Documents"
+• "Recently Uploaded"
+
+**4. SORTING OPTIONS** ⬆️⬇️
+Sort results by:
+• Name (A-Z, Z-A)
+• Upload date (Newest, Oldest)
+• Expiration date (Soonest, Latest)
+• File size (Largest, Smallest)
+• Relevance (search results)
+
+**5. BULK ACTIONS** ✅
+After filtering:
+• Select all results
+• Download as ZIP
+• Bulk delete
+• Bulk tag
+• Bulk move to folder
+• Export list to Excel
+
+**SEARCH OPERATORS:**
+
+**Exact Phrase:**
+"Property Management Agreement"
+• Must match exactly
+
+**Exclude Terms:**
+COI -expired
+• COIs that are NOT expired
+
+**Date Ranges:**
+uploaded:2025-01
+• Uploaded in January 2025
+
+**File Type:**
+type:pdf plumbing
+• PDFs containing "plumbing"
+
+**TREE VIEW WITH SEARCH:**
+
+**Combined Power:**
+1. Use tree view for browsing
+2. Use search for specific docs
+3. Results highlight tree location
+4. Click to see in context
+
+**Example:**
+• Search: "Sunset Villa lease"
+• Results show document
+• Tree highlights: Contracts → Leases → Sunset Villa
+• One-click to folder location
+
+**EXPORT SEARCH RESULTS:**
+• Export to Excel
+• CSV format
+• Includes metadata:
+  - File name
+  - Type
+  - Upload date
+  - Uploader
+  - Expiration date
+  - File size
+• Use for reporting`,
+        },
+      ],
+    },
+    {
+      id: 'access-control',
+      title: 'Access Control & Security',
+      icon: ShieldCheck,
+      color: 'text-blue-700',
+      bgColor: 'bg-blue-50',
+      topics: [
+        {
+          question: 'How do I manage vendor COIs (Certificates of Insurance)?',
+          answer: `**COI Management System:**
+
+**Why COIs Matter:**
+Certificates of Insurance (COI) protect your business by ensuring vendors have adequate insurance coverage before accessing properties.
+
+**Required Coverage Types:**
+• **General Liability:** Min $1,000,000
+• **Workers' Compensation:** Min $500,000
+• **Auto Liability:** $1,000,000 (if applicable)
+• **Property Damage:** Included in general liability
+
+**Adding a COI:**
+
+**Step 1: Navigate to COIs**
+1. Go to Operations → Vendor COIs
+2. Click "Add COI"
+
+**Step 2: Enter COI Details**
+📋 **Required Information:**
+• Vendor Name (from service providers list)
+• Policy Number
+• Insurance Provider
+• Policy Type (General Liability, Workers Comp, Auto)
+• Coverage Amount
+• Effective Date
+• Expiration Date
+• Certificate Holder (your company)
+
+**Step 3: Upload Certificate**
+• Click "Upload Certificate"
+• Supported: PDF, JPG, PNG
+• System auto-reads dates (OCR)
+• Preview before saving
+
+**Tree View Organization:**
+📁 **Vendor COIs**
+  ├─ 🟢 Current (45)
+  │   ├─ ABC Plumbing - Exp: Dec 2025
+  │   ├─ XYZ HVAC - Exp: Nov 2025
+  │   └─ ...
+  ├─ 🟡 Expiring Soon (8)
+  │   ├─ Clean Team - Exp: Feb 2025
+  │   └─ ...
+  └─ 🔴 Expired (3)
+      ├─ Old Vendor - EXPIRED
+      └─ ...
+
+**Automatic Tracking:**
+
+**90 Days Before Expiration:**
+• Yellow status indicator
+• Email reminder to vendor
+• Dashboard notification
+
+**30 Days Before Expiration:**
+• Orange status indicator
+• Second email reminder
+• Phone call recommended
+• Booking restrictions enabled
+
+**On Expiration Date:**
+• Red status indicator
+• Vendor automatically deactivated
+• Cannot assign to new jobs
+• In-progress jobs flagged for review
+
+**Compliance Dashboard:**
+View all vendor compliance at a glance:
+• Total vendors: 45
+• Compliant: 37 (82%)
+• Expiring soon: 8 (18%)
+• Expired: 0 (0%)
+
+**Reports:**
+• Weekly COI status report
+• Vendor compliance summary
+• Expiration calendar
+• Non-compliant vendors list`,
+        },
+        {
+          question: 'How do I create and manage access authorizations?',
+          answer: `**Access Authorization System:**
+
+**Purpose:**
+Control and track who has access to which properties and when, ensuring security and accountability.
+
+**Creating an Access Authorization:**
+
+**Step 1: Navigate to Access Authorizations**
+1. Go to Operations → Access Authorizations
+2. Click "Create Authorization"
+
+**Step 2: Authorization Details**
+📝 **Required Information:**
+• **Property/Unit:** Select from dropdown
+• **Vendor/Person:** Who needs access
+• **Purpose:** Reason for access
+  - Maintenance/Repair
+  - Cleaning/Turnover
+  - Inspection
+  - Showing/Tour
+  - Emergency
+  - Other
+• **Date:** When access is granted
+• **Time Window:** Start and end time
+• **Access Type:**
+  - One-time
+  - Recurring (specify days)
+  - Duration-based
+
+**Step 3: Access Method**
+• Physical key pickup
+• Digital access code (auto-generated)
+• Building management escort
+• Property manager meeting
+• Lockbox combination
+
+**Step 4: Special Instructions**
+• Parking location
+• Entry procedures
+• Alarm code (if applicable)
+• Pet instructions
+• Emergency contacts
+
+**Step 5: Requirements**
+☑️ Valid COI attached
+☑️ Background check (if required)
+☑️ Building approval (if needed)
+☑️ Resident notification sent
+
+**Tree View Organization:**
+📁 **Access Authorizations**
+  ├─ 📅 Today's Access (5)
+  │   ├─ 🟢 ABC Plumbing @ Sunset Villa - 9 AM-12 PM
+  │   ├─ 🟢 Clean Team @ Beach House - 11 AM-3 PM
+  │   └─ ...
+  ├─ 📅 Upcoming (12)
+  │   ├─ HVAC Tech @ Condo 201 - Tomorrow 2 PM
+  │   └─ ...
+  ├─ 📅 Recurring (8)
+  │   ├─ Weekly Cleaning - Every Monday
+  │   └─ ...
+  └─ 📁 Past Authorizations (Archive)
+
+**Digital Access Codes:**
+
+**Auto-Generation:**
+• System creates unique codes
+• Valid only during authorized time
+• Auto-expires after window
+• Can extend remotely if needed
+
+**Smart Lock Integration:**
+• Sync with August, Yale, Schlage
+• Create temporary access
+• Track entry/exit times
+• Remote lock/unlock
+
+**Notification System:**
+
+**Upon Authorization Creation:**
+📧 **To Vendor:**
+• Property address
+• Access date/time
+• Entry instructions
+• Access code (if digital)
+• Contact info
+• Map/directions
+
+📧 **To Building Management:**
+• Vendor details
+• COI proof attached
+• Purpose of visit
+• Expected duration
+
+📧 **To Resident (if applicable):**
+• Service notification
+• Vendor credentials
+• Expected completion time
+
+**Access Log:**
+Track all property access:
+• Who accessed
+• Date and time
+• Duration of stay
+• Entry method used
+• Work completed
+• Departure confirmation
+
+**Security Features:**
+
+**Verification:**
+✓ Photo ID required
+✓ COI must be current
+✓ Background check (optional)
+✓ Reference check
+✓ Company credentials
+
+**Monitoring:**
+• Real-time entry notifications
+• GPS check-in (mobile app)
+• Departure confirmation required
+• Property condition photos
+• Incident reporting
+
+**Emergency Overrides:**
+• Manager can grant emergency access
+• 24-hour access codes
+• Remote unlock capability
+• Security contacted if needed`,
+        },
+        {
+          question: 'What security measures protect sensitive data?',
+          answer: `**Data Security & Privacy:**
+
+**Encryption:**
+
+**Data at Rest:**
+• AES-256 encryption for all stored data
+• Encrypted backups
+• Secure database storage
+• Encrypted file uploads
+
+**Data in Transit:**
+• TLS 1.3 encryption
+• HTTPS for all connections
+• Secure API endpoints
+• Encrypted email communications
+
+**Access Control:**
+
+**Role-Based Permissions:**
+• Admins: Full access
+• Ops: Operational data only
+• Property Managers: Assigned properties only
+• Cleaners/Maintenance: Task-specific access
+
+**Two-Factor Authentication (2FA):**
+• SMS verification
+• Authenticator app support
+• Backup codes provided
+• Required for admins
+• Optional for other roles
+
+**Session Management:**
+• Auto-logout after 30 minutes inactivity
+• Concurrent session limits
+• Device tracking
+• Remote logout capability
+
+**Data Privacy:**
+
+**Personal Information Protection:**
+• SSN automatic redaction
+• Credit card tokenization
+• Password hashing (bcrypt)
+• PII data minimization
+• Right to be forgotten (GDPR)
+
+**Access Logs:**
+Track all data access:
+• Who viewed what
+• When it was viewed
+• What changes were made
+• IP address tracking
+• Device information
+
+**Compliance:**
+
+**Standards:**
+✓ GDPR compliant
+✓ CCPA compliant
+✓ SOC 2 Type II
+✓ PCI DSS (payment data)
+
+**Regular Audits:**
+• Quarterly security audits
+• Penetration testing
+• Vulnerability scanning
+• Code security reviews
+
+**Data Backup:**
+
+**Automatic Backups:**
+• Daily full backups
+• Hourly incremental backups
+• 30-day retention
+• Multiple geographic locations
+• Point-in-time recovery
+
+**Disaster Recovery:**
+• Recovery Time Objective (RTO): 4 hours
+• Recovery Point Objective (RPO): 1 hour
+• Tested quarterly
+• Documented procedures
+
+**Vendor Security:**
+
+**Third-Party Requirements:**
+• COI verification required
+• Background checks available
+• Data sharing agreements
+• Limited data access
+• Audit trail of vendor access
+
+**API Security:**
+• API key authentication
+• Rate limiting
+• IP whitelisting option
+• Request signing
+• Webhook verification
+
+**Best Practices:**
+
+**For Users:**
+✅ Use strong, unique passwords
+✅ Enable 2FA
+✅ Don't share credentials
+✅ Log out on shared devices
+✅ Report suspicious activity
+✅ Regular password changes
+✅ Review access logs`,
+        },
+        {
+          question: 'How do background checks work for vendors?',
+          answer: `**Vendor Background Check System:**
+
+**When Required:**
+• Access to occupied units
+• Work in sensitive areas
+• Handling valuable property
+• Recurring access
+• High-security properties
+• Client requirement
+
+**Background Check Levels:**
+
+**LEVEL 1: BASIC** ($25)
+Duration: 1-2 business days
+Includes:
+• Identity verification
+• Social Security trace
+• National criminal database
+• Sex offender registry
+• Driving record (if applicable)
+
+**LEVEL 2: STANDARD** ($50)
+Duration: 3-5 business days
+Includes all Level 1, plus:
+• County criminal search (7 years)
+• Federal criminal search
+• Civil court records
+• Credit report (basic)
+• Employment verification
+
+**LEVEL 3: COMPREHENSIVE** ($100)
+Duration: 7-10 business days
+Includes all Level 2, plus:
+• Multi-state criminal search
+• Professional license verification
+• Education verification
+• Reference checks (3)
+• Credit report (full)
+• International records (if applicable)
+
+**Process:**
+
+**Step 1: Request Background Check**
+1. Go to Service Providers
+2. Select vendor
+3. Click "Request Background Check"
+4. Choose level
+5. Vendor receives consent form
+
+**Step 2: Vendor Consent**
+• Vendor fills out authorization
+• Provides required information:
+  - Full name
+  - Date of birth
+  - Social Security number
+  - Current address
+  - 7-year address history
+• Digital signature required
+
+**Step 3: Processing**
+• Third-party service processes
+• System monitors status
+• Updates shown in real-time
+
+**Step 4: Results**
+• Admin receives notification
+• Review results in system
+• Make approval decision
+• Document decision rationale
+
+**Results Interpretation:**
+
+**CLEAR** 🟢
+• No negative findings
+• Approved for property access
+• Valid for 12 months
+
+**CONSIDER** 🟡
+• Minor findings require review
+• Case-by-case decision
+• Manager approval needed
+• Possible restrictions
+
+**FLAGGED** 🔴
+• Serious concerns found
+• Denied property access
+• Cannot assign to jobs
+• Must resolve or find alternate vendor
+
+**Red Flags:**
+⚠️ Violent criminal history
+⚠️ Theft/property crimes
+⚠️ Sex offender status
+⚠️ Multiple DUIs (for drivers)
+⚠️ Fraud convictions
+⚠️ Recent convictions (<3 years)
+
+**Privacy & Compliance:**
+
+**Fair Credit Reporting Act (FCRA):**
+• Written consent required
+• Adverse action notice if denied
+• Copy of report provided
+• Dispute process available
+
+**Data Protection:**
+• Results encrypted
+• Access restricted to admins
+• Cannot share with third parties
+• Secure document storage
+• Auto-delete after retention period
+
+**Renewal:**
+• Background checks expire after 12 months
+• Renewal reminder at 11 months
+• Continuous access requires current check
+• More frequent for high-risk roles
+
+**Alternative Verification:**
+
+**For Established Companies:**
+• Company-wide blanket check
+• Individual employee checks
+• Insurance as substitute
+• Trade association membership
+• Professional certifications
+
+**International Vendors:**
+• Country-specific checks
+• Interpol database search
+• Passport verification
+• Work authorization check`,
+        },
+        {
+          question: 'How does the access authorization workflow integrate with jobs?',
+          answer: `**Integrated Access Management Workflow:**
+
+**Automatic Authorization Creation:**
+
+**When Job is Assigned:**
+1. Service job created in pipeline
+2. Vendor assigned to job
+3. System checks:
+   ✓ Vendor has current COI
+   ✓ Background check is valid
+   ✓ No access restrictions
+4. If all checks pass:
+   • Access authorization auto-created
+   • Time window based on job schedule
+   • Property info auto-populated
+   • Entry instructions attached
+
+**Manual Approval Process:**
+
+**If Checks Fail:**
+⚠️ **Expired COI:**
+• Job blocked until renewal
+• Notification to vendor
+• Cannot proceed
+
+⚠️ **No Background Check:**
+• Admin approval required
+• Must be escorted
+• Or substitute vendor
+
+⚠️ **Building Approval Needed:**
+• Form sent to building management
+• Job on hold until approved
+• Estimated 24-48 hour delay
+
+**Access Code Management:**
+
+**Smart Lock Integration:**
+1. Job scheduled for Tuesday, 2-4 PM
+2. System creates code: #4829
+3. Code active: Tue 1:55 PM - 4:30 PM
+4. Vendor receives SMS with code
+5. Entry logged: 2:03 PM
+6. Exit logged: 3:47 PM
+7. Code auto-expires: 4:30 PM
+
+**Traditional Keys:**
+1. Key pickup location specified
+2. Vendor signs key log
+3. Photo ID verified
+4. Deposit collected (if required)
+5. Return by specified time
+6. Late fee if not returned
+
+**Service Pipeline Integration:**
+
+**STAGE 1: Quote Requested**
+• Check vendor COI status
+• Flag if expiring soon
+• Cannot proceed if expired
+
+**STAGE 2: Quote Approved**
+• System verifies all requirements
+• Pre-creates authorization draft
+• Vendor receives preliminary notice
+
+**STAGE 3: Job Scheduled**
+• Finalize authorization
+• Generate access codes
+• Send all notifications
+• Building approval (if needed)
+
+**STAGE 4: Day Before Service**
+• Reminder to vendor with access info
+• Verification checks repeated
+• Weather/scheduling confirmations
+
+**STAGE 5: Service Day**
+• Morning: Access code activated
+• Entry: GPS check-in notification
+• During: Available for support
+• Exit: GPS checkout + completion photos
+
+**STAGE 6: Completion**
+• Access code deactivated
+• Access log closed
+• Review vendor notes
+• Archive authorization
+
+**Real-Time Monitoring:**
+
+**Dashboard View:**
+📍 **Active Right Now:**
+• ABC Plumbing @ Sunset Villa (entered 2:03 PM)
+• Clean Team @ Beach House (entered 11:15 AM)
+
+📅 **Expected Today:**
+• HVAC Tech @ Condo 201 (2:00-5:00 PM) - Not yet arrived
+• Inspector @ Villa 5 (3:00-4:00 PM) - Not yet arrived
+
+⚠️ **Issues:**
+• Late arrival: Painter @ Unit 3B (expected 9 AM, now 10:30 AM)
+
+**Notifications:**
+
+**To Operations:**
+• "ABC Plumbing has entered Sunset Villa"
+• "Clean Team has not checked in (30 min late)"
+• "HVAC Tech completed work at Condo 201"
+
+**To Vendor:**
+• Reminder 2 hours before
+• Access instructions
+• Completion checklist
+• "Please confirm departure"
+
+**To Residents:**
+• "Service scheduled tomorrow"
+• "Vendor has arrived"
+• "Work completed, please review"
+
+**Security Escalation:**
+
+**If Issues Detected:**
+🚨 Entry outside authorized window
+🚨 No exit confirmation after 2 hours past window
+🚨 Multiple failed code attempts
+🚨 Suspicious activity reported
+
+**Actions:**
+1. Alert operations team
+2. Attempt contact with vendor
+3. Check property cameras (if available)
+4. Send someone to verify
+5. Contact authorities if needed
+6. Document incident
+7. Review vendor status
+
+**Reporting:**
+• Daily access summary
+• Weekly vendor activity report
+• Monthly compliance report
+• Incident logs
+• Property access history`,
+        },
+        {
+          question: 'How do I audit and review access logs?',
+          answer: `**Access Log Auditing:**
+
+**Access to Audit Logs:**
+• Admins: Full access to all logs
+• Ops: Property-specific logs
+• Property Managers: Their properties only
+
+**What's Logged:**
+
+**Every Property Access:**
+• Vendor/person name
+• Property address
+• Date and time of entry
+• Date and time of exit
+• Access method (code, key, escort)
+• Authorization reference
+• Purpose of visit
+• Duration of stay
+• GPS coordinates (if available)
+• Entry photos
+• Exit photos
+• Work completed summary
+• Any issues reported
+
+**Every System Access:**
+• User login/logout
+• Pages viewed
+• Data accessed
+• Changes made
+• Downloads
+• Exports
+• Failed login attempts
+• IP addresses
+• Device information
+
+**Viewing Access Logs:**
+
+**Step 1: Navigate to Logs**
+1. Go to System → Access Logs
+   OR
+2. Go to property details → Access History
+
+**Step 2: Filter Logs**
+📊 **Filter Options:**
+• Date range (custom picker)
+• Property (specific or all)
+• Vendor (specific or all)
+• Access type (authorized, emergency, staff)
+• Time of day
+• Duration (< 1 hr, 1-3 hrs, > 3 hrs)
+• Status (completed, ongoing, incident)
+
+**Step 3: Review Entries**
+Each log shows:
+✓ Entry card with all details
+✓ Timeline view
+✓ Map location (if GPS)
+✓ Attached photos
+✓ Related job/authorization
+✓ Vendor rating for this visit
+
+**Advanced Analytics:**
+
+**Property Access Patterns:**
+• Most accessed properties
+• Peak access times
+• Average visit duration
+• Vendor frequency
+• Unauthorized attempts
+
+**Vendor Performance:**
+• On-time arrival rate
+• Average duration vs estimated
+• Completion rate
+• Issue frequency
+• Client ratings
+
+**Security Metrics:**
+• Failed access attempts
+• After-hours access (with reason)
+• Emergency accesses
+• Key/code issues
+• Incident rate
+
+**Anomaly Detection:**
+
+**System Alerts:**
+🚨 Access during unusual hours
+🚨 Extended stay beyond window
+🚨 Multiple properties same day
+🚨 Pattern deviations
+🚨 High-frequency access
+
+**Automatic Flagging:**
+• Access >1 hour past window
+• Entry without authorization
+• No exit recorded
+• Multiple failed attempts
+• GPS mismatch with property
+
+**Audit Reports:**
+
+**Daily Access Report:**
+• All property entries today
+• Currently on-site vendors
+• Completed vs ongoing
+• Any issues or delays
+• Tomorrow's schedule
+
+**Weekly Summary:**
+• Total property visits
+• Unique vendors
+• Average visit duration
+• Incidents/issues
+• Compliance rate
+
+**Monthly Compliance:**
+• COI status all vendors
+• Background check renewals
+• Authorization compliance
+• Security incidents
+• Recommendations
+
+**Quarterly Security Audit:**
+• Full access pattern review
+• Vendor risk assessment
+• System security review
+• Policy compliance check
+• Improvement recommendations
+
+**Export Options:**
+📄 **PDF Report** - Formatted for presentation
+📊 **Excel/CSV** - Data analysis
+🗂️ **Archive** - Long-term storage
+📧 **Email** - Schedule automatic sending
+
+**Incident Investigation:**
+
+**If Issue Occurs:**
+1. Pull relevant logs
+2. Review timeline
+3. Check photos/documentation
+4. Contact vendor for statement
+5. Review authorization
+6. Assess damage/impact
+7. Determine liability
+8. Document resolution
+9. Update vendor record
+10. Adjust procedures if needed
+
+**Compliance & Retention:**
+
+**Log Retention:**
+• Active logs: Indefinite
+• Archived logs: 7 years
+• Incident logs: 10 years
+• Compliance with regulations
+• Searchable archive
+
+**Privacy:**
+• Logs encrypted at rest
+• Access logged (who viewed logs)
+• Cannot be altered
+• Blockchain verification (optional)
+• GDPR data export available
+
+**Best Practices:**
+✅ Review logs weekly
+✅ Investigate anomalies promptly
+✅ Document all incidents
+✅ Share reports with property owners
+✅ Use data to improve security
+✅ Train staff on log review
+✅ Automate routine monitoring`,
+        },
+      ],
+    },
+    {
+      id: 'advanced-features',
+      title: 'Advanced Features',
+      icon: Settings,
+      color: 'text-slate-600',
+      bgColor: 'bg-slate-50',
+      topics: [
+        {
+          question: 'How do I create and use checklist templates for check-in/check-out?',
+          answer: `**Checklist Template System:**
+
+**Purpose:**
+Create reusable checklists for property inspections, check-ins, check-outs, and quality control.
+
+**Creating a Template:**
+
+**Step 1: Navigate to Templates**
+1. Go to Operations → Checklist Templates
+2. Click "Create Template"
+
+**Step 2: Template Details**
+📝 **Basic Information:**
+• Template Name (e.g., "Standard Check-In", "Deep Clean Inspection")
+• Template Type:
+  - Check-In
+  - Check-Out
+  - Inspection
+  - Maintenance
+  - Quality Control
+• Property (specific or all)
+• Description/Purpose
+
+**Step 3: Build Checklist Items**
+Add checklist items with different types:
+
+**Checkbox Items:**
+☑️ All lights working
+☑️ No visible damage
+☑️ Appliances functioning
+☑️ Keys present
+
+**Text Response:**
+📝 Meter reading: _______
+📝 Guest count: _______
+📝 Special notes: _______
+
+**Photo Required:**
+📸 Living room condition
+📸 Kitchen appliances
+📸 Bathroom cleanliness
+📸 Exterior/parking
+
+**Signature:**
+✍️ Inspector signature
+✍️ Manager approval
+✍️ Guest acknowledgment
+
+**Step 4: Set Item Properties**
+For each item:
+• Required (must complete) vs Optional
+• Order/sequence number
+• Help text/instructions
+• Conditional logic (show if...)
+
+**Using Templates During Check-In/Out:**
+
+**Starting a Check-In:**
+1. Go to Operations → Check-In/Check-Out
+2. Click "New Check-In"
+3. Select property
+4. Choose checklist template
+5. Enter guest information
+6. Begin inspection
+
+**Completing the Checklist:**
+• Items shown in order
+• Check off completed items
+• Add photos inline
+• Enter text responses
+• Flag issues found
+• Add notes for each item
+
+**Photo Capture:**
+• Use device camera
+• Auto-timestamp
+• GPS location embedded
+• Compare to previous check-in
+• Before/after comparison
+
+**Issue Reporting:**
+If issues found during checklist:
+• Flag item as "Issue"
+• Take photos of damage
+• Estimate repair cost
+• Create maintenance task automatically
+• Notify property manager
+• Update property status
+
+**Signature Capture:**
+• Digital signature pad
+• Touch/mouse drawing
+• Name and date auto-added
+• Timestamp recorded
+• Cannot edit after signing
+
+**PDF Report Generation:**
+
+**Upon Completion:**
+1. All responses compiled
+2. Photos included
+3. Signature embedded
+4. PDF auto-generated
+5. Stored with record
+6. Email to stakeholders
+7. Available for download
+
+**Pre-configured Templates:**
+
+**Check-In Inspection (24 items):**
+• Exterior condition (5 items)
+• Living areas (6 items)
+• Kitchen (5 items)
+• Bathrooms (4 items)
+• Utilities (4 items)
+
+**Check-Out Inspection (28 items):**
+• All check-in items
+• Damage assessment
+• Cleaning level required
+• Missing items check
+• Meter readings
+• Key return confirmation
+
+**Deep Clean Quality Control (35 items):**
+• Room-by-room inspection
+• Surface cleanliness
+• Appliance condition
+• Bathroom sanitation
+• Floor cleanliness
+• Final approval
+
+**Template Benefits:**
+✅ Consistency across properties
+✅ Nothing forgotten
+✅ Photo documentation
+✅ Accountability
+✅ Quality control
+✅ Legal protection
+✅ Dispute resolution`,
+        },
+        {
+          question: 'How does tree view improve document organization?',
+          answer: `**Tree View Feature Overview:**
+
+**What is Tree View?**
+A hierarchical, visual file organization system similar to Windows Explorer or Mac Finder.
+
+**Where Tree View is Available:**
+• Document modules (Contracts, Service Docs, Employee Docs)
+• Media Management
+• Vendor COIs
+• Access Authorizations
+
+**Visual Structure:**
+\`\`\`
+📁 Root Folder
+├─ 📂 Category 1 (count)
+│  ├─ 📂 Subcategory A
+│  │  ├─ 📄 Document 1
+│  │  ├─ 📄 Document 2
+│  │  └─ 📄 Document 3
+│  └─ 📂 Subcategory B
+│     └─ 📄 Document 4
+├─ 📂 Category 2 (count)
+│  └─ 📄 Document 5
+└─ 📂 Category 3 (count)
+   ├─ 📄 Document 6
+   └─ 📄 Document 7
+\`\`\`
+
+**How to Use:**
+
+**1. EXPAND/COLLAPSE**
+• Click folder icon to expand
+• Click again to collapse
+• Double-click to expand all children
+• Right-click for bulk operations
+
+**2. NAVIGATION**
+• Click folder to view contents
+• Breadcrumb trail shows path
+• Back/forward buttons
+• Quick jump to parent
+
+**3. SEARCH WITHIN TREE**
+• Search filters tree in real-time
+• Highlights matching folders
+• Auto-expands to show results
+• Preserves tree structure
+
+**4. DRAG & DROP** (if enabled)
+• Drag documents to folders
+• Drag to reorder
+• Multi-select drag
+• Visual drop indicator
+
+**Folder Badges:**
+
+**Count Badges:**
+📂 Contracts (24) ← 24 documents inside
+
+**Status Indicators:**
+🟢 All current/valid
+🟡 Some items expiring soon
+🔴 Expired items present
+⚪ Empty folder
+
+**Smart Badges:**
+📊 Has sub-folders
+🔒 Restricted access
+⭐ Favorite/pinned
+📌 Recently accessed
+
+**Actions:**
+
+**Hover Actions:**
+• 👁️ Preview first item
+• 📥 Download entire folder
+• ✏️ Rename folder
+• 🎨 Change folder color
+• ⭐ Add to favorites
+
+**Right-Click Menu:**
+• Open in new tab
+• Expand all subfolders
+• Collapse all
+• Sort contents
+• Export folder
+• Share folder
+
+**Tree View vs List View:**
+
+**When to Use Tree View:**
+• Browsing and exploring
+• Understanding structure
+• Organizing documents
+• Managing categories
+• Visual learners
+
+**When to Use List View:**
+• Searching for specific files
+• Sorting by date/name/size
+• Bulk selection
+• Quick scanning
+• Detailed metadata view
+
+**Toggle between views:**
+• Button at top right
+• Keyboard shortcut: Ctrl+T
+• Preference saved per user
+
+**Advanced Features:**
+
+**Custom Folders:**
+• Create your own structure
+• Name and nest folders
+• Set folder icons/colors
+• Reorder folders
+• Private vs shared folders
+
+**Auto-Organization:**
+• Smart folders (like playlists)
+• Auto-sort by rules:
+  - Date ranges
+  - Document type
+  - Property
+  - Status
+  - Custom criteria
+
+**Favorite/Pin System:**
+• Pin frequently used folders to top
+• Add to favorites sidebar
+• Quick access menu
+• Recent folders history
+
+**Keyboard Shortcuts:**
+• Arrow keys: Navigate
+• Enter: Open folder
+• Backspace: Go to parent
+• Space: Preview
+• Ctrl+Click: Multi-select
+• / : Focus search
+
+**Mobile Experience:**
+• Touch-friendly spacing
+• Swipe to go back
+• Long-press for menu
+• Pinch to collapse all
+• Shake to refresh
+
+**Performance:**
+• Lazy loading (load as you expand)
+• Virtual scrolling (thousands of items)
+• Cached folder states
+• Instant search
+• Smooth animations
+
+**Benefits Summary:**
+✅ Intuitive navigation
+✅ Visual organization
+✅ Faster file location
+✅ Better understanding of structure
+✅ Improved user experience
+✅ Reduced clicks to find files`,
+        },
+        {
+          question: 'What are bill templates and how do I use them?',
+          answer: `**Bill Template System:**
+
+**Purpose:**
+Create reusable billing templates for recurring charges, standard services, and consistent invoicing.
+
+**Accessing Bill Templates:**
+1. Go to Finance → Bill Templates
+2. View all templates
+3. Create, edit, or delete
+
+**Creating a Bill Template:**
+
+**Step 1: Template Basics**
+📝 **Information:**
+• Template Name (e.g., "Standard Cleaning Fee", "Monthly Management")
+• Category:
+  - Property Management Fee
+  - Cleaning & Turnover
+  - Maintenance & Repairs
+  - Utilities
+  - Guest Fees
+  - Owner Charges
+  - Other
+• Description/Notes
+
+**Step 2: Line Items**
+Add multiple line items:
+
+**Item Details:**
+• Item name/description
+• Quantity (default 1)
+• Unit price
+• Tax rate (if applicable)
+• Category code
+• GL account (if using accounting integration)
+
+**Pricing Options:**
+• Fixed amount: $150
+• Percentage: 10% of subtotal
+• Per unit: $50 × quantity
+• Tiered pricing: Based on property size/type
+• Variable: Enter at time of use
+
+**Step 3: Variables & Customization**
+Use dynamic variables:
+• \{\{property_name\}\}
+• \{\{booking_nights\}\}
+• \{\{guest_count\}\}
+• \{\{property_size\}\} (bedrooms)
+• \{\{season\}\} (summer/winter rates)
+• \{\{date_range\}\}
+
+**Example:**
+"Cleaning Fee for \{\{property_name\}\} (\{\{property_size\}\} bedrooms) - $\{\{base_rate\}\} + $\{\{per_bedroom_rate\}\} per BR"
+
+**Step 4: Tax Configuration**
+• Apply sales tax (%)
+• Tax-exempt items
+• Multi-jurisdiction tax
+• Tax included vs added
+
+**Step 5: Terms & Notes**
+• Payment terms (Net 15, Net 30, Due on receipt)
+• Late fees policy
+• Cancellation policy
+• Special instructions
+• Terms & conditions
+
+**Common Bill Templates:**
+
+**1. CLEANING & TURNOVER**
+Template: "Standard Turnover"
+• Base cleaning: $100
+• Per bedroom: +$25
+• Same-day turnover: +$50
+• Deep clean add-on: +$75
+• Laundry service: $30
+→ Total calculated based on property
+
+**2. PROPERTY MANAGEMENT FEE**
+Template: "Monthly Management"
+• Management fee: 15% of gross rent
+• Minimum fee: $200
+• Additional services:
+  - Inspection: $50
+  - Key replacement: $25
+  - Guest communication: $15 per booking
+
+**3. GUEST BOOKING CHARGES**
+Template: "Guest Invoice"
+• Nightly rate: Variable
+• Cleaning fee: From template
+• Service fee: 10%
+• Security deposit: $500
+• Pet fee: $100 (if applicable)
+• Extra guest fee: $50/person/night (>4 guests)
+
+**4. MAINTENANCE SERVICES**
+Template: "HVAC Service"
+• Service call: $150
+• Hourly rate: $125/hr
+• Parts: Actual cost
+• Emergency fee (after hours): +$100
+
+**5. OWNER STATEMENT CHARGES**
+Template: "Owner Fees"
+• Management commission: 20%
+• Cleaning coordination: $15 per turnover
+• Maintenance markup: 10%
+• Platform fees: Actual
+• Credit card processing: 2.9% + $0.30
+
+**Using Templates:**
+
+**Method 1: Manual Application**
+1. Create new invoice
+2. Click "Apply Template"
+3. Select template
+4. Variables auto-populated
+5. Review and adjust
+6. Save invoice
+
+**Method 2: Automatic Application**
+1. Configure automation rules
+2. Trigger: Booking confirmed
+3. Action: Create invoice from template
+4. Send to guest automatically
+
+**Template Settings:**
+
+**Default Settings:**
+• Auto-apply to specific properties
+• Auto-apply by booking source
+• Auto-apply by season
+• Default payment terms
+• Default email message
+
+**Approval Workflow:**
+• Require manager approval
+• Auto-approve under $X
+• Notification when created
+• Review before sending
+
+**Version Control:**
+• Save template versions
+• Track changes
+• Revert to previous
+• Effective date ranges
+
+**Benefits:**
+
+✅ **Consistency** - Same pricing every time
+✅ **Speed** - Create invoices in seconds
+✅ **Accuracy** - No calculation errors
+✅ **Professionalism** - Uniform appearance
+✅ **Automation** - Set and forget
+✅ **Transparency** - Clear line items
+✅ **Scalability** - Works for 1 or 100 properties
+
+**Advanced Features:**
+
+**Conditional Logic:**
+• If property has pool → add pool cleaning fee
+• If booking > 7 nights → apply weekly discount
+• If off-season → reduce rates by 20%
+
+**Multi-Currency:**
+• Set primary currency
+• Auto-convert for international guests
+• Display both currencies
+• Update exchange rates
+
+**Discounts & Promotions:**
+• Early bird discount
+• Last-minute deal
+• Repeat guest discount
+• Long-term stay discount
+• Seasonal promotions
+
+**Integration:**
+• QuickBooks sync
+• Xero accounting
+• Stripe payment processing
+• Airbnb pricing sync
+• Custom accounting codes`,
+        },
+        {
+          question: 'How do I view my commissions as a team member?',
+          answer: `**My Commissions Portal:**
+
+**Accessing Your Commissions:**
+1. Go to Finance → My Commissions
+   (Available to all staff members)
+2. View your personal commission dashboard
+
+**Dashboard Overview:**
+
+**Summary Cards:**
+💰 **Current Month Earnings**
+• Pending commissions: $1,245
+• Approved commissions: $890
+• Paid commissions: $0
+• Total potential: $2,135
+
+📊 **Year-to-Date**
+• Total earned: $18,450
+• Average per month: $3,075
+• Highest month: $4,200 (July)
+• Commission rate: 8.5%
+
+**Commission Breakdown:**
+
+**By Source:**
+• Booking commissions: $12,300 (67%)
+• Service jobs: $4,150 (22%)
+• Referral bonuses: $2,000 (11%)
+
+**By Status:**
+• ⏳ Pending: $1,245 (waiting for payment from client)
+• ✅ Approved: $890 (ready for payout)
+• 💵 Paid: $16,315 (already received)
+
+**Commission Details Table:**
+
+**Columns Shown:**
+• Date
+• Type (Booking, Service, Referral)
+• Description (property/job details)
+• Base Amount
+• Commission Rate
+• Commission Amount
+• Status
+• Payment Date (if paid)
+
+**Example Entries:**
+| Date | Type | Description | Base | Rate | Commission | Status |
+|------|------|-------------|------|------|------------|--------|
+| 2025-01-15 | Booking | Sunset Villa (7 nights) | $2,100 | 10% | $210 | Pending |
+| 2025-01-12 | Service | HVAC Repair - Unit 3B | $850 | 5% | $42.50 | Approved |
+| 2025-01-10 | Referral | New Owner: John Smith | $1,000 | — | $1,000 | Paid |
+
+**Filtering & Search:**
+
+**Filter Options:**
+• Date range (This Month, Last Month, Custom)
+• Commission type (All, Bookings, Services, Referrals)
+• Status (Pending, Approved, Paid)
+• Property (if applicable)
+
+**Search:**
+• Search by property name
+• Search by job description
+• Search by booking ID
+
+**Payment Schedule:**
+
+**When You Get Paid:**
+• Commissions paid on 15th of month
+• For all jobs completed previous month
+• Payment must be received from client first
+• Approved by manager
+
+**Payment Details:**
+• View upcoming payment date
+• See payment method (direct deposit, check)
+• Download payment stubs
+• Tax information (1099 at year-end)
+
+**Commission Eligibility:**
+
+**Requirements for Commission:**
+✓ Job/booking must be completed
+✓ Payment received from client
+✓ No major issues or complaints
+✓ Quality standards met
+✓ Manager approval
+
+**Timeframe:**
+• Job completed → Pending (within 24 hrs)
+• Client pays → Approved (within 5 days)
+• Manager review → Paid (by 15th of month)
+
+**Commission Rates:**
+
+**By Role:**
+• Property Manager: 10% of booking revenue
+• Sales Agent: 5% first booking, 2% renewals
+• Service Coordinator: $50 per completed job
+• Maintenance Tech: 15% of labor charges
+
+**Bonus Opportunities:**
+
+**Performance Bonuses:**
+• SLA Bonus: +$25 for same-day completion
+• Quality Bonus: +10% for 5-star rating
+• Volume Bonus: +5% if >10 bookings/month
+• Perfect Attendance: +$100/month
+
+**Referral Program:**
+• New property owner: $1,000
+• New service provider: $250
+• New team member: $500
+
+**Tracking Your Performance:**
+
+**Metrics Dashboard:**
+📈 **This Month:**
+• Bookings closed: 8
+• Average booking value: $1,575
+• Commission per booking: $157.50
+• Total potential: $1,260
+
+📊 **Trends:**
+• Month-over-month growth
+• Seasonal patterns
+• Best performing properties
+• Top commission sources
+
+**Goals & Targets:**
+
+**Monthly Goals:**
+• Target: $3,000
+• Current: $2,135 (71%)
+• Remaining: $865
+• Days left: 12
+
+**Leaderboard:**
+See how you compare:
+1. Sarah J. - $4,200
+2. Mike T. - $3,850
+3. **You** - $3,075
+4. Lisa K. - $2,900
+5. Tom R. - $2,650
+
+**Disputes & Questions:**
+
+**If You Disagree:**
+1. Click commission entry
+2. Click "Dispute/Question"
+3. Explain the issue
+4. Manager reviews
+5. Resolution within 3 business days
+
+**Common Issues:**
+• Missing commission
+• Wrong commission rate
+• Not approved yet
+• Payment not received
+
+**Exporting & Reports:**
+
+**Download Options:**
+📄 **PDF Statement** - Professional summary
+📊 **Excel/CSV** - Data for analysis
+📧 **Email** - Send to yourself
+
+**Tax Documents:**
+• Monthly statements
+• Quarterly summaries
+• Year-end 1099 form
+• Tax withholding info
+
+**Mobile Access:**
+
+**Commission App:**
+• Check commissions on-the-go
+• Get notifications:
+  - New commission earned
+  - Commission approved
+  - Payment processed
+• Quick stats widget
+• Payment reminders
+
+**Best Practices:**
+
+✅ **Check Weekly** - Review pending commissions
+✅ **Follow Up** - Chase approvals if delayed
+✅ **Track Goals** - Monitor your targets
+✅ **Quality First** - Better ratings = bonuses
+✅ **Document** - Keep records of your work
+✅ **Communicate** - Report issues promptly`,
+        },
+        {
+          question: 'What analytics are available in the Financial Dashboard?',
+          answer: `**Financial Dashboard Overview:**
+
+**Accessing the Dashboard:**
+1. Go to Finance → Financial Dashboard
+2. View comprehensive financial analytics
+
+**Dashboard Sections:**
+
+**1. REVENUE OVERVIEW** 💰
+
+**Summary Cards:**
+• **This Month Revenue:** $45,280
+  ↗️ +15% vs last month
+• **Outstanding A/R:** $12,450
+  ⚠️ $3,200 overdue >30 days
+• **Expenses MTD:** $18,920
+  ↗️ +8% vs last month
+• **Net Profit:** $26,360
+  ↗️ +22% vs last month
+
+**Revenue Trend Chart:**
+• Line graph: Last 12 months
+• Compare to previous year
+• Show booking revenue vs other income
+• Highlight seasonal trends
+• Monthly average line
+
+**2. BOOKING ANALYSIS** 📊
+
+**Booking Revenue:**
+• Total booking revenue: $38,400
+• Number of bookings: 24
+• Average booking value: $1,600
+• Occupancy rate: 78%
+
+**By Property:**
+| Property | Bookings | Revenue | Avg Rate |
+|----------|----------|---------|----------|
+| Sunset Villa | 8 | $15,200 | $1,900 |
+| Beach House | 7 | $12,600 | $1,800 |
+| Condo 201 | 9 | $10,600 | $1,178 |
+
+**By Source:**
+• Airbnb: $18,900 (49%)
+• Direct bookings: $12,100 (32%)
+• VRBO: $7,400 (19%)
+
+**3. EXPENSE BREAKDOWN** 📉
+
+**Category Pie Chart:**
+• Maintenance: $6,200 (33%)
+• Cleaning: $4,800 (25%)
+• Utilities: $3,900 (21%)
+• Supplies: $2,400 (13%)
+• Other: $1,620 (8%)
+
+**Expense Trends:**
+• Month-over-month comparison
+• Budget vs actual
+• Identify cost increases
+• Flag anomalies
+
+**Top Expenses:**
+1. HVAC repair - Unit 3B: $2,450
+2. Deep cleaning - Sunset Villa: $850
+3. Pool service - All properties: $750
+
+**4. PROPERTY PERFORMANCE** 🏠
+
+**Property Comparison:**
+For each property show:
+• Revenue generated
+• Expenses incurred
+• Net profit
+• ROI %
+• Occupancy rate
+• Average nightly rate
+• Guest rating
+
+**Best Performers:**
+🏆 Sunset Villa: $8,850 net profit (58% margin)
+🥈 Beach House: $7,200 net profit (57% margin)
+🥉 Condo 201: $5,100 net profit (48% margin)
+
+**5. ACCOUNTS RECEIVABLE** 💳
+
+**A/R Aging Report:**
+• Current (0-30 days): $9,250
+• 31-60 days: $2,400
+• 61-90 days: $800
+• 90+ days: $0
+
+**Outstanding Invoices:**
+| Invoice | Guest | Amount | Due Date | Days Overdue |
+|---------|-------|--------|----------|--------------|
+| INV-1234 | John Smith | $2,100 | Jan 15 | 15 days |
+| INV-1235 | Jane Doe | $1,800 | Jan 10 | 20 days |
+
+**Collection Rate:**
+• Average days to payment: 18
+• Collection rate: 96%
+• Disputed invoices: 2
+
+**6. OWNER STATEMENTS** 📋
+
+**Owner Summary:**
+For each owner:
+• Properties managed
+• Total revenue
+• Total expenses
+• Management fees
+• Net to owner
+• Payment status
+
+**Owner Payout Schedule:**
+• Next payout date: February 1
+• Total payouts: $32,400
+• Pending approval: $8,200
+
+**7. CASH FLOW** 💵
+
+**Cash Flow Chart:**
+• Money in (green bars)
+• Money out (red bars)
+• Net cash flow (line)
+• Running balance
+• Projected for next 30 days
+
+**Bank Balance:**
+• Operating account: $45,280
+• Reserve account: $20,000
+• Total available: $65,280
+
+**8. COMMISSION TRACKING** 💰
+
+**Commission Summary:**
+• Total pending: $4,250
+• Total approved: $2,890
+• Paid this month: $8,150
+
+**By Team Member:**
+| Staff | Pending | Approved | Paid MTD |
+|-------|---------|----------|----------|
+| Sarah J. | $1,450 | $890 | $4,200 |
+| Mike T. | $1,100 | $750 | $3,850 |
+| You | $950 | $650 | $3,075 |
+
+**9. BUDGET VS ACTUAL** 📈
+
+**Monthly Budget Comparison:**
+| Category | Budget | Actual | Variance | % |
+|----------|--------|--------|----------|---|
+| Revenue | $42,000 | $45,280 | +$3,280 | +7.8% |
+| Expenses | $17,500 | $18,920 | +$1,420 | +8.1% |
+| Net Profit | $24,500 | $26,360 | +$1,860 | +7.6% |
+
+**YTD Budget:**
+• Annual revenue target: $500,000
+• Current pace: $540,000 (108%)
+• On track to exceed by: $40,000
+
+**10. KEY METRICS (KPIs)** 🎯
+
+**Profitability:**
+• Gross profit margin: 58%
+• Net profit margin: 36%
+• ROI: 18% annually
+
+**Efficiency:**
+• Revenue per property: $4,528/mo
+• Cost per booking: $788
+• Average booking value: $1,600
+
+**Growth:**
+• Revenue growth MoM: +15%
+• Revenue growth YoY: +32%
+• New properties added: 2
+
+**Quality:**
+• Guest satisfaction: 4.8/5.0
+• Booking cancellation rate: 3%
+• Repeat guest rate: 42%
+
+**Date Range Selection:**
+
+**Preset Ranges:**
+• This month
+• Last month
+• This quarter
+• Last quarter
+• This year
+• Last year
+• Custom range
+
+**Compare To:**
+• Previous period
+• Same period last year
+• Budget
+
+**Export & Reporting:**
+
+**Download Options:**
+📄 **PDF Report** - Executive summary
+📊 **Excel** - Full data export
+📧 **Email** - Schedule automatic delivery
+
+**Scheduled Reports:**
+• Daily revenue summary (email at 9 AM)
+• Weekly performance (email Monday AM)
+• Monthly financials (email 1st of month)
+• Quarterly board report (PDF)
+
+**Customization:**
+
+**Dashboard Layout:**
+• Drag & drop widgets
+• Show/hide sections
+• Resize charts
+• Save custom layouts
+• Multiple dashboard views
+
+**Filters:**
+• Filter by property
+• Filter by owner
+• Filter by date range
+• Filter by category
+
+**Access Control:**
+
+**Who Can See:**
+• Admins: Full dashboard access
+• Ops: Revenue and expenses
+• Property Managers: Their properties only
+• Owners: Their property data only
+
+**Benefits:**
+
+✅ **Real-time insights** - Always up-to-date
+✅ **Data-driven decisions** - Based on facts
+✅ **Spot trends** - Identify opportunities
+✅ **Track goals** - Monitor targets
+✅ **Professional reporting** - Impress stakeholders
+✅ **Save time** - No manual calculations
+✅ **Mobile accessible** - Check anywhere`,
+        },
+      ],
+    },
+    {
+      id: 'system-admin',
+      title: 'System Administration',
+      icon: Settings,
+      color: 'text-gray-700',
+      bgColor: 'bg-gray-50',
+      topics: [
+        {
+          question: 'How do I view and interpret activity logs?',
+          answer: `**Activity Log System:**
+
+**Purpose:**
+Track all system activities for auditing, troubleshooting, security, and compliance.
+
+**Accessing Activity Logs:**
+⚠️ **Admin Access Required**
+
+1. Go to System → Activity Logs
+2. View comprehensive activity history
+
+**What's Logged:**
+
+**User Actions:**
+• Login/logout events
+• Password changes
+• Profile updates
+• Settings modifications
+• Permission changes
+
+**Data Operations:**
+• Record created
+• Record updated
+• Record deleted
+• File uploaded
+• File downloaded
+• Data exported
+
+**Module-Specific:**
+• Booking created/modified/cancelled
+• Invoice created/sent/paid
+• Expense submitted/approved/rejected
+• Job created/assigned/completed
+• Property added/updated/deactivated
+• User created/modified/deactivated
+
+**System Events:**
+• Failed login attempts
+• API calls
+• Email sent
+• Notifications delivered
+• Background jobs
+• System errors
+
+**Log Entry Format:**
+
+**Each Entry Shows:**
+• 🕐 **Timestamp:** Exact date and time
+• 👤 **User:** Who performed the action
+• 📍 **IP Address:** Where from
+• 🖥️ **Device:** Browser/device info
+• 🎯 **Action:** What was done
+• 📄 **Resource:** What was affected
+• 📝 **Details:** Additional information
+• ✅ **Status:** Success or failure
+
+**Example Entries:**
+\`\`\`
+2025-01-30 14:23:45 | John Smith | 192.168.1.100 | Chrome/Mac
+Action: INVOICE_CREATED
+Resource: Invoice #INV-2025-001234
+Details: {"property": "Sunset Villa", "amount": "$2,100", "guest": "Jane Doe"}
+Status: Success
+
+2025-01-30 14:15:22 | Sarah Johnson | 10.0.1.50 | Mobile Safari
+Action: BOOKING_MODIFIED
+Resource: Booking #BK-789
+Details: {"field": "checkout_date", "old": "2025-02-15", "new": "2025-02-17"}
+Status: Success
+
+2025-01-30 13:58:10 | Mike Thompson | 172.16.0.5 | Firefox/Windows
+Action: EXPENSE_APPROVED
+Resource: Expense #EXP-456
+Details: {"amount": "$450", "category": "Maintenance", "property": "Beach House"}
+Status: Success
+
+2025-01-30 13:45:33 | Anonymous | 185.220.101.42 | Unknown
+Action: LOGIN_FAILED
+Details: {"email": "admin@company.com", "reason": "Invalid password", "attempts": 3}
+Status: Failed ⚠️
+\`\`\`
+
+**Filtering & Search:**
+
+**Filter by Date:**
+• Today
+• Last 7 days
+• Last 30 days
+• This month
+• Last month
+• Custom range
+
+**Filter by User:**
+• All users
+• Specific user
+• User role (Admin, Ops, etc.)
+• Anonymous (failed logins)
+
+**Filter by Action Type:**
+☑️ All actions
+☑️ Logins
+☑️ Data modifications
+☑️ Deletions (important!)
+☑️ Exports
+☑️ Failed actions
+☑️ System errors
+
+**Filter by Module:**
+• Bookings
+• Invoices
+• Expenses
+• Properties
+• Users
+• Documents
+• System
+
+**Search:**
+• Full-text search across all logs
+• Search by IP address
+• Search by resource ID
+• Search by keyword
+
+**Security Monitoring:**
+
+**Failed Login Attempts:**
+Monitor for:
+🚨 Multiple failed attempts from same IP
+🚨 Failed attempts for admin accounts
+🚨 Attempts from unusual locations
+🚨 Brute force attack patterns
+
+**Auto-Actions:**
+• Lock account after 5 failed attempts
+• Block IP after 10 failed attempts
+• Alert admins immediately
+• Require password reset
+
+**Suspicious Activity:**
+Watch for:
+⚠️ Logins from new locations
+⚠️ After-hours access
+⚠️ Mass data exports
+⚠️ Unusual deletion patterns
+⚠️ Permission changes
+
+**Audit Reports:**
+
+**Daily Summary:**
+• Total activities: 1,245
+• Unique users: 12
+• Failed actions: 3
+• Errors: 1
+• Peak activity time: 2-3 PM
+
+**Weekly Activity Report:**
+• User activity breakdown
+• Most active modules
+• Most common actions
+• Issues/errors summary
+• Security incidents
+
+**Monthly Compliance Report:**
+• All data access
+• All data modifications
+• All deletions
+• All exports
+• Access by external users
+
+**Quarterly Security Audit:**
+• Failed login analysis
+• Permission change review
+• Data breach check
+• Vulnerability assessment
+• Compliance verification
+
+**Common Use Cases:**
+
+**1. TROUBLESHOOTING**
+"User says booking disappeared"
+→ Search logs for booking ID
+→ Find delete action
+→ See who deleted it and when
+→ Can restore if needed
+
+**2. DISPUTE RESOLUTION**
+"Who changed the invoice amount?"
+→ Search invoice logs
+→ See modification history
+→ View old vs new values
+→ Identify responsible user
+
+**3. SECURITY INVESTIGATION**
+"Unusual activity detected"
+→ Filter by suspicious IP
+→ Review all actions
+→ Check for unauthorized access
+→ Block if necessary
+
+**4. COMPLIANCE AUDIT**
+"Show all GDPR data access"
+→ Filter by user data views
+→ Export comprehensive report
+→ Demonstrate compliance
+→ Archive for records
+
+**Data Retention:**
+
+**Retention Policy:**
+• Active logs: 90 days (searchable)
+• Archived logs: 7 years (long-term storage)
+• Compliance logs: 10 years
+• Security incidents: Permanent
+
+**Storage:**
+• Encrypted at rest
+• Immutable (cannot be altered)
+• Backed up daily
+• Multiple geographic locations
+
+**Privacy Considerations:**
+
+**GDPR Compliance:**
+• User can request their data
+• Export personal activity log
+• Anonymize after user deletion
+• Right to explanation
+
+**Access Control:**
+• Only admins can view logs
+• Some logs restricted to super admins
+• Viewing logs is itself logged
+• Cannot delete logs
+
+**Export Options:**
+
+📄 **PDF** - Formatted report
+📊 **Excel/CSV** - Data analysis
+🗄️ **JSON** - Developer format
+📧 **Email** - Send to stakeholders
+
+**Best Practices:**
+
+✅ **Review Daily** - Check for anomalies
+✅ **Investigate Failures** - Don't ignore errors
+✅ **Monitor Trends** - Spot patterns
+✅ **Document Incidents** - Keep notes
+✅ **Regular Audits** - Monthly reviews
+✅ **Train Staff** - On proper usage
+✅ **Automate Alerts** - For critical events`,
+        },
+        {
+          question: 'How do I manage system settings and configurations?',
+          answer: `**System Settings Overview:**
+
+⚠️ **Admin Access Required** for most settings
+
+**Accessing Settings:**
+1. Click profile icon (top right)
+2. Select "System Settings"
+OR
+3. Go to System → Settings
+
+**Settings Categories:**
+
+**1. GENERAL SETTINGS** ⚙️
+
+**Company Information:**
+• Company name
+• Logo upload
+• Address
+• Phone numbers
+• Email addresses
+• Website
+• Tax ID / Business registration
+
+**Timezone & Localization:**
+• Default timezone
+• Date format (MM/DD/YYYY or DD/MM/YYYY)
+• Time format (12-hour or 24-hour)
+• Currency (USD, EUR, GBP, etc.)
+• Language
+
+**Business Hours:**
+• Operating hours
+• Days of operation
+• Holiday schedule
+• After-hours support
+
+**2. USER MANAGEMENT** 👥
+
+**Default Settings:**
+• Default user role for new users
+• Password requirements
+  - Minimum length
+  - Complexity rules
+  - Expiration period
+• Session timeout (inactivity)
+• Two-factor authentication (required/optional)
+
+**Email Notifications:**
+• Welcome email
+• Password reset template
+• Account locked notification
+• Role change notification
+
+**3. BOOKING SETTINGS** 📅
+
+**Booking Rules:**
+• Minimum stay (nights)
+• Maximum stay (nights)
+• Advance notice (hours)
+• Cancellation policy
+• Security deposit amount
+• Cleaning fee
+
+**Check-in/Check-out:**
+• Standard check-in time (4:00 PM)
+• Standard check-out time (11:00 AM)
+• Early check-in fee
+• Late checkout fee
+• Grace period
+
+**4. FINANCIAL SETTINGS** 💰
+
+**Invoice Configuration:**
+• Invoice number format
+• Starting invoice number
+• Tax rates by location
+• Payment terms (Net 15, Net 30)
+• Late fee policy
+• Currency and exchange rates
+
+**Commission Structure:**
+• Commission rates by role
+• Bonus structures
+• Payment schedule
+• Minimum payout threshold
+
+**Payment Integration:**
+• Stripe configuration
+• PayPal settings
+• Bank account info
+• Payment methods accepted
+
+**5. NOTIFICATION SETTINGS** 🔔
+
+**Email Notifications:**
+Enable/disable:
+☑️ Booking confirmations
+☑️ Payment received
+☑️ Booking reminders
+☑️ Check-in instructions
+☑️ Review requests
+☑️ Owner statements
+☑️ Team assignments
+
+**SMS Notifications:**
+☑️ Booking confirmations
+☑️ Check-in codes
+☑️ Task assignments
+☑️ Emergency alerts
+
+**In-App Notifications:**
+☑️ New bookings
+☑️ Task assignments
+☑️ Messages
+☑️ System alerts
+
+**Frequency:**
+• Real-time
+• Daily digest
+• Weekly summary
+• Monthly report
+
+**6. SECURITY SETTINGS** 🔒
+
+**Access Control:**
+• IP whitelist/blacklist
+• Geographic restrictions
+• VPN requirements
+• Device limits per user
+
+**Data Protection:**
+• Auto-logout after inactivity
+• Require re-auth for sensitive actions
+• Data encryption level
+• Backup frequency
+
+**API Security:**
+• API key management
+• Rate limiting
+• Webhook signatures
+• CORS settings
+
+**7. INTEGRATION SETTINGS** 🔗
+
+**Channel Integrations:**
+• Airbnb connection
+• VRBO/HomeAway sync
+• Booking.com integration
+• Direct booking widget
+
+**Accounting Integration:**
+• QuickBooks connection
+• Xero integration
+• Custom GL mapping
+
+**Communication:**
+• Email provider (SendGrid, Mailgun)
+• SMS provider (Twilio)
+• Slack notifications
+• Zapier webhooks
+
+**8. AUTOMATION RULES** 🤖
+
+**Automatic Actions:**
+• Auto-send check-in instructions (24h before)
+• Auto-create cleaning tasks (after checkout)
+• Auto-generate invoices (on booking)
+• Auto-send review requests (after checkout)
+• Auto-archive old records
+
+**Triggers:**
+• Booking confirmed → Create invoice
+• Payment received → Send confirmation
+• Checkout tomorrow → Send reminder
+• Job assigned → Notify team member
+• COI expiring → Alert vendor
+
+**9. DOCUMENT SETTINGS** 📄
+
+**Templates:**
+• Invoice template design
+• Owner statement template
+• Contract templates
+• Email signatures
+
+**Storage:**
+• Default storage location
+• File size limits
+• Allowed file types
+• Retention policies
+
+**10. APPEARANCE** 🎨
+
+**Branding:**
+• Primary color
+• Secondary color
+• Logo placement
+• Favicon
+• Custom CSS (advanced)
+
+**Dashboard Layout:**
+• Default dashboard view
+• Widget arrangement
+• Default date ranges
+• Chart preferences
+
+**Saving Changes:**
+
+**Important:**
+• Click "Save" after each section
+• Some changes require page refresh
+• Critical changes show confirmation dialog
+• Changes logged in activity log
+
+**Backup Settings:**
+• Export all settings to JSON
+• Import settings from backup
+• Version control
+• Restore to previous version
+
+**Testing Changes:**
+
+**Test Mode:**
+• Enable test mode
+• Make changes safely
+• Preview before applying
+• Revert if issues found
+
+**Best Practices:**
+
+✅ **Document Changes** - Keep notes on why
+✅ **Test Thoroughly** - Before going live
+✅ **Backup First** - Export current settings
+✅ **Communicate** - Notify team of changes
+✅ **Review Regularly** - Quarterly settings audit
+✅ **Stay Updated** - Check for new features
+✅ **Train Staff** - On setting impacts`,
+        },
+        {
+          question: 'How do I troubleshoot common issues?',
+          answer: `**Troubleshooting Guide:**
+
+**Common Issues & Solutions:**
+
+**1. LOGIN ISSUES** 🔐
+
+**Problem: Can't log in**
+
+**Solutions:**
+✅ Check email spelling
+✅ Verify Caps Lock is off
+✅ Try password reset
+✅ Clear browser cache/cookies
+✅ Try different browser
+✅ Check if account is active
+✅ Contact admin if locked out
+
+**Error: "Account Locked"**
+• Too many failed attempts
+• Wait 30 minutes OR
+• Contact admin to unlock
+
+**Error: "Invalid Credentials"**
+• Email or password wrong
+• Use "Forgot Password"
+• Check for typos
+• Verify account exists
+
+**2. PAGE NOT LOADING** 🔄
+
+**Symptoms:**
+• Blank page
+• Spinning loader never stops
+• Error message
+
+**Solutions:**
+1. **Hard refresh:**
+   • Windows: Ctrl + F5
+   • Mac: Cmd + Shift + R
+2. **Clear cache:**
+   • Browser settings → Clear data
+   • Last hour or last 24 hours
+3. **Try incognito mode:**
+   • Rules out extension conflicts
+4. **Check internet connection:**
+   • Load other websites
+   • Run speed test
+5. **Try different browser:**
+   • Chrome, Firefox, Edge, Safari
+6. **Contact support:**
+   • Include screenshot
+   • Mention browser & OS
+
+**3. DATA NOT SAVING** 💾
+
+**Problem: Changes don't persist**
+
+**Common Causes:**
+• Network timeout
+• Form validation errors
+• Permission issues
+• Browser issues
+
+**Solutions:**
+✅ Look for red error messages
+✅ Check all required fields filled
+✅ Check internet connection
+✅ Wait for "Saved successfully" message
+✅ Try refreshing and re-entering
+✅ Check console for errors (F12)
+
+**4. MISSING DATA** 🔍
+
+**Problem: Record disappeared**
+
+**Investigation Steps:**
+1. **Check filters:**
+   • Reset all filters
+   • Check date range
+   • Check status filters
+2. **Search for it:**
+   • Use search bar
+   • Try partial match
+3. **Check permissions:**
+   • Can you see this data?
+   • Contact admin
+4. **Check activity logs:**
+   • Was it deleted?
+   • Who deleted it?
+   • Can it be restored?
+
+**5. UPLOAD FAILURES** 📤
+
+**Problem: File won't upload**
+
+**Common Issues:**
+
+**File Too Large:**
+• Max size: 25MB (documents), 100MB (videos)
+• Compress large files
+• Use cloud link instead
+
+**Wrong File Type:**
+• Check allowed types
+• Convert file format
+• Rename extension correctly
+
+**Network Issue:**
+• Check connection
+• Try again later
+• Use wired connection if possible
+
+**Browser Issue:**
+• Try different browser
+• Disable extensions
+• Clear cache
+
+**6. SYNC ISSUES** 🔄
+
+**Problem: Data not syncing with integrations**
+
+**Airbnb/VRBO Sync:**
+1. Check connection status
+2. Re-authorize if needed
+3. Check sync logs for errors
+4. Verify calendar permissions
+5. Contact support with error codes
+
+**Accounting Sync:**
+1. Verify credentials
+2. Check API limits
+3. Review error logs
+4. Manual sync as backup
+5. Check account permissions
+
+**7. NOTIFICATION PROBLEMS** 🔔
+
+**Not Receiving Emails:**
+
+**Check:**
+✅ Spam/junk folder
+✅ Email settings in profile
+✅ Notification preferences
+✅ Email address correct
+✅ Email server not blocking
+
+**Solutions:**
+• Whitelist sender email
+• Add to contacts
+• Check filters/rules
+• Try different email address
+
+**8. SLOW PERFORMANCE** 🐌
+
+**System Feels Slow:**
+
+**Quick Fixes:**
+1. **Clear browser cache**
+2. **Close unnecessary tabs**
+3. **Check internet speed:**
+   • Run speedtest.net
+   • Need >10 Mbps
+4. **Check device resources:**
+   • Close other programs
+   • Restart computer
+5. **Try off-peak hours:**
+   • Less traffic = faster
+
+**Still Slow?**
+• Use List View instead of Tree View
+• Reduce date range in reports
+• Filter to fewer items
+• Contact support
+
+**9. MOBILE ISSUES** 📱
+
+**Problems on Mobile:**
+
+**Common Issues:**
+• Buttons too small
+• Layout broken
+• Features missing
+
+**Solutions:**
+✅ Use landscape mode
+✅ Zoom in/out
+✅ Update browser app
+✅ Clear mobile cache
+✅ Use desktop version if needed
+
+**10. PERMISSION ERRORS** 🚫
+
+**Error: "You don't have permission"**
+
+**Solutions:**
+1. **Check your role:**
+   • Profile → View role
+2. **Verify feature access:**
+   • Some features are Admin-only
+3. **Contact admin:**
+   • Request access
+   • Explain need
+4. **Check property assignment:**
+   • Property Managers: Limited to assigned properties
+
+**Getting Help:**
+
+**Self-Service:**
+1. **Search Help Center** (this page)
+2. **Check video tutorials**
+3. **Read user manual PDF**
+
+**Contact Support:**
+📧 **Email:** support@casaandconcierge.com
+• Include:
+  - Your name and email
+  - What you were trying to do
+  - Error message (exact text)
+  - Screenshot if possible
+  - Browser and OS
+  - Steps to reproduce
+
+**Bug Reports:**
+Use "Report a Bug" button:
+• Describe the issue
+• Steps to reproduce
+• Expected vs actual behavior
+• Priority level
+
+**Emergency Support:**
+For critical issues:
+• System completely down
+• Data loss
+• Security breach
+
+→ Call emergency line (from account settings)
+
+**Diagnostic Information:**
+
+**To Help Support:**
+Press F12 (Developer Console)
+→ Check "Console" tab
+→ Screenshot any red errors
+→ Include in support ticket
+
+**System Status:**
+Check status page:
+• System uptime
+• Known issues
+• Scheduled maintenance
+• Performance metrics
+
+**Preventive Measures:**
+
+✅ **Keep browser updated**
+✅ **Use supported browsers:**
+   • Chrome 90+
+   • Firefox 88+
+   • Safari 14+
+   • Edge 90+
+✅ **Stable internet connection**
+✅ **Regular cache clearing**
+✅ **Save work frequently**
+✅ **Test in staging (if available)**
+✅ **Report bugs promptly**`,
         },
       ],
     },

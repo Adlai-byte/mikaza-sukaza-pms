@@ -56,7 +56,7 @@ export default function ChecklistTemplates() {
   const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplate | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
 
-  const { data: properties = [] } = useProperties();
+  const { properties = [] } = useProperties();
 
   const filters = useMemo(() => ({
     property_id: propertyFilter !== 'all' ? propertyFilter : undefined,

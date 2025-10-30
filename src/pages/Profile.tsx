@@ -10,25 +10,33 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Camera, Lock, User, Mail, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useProfileImage, updateProfileImageCache } from '@/hooks/useProfileImage';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function Profile() {
   const { profile, updateProfile } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [isUpdating, setIsUpdating] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [avatarKey, setAvatarKey] = useState(Date.now()); // Force re-render of avatar
 
-  // Log profile photo_url changes
+  // Use cached profile image
+  const { imageUrl, isLoading: imageLoading, hasError: imageError, refresh: refreshImage } = useProfileImage();
+
+  // Log profile data and image caching status
   useEffect(() => {
     console.log('🔍 [Profile] Profile data loaded:', {
       user_id: profile?.user_id,
       email: profile?.email,
       photo_url: profile?.photo_url,
+      cached_image_url: imageUrl,
       has_photo: !!profile?.photo_url,
+      image_loading: imageLoading,
+      image_error: imageError,
     });
-  }, [profile?.photo_url]);
+  }, [profile?.photo_url, imageUrl, imageLoading, imageError]);
 
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -216,15 +224,18 @@ export default function Profile() {
 
       console.log('✅ [Profile] Database updated successfully');
 
+      // Optimistically update the cache instead of reloading
+      if (profile?.user_id) {
+        updateProfileImageCache(queryClient, profile.user_id, publicUrl);
+      }
+
       toast({
         title: "Profile Picture Updated",
-        description: "Your profile picture has been successfully updated. Refreshing page...",
+        description: "Your profile picture has been successfully updated.",
       });
 
-      // Wait a moment for the toast to show, then reload
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      // Refresh the image to show the new one
+      refreshImage();
     } catch (error: any) {
       console.error('❌ [Profile] Photo upload error:', error);
       toast({
@@ -269,29 +280,37 @@ export default function Profile() {
               {/* Profile Picture Section */}
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative">
-                  <Avatar className="h-24 w-24" key={avatarKey}>
-                    <AvatarImage
-                      src={profile?.photo_url ? `${profile.photo_url}?v=${avatarKey}` : undefined}
-                      alt={profile?.first_name || 'User'}
-                      className="object-cover"
-                      onError={(e) => {
-                        console.error('❌ [Profile] Avatar image failed to load:', profile?.photo_url);
-                        console.error('❌ [Profile] Image error:', e);
-                      }}
-                      onLoad={() => {
-                        console.log('✅ [Profile] Avatar image loaded successfully');
-                      }}
-                    />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                      {getInitials(profile?.first_name, profile?.last_name)}
-                    </AvatarFallback>
+                  <Avatar className="h-24 w-24">
+                    {imageLoading ? (
+                      <AvatarFallback className="bg-muted">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </AvatarFallback>
+                    ) : (
+                      <>
+                        <AvatarImage
+                          src={imageUrl || undefined}
+                          alt={profile?.first_name || 'User'}
+                          className="object-cover"
+                          onError={(e) => {
+                            console.error('❌ [Profile] Avatar image failed to load:', imageUrl);
+                            console.error('❌ [Profile] Image error:', e);
+                          }}
+                          onLoad={() => {
+                            console.log('✅ [Profile] Avatar image loaded successfully from cache');
+                          }}
+                        />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+                          {getInitials(profile?.first_name, profile?.last_name)}
+                        </AvatarFallback>
+                      </>
+                    )}
                   </Avatar>
                   <Button
                     size="sm"
                     variant="outline"
                     className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
                     onClick={() => document.getElementById('avatar-upload')?.click()}
-                    disabled={isUploadingAvatar}
+                    disabled={isUploadingAvatar || imageLoading}
                   >
                     {isUploadingAvatar ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -311,6 +330,7 @@ export default function Profile() {
                   <h3 className="font-medium">Profile Picture</h3>
                   <p className="text-sm text-muted-foreground">
                     Click the camera icon to upload a new profile picture.
+                    {imageError && <span className="text-destructive"> (Failed to load image)</span>}
                   </p>
                 </div>
               </div>

@@ -60,8 +60,13 @@ export default function CheckInOut() {
   const [selectedRecord, setSelectedRecord] = useState<CheckInOutRecord | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
 
-  const { data: properties = [] } = useProperties();
-  const { data: users = [] } = useUsersOptimized({ user_types: ['ops', 'admin'] });
+  const { properties = [] } = useProperties();
+  const { users: allUsers = [] } = useUsersOptimized();
+
+  // Filter to show only ops and admin users
+  const users = useMemo(() => {
+    return allUsers.filter(u => u.user_type === 'ops' || u.user_type === 'admin');
+  }, [allUsers]);
 
   const filters = useMemo(() => ({
     property_id: propertyFilter !== 'all' ? propertyFilter : undefined,
