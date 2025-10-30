@@ -43,7 +43,6 @@ import MyCommissions from "./pages/MyCommissions";
 import Help from "./pages/Help";
 import VendorCOIs from "./pages/VendorCOIs";
 import AccessAuthorizations from "./pages/AccessAuthorizations";
-import CheckInOut from "./pages/CheckInOut";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
@@ -473,7 +472,7 @@ const App = () => (
                   path="/check-in-out"
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.PROPERTIES_VIEW}>
-                      <CheckInOut />
+                      <div className="p-8 text-center text-muted-foreground">Check-In / Check-Out - Coming Soon</div>
                     </RBACProtectedRoute>
                   }
                 />
