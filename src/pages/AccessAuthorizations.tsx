@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -44,7 +45,10 @@ import {
   Shield,
   AlertTriangle,
   Download,
+  FolderTree,
+  List,
 } from "lucide-react";
+import { AccessAuthorizationTreeView } from "@/components/access/AccessAuthorizationTreeView";
 import {
   useAccessAuthorizations,
   useTodayAccessAuthorizations,
@@ -74,6 +78,7 @@ export default function AccessAuthorizations() {
   const [selectedVendor, setSelectedVendor] = useState<string>("");
   const [selectedProperty, setSelectedProperty] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editAuth, setEditAuth] = useState<AccessAuthorization | null>(null);
 
@@ -404,13 +409,31 @@ export default function AccessAuthorizations() {
         {/* Access Authorizations Table */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Access Authorizations</span>
-              <Badge variant="outline">{filteredAuthorizations.length} total</Badge>
-            </CardTitle>
-            <CardDescription>
-              View and manage all vendor access requests and approvals
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <CardTitle className="flex items-center gap-2">
+                  <span>Access Authorizations</span>
+                  <Badge variant="outline">{filteredAuthorizations.length} total</Badge>
+                </CardTitle>
+                <CardDescription className="mt-1.5">
+                  View and manage all vendor access requests and approvals
+                </CardDescription>
+              </div>
+
+              {/* View Mode Toggle */}
+              <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'tree' | 'list')}>
+                <TabsList>
+                  <TabsTrigger value="tree" className="gap-2">
+                    <FolderTree className="h-4 w-4" />
+                    <span className="hidden sm:inline">Tree View</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="list" className="gap-2">
+                    <List className="h-4 w-4" />
+                    <span className="hidden sm:inline">List View</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </CardHeader>
           <CardContent>
             {filteredAuthorizations.length === 0 ? (
@@ -432,6 +455,12 @@ export default function AccessAuthorizations() {
                   </Button>
                 )}
               </div>
+            ) : viewMode === 'tree' ? (
+              <AccessAuthorizationTreeView
+                authorizations={filteredAuthorizations}
+                onEditAuth={canEdit ? handleEditAuth : undefined}
+                canEdit={canEdit}
+              />
             ) : (
               <div className="overflow-x-auto">
                 <Table>

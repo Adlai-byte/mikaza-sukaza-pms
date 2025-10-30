@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ProtectedRoute as RBACProtectedRoute } from "@/components/rbac/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "./components/MainLayout";
+import { Analytics } from "@vercel/analytics/react";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
 import PropertyEdit from "./pages/PropertyEdit";
@@ -42,6 +43,7 @@ import MyCommissions from "./pages/MyCommissions";
 import Help from "./pages/Help";
 import VendorCOIs from "./pages/VendorCOIs";
 import AccessAuthorizations from "./pages/AccessAuthorizations";
+import Media from "./pages/Media";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
@@ -150,6 +152,7 @@ if (typeof window !== 'undefined') {
 
 const App = () => (
   <ErrorBoundary>
+    <Analytics />
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
@@ -460,7 +463,7 @@ const App = () => (
                   path="/media"
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.MEDIA_VIEW}>
-                      <div className="p-8 text-center text-muted-foreground">Media - Coming Soon</div>
+                      <Media />
                     </RBACProtectedRoute>
                   }
                 />

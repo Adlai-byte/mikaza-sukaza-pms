@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus, FileText, Download, Trash2, Eye, Filter } from "lucide-react";
+import { RefreshCw, Plus, FileText, Download, Trash2, Eye, Filter, FolderTree, List } from "lucide-react";
 import { DocumentsTable } from "@/components/documents/DocumentsTable";
 import { DocumentUploadDialog } from "@/components/documents/DocumentUploadDialog";
-import { useDocuments } from "@/hooks/useDocuments";
+import { DocumentTreeView, type TreeFolder } from "@/components/documents/DocumentTreeView";
+import { useDocuments, useDocumentDownload } from "@/hooks/useDocuments";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { Badge } from "@/components/ui/badge";
@@ -15,13 +16,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CONTRACT_TYPES } from "@/lib/schemas";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CONTRACT_TYPES, type DocumentSummary } from "@/lib/schemas";
 import { markCategoryAsVisited } from "@/hooks/useExpiringDocumentsCount";
 
 export default function Contracts() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [contractTypeFilter, setContractTypeFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
   const { hasPermission } = usePermissions();
+  const { downloadDocument } = useDocumentDownload();
 
   // Fetch contracts
   const {
@@ -65,6 +69,24 @@ export default function Contracts() {
     });
     return counts;
   }, [contracts]);
+
+  // Tree view folders
+  const treeFolders: TreeFolder[] = useMemo(() => {
+    return Object.entries(CONTRACT_TYPES).map(([key, label]) => ({
+      id: key,
+      name: label,
+      metadata: { contractType: key },
+    }));
+  }, []);
+
+  // Group documents by contract type
+  const groupByContractType = (doc: DocumentSummary, folder: TreeFolder) => {
+    return doc.contract_type === folder.metadata?.contractType;
+  };
+
+  const handleDownloadDocument = (document: DocumentSummary) => {
+    downloadDocument(document);
+  };
 
   return (
     <div className="space-y-6">
@@ -193,19 +215,37 @@ export default function Contracts() {
       {/* Contracts Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>
-              {contractTypeFilter === "all"
-                ? "All Contracts"
-                : CONTRACT_TYPES[contractTypeFilter as keyof typeof CONTRACT_TYPES]}
-            </span>
-            <Badge variant="outline">{filteredContracts.length} {contractTypeFilter !== "all" ? "filtered" : "total"}</Badge>
-          </CardTitle>
-          <CardDescription>
-            {contractTypeFilter === "all"
-              ? "Property leases, service agreements, and vendor contracts"
-              : `Showing ${CONTRACT_TYPES[contractTypeFilter as keyof typeof CONTRACT_TYPES].toLowerCase()} documents`}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <CardTitle className="flex items-center gap-2">
+                <span>
+                  {contractTypeFilter === "all"
+                    ? "All Contracts"
+                    : CONTRACT_TYPES[contractTypeFilter as keyof typeof CONTRACT_TYPES]}
+                </span>
+                <Badge variant="outline">{filteredContracts.length} {contractTypeFilter !== "all" ? "filtered" : "total"}</Badge>
+              </CardTitle>
+              <CardDescription className="mt-1.5">
+                {contractTypeFilter === "all"
+                  ? "Property leases, service agreements, and vendor contracts"
+                  : `Showing ${CONTRACT_TYPES[contractTypeFilter as keyof typeof CONTRACT_TYPES].toLowerCase()} documents`}
+              </CardDescription>
+            </div>
+
+            {/* View Mode Toggle */}
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'tree' | 'list')}>
+              <TabsList>
+                <TabsTrigger value="tree" className="gap-2">
+                  <FolderTree className="h-4 w-4" />
+                  <span className="hidden sm:inline">Tree View</span>
+                </TabsTrigger>
+                <TabsTrigger value="list" className="gap-2">
+                  <List className="h-4 w-4" />
+                  <span className="hidden sm:inline">List View</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent>
           {filteredContracts.length === 0 ? (
@@ -229,6 +269,17 @@ export default function Contracts() {
                 </Button>
               )}
             </div>
+          ) : viewMode === 'tree' ? (
+            <DocumentTreeView
+              documents={filteredContracts}
+              folders={treeFolders}
+              groupDocuments={groupByContractType}
+              onDownloadDocument={handleDownloadDocument}
+              onDeleteDocument={canManage ? deleteDocument : undefined}
+              canDelete={canManage}
+              emptyMessage="No contracts found"
+              emptyIcon={<FileText className="h-12 w-12 mx-auto mb-4 opacity-20" />}
+            />
           ) : (
             <DocumentsTable
               documents={filteredContracts}

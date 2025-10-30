@@ -1,17 +1,22 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus, Wrench, FileCheck } from "lucide-react";
+import { RefreshCw, Plus, Wrench, FileCheck, FolderTree, List } from "lucide-react";
 import { DocumentsTable } from "@/components/documents/DocumentsTable";
 import { DocumentUploadDialog } from "@/components/documents/DocumentUploadDialog";
-import { useDocuments } from "@/hooks/useDocuments";
+import { DocumentTreeView, type TreeFolder } from "@/components/documents/DocumentTreeView";
+import { useDocuments, useDocumentDownload } from "@/hooks/useDocuments";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { DocumentSummary } from "@/lib/schemas";
 
 export default function ServiceDocuments() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
   const { hasPermission } = usePermissions();
+  const { downloadDocument } = useDocumentDownload();
 
   // Fetch service documents
   const {
@@ -32,6 +37,32 @@ export default function ServiceDocuments() {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     return createdAt >= thirtyDaysAgo;
   }).length;
+
+  // Tree view folders - create folders based on unique tags
+  const treeFolders: TreeFolder[] = useMemo(() => {
+    const allTags = new Set<string>();
+    serviceDocs.forEach(doc => {
+      if (doc.tags && Array.isArray(doc.tags)) {
+        doc.tags.forEach(tag => allTags.add(tag));
+      }
+    });
+    return Array.from(allTags)
+      .sort()
+      .map(tag => ({
+        id: tag,
+        name: tag.charAt(0).toUpperCase() + tag.slice(1).replace(/_/g, ' '),
+        metadata: { tag },
+      }));
+  }, [serviceDocs]);
+
+  // Group documents by tag
+  const groupByTag = (doc: DocumentSummary, folder: TreeFolder) => {
+    return doc.tags?.includes(folder.metadata?.tag) || false;
+  };
+
+  const handleDownloadDocument = (document: DocumentSummary) => {
+    downloadDocument(document);
+  };
 
   return (
     <div className="space-y-6">
@@ -120,13 +151,31 @@ export default function ServiceDocuments() {
       {/* Service Documents Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>All Service Documents</span>
-            <Badge variant="outline">{serviceDocs.length} total</Badge>
-          </CardTitle>
-          <CardDescription>
-            Vendor agreements, work orders, inspection reports, and completion certificates
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <CardTitle className="flex items-center gap-2">
+                <span>All Service Documents</span>
+                <Badge variant="outline">{serviceDocs.length} total</Badge>
+              </CardTitle>
+              <CardDescription className="mt-1.5">
+                Vendor agreements, work orders, inspection reports, and completion certificates
+              </CardDescription>
+            </div>
+
+            {/* View Mode Toggle */}
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'tree' | 'list')}>
+              <TabsList>
+                <TabsTrigger value="tree" className="gap-2">
+                  <FolderTree className="h-4 w-4" />
+                  <span className="hidden sm:inline">Tree View</span>
+                </TabsTrigger>
+                <TabsTrigger value="list" className="gap-2">
+                  <List className="h-4 w-4" />
+                  <span className="hidden sm:inline">List View</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent>
           {serviceDocs.length === 0 ? (
@@ -146,6 +195,17 @@ export default function ServiceDocuments() {
                 </Button>
               )}
             </div>
+          ) : viewMode === 'tree' ? (
+            <DocumentTreeView
+              documents={serviceDocs}
+              folders={treeFolders}
+              groupDocuments={groupByTag}
+              onDownloadDocument={handleDownloadDocument}
+              onDeleteDocument={canManage ? deleteDocument : undefined}
+              canDelete={canManage}
+              emptyMessage="No service documents found. Tag documents to organize them in tree view."
+              emptyIcon={<Wrench className="h-12 w-12 mx-auto mb-4 opacity-20" />}
+            />
           ) : (
             <DocumentsTable
               documents={serviceDocs}

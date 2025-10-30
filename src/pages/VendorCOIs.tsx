@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -36,12 +37,14 @@ import {
   XCircle,
   Clock,
   AlertTriangle,
-  Eye,
   Edit,
   Trash2,
   Upload,
   Building2,
+  FolderTree,
+  List,
 } from "lucide-react";
+import { COITreeView } from "@/components/coi/COITreeView";
 import { useVendorCOIs, useExpiringCOIs } from "@/hooks/useVendorCOIs";
 import { useCOIDashboardStats } from "@/hooks/useCOIDashboardStats";
 import { useProviders } from "@/hooks/useProviders";
@@ -49,12 +52,11 @@ import { markCategoryAsVisited } from "@/hooks/useExpiringDocumentsCount";
 import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
-import { COI_COVERAGE_TYPES, COI_STATUS, type VendorCOI, type DocumentSummary } from "@/lib/schemas";
+import { COI_COVERAGE_TYPES, COI_STATUS, type VendorCOI } from "@/lib/schemas";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { CasaSpinner } from "@/components/ui/casa-loader";
 import { useSearchParams } from "react-router-dom";
 import { AddCOIDialog } from "@/components/AddCOIDialog";
-import { DocumentViewer } from "@/components/documents/DocumentViewer";
 
 export default function VendorCOIs() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -70,49 +72,9 @@ export default function VendorCOIs() {
   const [selectedProperty, setSelectedProperty] = useState<string>("");
   const [selectedCoverageType, setSelectedCoverageType] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>(statusFilter);
+  const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editCOI, setEditCOI] = useState<VendorCOI | null>(null);
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const [selectedCOIForView, setSelectedCOIForView] = useState<DocumentSummary | null>(null);
-
-  // Convert COI to DocumentSummary format for viewer
-  const convertCOIToDocument = (coi: VendorCOI): DocumentSummary => {
-    const vendorName = coi.vendor?.company_name || 'Unknown Vendor';
-    const propertyName = properties.find(p => p.property_id === coi.property_id)?.property_name;
-    const uploadedByName = coi.uploaded_user
-      ? `${coi.uploaded_user.first_name} ${coi.uploaded_user.last_name}`
-      : undefined;
-
-    return {
-      document_id: coi.coi_id,
-      document_name: `${vendorName} - ${COI_COVERAGE_TYPES[coi.coverage_type] || coi.coverage_type}`,
-      description: `Policy #${coi.policy_number || 'N/A'} - ${coi.insurance_company || 'Unknown Insurer'}`,
-      file_url: coi.file_url || '',
-      file_name: coi.file_name || 'coi-document.pdf',
-      file_type: 'application/pdf',
-      file_size: 0, // Not stored in COI schema
-      property_id: coi.property_id,
-      category: 'coi' as const,
-      status: coi.status === 'active' ? 'active' as const : 'expired' as const,
-      expiry_date: coi.valid_through,
-      tags: [COI_COVERAGE_TYPES[coi.coverage_type], coi.status],
-      version_number: 1,
-      is_current_version: true,
-      created_at: coi.created_at,
-      updated_at: coi.updated_at,
-      property_name: propertyName,
-      uploaded_by_name: uploadedByName,
-      expiring_soon: coi.status === 'expiring_soon',
-    };
-  };
-
-  const handleViewCOI = (coi: VendorCOI) => {
-    if (!coi.file_url) {
-      return; // No file to view
-    }
-    setSelectedCOIForView(convertCOIToDocument(coi));
-    setViewerOpen(true);
-  };
 
   // Hooks
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useCOIDashboardStats();
@@ -434,13 +396,31 @@ export default function VendorCOIs() {
         {/* COI Table */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Certificates of Insurance</span>
-              <Badge variant="outline">{filteredCOIs.length} total</Badge>
-            </CardTitle>
-            <CardDescription>
-              View and manage all vendor insurance certificates
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <CardTitle className="flex items-center gap-2">
+                  <span>Certificates of Insurance</span>
+                  <Badge variant="outline">{filteredCOIs.length} total</Badge>
+                </CardTitle>
+                <CardDescription className="mt-1.5">
+                  View and manage all vendor insurance certificates
+                </CardDescription>
+              </div>
+
+              {/* View Mode Toggle */}
+              <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'tree' | 'list')}>
+                <TabsList>
+                  <TabsTrigger value="tree" className="gap-2">
+                    <FolderTree className="h-4 w-4" />
+                    <span className="hidden sm:inline">Tree View</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="list" className="gap-2">
+                    <List className="h-4 w-4" />
+                    <span className="hidden sm:inline">List View</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </CardHeader>
           <CardContent>
             {filteredCOIs.length === 0 ? (
@@ -462,6 +442,14 @@ export default function VendorCOIs() {
                   </Button>
                 )}
               </div>
+            ) : viewMode === 'tree' ? (
+              <COITreeView
+                cois={filteredCOIs}
+                onEditCOI={canEdit ? handleEditCOI : undefined}
+                onDeleteCOI={canDelete ? handleDelete : undefined}
+                canEdit={canEdit}
+                canDelete={canDelete}
+              />
             ) : (
               <div className="overflow-x-auto">
                 <Table>
@@ -547,22 +535,6 @@ export default function VendorCOIs() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleViewCOI(coi)}
-                                    disabled={!coi.file_url}
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>View document</p>
-                                </TooltipContent>
-                              </Tooltip>
-
                               {!coi.verified_at && canEdit && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -636,13 +608,6 @@ export default function VendorCOIs() {
           open={dialogOpen}
           onOpenChange={handleDialogClose}
           editCOI={editCOI}
-        />
-
-        {/* Document Viewer */}
-        <DocumentViewer
-          document={selectedCOIForView}
-          open={viewerOpen}
-          onOpenChange={setViewerOpen}
         />
       </div>
     </TooltipProvider>
