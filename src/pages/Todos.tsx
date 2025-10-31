@@ -221,8 +221,8 @@ export default function Todos() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('title')}
-        subtitle={t('subtitle')}
+        title={t('todos:title')}
+        subtitle={t('todos:subtitle')}
         icon={CheckSquare}
       />
 

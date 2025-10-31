@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/ui/page-header';
 import {
   Select,
   SelectContent,
@@ -615,22 +616,23 @@ const Calendar = () => {
   };
 
   /**
-   * HANDLER: Delete booking
+   * HANDLER: Delete booking (soft delete by setting status to cancelled)
    */
   const handleDeleteBooking = async () => {
     if (!deletingBooking) return;
 
     try {
+      // Soft delete: Update status to cancelled instead of hard deleting
       const { error } = await supabase
         .from('property_bookings')
-        .delete()
+        .update({ booking_status: 'cancelled' })
         .eq('booking_id', deletingBooking.booking_id);
 
       if (error) throw error;
 
       toast({
         title: t('common.success'),
-        description: t('notifications.success.deleted'),
+        description: 'Booking cancelled successfully',
       });
 
       setShowDeleteDialog(false);
@@ -640,9 +642,10 @@ const Calendar = () => {
 
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
     } catch (error: any) {
+      console.error('Error cancelling booking:', error);
       toast({
         title: t('common.error'),
-        description: error.message || t('notifications.error.deleteFailed'),
+        description: error.message || 'Failed to cancel booking. Please try again.',
         variant: 'destructive',
       });
     }
@@ -897,67 +900,53 @@ const Calendar = () => {
             HEADER: Title, Stats, Actions (Fixed - no horizontal scroll)
             ======================================== */}
         <div className="flex-shrink-0">
-          <Card className="border-0 shadow-lg bg-white">
-            <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <PageHeader
+            title={t('calendar.title')}
+            subtitle={t('calendar.subtitle')}
+            icon={CalendarIcon}
+            actions={
+              <>
+                <Button
+                  variant={bulkSelectMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setBulkSelectMode(!bulkSelectMode);
+                    if (bulkSelectMode) setSelectedProperties(new Set());
+                  }}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {bulkSelectMode ? t('calendar.exitBulkMode') : t('calendar.bulkSelect')}
+                </Button>
 
-                {/* Title Section */}
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
-                    <CalendarIcon className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900">{t('calendar.title')}</h1>
-                    <p className="text-sm text-gray-500">
-                      {t('calendar.subtitle')}
-                    </p>
-                  </div>
-                </div>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowCalendarSyncDialog(true)}
+                >
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  {t('calendar.syncCalendar')}
+                </Button>
 
-                {/* Actions */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant={bulkSelectMode ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setBulkSelectMode(!bulkSelectMode);
-                      if (bulkSelectMode) setSelectedProperties(new Set());
-                    }}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    {bulkSelectMode ? t('calendar.exitBulkMode') : t('calendar.bulkSelect')}
-                  </Button>
+                <Button variant="outline" size="sm" onClick={exportToCSV}>
+                  <Download className="h-4 w-4 mr-2" />
+                  {t('calendar.exportCSV')}
+                </Button>
 
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => setShowCalendarSyncDialog(true)}
-                  >
-                    <CalendarIcon className="h-4 w-4 mr-2" />
-                    {t('calendar.syncCalendar')}
-                  </Button>
-
-                  <Button variant="outline" size="sm" onClick={exportToCSV}>
-                    <Download className="h-4 w-4 mr-2" />
-                    {t('calendar.exportCSV')}
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      queryClient.invalidateQueries({ queryKey: ['bookings'] });
-                      queryClient.invalidateQueries({ queryKey: ['properties-with-location'] });
-                      toast({ title: t('calendar.calendarRefreshed') });
-                    }}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    {t('common.refresh')}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                    queryClient.invalidateQueries({ queryKey: ['properties-with-location'] });
+                    toast({ title: t('calendar.calendarRefreshed') });
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  {t('common.refresh')}
+                </Button>
+              </>
+            }
+          />
         </div>
 
         {/* ========================================
@@ -1613,7 +1602,7 @@ const Calendar = () => {
                                         className="text-red-600 focus:text-red-600"
                                       >
                                         <Trash2 className="h-4 w-4 mr-2" />
-                                        {t('common.delete')}
+                                        Cancel Booking
                                       </ContextMenuItem>
                                     </ContextMenuContent>
                                   </ContextMenu>
@@ -1696,13 +1685,13 @@ const Calendar = () => {
           defaultCheckOut={bookingCheckOut}
         />
 
-        {/* Delete Confirmation Dialog */}
+        {/* Cancel Booking Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t('calendar.deleteBooking')}</DialogTitle>
+              <DialogTitle>Cancel Booking</DialogTitle>
               <DialogDescription>
-                {t('calendar.confirmDelete')}
+                Are you sure you want to cancel this booking? This will set the booking status to cancelled.
               </DialogDescription>
             </DialogHeader>
             {deletingBooking && (
@@ -1723,6 +1712,10 @@ const Calendar = () => {
                     {format(parseISO(deletingBooking.check_out_date), 'MMM dd, yyyy')}
                   </span>
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Status:</span>
+                  <span className="font-medium">{deletingBooking.booking_status}</span>
+                </div>
               </div>
             )}
             <DialogFooter>
@@ -1730,7 +1723,7 @@ const Calendar = () => {
                 {t('common.cancel')}
               </Button>
               <Button variant="destructive" onClick={handleDeleteBooking}>
-                {t('calendar.deleteBooking')}
+                Cancel Booking
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1910,7 +1903,7 @@ const Calendar = () => {
                     }}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    {t('common.delete')}
+                    Cancel Booking
                   </Button>
                 </div>
               </div>
