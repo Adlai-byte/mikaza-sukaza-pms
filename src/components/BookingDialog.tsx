@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { Booking, BookingInsert } from '@/lib/schemas';
 import { format, parseISO, differenceInDays } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 interface BookingDialogProps {
   open: boolean;
@@ -56,6 +57,7 @@ export function BookingDialog({
   defaultCheckIn,
   defaultCheckOut,
 }: BookingDialogProps) {
+  const { t } = useTranslation();
   const isEditing = !!booking;
 
   const [formData, setFormData] = useState<BookingInsert>({
@@ -100,19 +102,19 @@ export function BookingDialog({
     const newErrors: Record<string, string> = {};
 
     if (!formData.guest_name.trim()) {
-      newErrors.guest_name = 'Guest name is required';
+      newErrors.guest_name = t('bookingDialog.validation.guestNameRequired');
     }
 
     if (formData.guest_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.guest_email)) {
-      newErrors.guest_email = 'Invalid email format';
+      newErrors.guest_email = t('bookingDialog.validation.invalidEmail');
     }
 
     if (!formData.check_in_date) {
-      newErrors.check_in_date = 'Check-in date is required';
+      newErrors.check_in_date = t('bookingDialog.validation.checkInRequired');
     }
 
     if (!formData.check_out_date) {
-      newErrors.check_out_date = 'Check-out date is required';
+      newErrors.check_out_date = t('bookingDialog.validation.checkOutRequired');
     }
 
     if (formData.check_in_date && formData.check_out_date) {
@@ -120,24 +122,24 @@ export function BookingDialog({
       const checkOut = new Date(formData.check_out_date);
 
       if (checkOut <= checkIn) {
-        newErrors.check_out_date = 'Check-out must be after check-in';
+        newErrors.check_out_date = t('bookingDialog.validation.checkOutAfterCheckIn');
       }
 
       if (checkIn < new Date(new Date().setHours(0, 0, 0, 0)) && !isEditing) {
-        newErrors.check_in_date = 'Check-in cannot be in the past';
+        newErrors.check_in_date = t('bookingDialog.validation.checkInPast');
       }
     }
 
     if (formData.number_of_guests && formData.number_of_guests < 1) {
-      newErrors.number_of_guests = 'At least 1 guest required';
+      newErrors.number_of_guests = t('bookingDialog.validation.minGuests');
     }
 
     if (formData.total_amount && formData.total_amount < 0) {
-      newErrors.total_amount = 'Amount cannot be negative';
+      newErrors.total_amount = t('bookingDialog.validation.negativeAmount');
     }
 
     if (formData.deposit_amount && formData.deposit_amount < 0) {
-      newErrors.deposit_amount = 'Deposit cannot be negative';
+      newErrors.deposit_amount = t('bookingDialog.validation.negativeDeposit');
     }
 
     setErrors(newErrors);
@@ -180,12 +182,12 @@ export function BookingDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <CalendarIcon className="h-6 w-6 text-primary" />
-            {isEditing ? 'Edit Booking' : 'Create New Booking'}
+            {isEditing ? t('bookingDialog.title.edit') : t('bookingDialog.title.create')}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? 'Update the booking details below'
-              : 'Fill in the details to create a new booking'}
+              ? t('bookingDialog.description.edit')
+              : t('bookingDialog.description.create')}
           </DialogDescription>
         </DialogHeader>
 
@@ -194,12 +196,12 @@ export function BookingDialog({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
-              Guest Information
+              {t('bookingDialog.sections.guestInformation')}
             </h3>
 
             <div className="space-y-2">
               <Label htmlFor="guest_name" className="required">
-                Guest Name *
+                {t('bookingDialog.fields.guestName')} {t('bookingDialog.required')}
               </Label>
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -207,7 +209,7 @@ export function BookingDialog({
                   id="guest_name"
                   value={formData.guest_name}
                   onChange={(e) => handleChange('guest_name', e.target.value)}
-                  placeholder="John Doe"
+                  placeholder={t('bookingDialog.placeholders.guestName')}
                   className={`pl-10 ${errors.guest_name ? 'border-red-500' : ''}`}
                 />
               </div>
@@ -218,7 +220,7 @@ export function BookingDialog({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="guest_email">Email</Label>
+                <Label htmlFor="guest_email">{t('bookingDialog.fields.guestEmail')}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -226,7 +228,7 @@ export function BookingDialog({
                     type="email"
                     value={formData.guest_email || ''}
                     onChange={(e) => handleChange('guest_email', e.target.value)}
-                    placeholder="john@example.com"
+                    placeholder={t('bookingDialog.placeholders.guestEmail')}
                     className={`pl-10 ${errors.guest_email ? 'border-red-500' : ''}`}
                   />
                 </div>
@@ -236,7 +238,7 @@ export function BookingDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="guest_phone">Phone</Label>
+                <Label htmlFor="guest_phone">{t('bookingDialog.fields.guestPhone')}</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -244,7 +246,7 @@ export function BookingDialog({
                     type="tel"
                     value={formData.guest_phone || ''}
                     onChange={(e) => handleChange('guest_phone', e.target.value)}
-                    placeholder="+1 (555) 123-4567"
+                    placeholder={t('bookingDialog.placeholders.guestPhone')}
                     className="pl-10"
                   />
                 </div>
@@ -256,13 +258,13 @@ export function BookingDialog({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <CalendarIcon className="h-5 w-5 text-primary" />
-              Booking Dates
+              {t('bookingDialog.sections.bookingDates')}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="check_in_date" className="required">
-                  Check-in Date *
+                  {t('bookingDialog.fields.checkInDate')} {t('bookingDialog.required')}
                 </Label>
                 <Input
                   id="check_in_date"
@@ -278,7 +280,7 @@ export function BookingDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="check_out_date" className="required">
-                  Check-out Date *
+                  {t('bookingDialog.fields.checkOutDate')} {t('bookingDialog.required')}
                 </Label>
                 <Input
                   id="check_out_date"
@@ -297,7 +299,7 @@ export function BookingDialog({
               <Alert className="bg-blue-50 border-blue-200">
                 <CalendarIcon className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-800">
-                  <strong>{nights}</strong> night{nights > 1 ? 's' : ''}
+                  <strong>{nights}</strong> {nights === 1 ? t('bookingDialog.nights.one') : t('bookingDialog.nights.other')}
                 </AlertDescription>
               </Alert>
             )}
@@ -307,12 +309,12 @@ export function BookingDialog({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              Booking Details
+              {t('bookingDialog.sections.bookingDetails')}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="number_of_guests">Number of Guests</Label>
+                <Label htmlFor="number_of_guests">{t('bookingDialog.fields.numberOfGuests')}</Label>
                 <div className="relative">
                   <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -330,7 +332,7 @@ export function BookingDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="total_amount">Total Amount ($)</Label>
+                <Label htmlFor="total_amount">{t('bookingDialog.fields.totalAmount')}</Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -349,7 +351,7 @@ export function BookingDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="deposit_amount">Deposit ($)</Label>
+                <Label htmlFor="deposit_amount">{t('bookingDialog.fields.depositAmount')}</Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -370,57 +372,57 @@ export function BookingDialog({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="payment_method">Payment Method</Label>
+                <Label htmlFor="payment_method">{t('bookingDialog.fields.paymentMethod')}</Label>
                 <Select
                   value={formData.payment_method || ''}
                   onValueChange={(value) => handleChange('payment_method', value)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select payment method" />
+                    <SelectValue placeholder={t('bookingDialog.placeholders.paymentMethod')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="credit_card">Credit Card</SelectItem>
-                    <SelectItem value="debit_card">Debit Card</SelectItem>
-                    <SelectItem value="stripe">Stripe</SelectItem>
-                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="cash">{t('bookingDialog.paymentMethods.cash')}</SelectItem>
+                    <SelectItem value="credit_card">{t('bookingDialog.paymentMethods.creditCard')}</SelectItem>
+                    <SelectItem value="debit_card">{t('bookingDialog.paymentMethods.debitCard')}</SelectItem>
+                    <SelectItem value="stripe">{t('bookingDialog.paymentMethods.stripe')}</SelectItem>
+                    <SelectItem value="bank_transfer">{t('bookingDialog.paymentMethods.bankTransfer')}</SelectItem>
+                    <SelectItem value="other">{t('bookingDialog.paymentMethods.other')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="booking_status">Status</Label>
+                <Label htmlFor="booking_status">{t('bookingDialog.fields.bookingStatus')}</Label>
                 <Select
                   value={formData.booking_status || 'pending'}
                   onValueChange={(value) => handleChange('booking_status', value)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder={t('bookingDialog.placeholders.bookingStatus')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="inquiry">💬 Inquiry</SelectItem>
-                    <SelectItem value="pending">⏳ Pending</SelectItem>
-                    <SelectItem value="confirmed">✅ Confirmed</SelectItem>
-                    <SelectItem value="checked_in">🔑 Checked In</SelectItem>
-                    <SelectItem value="checked_out">👋 Checked Out</SelectItem>
-                    <SelectItem value="completed">✔️ Completed</SelectItem>
-                    <SelectItem value="blocked">🚫 Blocked (Maintenance)</SelectItem>
-                    <SelectItem value="cancelled">❌ Cancelled</SelectItem>
+                    <SelectItem value="inquiry">💬 {t('bookingDialog.statuses.inquiry')}</SelectItem>
+                    <SelectItem value="pending">⏳ {t('bookingDialog.statuses.pending')}</SelectItem>
+                    <SelectItem value="confirmed">✅ {t('bookingDialog.statuses.confirmed')}</SelectItem>
+                    <SelectItem value="checked_in">🔑 {t('bookingDialog.statuses.checkedIn')}</SelectItem>
+                    <SelectItem value="checked_out">👋 {t('bookingDialog.statuses.checkedOut')}</SelectItem>
+                    <SelectItem value="completed">✔️ {t('bookingDialog.statuses.completed')}</SelectItem>
+                    <SelectItem value="blocked">🚫 {t('bookingDialog.statuses.blocked')}</SelectItem>
+                    <SelectItem value="cancelled">❌ {t('bookingDialog.statuses.cancelled')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="special_requests">Special Requests</Label>
+              <Label htmlFor="special_requests">{t('bookingDialog.fields.specialRequests')}</Label>
               <div className="relative">
                 <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Textarea
                   id="special_requests"
                   value={formData.special_requests || ''}
                   onChange={(e) => handleChange('special_requests', e.target.value)}
-                  placeholder="Any special requests or notes..."
+                  placeholder={t('bookingDialog.placeholders.specialRequests')}
                   className="pl-10 min-h-[100px]"
                 />
               </div>
@@ -435,7 +437,7 @@ export function BookingDialog({
               disabled={isSubmitting}
             >
               <X className="mr-2 h-4 w-4" />
-              Cancel
+              {t('bookingDialog.buttons.cancel')}
             </Button>
             <Button
               type="submit"
@@ -445,11 +447,11 @@ export function BookingDialog({
               <Save className="mr-2 h-4 w-4" />
               {isSubmitting
                 ? isEditing
-                  ? 'Updating...'
-                  : 'Creating...'
+                  ? t('bookingDialog.buttons.updating')
+                  : t('bookingDialog.buttons.creating')
                 : isEditing
-                  ? 'Update Booking'
-                  : 'Create Booking'}
+                  ? t('bookingDialog.buttons.update')
+                  : t('bookingDialog.buttons.create')}
             </Button>
           </DialogFooter>
         </form>

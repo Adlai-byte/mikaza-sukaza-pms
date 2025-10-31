@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Plus, FileText, Download, Trash2, Eye, Filter, FolderTree, List } from "lucide-react";
@@ -25,6 +26,7 @@ export default function Contracts() {
   const [contractTypeFilter, setContractTypeFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
   const { hasPermission } = usePermissions();
+  const { t } = useTranslation();
   const { downloadDocument } = useDocumentDownload();
 
   // Fetch contracts
@@ -95,10 +97,10 @@ export default function Contracts() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
             <FileText className="h-7 w-7 text-primary" />
-            Contracts
+            {t('contracts.title')}
           </h1>
           <p className="text-muted-foreground">
-            Manage property leases, service agreements, and vendor contracts
+            {t('contracts.subtitle')}
           </p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
@@ -108,12 +110,12 @@ export default function Contracts() {
             disabled={isFetching}
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('contracts.refresh')}
           </Button>
           {canManage && (
             <Button onClick={() => setUploadDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Upload Contract
+              {t('contracts.uploadContract')}
             </Button>
           )}
         </div>
@@ -125,15 +127,15 @@ export default function Contracts() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Filter by Type:</span>
+              <span className="text-sm font-medium">{t('contracts.filterByType')}</span>
             </div>
             <Select value={contractTypeFilter} onValueChange={setContractTypeFilter}>
               <SelectTrigger className="w-full sm:w-[280px]">
-                <SelectValue placeholder="All Contract Types" />
+                <SelectValue placeholder={t('contracts.allContractTypes')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">
-                  All Contract Types ({contracts.length})
+                  {t('contracts.allContractTypes')} ({contracts.length})
                 </SelectItem>
                 {Object.entries(CONTRACT_TYPES).map(([value, label]) => {
                   const count = contractsByType[value] || 0;
@@ -151,7 +153,7 @@ export default function Contracts() {
                 size="sm"
                 onClick={() => setContractTypeFilter("all")}
               >
-                Clear Filter
+                {t('contracts.clearFilter')}
               </Button>
             )}
           </div>
@@ -165,7 +167,7 @@ export default function Contracts() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-700">
-                  {contractTypeFilter === "all" ? "Total Contracts" : "Filtered Contracts"}
+                  {contractTypeFilter === "all" ? t('contracts.stats.totalContracts') : t('contracts.stats.filteredContracts')}
                 </p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">
                   {filteredContracts.length}
@@ -182,7 +184,7 @@ export default function Contracts() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Active Contracts</p>
+                <p className="text-sm font-medium text-green-700">{t('contracts.stats.activeContracts')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">
                   {activeContracts}
                 </h3>
@@ -198,11 +200,11 @@ export default function Contracts() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-700">Expiring Soon</p>
+                <p className="text-sm font-medium text-orange-700">{t('contracts.stats.expiringSoon')}</p>
                 <h3 className="text-3xl font-bold text-orange-900 mt-1">
                   {expiringContracts}
                 </h3>
-                <p className="text-xs text-orange-600 mt-1">Next 30 days</p>
+                <p className="text-xs text-orange-600 mt-1">{t('contracts.stats.next30Days')}</p>
               </div>
               <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
                 <FileText className="h-6 w-6 text-white" />
@@ -220,15 +222,15 @@ export default function Contracts() {
               <CardTitle className="flex items-center gap-2">
                 <span>
                   {contractTypeFilter === "all"
-                    ? "All Contracts"
+                    ? t('contracts.tableTitle.all')
                     : CONTRACT_TYPES[contractTypeFilter as keyof typeof CONTRACT_TYPES]}
                 </span>
-                <Badge variant="outline">{filteredContracts.length} {contractTypeFilter !== "all" ? "filtered" : "total"}</Badge>
+                <Badge variant="outline">{filteredContracts.length} {contractTypeFilter !== "all" ? t('contracts.tableTitle.filtered') : t('contracts.tableTitle.total')}</Badge>
               </CardTitle>
               <CardDescription className="mt-1.5">
                 {contractTypeFilter === "all"
-                  ? "Property leases, service agreements, and vendor contracts"
-                  : `Showing ${CONTRACT_TYPES[contractTypeFilter as keyof typeof CONTRACT_TYPES].toLowerCase()} documents`}
+                  ? t('contracts.tableDescription.all')
+                  : t('contracts.tableDescription.showing', { type: CONTRACT_TYPES[contractTypeFilter as keyof typeof CONTRACT_TYPES].toLowerCase() })}
               </CardDescription>
             </div>
 
@@ -237,11 +239,11 @@ export default function Contracts() {
               <TabsList>
                 <TabsTrigger value="tree" className="gap-2">
                   <FolderTree className="h-4 w-4" />
-                  <span className="hidden sm:inline">Tree View</span>
+                  <span className="hidden sm:inline">{t('contracts.viewMode.treeView')}</span>
                 </TabsTrigger>
                 <TabsTrigger value="list" className="gap-2">
                   <List className="h-4 w-4" />
-                  <span className="hidden sm:inline">List View</span>
+                  <span className="hidden sm:inline">{t('contracts.viewMode.listView')}</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -252,12 +254,12 @@ export default function Contracts() {
             <div className="text-center py-12">
               <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-20" />
               <h3 className="text-lg font-semibold mb-2">
-                {contractTypeFilter === "all" ? "No Contracts Found" : "No Contracts of This Type"}
+                {contractTypeFilter === "all" ? t('contracts.emptyState.noContracts') : t('contracts.emptyState.noContractsOfType')}
               </h3>
               <p className="text-muted-foreground mb-4">
                 {contractTypeFilter === "all"
-                  ? "Get started by uploading your first contract"
-                  : `No ${CONTRACT_TYPES[contractTypeFilter as keyof typeof CONTRACT_TYPES].toLowerCase()} documents found`}
+                  ? t('contracts.emptyState.getStarted')
+                  : t('contracts.emptyState.noDocumentsFound', { type: CONTRACT_TYPES[contractTypeFilter as keyof typeof CONTRACT_TYPES].toLowerCase() })}
               </p>
               {canManage && contractTypeFilter === "all" && (
                 <Button
@@ -265,7 +267,7 @@ export default function Contracts() {
                   onClick={() => setUploadDialogOpen(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Upload Contract
+                  {t('contracts.uploadContract')}
                 </Button>
               )}
             </div>
@@ -277,7 +279,7 @@ export default function Contracts() {
               onDownloadDocument={handleDownloadDocument}
               onDeleteDocument={canManage ? deleteDocument : undefined}
               canDelete={canManage}
-              emptyMessage="No contracts found"
+              emptyMessage={t('contracts.emptyState.emptyMessage')}
               emptyIcon={<FileText className="h-12 w-12 mx-auto mb-4 opacity-20" />}
             />
           ) : (

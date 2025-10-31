@@ -51,6 +51,7 @@ import { cn } from '@/lib/utils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { expenseSchema } from '@/lib/schemas';
+import { useTranslation } from 'react-i18next';
 
 const EXPENSE_CATEGORIES = [
   'maintenance',
@@ -72,6 +73,7 @@ const EXPENSE_CATEGORIES = [
 const PAYMENT_METHODS = ['cash', 'credit_card', 'bank_transfer', 'check', 'other'];
 
 export default function Expenses() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProperty, setSelectedProperty] = useState<string>('all');
@@ -160,7 +162,7 @@ export default function Expenses() {
   });
 
   const handleDelete = (expenseId: string) => {
-    if (confirm('Are you sure you want to delete this expense?')) {
+    if (confirm(t('expenses.confirmDelete'))) {
       deleteExpense.mutate(expenseId);
     }
   };
@@ -212,15 +214,15 @@ export default function Expenses() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Receipt className="h-8 w-8" />
-            Expenses
+            {t('expenses.title')}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Track property expenses and vendor payments
+            {t('expenses.subtitle')}
           </p>
         </div>
         <Button onClick={() => handleOpenDialog()} size="lg">
           <Plus className="h-4 w-4 mr-2" />
-          New Expense
+          {t('expenses.newExpense')}
         </Button>
       </div>
 
@@ -230,9 +232,9 @@ export default function Expenses() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Expenses</p>
+                <p className="text-sm font-medium text-blue-700">{t('expenses.totalExpenses')}</p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
-                <p className="text-xs text-blue-600 mt-1">All time</p>
+                <p className="text-xs text-blue-600 mt-1">{t('expenses.allTime')}</p>
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
                 <Receipt className="h-6 w-6 text-white" />
@@ -245,11 +247,11 @@ export default function Expenses() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">Total Amount</p>
+                <p className="text-sm font-medium text-purple-700">{t('expenses.totalAmount')}</p>
                 <h3 className="text-3xl font-bold text-purple-900 mt-1">
                   ${stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
-                <p className="text-xs text-purple-600 mt-1">Combined total</p>
+                <p className="text-xs text-purple-600 mt-1">{t('expenses.combinedTotal')}</p>
               </div>
               <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                 <Receipt className="h-6 w-6 text-white" />
@@ -262,11 +264,11 @@ export default function Expenses() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Paid</p>
+                <p className="text-sm font-medium text-green-700">{t('expenses.paid')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">
                   ${stats.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
-                <p className="text-xs text-green-600 mt-1">{stats.paid} paid expenses</p>
+                <p className="text-xs text-green-600 mt-1">{t('expenses.paidExpenses', { count: stats.paid })}</p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
                 <CheckCircle className="h-6 w-6 text-white" />
@@ -279,11 +281,11 @@ export default function Expenses() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-amber-700">Outstanding</p>
+                <p className="text-sm font-medium text-amber-700">{t('expenses.outstanding')}</p>
                 <h3 className="text-3xl font-bold text-amber-900 mt-1">
                   ${stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
-                <p className="text-xs text-amber-600 mt-1">Pending payment</p>
+                <p className="text-xs text-amber-600 mt-1">{t('expenses.pendingPayment')}</p>
               </div>
               <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
                 <Clock className="h-6 w-6 text-white" />
@@ -293,12 +295,12 @@ export default function Expenses() {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* {t('expenses.filters')} */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Filters
+            {t('expenses.filters')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -307,7 +309,7 @@ export default function Expenses() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search vendor..."
+                placeholder={t('expenses.searchVendorPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
@@ -317,10 +319,10 @@ export default function Expenses() {
             {/* Property Filter */}
             <Select value={selectedProperty} onValueChange={setSelectedProperty}>
               <SelectTrigger>
-                <SelectValue placeholder="All Properties" />
+                <SelectValue placeholder={t('expenses.allProperties')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Properties</SelectItem>
+                <SelectItem value="all">{t('expenses.allProperties')}</SelectItem>
                 {properties.map((property) => (
                   <SelectItem key={property.property_id} value={property.property_id!}>
                     {property.property_name}
@@ -332,13 +334,13 @@ export default function Expenses() {
             {/* Category Filter */}
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger>
-                <SelectValue placeholder="All Categories" />
+                <SelectValue placeholder={t('expenses.allCategories')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="all">{t('expenses.allCategories')}</SelectItem>
                 {EXPENSE_CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>
-                    {cat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {t(`expenses.categories.${cat}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -347,14 +349,14 @@ export default function Expenses() {
             {/* Status Filter */}
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
               <SelectTrigger>
-                <SelectValue placeholder="All Statuses" />
+                <SelectValue placeholder={t('expenses.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="unpaid">Unpaid</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="partially_paid">Partially Paid</SelectItem>
-                <SelectItem value="refunded">Refunded</SelectItem>
+                <SelectItem value="all">{t('expenses.allStatuses')}</SelectItem>
+                <SelectItem value="unpaid">{t('expenses.status.unpaid')}</SelectItem>
+                <SelectItem value="paid">{t('expenses.status.paid')}</SelectItem>
+                <SelectItem value="partially_paid">{t('expenses.status.partially_paid')}</SelectItem>
+                <SelectItem value="refunded">{t('expenses.status.refunded')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -387,24 +389,24 @@ export default function Expenses() {
           ) : expenses.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
               <Receipt className="h-16 w-16 mb-4 opacity-20" />
-              <p className="text-lg font-medium">No expenses found</p>
-              <p className="text-sm">Add your first expense to get started</p>
+              <p className="text-lg font-medium">{t('expenses.noExpensesFound')}</p>
+              <p className="text-sm">{t('expenses.addFirstExpense')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Property</TableHead>
-                    <TableHead>Vendor</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">Tax</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t('expenses.date')}</TableHead>
+                    <TableHead>{t('common.property')}</TableHead>
+                    <TableHead>{t('expenses.vendor')}</TableHead>
+                    <TableHead>{t('expenses.category')}</TableHead>
+                    <TableHead>{t('common.description')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead className="text-right">{t('common.amount')}</TableHead>
+                    <TableHead className="text-right">{t('common.tax')}</TableHead>
+                    <TableHead className="text-right">{t('common.total')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -467,22 +469,22 @@ export default function Expenses() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingExpense ? 'Edit Expense' : 'New Expense'}</DialogTitle>
+            <DialogTitle>{editingExpense ? t('expenses.editExpense') : t('expenses.newExpense')}</DialogTitle>
             <DialogDescription>
-              {editingExpense ? 'Update expense details' : 'Add a new expense entry'}
+              {editingExpense ? t('expenses.updateExpenseDetails') : t('expenses.addNewExpenseEntry')}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="property_id">Property *</Label>
+                <Label htmlFor="property_id">{t('common.property')} *</Label>
                 <Select
                   value={form.watch('property_id')}
                   onValueChange={(value) => form.setValue('property_id', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select property" />
+                    <SelectValue placeholder={t('common.selectProperty')} />
                   </SelectTrigger>
                   <SelectContent>
                     {properties.map((property) => (
@@ -495,7 +497,7 @@ export default function Expenses() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="expense_date">Date *</Label>
+                <Label htmlFor="expense_date">{t('expenses.expenseDate')} *</Label>
                 <Input
                   type="date"
                   {...form.register('expense_date')}
@@ -505,7 +507,7 @@ export default function Expenses() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="category">Category *</Label>
+                <Label htmlFor="category">{t('expenses.category')} *</Label>
                 <Select
                   value={form.watch('category')}
                   onValueChange={(value) => form.setValue('category', value as any)}
@@ -516,7 +518,7 @@ export default function Expenses() {
                   <SelectContent>
                     {EXPENSE_CATEGORIES.map((cat) => (
                       <SelectItem key={cat} value={cat}>
-                        {cat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {t(`expenses.categories.${cat}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -524,13 +526,13 @@ export default function Expenses() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="vendor_name">Vendor</Label>
+                <Label htmlFor="vendor_name">{t('expenses.vendor')}</Label>
                 <Select
                   value={form.watch('vendor_name')}
                   onValueChange={(value) => form.setValue('vendor_name', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a vendor" />
+                    <SelectValue placeholder={t('expenses.selectVendor')} />
                   </SelectTrigger>
                   <SelectContent>
                     {providers?.map((provider) => (
@@ -541,12 +543,12 @@ export default function Expenses() {
                         {provider.provider_name}
                       </SelectItem>
                     ))}
-                    <SelectItem value="other">Other (Custom Vendor)</SelectItem>
+                    <SelectItem value="other">{t('expenses.otherVendor')}</SelectItem>
                   </SelectContent>
                 </Select>
                 {form.watch('vendor_name') === 'other' && (
                   <Input
-                    placeholder="Enter custom vendor name"
+                    placeholder={t('expenses.enterCustomVendor')}
                     onChange={(e) => form.setValue('vendor_name', e.target.value)}
                     className="mt-2"
                   />
@@ -555,17 +557,17 @@ export default function Expenses() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="description">{t('expenses.expenseDescription')} *</Label>
               <Textarea
                 {...form.register('description')}
-                placeholder="Expense description"
+                placeholder={t('expenses.expenseDescriptionPlaceholder')}
                 rows={3}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount *</Label>
+                <Label htmlFor="amount">{t('common.amount')} *</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -575,7 +577,7 @@ export default function Expenses() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tax_amount">Tax Amount</Label>
+                <Label htmlFor="tax_amount">{t('expenses.taxAmount')}</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -587,7 +589,7 @@ export default function Expenses() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="payment_status">Payment Status *</Label>
+                <Label htmlFor="payment_status">{t('expenses.paymentStatus')} *</Label>
                 <Select
                   value={form.watch('payment_status')}
                   onValueChange={(value) => form.setValue('payment_status', value as any)}
@@ -596,27 +598,27 @@ export default function Expenses() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="unpaid">Unpaid</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="partially_paid">Partially Paid</SelectItem>
-                    <SelectItem value="refunded">Refunded</SelectItem>
+                    <SelectItem value="unpaid">{t('expenses.status.unpaid')}</SelectItem>
+                    <SelectItem value="paid">{t('expenses.status.paid')}</SelectItem>
+                    <SelectItem value="partially_paid">{t('expenses.status.partially_paid')}</SelectItem>
+                    <SelectItem value="refunded">{t('expenses.status.refunded')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="payment_method">Payment Method</Label>
+                <Label htmlFor="payment_method">{t('common.paymentMethod')}</Label>
                 <Select
                   value={form.watch('payment_method') || ''}
                   onValueChange={(value) => form.setValue('payment_method', value as any)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select method" />
+                    <SelectValue placeholder={t('common.selectMethod')} />
                   </SelectTrigger>
                   <SelectContent>
                     {PAYMENT_METHODS.map((method) => (
                       <SelectItem key={method} value={method}>
-                        {method.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {t(`expenses.paymentMethods.${method}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -625,20 +627,20 @@ export default function Expenses() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">{t('common.notes')}</Label>
               <Textarea
                 {...form.register('notes')}
-                placeholder="Additional notes"
+                placeholder={t('common.additionalNotes')}
                 rows={2}
               />
             </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={createExpense.isPending || updateExpense.isPending}>
-                {editingExpense ? 'Update' : 'Create'} Expense
+                {editingExpense ? t('expenses.updateExpense') : t('expenses.createExpense')}
               </Button>
             </DialogFooter>
           </form>

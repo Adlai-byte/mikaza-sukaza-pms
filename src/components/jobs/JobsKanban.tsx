@@ -27,6 +27,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { JobWithRelations } from '@/hooks/useJobs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useTranslation } from 'react-i18next';
 
 interface JobsKanbanProps {
   jobs: JobWithRelations[];
@@ -45,74 +46,75 @@ interface Column {
   icon: React.ReactNode;
 }
 
-const columns: Column[] = [
-  {
-    id: 'pending',
-    title: 'Pending',
-    color: 'text-orange-700',
-    bgColor: 'bg-orange-50',
-    icon: <Clock className="h-4 w-4" />,
-  },
-  {
-    id: 'in_progress',
-    title: 'In Progress',
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-50',
-    icon: <PlayCircle className="h-4 w-4" />,
-  },
-  {
-    id: 'review',
-    title: 'Review',
-    color: 'text-purple-700',
-    bgColor: 'bg-purple-50',
-    icon: <PauseCircle className="h-4 w-4" />,
-  },
-  {
-    id: 'completed',
-    title: 'Completed',
-    color: 'text-green-700',
-    bgColor: 'bg-green-50',
-    icon: <CheckCircle className="h-4 w-4" />,
-  },
-  {
-    id: 'cancelled',
-    title: 'Cancelled',
-    color: 'text-red-700',
-    bgColor: 'bg-red-50',
-    icon: <XCircle className="h-4 w-4" />,
-  },
-];
-
 export function JobsKanban({
   jobs,
   onEdit,
   onView,
   onStatusChange,
 }: JobsKanbanProps) {
+  const { t } = useTranslation();
   const [draggedJob, setDraggedJob] = useState<JobWithRelations | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<JobStatus | null>(null);
+
+  const columns: Column[] = [
+    {
+      id: 'pending',
+      title: t('jobs.status.pending'),
+      color: 'text-orange-700',
+      bgColor: 'bg-orange-50',
+      icon: <Clock className="h-4 w-4" />,
+    },
+    {
+      id: 'in_progress',
+      title: t('jobs.status.inProgress'),
+      color: 'text-blue-700',
+      bgColor: 'bg-blue-50',
+      icon: <PlayCircle className="h-4 w-4" />,
+    },
+    {
+      id: 'review',
+      title: t('jobs.status.review'),
+      color: 'text-purple-700',
+      bgColor: 'bg-purple-50',
+      icon: <PauseCircle className="h-4 w-4" />,
+    },
+    {
+      id: 'completed',
+      title: t('jobs.status.completed'),
+      color: 'text-green-700',
+      bgColor: 'bg-green-50',
+      icon: <CheckCircle className="h-4 w-4" />,
+    },
+    {
+      id: 'cancelled',
+      title: t('jobs.status.cancelled'),
+      color: 'text-red-700',
+      bgColor: 'bg-red-50',
+      icon: <XCircle className="h-4 w-4" />,
+    },
+  ];
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case "urgent":
-        return <Badge variant="destructive" className="text-xs">Urgent</Badge>;
+        return <Badge variant="destructive" className="text-xs">{t('jobs.priority.urgent')}</Badge>;
       case "high":
-        return <Badge className="bg-orange-500 text-white text-xs">High</Badge>;
+        return <Badge className="bg-orange-500 text-white text-xs">{t('jobs.priority.high')}</Badge>;
       case "normal":
-        return <Badge className="bg-blue-500 text-white text-xs">Normal</Badge>;
+        return <Badge className="bg-blue-500 text-white text-xs">{t('jobs.priority.medium')}</Badge>;
       case "low":
-        return <Badge variant="secondary" className="text-xs">Low</Badge>;
+        return <Badge variant="secondary" className="text-xs">{t('jobs.priority.low')}</Badge>;
       default:
         return <Badge variant="secondary" className="text-xs">{priority}</Badge>;
     }
   };
 
   const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return "No due date";
+    if (!dateString) return t('jobs.noDueDate');
     try {
       return format(parseISO(dateString), "MMM dd");
     } catch (error) {
-      return "Invalid date";
+      return t('jobs.invalidDate');
     }
   };
 
@@ -226,7 +228,7 @@ export function JobsKanban({
                               <div className="flex items-center gap-1.5">
                                 <MapPin className="h-3.5 w-3.5" />
                                 <span className="truncate">
-                                  {job.property?.property_name || 'No property'}
+                                  {job.property?.property_name || t('jobs.noProperty')}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1.5">
@@ -234,7 +236,7 @@ export function JobsKanban({
                                 <span className="truncate">
                                   {job.assigned_user
                                     ? `${job.assigned_user.first_name} ${job.assigned_user.last_name}`
-                                    : 'Unassigned'}
+                                    : t('jobs.unassigned')}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1.5">
@@ -269,12 +271,12 @@ export function JobsKanban({
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuLabel>{t('jobs.actions')}</DropdownMenuLabel>
                                   <DropdownMenuSeparator />
                                   {onEdit && (
                                     <DropdownMenuItem onClick={() => onEdit(job)}>
                                       <Edit className="mr-2 h-4 w-4" />
-                                      Edit Job
+                                      {t('jobs.editJob')}
                                     </DropdownMenuItem>
                                   )}
 
@@ -282,36 +284,36 @@ export function JobsKanban({
                                     <>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuLabel className="text-xs text-muted-foreground">
-                                        Change Status
+                                        {t('jobs.changeStatus')}
                                       </DropdownMenuLabel>
                                       {job.status !== 'pending' && (
                                         <DropdownMenuItem onClick={() => handleStatusChangeFromMenu(job, 'pending')}>
                                           <Clock className="mr-2 h-4 w-4" />
-                                          Move to Pending
+                                          {t('jobs.moveToPending')}
                                         </DropdownMenuItem>
                                       )}
                                       {job.status !== 'in_progress' && (
                                         <DropdownMenuItem onClick={() => handleStatusChangeFromMenu(job, 'in_progress')}>
                                           <PlayCircle className="mr-2 h-4 w-4" />
-                                          Move to In Progress
+                                          {t('jobs.moveToInProgress')}
                                         </DropdownMenuItem>
                                       )}
                                       {job.status !== 'review' && (
                                         <DropdownMenuItem onClick={() => handleStatusChangeFromMenu(job, 'review')}>
                                           <PauseCircle className="mr-2 h-4 w-4" />
-                                          Move to Review
+                                          {t('jobs.moveToReview')}
                                         </DropdownMenuItem>
                                       )}
                                       {job.status !== 'completed' && (
                                         <DropdownMenuItem onClick={() => handleStatusChangeFromMenu(job, 'completed')}>
                                           <CheckCircle className="mr-2 h-4 w-4" />
-                                          Mark as Completed
+                                          {t('jobs.markAsCompleted')}
                                         </DropdownMenuItem>
                                       )}
                                       {job.status !== 'cancelled' && (
                                         <DropdownMenuItem onClick={() => handleStatusChangeFromMenu(job, 'cancelled')}>
                                           <XCircle className="mr-2 h-4 w-4" />
-                                          Cancel Job
+                                          {t('jobs.cancelJob')}
                                         </DropdownMenuItem>
                                       )}
                                     </>

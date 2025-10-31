@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useProfileImage } from "@/hooks/useProfileImage";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function MainLayout() {
   const { profile, signOut, isAdmin } = useAuth();
@@ -59,6 +60,7 @@ export function MainLayout() {
               </div>
               
               <div className="flex items-center space-x-2 sm:space-x-3">
+                <LanguageSwitcher />
                 <NotificationBell />
 
                 <DropdownMenu>

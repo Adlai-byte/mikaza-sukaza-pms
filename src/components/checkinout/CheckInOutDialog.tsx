@@ -45,9 +45,10 @@ interface CheckInOutDialogProps {
   open: boolean;
   onClose: () => void;
   record?: CheckInOutRecord | null;
+  viewMode?: boolean;
 }
 
-export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProps) {
+export function CheckInOutDialog({ open, onClose, record, viewMode = false }: CheckInOutDialogProps) {
   const { user } = useAuth();
   const { properties = [], loading: propertiesLoading, error: propertiesError } = useProperties();
   const { users: allUsers = [], loading: usersLoading } = useUsersOptimized();
@@ -217,6 +218,9 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
   };
 
   const onSubmit = async (data: CheckInOutFormData) => {
+    console.log('📝 Form submitted with data:', data);
+    console.log('👤 Current user:', user);
+
     const recordData = {
       property_id: data.property_id,
       record_type: data.record_type,
@@ -236,19 +240,28 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
       created_by: user?.id || null,
     };
 
+    console.log('💾 Record data to be saved:', recordData);
+
     if (record) {
+      console.log('✏️ Updating existing record:', record.record_id);
       updateMutation.mutate({
         recordId: record.record_id,
         updates: recordData,
       }, {
         onSuccess: () => {
+          console.log('✅ Record updated successfully');
           onClose();
           reset();
         },
+        onError: (error) => {
+          console.error('❌ Error updating record:', error);
+        },
       });
     } else {
+      console.log('➕ Creating new record');
       createMutation.mutate(recordData, {
         onSuccess: () => {
+          console.log('✅ Record created successfully');
           onClose();
           reset();
           setChecklistResponses([]);
@@ -256,6 +269,9 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
           setDocuments([]);
           setSignatureData('');
           setSignatureName('');
+        },
+        onError: (error) => {
+          console.error('❌ Error creating record:', error);
         },
       });
     }
@@ -266,7 +282,7 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {record ? 'Edit' : 'New'} Check-{watchRecordType === 'check_in' ? 'In' : 'Out'} Record
+            {viewMode ? 'View' : record ? 'Edit' : 'New'} Check-{watchRecordType === 'check_in' ? 'In' : 'Out'} Record
           </DialogTitle>
         </DialogHeader>
 
@@ -287,6 +303,7 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
                   <Select
                     value={watchRecordType}
                     onValueChange={(value) => setValue('record_type', value as 'check_in' | 'check_out')}
+                    disabled={viewMode}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -303,7 +320,7 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
 
                 <div>
                   <Label htmlFor="record_date">Date</Label>
-                  <Input type="date" {...register('record_date')} />
+                  <Input type="date" {...register('record_date')} disabled={viewMode} />
                   {errors.record_date && (
                     <p className="text-sm text-destructive mt-1">{errors.record_date.message}</p>
                   )}
@@ -311,13 +328,16 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
               </div>
 
               <div>
-                <Label htmlFor="property_id">Property</Label>
+                <Label htmlFor="property_id" className="flex items-center gap-1">
+                  Property
+                  <span className="text-destructive">*</span>
+                </Label>
                 <Select
                   value={watchPropertyId}
                   onValueChange={(value) => setValue('property_id', value)}
-                  disabled={propertiesLoading}
+                  disabled={viewMode || propertiesLoading}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={errors.property_id ? 'border-destructive focus-visible:ring-destructive' : ''}>
                     <SelectValue placeholder={propertiesLoading ? "Loading properties..." : "Select property"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -338,22 +358,34 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
                   <p className="text-sm text-destructive mt-1">Error loading properties</p>
                 )}
                 {errors.property_id && (
-                  <p className="text-sm text-destructive mt-1">{errors.property_id.message}</p>
+                  <p className="text-sm text-destructive mt-1 font-medium">
+                    ⚠️ {errors.property_id.message}
+                  </p>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="resident_name">Resident Name</Label>
-                  <Input {...register('resident_name')} placeholder="Full name" />
+                  <Label htmlFor="resident_name" className="flex items-center gap-1">
+                    Resident Name
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    {...register('resident_name')}
+                    placeholder="Full name"
+                    className={errors.resident_name ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    disabled={viewMode}
+                  />
                   {errors.resident_name && (
-                    <p className="text-sm text-destructive mt-1">{errors.resident_name.message}</p>
+                    <p className="text-sm text-destructive mt-1 font-medium">
+                      ⚠️ {errors.resident_name.message}
+                    </p>
                   )}
                 </div>
 
                 <div>
-                  <Label htmlFor="resident_contact">Contact</Label>
-                  <Input {...register('resident_contact')} placeholder="Phone or email" />
+                  <Label htmlFor="resident_contact">Contact (Optional)</Label>
+                  <Input {...register('resident_contact')} placeholder="Phone or email" disabled={viewMode} />
                 </div>
               </div>
 
@@ -362,7 +394,7 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
                 <Select
                   value={watch('agent_id')}
                   onValueChange={(value) => setValue('agent_id', value)}
-                  disabled={usersLoading}
+                  disabled={viewMode || usersLoading}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={usersLoading ? "Loading staff members..." : "Select staff member performing inspection"} />
@@ -391,7 +423,7 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
                 <Select
                   value={watchTemplateId || 'none'}
                   onValueChange={(value) => setValue('template_id', value === 'none' ? '' : value)}
-                  disabled={templatesLoading}
+                  disabled={viewMode || templatesLoading}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={templatesLoading ? "Loading templates..." : "Select template"} />
@@ -421,7 +453,7 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
 
               <div>
                 <Label htmlFor="notes">Notes</Label>
-                <Textarea {...register('notes')} rows={4} placeholder="Additional notes..." />
+                <Textarea {...register('notes')} rows={4} placeholder="Additional notes..." disabled={viewMode} />
               </div>
             </TabsContent>
 
@@ -634,21 +666,36 @@ export function CheckInOutDialog({ open, onClose, record }: CheckInOutDialogProp
                 onSave={setSignatureData}
                 signatureName={signatureName}
                 onNameChange={setSignatureName}
+                initialSignature={signatureData}
+                viewMode={viewMode}
+                disabled={viewMode}
               />
             </TabsContent>
           </Tabs>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {viewMode ? 'Close' : 'Cancel'}
             </Button>
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || updateMutation.isPending || uploadingFile}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {record ? 'Update' : 'Create'} Record
-            </Button>
+            {!viewMode && (
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending || uploadingFile}
+                onClick={() => {
+                  console.log('🔘 Submit button clicked, Form errors:', errors);
+                  // If there are validation errors, show them in console
+                  if (Object.keys(errors).length > 0) {
+                    console.error('❌ Form has validation errors:', errors);
+                    Object.entries(errors).forEach(([field, error]) => {
+                      console.error(`  - ${field}: ${(error as any)?.message}`);
+                    });
+                  }
+                }}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {record ? 'Update' : 'Create'} Record
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>

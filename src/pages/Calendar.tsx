@@ -17,6 +17,7 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -204,6 +205,7 @@ interface CalendarViewMode {
  * Production-ready with error handling, loading states, and accessibility
  */
 const Calendar = () => {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -577,8 +579,8 @@ const Calendar = () => {
         if (error) throw error;
 
         toast({
-          title: 'Success',
-          description: 'Booking updated successfully',
+          title: t('common.success'),
+          description: t('notifications.success.updated'),
         });
       } else {
         const { data, error } = await supabase
@@ -590,8 +592,8 @@ const Calendar = () => {
         if (error) throw error;
 
         toast({
-          title: 'Success',
-          description: 'Booking created successfully',
+          title: t('common.success'),
+          description: t('notifications.success.created'),
         });
       }
 
@@ -605,8 +607,8 @@ const Calendar = () => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(bookingData.property_id) });
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || `Failed to ${editingBooking ? 'update' : 'create'} booking`,
+        title: t('common.error'),
+        description: error.message || t(editingBooking ? 'notifications.error.updateFailed' : 'notifications.error.createFailed'),
         variant: 'destructive',
       });
     }
@@ -627,8 +629,8 @@ const Calendar = () => {
       if (error) throw error;
 
       toast({
-        title: 'Success',
-        description: 'Booking deleted successfully',
+        title: t('common.success'),
+        description: t('notifications.success.deleted'),
       });
 
       setShowDeleteDialog(false);
@@ -639,8 +641,8 @@ const Calendar = () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to delete booking',
+        title: t('common.error'),
+        description: error.message || t('notifications.error.deleteFailed'),
         variant: 'destructive',
       });
     }
@@ -652,8 +654,8 @@ const Calendar = () => {
   const handleBlockDates = async () => {
     if (!blockStartDate || !blockEndDate) {
       toast({
-        title: 'Error',
-        description: 'Please fill in all required fields',
+        title: t('common.error'),
+        description: t('validation.required'),
         variant: 'destructive',
       });
       return;
@@ -661,8 +663,8 @@ const Calendar = () => {
 
     if (new Date(blockEndDate) <= new Date(blockStartDate)) {
       toast({
-        title: 'Error',
-        description: 'End date must be after start date',
+        title: t('common.error'),
+        description: t('validation.startDateBeforeEnd'),
         variant: 'destructive',
       });
       return;
@@ -677,7 +679,7 @@ const Calendar = () => {
 
       if (propertiesToBlock.length === 0) {
         toast({
-          title: 'Error',
+          title: t('common.error'),
           description: 'No properties selected',
           variant: 'destructive',
         });
@@ -702,7 +704,7 @@ const Calendar = () => {
       if (error) throw error;
 
       toast({
-        title: 'Success',
+        title: t('common.success'),
         description: `Dates blocked for ${propertiesToBlock.length} propert${propertiesToBlock.length === 1 ? 'y' : 'ies'}`,
       });
 
@@ -716,7 +718,7 @@ const Calendar = () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
     } catch (error: any) {
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: error.message || 'Failed to block dates',
         variant: 'destructive',
       });
@@ -760,12 +762,12 @@ const Calendar = () => {
       document.body.removeChild(link);
 
       toast({
-        title: 'Success',
-        description: 'Calendar exported successfully',
+        title: t('common.success'),
+        description: t('calendar.calendarExported'),
       });
     } catch (error: any) {
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: error.message || 'Failed to export calendar',
         variant: 'destructive',
       });
@@ -821,11 +823,11 @@ const Calendar = () => {
   if (propertiesError || bookingsError) {
     return (
       <div className="space-y-6 p-6">
-        <h1 className="text-2xl font-bold">Calendar</h1>
+        <h1 className="text-2xl font-bold">{t('calendar.title')}</h1>
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <div className="flex items-center gap-3 mb-2">
             <AlertCircle className="h-6 w-6 text-red-600" />
-            <h3 className="text-red-800 font-semibold text-lg">Database Connection Error</h3>
+            <h3 className="text-red-800 font-semibold text-lg">{t('calendar.databaseError')}</h3>
           </div>
           <p className="text-red-700 mt-2">
             {propertiesError ? `Properties: ${propertiesError.message}` : ''}
@@ -837,7 +839,7 @@ const Calendar = () => {
             variant="outline"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
-            Retry Connection
+            {t('calendar.retryConnection')}
           </Button>
         </div>
       </div>
@@ -889,12 +891,12 @@ const Calendar = () => {
    */
   return (
     <TooltipProvider>
-      <div className="h-screen flex flex-col p-6 gap-4 overflow-hidden bg-gray-50">
+      <div className="flex flex-col gap-4 h-full">
 
         {/* ========================================
-            HEADER: Title, Stats, Actions
+            HEADER: Title, Stats, Actions (Fixed - no horizontal scroll)
             ======================================== */}
-        <div className="relative flex-shrink-0">
+        <div className="flex-shrink-0">
           <Card className="border-0 shadow-lg bg-white">
             <CardContent className="p-6">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -905,9 +907,9 @@ const Calendar = () => {
                     <CalendarIcon className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Property Calendar</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('calendar.title')}</h1>
                     <p className="text-sm text-gray-500">
-                      Manage bookings and availability
+                      {t('calendar.subtitle')}
                     </p>
                   </div>
                 </div>
@@ -923,7 +925,7 @@ const Calendar = () => {
                     }}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    {bulkSelectMode ? 'Exit Bulk Mode' : 'Bulk Select'}
+                    {bulkSelectMode ? t('calendar.exitBulkMode') : t('calendar.bulkSelect')}
                   </Button>
 
                   <Button
@@ -932,12 +934,12 @@ const Calendar = () => {
                     onClick={() => setShowCalendarSyncDialog(true)}
                   >
                     <CalendarIcon className="h-4 w-4 mr-2" />
-                    Sync Calendar
+                    {t('calendar.syncCalendar')}
                   </Button>
 
                   <Button variant="outline" size="sm" onClick={exportToCSV}>
                     <Download className="h-4 w-4 mr-2" />
-                    Export CSV
+                    {t('calendar.exportCSV')}
                   </Button>
 
                   <Button
@@ -946,11 +948,11 @@ const Calendar = () => {
                     onClick={() => {
                       queryClient.invalidateQueries({ queryKey: ['bookings'] });
                       queryClient.invalidateQueries({ queryKey: ['properties-with-location'] });
-                      toast({ title: 'Calendar refreshed' });
+                      toast({ title: t('calendar.calendarRefreshed') });
                     }}
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
+                    {t('common.refresh')}
                   </Button>
                 </div>
               </div>
@@ -968,7 +970,7 @@ const Calendar = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-700">Total Revenue</p>
+                  <p className="text-sm font-medium text-green-700">{t('calendar.totalRevenue')}</p>
                   <h3 className="text-3xl font-bold text-green-900 mt-1">
                     ${dashboardStats.totalRevenue.toLocaleString()}
                   </h3>
@@ -985,7 +987,7 @@ const Calendar = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">Occupancy Rate</p>
+                  <p className="text-sm font-medium text-blue-700">{t('calendar.occupancyRate')}</p>
                   <h3 className="text-3xl font-bold text-blue-900 mt-1">
                     {dashboardStats.occupancyRate}%
                   </h3>
@@ -1002,7 +1004,7 @@ const Calendar = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-700">Total Bookings</p>
+                  <p className="text-sm font-medium text-purple-700">{t('calendar.totalBookings')}</p>
                   <h3 className="text-3xl font-bold text-purple-900 mt-1">
                     {dashboardStats.totalBookings}
                   </h3>
@@ -1019,7 +1021,7 @@ const Calendar = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-orange-700">Available Units</p>
+                  <p className="text-sm font-medium text-orange-700">{t('calendar.availableUnits')}</p>
                   <h3 className="text-3xl font-bold text-orange-900 mt-1">
                     {dashboardStats.availableUnits}
                   </h3>
@@ -1042,7 +1044,7 @@ const Calendar = () => {
                 <div className="flex items-center gap-4">
                   <CheckCircle className="h-5 w-5 text-blue-600" />
                   <span className="font-semibold text-blue-900">
-                    {selectedProperties.size} propert{selectedProperties.size === 1 ? 'y' : 'ies'} selected
+                    {selectedProperties.size} {selectedProperties.size === 1 ? t('calendar.propertySelected') : t('calendar.propertiesSelected')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1051,13 +1053,13 @@ const Calendar = () => {
                     // Export logic here
                   }}>
                     <FileDown className="h-4 w-4 mr-2" />
-                    Export Selected
+                    {t('calendar.exportSelected')}
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => {
                     setShowBlockDatesDialog(true);
                   }}>
                     <Ban className="h-4 w-4 mr-2" />
-                    Block Dates
+                    {t('calendar.blockDates')}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => {
                     setSelectedProperties(new Set());
@@ -1112,7 +1114,7 @@ const Calendar = () => {
                     size="sm"
                     onClick={() => setFilters(prev => ({ ...prev, startDate: new Date() }))}
                   >
-                    Today
+                    {t('calendar.today')}
                   </Button>
                 </div>
 
@@ -1126,10 +1128,10 @@ const Calendar = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="week">Week</SelectItem>
-                      <SelectItem value="month">Month</SelectItem>
-                      <SelectItem value="quarter">Quarter</SelectItem>
-                      <SelectItem value="year">Year</SelectItem>
+                      <SelectItem value="week">{t('calendar.week')}</SelectItem>
+                      <SelectItem value="month">{t('calendar.month')}</SelectItem>
+                      <SelectItem value="quarter">{t('calendar.quarter')}</SelectItem>
+                      <SelectItem value="year">{t('calendar.year')}</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -1159,9 +1161,9 @@ const Calendar = () => {
                     <SelectValue placeholder="Capacity" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Any capacity</SelectItem>
-                    <SelectItem value="2">2+ guests</SelectItem>
-                    <SelectItem value="4">4+ guests</SelectItem>
+                    <SelectItem value="all">{t('calendar.anyCapacity')}</SelectItem>
+                    <SelectItem value="2">{t('calendar.twoPlus')}</SelectItem>
+                    <SelectItem value="4">{t('calendar.fourPlus')}</SelectItem>
                     <SelectItem value="6">6+ guests</SelectItem>
                     <SelectItem value="8">8+ guests</SelectItem>
                   </SelectContent>
@@ -1169,10 +1171,10 @@ const Calendar = () => {
 
                 <Select value={filters.city} onValueChange={(value) => setFilters(prev => ({ ...prev, city: value }))}>
                   <SelectTrigger className="h-9">
-                    <SelectValue placeholder="City" />
+                    <SelectValue placeholder={t('properties.city')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All cities</SelectItem>
+                    <SelectItem value="all">{t('calendar.allCities')}</SelectItem>
                     {cities.map(city => (
                       <SelectItem key={city} value={city}>{city}</SelectItem>
                     ))}
@@ -1181,10 +1183,10 @@ const Calendar = () => {
 
                 <Select value={filters.propertyType} onValueChange={(value) => setFilters(prev => ({ ...prev, propertyType: value }))}>
                   <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Type" />
+                    <SelectValue placeholder={t('properties.propertyType')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All types</SelectItem>
+                    <SelectItem value="all">{t('calendar.allTypes')}</SelectItem>
                     {propertyTypes.map(type => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
@@ -1193,13 +1195,13 @@ const Calendar = () => {
 
                 <Select value={filters.bookingStatus} onValueChange={(value) => setFilters(prev => ({ ...prev, bookingStatus: value }))}>
                   <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Status" />
+                    <SelectValue placeholder={t('common.status')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="blocked">Blocked</SelectItem>
+                    <SelectItem value="all">{t('calendar.allStatuses')}</SelectItem>
+                    <SelectItem value="confirmed">{t('calendar.status.confirmed')}</SelectItem>
+                    <SelectItem value="pending">{t('calendar.status.pending')}</SelectItem>
+                    <SelectItem value="blocked">{t('calendar.status.blocked')}</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -1210,7 +1212,7 @@ const Calendar = () => {
                   className="h-9"
                 >
                   <Filter className="h-4 w-4 mr-2" />
-                  More Filters
+                  {t('calendar.moreFilters')}
                 </Button>
               </div>
 
@@ -1218,14 +1220,14 @@ const Calendar = () => {
               {filtersExpanded && (
                 <div className="pt-4 border-t space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Amenities</Label>
+                    <Label className="text-sm font-medium">{t('calendar.amenities')}</Label>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setFiltersExpanded(false)}
                     >
                       <ChevronDown className="h-4 w-4 mr-2" />
-                      Hide
+                      {t('calendar.hide')}
                     </Button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
@@ -1258,7 +1260,7 @@ const Calendar = () => {
               {/* Active Filters Display */}
               {(filters.minCapacity !== 'all' || filters.city !== 'all' || filters.propertyType !== 'all' || filters.amenities.length > 0) && (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium text-gray-600">Active:</span>
+                  <span className="text-sm font-medium text-gray-600">{t('calendar.active')}:</span>
                   {filters.minCapacity !== 'all' && (
                     <Badge variant="secondary" className="gap-1">
                       {filters.minCapacity}+ guests
@@ -1284,7 +1286,7 @@ const Calendar = () => {
                     </Badge>
                   ))}
                   <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-6 text-xs">
-                    Clear all
+                    {t('calendar.clearAll')}
                   </Button>
                 </div>
               )}
@@ -1300,10 +1302,10 @@ const Calendar = () => {
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Building className="h-5 w-5 text-blue-600" />
-                Timeline View
+                {t('calendar.timelineView')}
               </CardTitle>
               <Badge variant="outline">
-                {filteredProperties.length} Properties • {dateRange.length} Days
+                {filteredProperties.length} {t('calendar.properties')} • {dateRange.length} Days
               </Badge>
             </div>
           </CardHeader>
@@ -1315,13 +1317,13 @@ const Calendar = () => {
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Building className="h-8 w-8 text-gray-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Properties Found</h3>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('calendar.noPropertiesFound')}</h3>
                   <p className="text-gray-500 mb-4">
-                    No properties match your current filter criteria. Try adjusting your filters.
+                    {t('calendar.noPropertiesMatch')}
                   </p>
                   <Button onClick={clearAllFilters} variant="outline">
                     <RefreshCw className="h-4 w-4 mr-2" />
-                    Clear Filters
+                    {t('calendar.clearAll')}
                   </Button>
                 </div>
               </div>
@@ -1333,7 +1335,7 @@ const Calendar = () => {
                   {/* Header */}
                   <div className="h-12 border-b bg-gray-50 flex items-center px-4 font-semibold text-gray-700">
                     <Home className="h-4 w-4 mr-2" />
-                    Properties
+                    {t('calendar.properties')}
                   </div>
 
                   {/* Property List */}
@@ -1401,7 +1403,7 @@ const Calendar = () => {
                               {/* Occupancy Bar */}
                               <div className="mt-2">
                                 <div className="flex items-center justify-between text-xs mb-1">
-                                  <span className="text-gray-500">Occupancy</span>
+                                  <span className="text-gray-500">{t('calendar.occupancy')}</span>
                                   <span className={`font-medium ${
                                     occupancyRate > 80 ? 'text-red-600' :
                                     occupancyRate > 50 ? 'text-orange-600' :
@@ -1435,7 +1437,7 @@ const Calendar = () => {
                                   }}
                                 >
                                   <Ban className="h-3 w-3 mr-1" />
-                                  Block Dates
+                                  {t('calendar.blockDates')}
                                 </Button>
                               )}
                             </div>
@@ -1447,43 +1449,45 @@ const Calendar = () => {
                 </div>
 
                 {/* Scrollable Timeline Column */}
-                <div className="flex-1 flex flex-col min-w-0">
-                  {/* Date Header */}
-                  <div className="h-12 border-b bg-gray-50 overflow-x-auto overflow-y-hidden flex-shrink-0">
-                    <div className="inline-flex h-full">
-                      {dateRange.map((date, index) => {
-                        const isFirstOfMonth = date.getDate() === 1;
-                        const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-                        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                <div className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
+                  {/* Single scrollable container for synchronized scrolling */}
+                  <div className="flex-1 overflow-auto relative">
+                    <div className="inline-flex flex-col min-w-max">
+                      {/* Date Header - sticky at top */}
+                      <div className="sticky top-0 z-10 h-12 border-b bg-gray-50 flex-shrink-0">
+                        <div className="inline-flex h-full">
+                          {dateRange.map((date, index) => {
+                            const isFirstOfMonth = date.getDate() === 1;
+                            const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+                            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
-                        return (
-                          <div
-                            key={format(date, 'yyyy-MM-dd')}
-                            className={`
-                              flex-shrink-0 w-12 h-full flex flex-col items-center justify-center text-xs border-r
-                              ${isToday ? 'bg-blue-100 border-blue-300 font-bold' : ''}
-                              ${isWeekend && !isToday ? 'bg-gray-100' : ''}
-                            `}
-                          >
-                            {isFirstOfMonth && (
-                              <div className="text-[10px] font-semibold text-blue-600 uppercase">
-                                {format(date, 'MMM')}
+                            return (
+                              <div
+                                key={format(date, 'yyyy-MM-dd')}
+                                className={`
+                                  flex-shrink-0 w-12 h-full flex flex-col items-center justify-center text-xs border-r
+                                  ${isToday ? 'bg-blue-100 border-blue-300 font-bold' : ''}
+                                  ${isWeekend && !isToday ? 'bg-gray-100' : ''}
+                                `}
+                              >
+                                {isFirstOfMonth && (
+                                  <div className="text-[10px] font-semibold text-blue-600 uppercase">
+                                    {format(date, 'MMM')}
+                                  </div>
+                                )}
+                                <div className={`${isToday ? 'text-blue-600' : 'text-gray-700'} font-medium`}>
+                                  {format(date, 'd')}
+                                </div>
+                                <div className="text-[10px] text-gray-500">
+                                  {format(date, 'EEE')}
+                                </div>
                               </div>
-                            )}
-                            <div className={`${isToday ? 'text-blue-600' : 'text-gray-700'} font-medium`}>
-                              {format(date, 'd')}
-                            </div>
-                            <div className="text-[10px] text-gray-500">
-                              {format(date, 'EEE')}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                            );
+                          })}
+                        </div>
+                      </div>
 
-                  {/* Timeline Grid */}
-                  <div className="flex-1 overflow-auto">
+                      {/* Timeline Grid */}
                     <div className="inline-flex flex-col min-w-full">
                       {filteredProperties.map((property, propIndex) => (
                         <div
@@ -1586,7 +1590,7 @@ const Calendar = () => {
                                         }}
                                       >
                                         <Info className="h-4 w-4 mr-2" />
-                                        View Details
+                                        {t('common.details')}
                                       </ContextMenuItem>
                                       <ContextMenuItem
                                         onClick={(e) => {
@@ -1597,7 +1601,7 @@ const Calendar = () => {
                                         }}
                                       >
                                         <Edit className="h-4 w-4 mr-2" />
-                                        Edit Booking
+                                        {t('common.edit')}
                                       </ContextMenuItem>
                                       <ContextMenuSeparator />
                                       <ContextMenuItem
@@ -1609,7 +1613,7 @@ const Calendar = () => {
                                         className="text-red-600 focus:text-red-600"
                                       >
                                         <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete
+                                        {t('common.delete')}
                                       </ContextMenuItem>
                                     </ContextMenuContent>
                                   </ContextMenu>
@@ -1621,6 +1625,7 @@ const Calendar = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
                     </div>
                   </div>
                 </div>
@@ -1640,29 +1645,29 @@ const Calendar = () => {
               <div className="flex items-center gap-6 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                  <span className="text-gray-700">Confirmed</span>
+                  <span className="text-gray-700">{t('calendar.status.confirmed')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                  <span className="text-gray-700">Pending</span>
+                  <span className="text-gray-700">{t('calendar.status.pending')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-gray-400 rounded"></div>
-                  <span className="text-gray-700">Blocked</span>
+                  <span className="text-gray-700">{t('calendar.status.blocked')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-green-500 rounded"></div>
-                  <span className="text-gray-700">Checked In</span>
+                  <span className="text-gray-700">{t('calendar.status.checkedIn')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-purple-500 rounded"></div>
-                  <span className="text-gray-700">Completed</span>
+                  <span className="text-gray-700">{t('calendar.status.completed')}</span>
                 </div>
               </div>
 
               {/* Summary */}
               <div className="text-sm text-gray-500">
-                Last updated: {format(new Date(), 'MMM dd, HH:mm')}
+                {t('calendar.lastUpdated')}: {format(new Date(), 'MMM dd, HH:mm')}
               </div>
             </div>
           </CardContent>
@@ -1695,25 +1700,25 @@ const Calendar = () => {
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Booking</DialogTitle>
+              <DialogTitle>{t('calendar.deleteBooking')}</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete this booking? This action cannot be undone.
+                {t('calendar.confirmDelete')}
               </DialogDescription>
             </DialogHeader>
             {deletingBooking && (
               <div className="space-y-3 py-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Guest:</span>
+                  <span className="text-gray-500">{t('calendar.guest')}:</span>
                   <span className="font-medium">{deletingBooking.guest_name}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Check-in:</span>
+                  <span className="text-gray-500">{t('bookings.checkIn')}:</span>
                   <span className="font-medium">
                     {format(parseISO(deletingBooking.check_in_date), 'MMM dd, yyyy')}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Check-out:</span>
+                  <span className="text-gray-500">{t('bookings.checkOut')}:</span>
                   <span className="font-medium">
                     {format(parseISO(deletingBooking.check_out_date), 'MMM dd, yyyy')}
                   </span>
@@ -1722,10 +1727,10 @@ const Calendar = () => {
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button variant="destructive" onClick={handleDeleteBooking}>
-                Delete Booking
+                {t('calendar.deleteBooking')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1735,7 +1740,7 @@ const Calendar = () => {
         <Dialog open={showBlockDatesDialog} onOpenChange={setShowBlockDatesDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Block Dates for Maintenance</DialogTitle>
+              <DialogTitle>{t('calendar.blockDatesTitle')}</DialogTitle>
               <DialogDescription>
                 {selectedProperties.size > 0
                   ? `Block dates for ${selectedProperties.size} selected propert${selectedProperties.size === 1 ? 'y' : 'ies'}`
@@ -1744,7 +1749,7 @@ const Calendar = () => {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Start Date *</Label>
+                <Label>{t('calendar.startDate')} *</Label>
                 <Input
                   type="date"
                   value={blockStartDate}
@@ -1753,7 +1758,7 @@ const Calendar = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>End Date *</Label>
+                <Label>{t('calendar.endDate')} *</Label>
                 <Input
                   type="date"
                   value={blockEndDate}
@@ -1762,10 +1767,10 @@ const Calendar = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Reason (Optional)</Label>
+                <Label>{t('calendar.reasonOptional')}</Label>
                 <Input
                   type="text"
-                  placeholder="e.g., Maintenance, Renovation"
+                  placeholder={t('calendar.reasonPlaceholder')}
                   value={blockReason}
                   onChange={(e) => setBlockReason(e.target.value)}
                 />
@@ -1782,11 +1787,11 @@ const Calendar = () => {
                   setBlockReason('');
                 }}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button onClick={handleBlockDates}>
                 <Ban className="h-4 w-4 mr-2" />
-                Block Dates
+                {t('calendar.blockDates')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1796,9 +1801,9 @@ const Calendar = () => {
         <Sheet open={showDetailsDrawer} onOpenChange={setShowDetailsDrawer}>
           <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
             <SheetHeader>
-              <SheetTitle>Booking Details</SheetTitle>
+              <SheetTitle>{t('calendar.bookingDetails')}</SheetTitle>
               <SheetDescription>
-                Complete information about this booking
+                {t('calendar.bookingDetailsSubtitle')}
               </SheetDescription>
             </SheetHeader>
             {selectedBookingDetails && (
@@ -1807,22 +1812,22 @@ const Calendar = () => {
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     <Users className="h-4 w-4 text-blue-600" />
-                    Guest Information
+                    {t('calendar.guestInformation')}
                   </h3>
                   <div className="space-y-2 pl-6">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Name:</span>
+                      <span className="text-gray-500">{t('common.name')}:</span>
                       <span className="font-medium">{selectedBookingDetails.guest_name}</span>
                     </div>
                     {selectedBookingDetails.guest_email && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Email:</span>
+                        <span className="text-gray-500">{t('common.email')}:</span>
                         <span className="font-medium">{selectedBookingDetails.guest_email}</span>
                       </div>
                     )}
                     {selectedBookingDetails.guest_phone && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Phone:</span>
+                        <span className="text-gray-500">{t('common.phone')}:</span>
                         <span className="font-medium">{selectedBookingDetails.guest_phone}</span>
                       </div>
                     )}
@@ -1833,28 +1838,28 @@ const Calendar = () => {
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     <CalendarIcon className="h-4 w-4 text-blue-600" />
-                    Booking Dates
+                    {t('calendar.bookingDates')}
                   </h3>
                   <div className="space-y-2 pl-6">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Check-in:</span>
+                      <span className="text-gray-500">{t('bookings.checkIn')}:</span>
                       <span className="font-medium">
                         {format(parseISO(selectedBookingDetails.check_in_date), 'MMM dd, yyyy')}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Check-out:</span>
+                      <span className="text-gray-500">{t('bookings.checkOut')}:</span>
                       <span className="font-medium">
                         {format(parseISO(selectedBookingDetails.check_out_date), 'MMM dd, yyyy')}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Duration:</span>
+                      <span className="text-gray-500">{t('calendar.duration')}:</span>
                       <span className="font-medium">
                         {differenceInDays(
                           parseISO(selectedBookingDetails.check_out_date),
                           parseISO(selectedBookingDetails.check_in_date)
-                        )} nights
+                        )} {t('calendar.nights')}
                       </span>
                     </div>
                   </div>
@@ -1864,16 +1869,16 @@ const Calendar = () => {
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-blue-600" />
-                    Status & Payment
+                    {t('calendar.statusAndPayment')}
                   </h3>
                   <div className="space-y-2 pl-6">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Status:</span>
+                      <span className="text-gray-500">{t('common.status')}:</span>
                       <Badge>{selectedBookingDetails.booking_status}</Badge>
                     </div>
                     {selectedBookingDetails.total_amount && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Total Amount:</span>
+                        <span className="text-gray-500">{t('bookings.totalAmount')}:</span>
                         <span className="font-medium text-lg">
                           ${selectedBookingDetails.total_amount.toFixed(2)}
                         </span>
@@ -1894,7 +1899,7 @@ const Calendar = () => {
                     }}
                   >
                     <Edit className="h-4 w-4 mr-2" />
-                    Edit
+                    {t('common.edit')}
                   </Button>
                   <Button
                     variant="destructive"
@@ -1905,7 +1910,7 @@ const Calendar = () => {
                     }}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
+                    {t('common.delete')}
                   </Button>
                 </div>
               </div>

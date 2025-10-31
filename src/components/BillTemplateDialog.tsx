@@ -290,9 +290,9 @@ export default function BillTemplateDialog({
                         <TableHead className="w-12">#</TableHead>
                         <TableHead className="min-w-[200px]">Description</TableHead>
                         <TableHead className="w-32">Type</TableHead>
-                        <TableHead className="w-24">Qty</TableHead>
+                        <TableHead className="w-32">Qty</TableHead>
                         <TableHead className="w-32">Unit Price</TableHead>
-                        <TableHead className="w-24">Tax %</TableHead>
+                        <TableHead className="w-32">Tax %</TableHead>
                         <TableHead className="w-32">Tax Amount</TableHead>
                         <TableHead className="w-32">Total</TableHead>
                         <TableHead className="w-16"></TableHead>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function BookingManagement() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { bookings, loading, createBooking, updateBooking, isCreating, isUpdating, refetch } = useBookings();
   const [showBookingDialog, setShowBookingDialog] = useState(false);
@@ -205,24 +207,24 @@ export default function BookingManagement() {
           <div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
               <CalendarDays className="h-8 w-8 text-primary" />
-              Booking Management
+              {t('bookings.title')}
             </h1>
             <p className="text-muted-foreground mt-2">
-              Manage all property bookings, reservations, and schedules in one place
+              {t('bookings.subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => refetch()} disabled={loading}>
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
+              {t('common.refresh')}
             </Button>
             <Button variant="outline" onClick={handleExportBookings}>
               <Download className="mr-2 h-4 w-4" />
-              Export
+              {t('common.export')}
             </Button>
             <Button onClick={handleCreateBooking} className="bg-primary hover:bg-primary/90">
               <Plus className="mr-2 h-4 w-4" />
-              New Booking
+              {t('bookings.newBooking')}
             </Button>
           </div>
         </div>
@@ -233,10 +235,10 @@ export default function BookingManagement() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">Active Bookings</p>
+                  <p className="text-sm font-medium text-blue-700">{t('bookings.activeBookings')}</p>
                   <h3 className="text-3xl font-bold text-blue-900 mt-1">{totalActiveBookings}</h3>
                   <p className="text-xs text-blue-600 mt-1">
-                    {totalHistoryBookings} in history
+                    {totalHistoryBookings} {t('bookings.inHistory')}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
@@ -250,10 +252,10 @@ export default function BookingManagement() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-700">Confirmed</p>
+                  <p className="text-sm font-medium text-green-700">{t('bookings.confirmedBookings')}</p>
                   <h3 className="text-3xl font-bold text-green-900 mt-1">{confirmedBookings}</h3>
                   <p className="text-xs text-green-600 mt-1">
-                    Active reservations
+                    {t('bookings.confirmedDesc')}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
@@ -267,10 +269,10 @@ export default function BookingManagement() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-amber-700">Pending</p>
+                  <p className="text-sm font-medium text-amber-700">{t('bookings.pendingBookings')}</p>
                   <h3 className="text-3xl font-bold text-amber-900 mt-1">{pendingBookings}</h3>
                   <p className="text-xs text-amber-600 mt-1">
-                    Awaiting confirmation
+                    {t('bookings.pendingDesc')}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
@@ -284,12 +286,12 @@ export default function BookingManagement() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-700">Total Revenue</p>
+                  <p className="text-sm font-medium text-purple-700">{t('bookings.totalRevenue')}</p>
                   <h3 className="text-3xl font-bold text-purple-900 mt-1">
                     ${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </h3>
                   <p className="text-xs text-purple-600 mt-1">
-                    From active bookings
+                    {t('bookings.revenueDesc')}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
@@ -305,18 +307,18 @@ export default function BookingManagement() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              Filters & Search
+              {t('bookings.filtersAndSearch')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="search">Search Bookings</Label>
+                <Label htmlFor="search">{t('bookings.searchBookings')}</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder="Guest name, email, or phone..."
+                    placeholder={t('bookings.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -325,18 +327,18 @@ export default function BookingManagement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="status">Status Filter</Label>
+                <Label htmlFor="status">{t('bookings.statusFilter')}</Label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger id="status">
-                    <SelectValue placeholder="All statuses" />
+                    <SelectValue placeholder={t('bookings.allStatuses')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="inquiry">Inquiry</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="checked_in">Checked In</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="all">{t('bookings.allStatuses')}</SelectItem>
+                    <SelectItem value="inquiry">{t('bookings.status.inquiry')}</SelectItem>
+                    <SelectItem value="pending">{t('bookings.status.pending')}</SelectItem>
+                    <SelectItem value="confirmed">{t('bookings.status.confirmed')}</SelectItem>
+                    <SelectItem value="checked_in">{t('bookings.status.checkedIn')}</SelectItem>
+                    <SelectItem value="cancelled">{t('bookings.status.cancelled')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -345,10 +347,10 @@ export default function BookingManagement() {
             <div className="mt-4 flex items-center gap-2">
               <Badge variant="secondary" className="text-sm">
                 {viewMode === 'history'
-                  ? `${filteredHistoryBookings.length} result${filteredHistoryBookings.length !== 1 ? 's' : ''}`
+                  ? `${filteredHistoryBookings.length} ${filteredHistoryBookings.length !== 1 ? t('bookings.results') : t('bookings.result')}`
                   : viewMode === 'calendar'
-                  ? `${bookings.length} booking${bookings.length !== 1 ? 's' : ''}`
-                  : `${filteredBookings.length} result${filteredBookings.length !== 1 ? 's' : ''}`
+                  ? `${bookings.length} ${bookings.length !== 1 ? t('bookings.results') : t('bookings.result')}`
+                  : `${filteredBookings.length} ${filteredBookings.length !== 1 ? t('bookings.results') : t('bookings.result')}`
                 }
               </Badge>
               {searchQuery && (
@@ -358,7 +360,7 @@ export default function BookingManagement() {
                   onClick={() => setSearchQuery('')}
                   className="h-8"
                 >
-                  Clear search
+                  {t('bookings.clearSearch')}
                 </Button>
               )}
               {statusFilter !== 'all' && (
@@ -368,7 +370,7 @@ export default function BookingManagement() {
                   onClick={() => setStatusFilter('all')}
                   className="h-8"
                 >
-                  Clear filter
+                  {t('bookings.clearFilter')}
                 </Button>
               )}
             </div>
@@ -380,15 +382,15 @@ export default function BookingManagement() {
           <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="list" className="flex items-center gap-2">
               <List className="h-4 w-4" />
-              Active Bookings
+              {t('bookings.activeBookings')}
             </TabsTrigger>
             <TabsTrigger value="calendar" className="flex items-center gap-2">
               <LayoutGrid className="h-4 w-4" />
-              Calendar View
+              {t('bookings.calendarView')}
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <History className="h-4 w-4" />
-              Booking History
+              {t('bookings.bookingHistory')}
             </TabsTrigger>
           </TabsList>
 
@@ -398,7 +400,7 @@ export default function BookingManagement() {
                 <BookingsTable
                   bookings={paginatedBookings}
                   onEdit={handleEditBooking}
-                  emptyMessage="No bookings found. Create your first booking to get started."
+                  emptyMessage={t('bookings.noBookingsFound')}
                 />
                 <Pagination
                   currentPage={currentPage}
@@ -417,7 +419,7 @@ export default function BookingManagement() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <CalendarDays className="h-5 w-5" />
-                    Booking Calendar - {format(currentMonth, 'MMMM yyyy')}
+                    {t('bookings.bookingCalendar')} - {format(currentMonth, 'MMMM yyyy')}
                   </CardTitle>
                   <div className="flex items-center space-x-2">
                     <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
@@ -429,7 +431,7 @@ export default function BookingManagement() {
                   </div>
                 </div>
                 <CardDescription>
-                  Booked dates are highlighted. Click on a date to see bookings.
+                  {t('bookings.calendarDescription')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -458,7 +460,7 @@ export default function BookingManagement() {
                 {selectedDate && (
                   <div className="mt-6">
                     <h3 className="text-lg font-semibold mb-4">
-                      Bookings for {format(selectedDate, 'MMMM dd, yyyy')}
+                      {t('bookings.bookingsFor')} {format(selectedDate, 'MMMM dd, yyyy')}
                     </h3>
                     <BookingsTable
                       bookings={bookings.filter((booking) => {
@@ -476,7 +478,7 @@ export default function BookingManagement() {
                         return matchesDate && matchesSearch;
                       })}
                       onEdit={handleEditBooking}
-                      emptyMessage="No bookings on this date"
+                      emptyMessage={t('bookings.noBookingsOnDate')}
                     />
                   </div>
                 )}
@@ -489,10 +491,10 @@ export default function BookingManagement() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <History className="h-5 w-5" />
-                  Booking History
+                  {t('bookings.bookingHistory')}
                 </CardTitle>
                 <CardDescription>
-                  Completed and checked-out bookings
+                  {t('bookings.completedBookings')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
@@ -500,7 +502,7 @@ export default function BookingManagement() {
                   <BookingsTable
                     bookings={paginatedHistoryBookings}
                     onEdit={handleEditBooking}
-                    emptyMessage="No completed bookings yet."
+                    emptyMessage={t('bookings.noCompletedBookings')}
                   />
                 </div>
                 <Pagination

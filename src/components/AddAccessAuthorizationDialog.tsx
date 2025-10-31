@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -73,6 +74,7 @@ export function AddAccessAuthorizationDialog({
   editAuth
 }: AddAccessAuthorizationDialogProps) {
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const { providers: vendors } = useProviders('service');
   const { properties } = usePropertiesOptimized();
@@ -143,15 +145,15 @@ export function AddAccessAuthorizationDialog({
         });
 
         toast({
-          title: "Success",
-          description: "Access authorization updated successfully",
+          title: t('common.success'),
+          description: t('dialogs.accessAuthorization.toasts.updateSuccess'),
         });
       } else {
         await createAuthorization(authData);
 
         toast({
-          title: "Success",
-          description: "Access authorization created successfully",
+          title: t('common.success'),
+          description: t('dialogs.accessAuthorization.toasts.createSuccess'),
         });
       }
 
@@ -160,8 +162,8 @@ export function AddAccessAuthorizationDialog({
       onOpenChange(false);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to save access authorization",
+        title: t('common.error'),
+          description: error.message || t('dialogs.accessAuthorization.toasts.error'),
         variant: "destructive",
       });
     }
@@ -194,14 +196,14 @@ export function AddAccessAuthorizationDialog({
       await generateAccessAuthorizationPDF(authData);
 
       toast({
-        title: "PDF Generated",
-        description: "Access authorization document has been downloaded",
+        title: t('dialogs.accessAuthorization.toasts.pdfGenerated'),
+        description: t('dialogs.accessAuthorization.toasts.pdfDescription'),
       });
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast({
-        title: "Error",
-        description: "Failed to generate PDF. Please try again.",
+        title: t('common.error'),
+        description: t('dialogs.accessAuthorization.toasts.pdfError'),
         variant: "destructive",
       });
     }
@@ -213,9 +215,9 @@ export function AddAccessAuthorizationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editAuth ? 'Edit' : 'Request'} Access Authorization</DialogTitle>
+          <DialogTitle>{editAuth ? t('dialogs.accessAuthorization.titleEdit') : t('dialogs.accessAuthorization.titleRequest')}</DialogTitle>
           <DialogDescription>
-            {editAuth ? 'Update' : 'Create'} vendor access request for property
+            {editAuth ? t('dialogs.accessAuthorization.descriptionUpdate') : t('dialogs.accessAuthorization.descriptionCreate')}
           </DialogDescription>
         </DialogHeader>
 
@@ -228,11 +230,11 @@ export function AddAccessAuthorizationDialog({
                 name="vendor_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Vendor *</FormLabel>
+                    <FormLabel>{t('dialogs.accessAuthorization.fields.vendor')} *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select vendor" />
+                          <SelectValue placeholder={t('dialogs.accessAuthorization.fields.selectVendor')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -254,11 +256,11 @@ export function AddAccessAuthorizationDialog({
                 name="property_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Property *</FormLabel>
+                    <FormLabel>{t('dialogs.accessAuthorization.fields.property')} *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select property" />
+                          <SelectValue placeholder={t('dialogs.accessAuthorization.fields.selectProperty')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -281,7 +283,7 @@ export function AddAccessAuthorizationDialog({
               name="access_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Access Date *</FormLabel>
+                  <FormLabel>{t('dialogs.accessAuthorization.fields.accessDate')} *</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -297,7 +299,7 @@ export function AddAccessAuthorizationDialog({
                 name="access_time_start"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Start Time</FormLabel>
+                    <FormLabel>{t('dialogs.accessAuthorization.fields.startTime')}</FormLabel>
                     <FormControl>
                       <Input type="time" {...field} />
                     </FormControl>
@@ -311,7 +313,7 @@ export function AddAccessAuthorizationDialog({
                 name="access_time_end"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>End Time</FormLabel>
+                    <FormLabel>{t('dialogs.accessAuthorization.fields.endTime')}</FormLabel>
                     <FormControl>
                       <Input type="time" {...field} />
                     </FormControl>
@@ -328,7 +330,7 @@ export function AddAccessAuthorizationDialog({
                 name="vendor_contact_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contact Name</FormLabel>
+                    <FormLabel>{t('dialogs.accessAuthorization.fields.contactName')}</FormLabel>
                     <FormControl>
                       <Input placeholder="John Doe" {...field} />
                     </FormControl>
@@ -342,7 +344,7 @@ export function AddAccessAuthorizationDialog({
                 name="vendor_contact_phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contact Phone</FormLabel>
+                    <FormLabel>{t('dialogs.accessAuthorization.fields.contactPhone')}</FormLabel>
                     <FormControl>
                       <Input placeholder="555-1234" {...field} />
                     </FormControl>
@@ -359,7 +361,7 @@ export function AddAccessAuthorizationDialog({
                 name="number_of_personnel"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Number of Personnel</FormLabel>
+                    <FormLabel>{t('dialogs.accessAuthorization.fields.numberOfPersonnel')}</FormLabel>
                     <FormControl>
                       <Input type="number" min="1" {...field} />
                     </FormControl>
@@ -373,9 +375,9 @@ export function AddAccessAuthorizationDialog({
                 name="vehicle_info"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Vehicle Info</FormLabel>
+                    <FormLabel>{t('dialogs.accessAuthorization.fields.vehicleInfo')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Make, model, license" {...field} />
+                      <Input placeholder={t('dialogs.accessAuthorization.fields.vehiclePlaceholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -390,7 +392,7 @@ export function AddAccessAuthorizationDialog({
                 name="access_code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Access Code</FormLabel>
+                    <FormLabel>{t('dialogs.accessAuthorization.fields.accessCode')}</FormLabel>
                     <FormControl>
                       <Input placeholder="1234" {...field} />
                     </FormControl>
@@ -404,9 +406,9 @@ export function AddAccessAuthorizationDialog({
                 name="key_pickup_location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Key Pickup Location</FormLabel>
+                    <FormLabel>{t('dialogs.accessAuthorization.fields.keyPickupLocation')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Front desk, Concierge" {...field} />
+                      <Input placeholder={t('dialogs.accessAuthorization.fields.keyPickupPlaceholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -420,12 +422,12 @@ export function AddAccessAuthorizationDialog({
               name="authorized_areas"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Authorized Areas</FormLabel>
+                  <FormLabel>{t('dialogs.accessAuthorization.fields.authorizedAreas')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Lobby, Unit 5A, Basement (comma-separated)" {...field} />
+                    <Input placeholder={t('dialogs.accessAuthorization.fields.authorizedAreasPlaceholder')} {...field} />
                   </FormControl>
                   <FormDescription>
-                    Enter areas separated by commas
+                    {t('dialogs.accessAuthorization.fields.authorizedAreasDescription')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -438,10 +440,10 @@ export function AddAccessAuthorizationDialog({
               name="special_instructions"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Special Instructions</FormLabel>
+                  <FormLabel>{t('dialogs.accessAuthorization.fields.specialInstructions')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Any special requirements or notes..."
+                      placeholder={t('dialogs.accessAuthorization.fields.specialInstructionsPlaceholder')}
                       className="resize-none"
                       rows={3}
                       {...field}
@@ -463,7 +465,7 @@ export function AddAccessAuthorizationDialog({
                       disabled={isSubmitting}
                     >
                       <Download className="mr-2 h-4 w-4" />
-                      Download Pass
+                      {t('dialogs.accessAuthorization.buttons.downloadPass')}
                     </Button>
                   )}
                 </div>
@@ -478,7 +480,7 @@ export function AddAccessAuthorizationDialog({
                   </Button>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {editAuth ? 'Update' : 'Create'} Request
+                    {editAuth ? t('dialogs.accessAuthorization.buttons.update') : t('dialogs.accessAuthorization.buttons.create')}
                   </Button>
                 </div>
               </div>

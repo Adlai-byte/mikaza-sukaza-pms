@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CheckInOutRecord, CheckInOutRecordInsert, CheckInOutFilters } from '@/lib/schemas';
 import { useActivityLogs } from '@/hooks/useActivityLogs';
-import { generateAndUploadCheckInOutPDF } from '@/lib/checkInOutPDF';
+import { generateAndUploadCheckInOutPDF } from '@/lib/check-in-out-pdf';
 
 export function useCheckInOutRecords(filters?: CheckInOutFilters) {
   return useQuery({
@@ -284,6 +284,72 @@ export function useCompleteCheckInOutRecord() {
       toast({
         title: 'Error',
         description: 'Failed to complete check-in/out record. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useGenerateCheckInOutPDF() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { logActivity } = useActivityLogs();
+
+  return useMutation({
+    mutationFn: async (recordId: string) => {
+      // Fetch the complete record with all relations
+      const { data: record, error: fetchError } = await supabase
+        .from('check_in_out_records')
+        .select(`
+          *,
+          property:properties(property_id, property_name),
+          agent:users!check_in_out_records_agent_id_fkey(user_id, first_name, last_name, user_type),
+          template:checklist_templates(template_id, template_name, template_type, checklist_items)
+        `)
+        .eq('record_id', recordId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Generate and upload PDF
+      const checklistItems = record.template?.checklist_items || [];
+      const pdfUrl = await generateAndUploadCheckInOutPDF(
+        { record, checklistItems },
+        supabase
+      );
+
+      // Update record with PDF URL
+      const { data, error } = await supabase
+        .from('check_in_out_records')
+        .update({ pdf_url: pdfUrl })
+        .eq('record_id', recordId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { record: data, pdfUrl };
+    },
+    onSuccess: ({ record, pdfUrl }) => {
+      queryClient.invalidateQueries({ queryKey: ['check_in_out_records'] });
+      queryClient.invalidateQueries({ queryKey: ['check_in_out_record', record.record_id] });
+
+      logActivity('check_in_out_pdf_generated', {
+        record_id: record.record_id,
+        record_type: record.record_type,
+        property_id: record.property_id,
+      });
+
+      toast({
+        title: 'PDF Generated',
+        description: 'Check-in/out PDF report has been generated successfully.',
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error generating PDF:', error);
+      const errorMessage = error?.message || 'Unknown error occurred';
+      toast({
+        title: 'PDF Generation Failed',
+        description: `Failed to generate PDF: ${errorMessage}`,
         variant: 'destructive',
       });
     },

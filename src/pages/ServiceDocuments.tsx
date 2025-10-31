@@ -11,11 +11,13 @@ import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { DocumentSummary } from "@/lib/schemas";
+import { useTranslation } from "react-i18next";
 
 export default function ServiceDocuments() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
   const { hasPermission } = usePermissions();
+  const { t } = useTranslation();
   const { downloadDocument } = useDocumentDownload();
 
   // Fetch service documents
@@ -74,7 +76,7 @@ export default function ServiceDocuments() {
             Service Documents
           </h1>
           <p className="text-muted-foreground">
-            Manage vendor agreements, work orders, service reports, and completion certificates
+            {t('serviceDocuments.subtitle')}
           </p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
@@ -101,7 +103,7 @@ export default function ServiceDocuments() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-emerald-700">Total Documents</p>
+                <p className="text-sm font-medium text-emerald-700">{t('serviceDocuments.stats.totalDocuments')}</p>
                 <h3 className="text-3xl font-bold text-emerald-900 mt-1">
                   {serviceDocs.length}
                 </h3>
@@ -117,11 +119,11 @@ export default function ServiceDocuments() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-teal-700">Recent Uploads</p>
+                <p className="text-sm font-medium text-teal-700">{t('serviceDocuments.stats.recentUploads')}</p>
                 <h3 className="text-3xl font-bold text-teal-900 mt-1">
                   {recentDocs}
                 </h3>
-                <p className="text-xs text-teal-600 mt-1">Last 30 days</p>
+                <p className="text-xs text-teal-600 mt-1">{t('serviceDocuments.stats.last30Days')}</p>
               </div>
               <div className="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center">
                 <FileCheck className="h-6 w-6 text-white" />
@@ -134,11 +136,11 @@ export default function ServiceDocuments() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-cyan-700">Categories</p>
+                <p className="text-sm font-medium text-cyan-700">{t('serviceDocuments.stats.categories')}</p>
                 <h3 className="text-3xl font-bold text-cyan-900 mt-1">
                   {new Set(serviceDocs.flatMap(d => d.tags || [])).size}
                 </h3>
-                <p className="text-xs text-cyan-600 mt-1">Document types</p>
+                <p className="text-xs text-cyan-600 mt-1">{t('serviceDocuments.stats.documentTypes')}</p>
               </div>
               <div className="w-12 h-12 bg-cyan-500 rounded-lg flex items-center justify-center">
                 <FileCheck className="h-6 w-6 text-white" />
@@ -154,11 +156,11 @@ export default function ServiceDocuments() {
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <CardTitle className="flex items-center gap-2">
-                <span>All Service Documents</span>
-                <Badge variant="outline">{serviceDocs.length} total</Badge>
+                <span>{t('serviceDocuments.allServiceDocuments')}</span>
+                <Badge variant="outline">{serviceDocs.length} {t('documents.common.total')}</Badge>
               </CardTitle>
               <CardDescription className="mt-1.5">
-                Vendor agreements, work orders, inspection reports, and completion certificates
+                {t('serviceDocuments.description')}
               </CardDescription>
             </div>
 
@@ -167,11 +169,11 @@ export default function ServiceDocuments() {
               <TabsList>
                 <TabsTrigger value="tree" className="gap-2">
                   <FolderTree className="h-4 w-4" />
-                  <span className="hidden sm:inline">Tree View</span>
+                  <span className="hidden sm:inline">{t('employeeDocuments.viewMode.treeView')}</span>
                 </TabsTrigger>
                 <TabsTrigger value="list" className="gap-2">
                   <List className="h-4 w-4" />
-                  <span className="hidden sm:inline">List View</span>
+                  <span className="hidden sm:inline">{t('employeeDocuments.viewMode.listView')}</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -181,9 +183,9 @@ export default function ServiceDocuments() {
           {serviceDocs.length === 0 ? (
             <div className="text-center py-12">
               <Wrench className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-20" />
-              <h3 className="text-lg font-semibold mb-2">No Service Documents</h3>
+              <h3 className="text-lg font-semibold mb-2">{t('serviceDocuments.emptyState.title')}</h3>
               <p className="text-muted-foreground mb-4">
-                Upload vendor agreements, work orders, and service reports
+                {t('serviceDocuments.emptyState.message')}
               </p>
               {canManage && (
                 <Button

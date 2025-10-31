@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,7 +20,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckInOutDialog } from '@/components/checkinout/CheckInOutDialog';
-import { useCheckInOutRecords, useDeleteCheckInOutRecord, useCompleteCheckInOutRecord } from '@/hooks/useCheckInOutRecords';
+import { useCheckInOutRecords, useDeleteCheckInOutRecord, useCompleteCheckInOutRecord, useGenerateCheckInOutPDF } from '@/hooks/useCheckInOutRecords';
 import { useProperties } from '@/hooks/useProperties';
 import { useUsersOptimized } from '@/hooks/useUsersOptimized';
 import { CheckInOutRecord } from '@/lib/schemas';
@@ -51,6 +52,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function CheckInOut() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [propertyFilter, setPropertyFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -59,6 +61,8 @@ export default function CheckInOut() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<CheckInOutRecord | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
+  const [recordToComplete, setRecordToComplete] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState(false);
 
   const { properties = [] } = useProperties();
   const { users: allUsers = [] } = useUsersOptimized();
@@ -78,6 +82,7 @@ export default function CheckInOut() {
   const { data: records = [], isLoading } = useCheckInOutRecords(filters);
   const deleteMutation = useDeleteCheckInOutRecord();
   const completeMutation = useCompleteCheckInOutRecord();
+  const generatePDFMutation = useGenerateCheckInOutPDF();
 
   const filteredRecords = useMemo(() => {
     if (!searchQuery) return records;
@@ -93,11 +98,19 @@ export default function CheckInOut() {
 
   const handleCreate = () => {
     setSelectedRecord(null);
+    setViewMode(false);
+    setDialogOpen(true);
+  };
+
+  const handleView = (record: CheckInOutRecord) => {
+    setSelectedRecord(record);
+    setViewMode(true);
     setDialogOpen(true);
   };
 
   const handleEdit = (record: CheckInOutRecord) => {
     setSelectedRecord(record);
+    setViewMode(false);
     setDialogOpen(true);
   };
 
@@ -116,7 +129,21 @@ export default function CheckInOut() {
   };
 
   const handleComplete = (recordId: string) => {
-    completeMutation.mutate(recordId);
+    setRecordToComplete(recordId);
+  };
+
+  const confirmComplete = () => {
+    if (recordToComplete) {
+      completeMutation.mutate(recordToComplete, {
+        onSuccess: () => {
+          setRecordToComplete(null);
+        },
+      });
+    }
+  };
+
+  const handleGeneratePDF = (recordId: string) => {
+    generatePDFMutation.mutate(recordId);
   };
 
   const getRecordTypeIcon = (type: string) => {
@@ -127,21 +154,21 @@ export default function CheckInOut() {
     return type === 'check_in' ? (
       <Badge variant="default" className="bg-green-500">
         <LogIn className="h-3 w-3 mr-1" />
-        Check-In
+        {t('checkInOut.types.checkIn')}
       </Badge>
     ) : (
       <Badge variant="default" className="bg-blue-500">
         <LogOut className="h-3 w-3 mr-1" />
-        Check-Out
+        {t('checkInOut.types.checkOut')}
       </Badge>
     );
   };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      draft: { variant: 'secondary' as const, label: 'Draft' },
-      completed: { variant: 'default' as const, label: 'Completed' },
-      archived: { variant: 'outline' as const, label: 'Archived' },
+      draft: { variant: 'secondary' as const, label: t('checkInOut.status.draft') },
+      completed: { variant: 'default' as const, label: t('checkInOut.status.completed') },
+      archived: { variant: 'outline' as const, label: t('checkInOut.status.archived') },
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
@@ -154,9 +181,9 @@ export default function CheckInOut() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Check-In / Check-Out</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t('checkInOut.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Manage property check-ins and check-outs with digital signatures
+            {t('checkInOut.subtitle')}
           </p>
         </div>
         <Button
@@ -164,7 +191,7 @@ export default function CheckInOut() {
           className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
-          New Record
+          {t('checkInOut.newRecord')}
         </Button>
       </div>
 
@@ -174,12 +201,12 @@ export default function CheckInOut() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">Total Records</p>
+                <p className="text-sm font-medium text-purple-700">{t('checkInOut.stats.totalRecords')}</p>
                 <h3 className="text-3xl font-bold text-purple-900 mt-1">
                   {records.length}
                 </h3>
                 <p className="text-xs text-purple-600 mt-1">
-                  All check-in/out records
+                  {t('checkInOut.stats.allRecords')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
@@ -193,12 +220,12 @@ export default function CheckInOut() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Check-Ins</p>
+                <p className="text-sm font-medium text-green-700">{t('checkInOut.stats.checkIns')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">
                   {records.filter(r => r.record_type === 'check_in').length}
                 </h3>
                 <p className="text-xs text-green-600 mt-1">
-                  {records.filter(r => r.record_type === 'check_in' && r.status === 'completed').length} completed
+                  {records.filter(r => r.record_type === 'check_in' && r.status === 'completed').length} {t('checkInOut.stats.checkInsCompleted')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
@@ -212,12 +239,12 @@ export default function CheckInOut() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Check-Outs</p>
+                <p className="text-sm font-medium text-blue-700">{t('checkInOut.stats.checkOuts')}</p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">
                   {records.filter(r => r.record_type === 'check_out').length}
                 </h3>
                 <p className="text-xs text-blue-600 mt-1">
-                  {records.filter(r => r.record_type === 'check_out' && r.status === 'completed').length} completed
+                  {records.filter(r => r.record_type === 'check_out' && r.status === 'completed').length} {t('checkInOut.stats.checkOutsCompleted')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
@@ -231,12 +258,12 @@ export default function CheckInOut() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-amber-700">Completed</p>
+                <p className="text-sm font-medium text-amber-700">{t('checkInOut.stats.completed')}</p>
                 <h3 className="text-3xl font-bold text-amber-900 mt-1">
                   {records.filter(r => r.status === 'completed').length}
                 </h3>
                 <p className="text-xs text-amber-600 mt-1">
-                  {records.filter(r => r.status === 'draft').length} pending
+                  {records.filter(r => r.status === 'draft').length} {t('checkInOut.stats.pending')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
@@ -252,7 +279,7 @@ export default function CheckInOut() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Filter className="h-4 w-4" />
-            Filters
+            {t('checkInOut.filters.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -260,7 +287,7 @@ export default function CheckInOut() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search records..."
+                placeholder={t('checkInOut.filters.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -269,10 +296,10 @@ export default function CheckInOut() {
 
             <Select value={propertyFilter} onValueChange={setPropertyFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="All Properties" />
+                <SelectValue placeholder={t('checkInOut.filters.allProperties')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Properties</SelectItem>
+                <SelectItem value="all">{t('checkInOut.filters.allProperties')}</SelectItem>
                 {properties.map((property) => (
                   <SelectItem key={property.property_id} value={property.property_id}>
                     {property.property_name}
@@ -283,33 +310,33 @@ export default function CheckInOut() {
 
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="All Types" />
+                <SelectValue placeholder={t('checkInOut.filters.allTypes')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="check_in">Check-In</SelectItem>
-                <SelectItem value="check_out">Check-Out</SelectItem>
+                <SelectItem value="all">{t('checkInOut.filters.allTypes')}</SelectItem>
+                <SelectItem value="check_in">{t('checkInOut.types.checkIn')}</SelectItem>
+                <SelectItem value="check_out">{t('checkInOut.types.checkOut')}</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="All Statuses" />
+                <SelectValue placeholder={t('checkInOut.filters.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
+                <SelectItem value="all">{t('checkInOut.filters.allStatuses')}</SelectItem>
+                <SelectItem value="draft">{t('checkInOut.status.draft')}</SelectItem>
+                <SelectItem value="completed">{t('checkInOut.status.completed')}</SelectItem>
+                <SelectItem value="archived">{t('checkInOut.status.archived')}</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={agentFilter} onValueChange={setAgentFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="All Agents" />
+                <SelectValue placeholder={t('checkInOut.filters.allAgents')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Agents</SelectItem>
+                <SelectItem value="all">{t('checkInOut.filters.allAgents')}</SelectItem>
                 {users.map((user) => (
                   <SelectItem key={user.user_id} value={user.user_id!}>
                     {formatUserDisplay(user)}
@@ -327,27 +354,27 @@ export default function CheckInOut() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Property</TableHead>
-                <TableHead>Resident</TableHead>
-                <TableHead>Agent</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Signature</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('checkInOut.table.type')}</TableHead>
+                <TableHead>{t('checkInOut.table.date')}</TableHead>
+                <TableHead>{t('checkInOut.table.property')}</TableHead>
+                <TableHead>{t('checkInOut.table.resident')}</TableHead>
+                <TableHead>{t('checkInOut.table.agent')}</TableHead>
+                <TableHead>{t('checkInOut.table.status')}</TableHead>
+                <TableHead>{t('checkInOut.table.signature')}</TableHead>
+                <TableHead className="text-right">{t('checkInOut.table.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8">
-                    Loading records...
+                    {t('checkInOut.table.loading')}
                   </TableCell>
                 </TableRow>
               ) : filteredRecords.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8">
-                    No check-in/out records found
+                    {t('checkInOut.table.noRecords')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -383,11 +410,11 @@ export default function CheckInOut() {
                       {record.signature_data ? (
                         <Badge variant="outline" className="text-green-600">
                           <CheckCircle className="h-3 w-3 mr-1" />
-                          Signed
+                          {t('checkInOut.table.signed')}
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="text-muted-foreground">
-                          Pending
+                          {t('checkInOut.table.pending')}
                         </Badge>
                       )}
                     </TableCell>
@@ -399,7 +426,7 @@ export default function CheckInOut() {
                             variant="outline"
                             onClick={() => handleComplete(record.record_id)}
                             disabled={!record.signature_data}
-                            title={!record.signature_data ? 'Signature required' : 'Mark as completed'}
+                            title={!record.signature_data ? t('checkInOut.actions.signatureRequired') : t('checkInOut.actions.markComplete')}
                           >
                             <CheckCircle className="h-4 w-4" />
                           </Button>
@@ -407,21 +434,41 @@ export default function CheckInOut() {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => handleView(record)}
+                          title="View details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleEdit(record)}
+                          title="Edit record"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        {record.pdf_url && (
-                          <Button size="sm" variant="outline" asChild>
+                        {record.pdf_url ? (
+                          <Button size="sm" variant="outline" asChild title="Download PDF">
                             <a href={record.pdf_url} target="_blank" rel="noopener noreferrer">
                               <Download className="h-4 w-4" />
                             </a>
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleGeneratePDF(record.record_id)}
+                            disabled={generatePDFMutation.isPending}
+                            title="Generate PDF Report"
+                          >
+                            <FileText className="h-4 w-4" />
                           </Button>
                         )}
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleDelete(record.record_id)}
+                          title="Delete record"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -441,26 +488,49 @@ export default function CheckInOut() {
         onClose={() => {
           setDialogOpen(false);
           setSelectedRecord(null);
+          setViewMode(false);
         }}
         record={selectedRecord}
+        viewMode={viewMode}
       />
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!recordToDelete} onOpenChange={() => setRecordToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Record</AlertDialogTitle>
+            <AlertDialogTitle>{t('checkInOut.deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this check-in/out record? This action cannot be undone.
+              {t('checkInOut.deleteDialog.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('checkInOut.deleteDialog.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('checkInOut.deleteDialog.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Complete Confirmation */}
+      <AlertDialog open={!!recordToComplete} onOpenChange={() => setRecordToComplete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Check-In/Out Record</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to mark this record as completed? This will generate a PDF report and finalize the record.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmComplete}
+              className="bg-green-600 text-white hover:bg-green-700"
             >
-              Delete
+              Complete & Generate PDF
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   FileText,
   Plus,
@@ -49,6 +50,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function Invoices() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProperty, setSelectedProperty] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -73,7 +75,7 @@ export default function Invoices() {
   const markAsPaid = useMarkInvoiceAsPaid();
 
   const handleDelete = (invoiceId: string) => {
-    if (confirm('Are you sure you want to delete this invoice?')) {
+    if (confirm(t('invoices.confirmDelete'))) {
       deleteInvoice.mutate(invoiceId);
     }
   };
@@ -91,27 +93,27 @@ export default function Invoices() {
       generateInvoicePDF(invoice);
 
       toast({
-        title: 'Success',
-        description: 'Invoice PDF downloaded successfully',
+        title: t('common.success'),
+        description: t('invoices.pdfDownloaded'),
       });
     } catch (error) {
       console.error('PDF generation error:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to generate PDF. Please try again.',
+        title: t('common.error'),
+        description: t('invoices.pdfError'),
         variant: 'destructive',
       });
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: any; icon: React.ReactNode; label: string }> = {
-      draft: { variant: 'secondary', icon: <Clock className="h-3 w-3" />, label: 'Draft' },
-      sent: { variant: 'default', icon: <Send className="h-3 w-3" />, label: 'Sent' },
-      paid: { variant: 'default', icon: <CheckCircle className="h-3 w-3" />, label: 'Paid' },
-      overdue: { variant: 'destructive', icon: <XCircle className="h-3 w-3" />, label: 'Overdue' },
-      cancelled: { variant: 'outline', icon: <XCircle className="h-3 w-3" />, label: 'Cancelled' },
-      refunded: { variant: 'outline', icon: <DollarSign className="h-3 w-3" />, label: 'Refunded' },
+    const variants: Record<string, { variant: any; icon: React.ReactNode }> = {
+      draft: { variant: 'secondary', icon: <Clock className="h-3 w-3" /> },
+      sent: { variant: 'default', icon: <Send className="h-3 w-3" /> },
+      paid: { variant: 'default', icon: <CheckCircle className="h-3 w-3" /> },
+      overdue: { variant: 'destructive', icon: <XCircle className="h-3 w-3" /> },
+      cancelled: { variant: 'outline', icon: <XCircle className="h-3 w-3" /> },
+      refunded: { variant: 'outline', icon: <DollarSign className="h-3 w-3" /> },
     };
 
     const config = variants[status] || variants.draft;
@@ -119,7 +121,7 @@ export default function Invoices() {
     return (
       <Badge variant={config.variant} className="gap-1">
         {config.icon}
-        {config.label}
+        {t(`invoices.status.${status}`)}
       </Badge>
     );
   };
@@ -143,10 +145,10 @@ export default function Invoices() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <FileText className="h-8 w-8" />
-            Invoices
+            {t('invoices.title')}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Manage guest invoices and billing
+            {t('invoices.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -156,11 +158,11 @@ export default function Invoices() {
             variant="outline"
           >
             <Settings className="h-4 w-4 mr-2" />
-            Manage Templates
+            {t('invoices.manageTemplates')}
           </Button>
           <Button onClick={() => navigate('/invoices/new')} size="lg">
             <Plus className="h-4 w-4 mr-2" />
-            New Invoice
+            {t('invoices.newInvoice')}
           </Button>
         </div>
       </div>
@@ -171,9 +173,9 @@ export default function Invoices() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Invoices</p>
+                <p className="text-sm font-medium text-blue-700">{t('invoices.totalInvoices')}</p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
-                <p className="text-xs text-blue-600 mt-1">All time</p>
+                <p className="text-xs text-blue-600 mt-1">{t('invoices.allTime')}</p>
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
                 <FileText className="h-6 w-6 text-white" />
@@ -186,11 +188,11 @@ export default function Invoices() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">Total Amount</p>
+                <p className="text-sm font-medium text-purple-700">{t('invoices.totalAmount')}</p>
                 <h3 className="text-3xl font-bold text-purple-900 mt-1">
                   ${stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
-                <p className="text-xs text-purple-600 mt-1">Combined total</p>
+                <p className="text-xs text-purple-600 mt-1">{t('invoices.combinedTotal')}</p>
               </div>
               <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                 <DollarSign className="h-6 w-6 text-white" />
@@ -203,11 +205,11 @@ export default function Invoices() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Paid</p>
+                <p className="text-sm font-medium text-green-700">{t('invoices.paidInvoices')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">
                   ${stats.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
-                <p className="text-xs text-green-600 mt-1">{stats.paid} paid invoices</p>
+                <p className="text-xs text-green-600 mt-1">{t('invoices.paidInvoicesDesc', { count: stats.paid })}</p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
                 <CheckCircle className="h-6 w-6 text-white" />
@@ -220,11 +222,11 @@ export default function Invoices() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-amber-700">Outstanding</p>
+                <p className="text-sm font-medium text-amber-700">{t('invoices.outstanding')}</p>
                 <h3 className="text-3xl font-bold text-amber-900 mt-1">
                   ${stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
-                <p className="text-xs text-amber-600 mt-1">Pending payment</p>
+                <p className="text-xs text-amber-600 mt-1">{t('invoices.pendingPayment')}</p>
               </div>
               <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
                 <Clock className="h-6 w-6 text-white" />
@@ -239,7 +241,7 @@ export default function Invoices() {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Filters
+            {t('invoices.filters')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -248,7 +250,7 @@ export default function Invoices() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search guest name..."
+                placeholder={t('invoices.searchGuestPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
@@ -258,10 +260,10 @@ export default function Invoices() {
             {/* Property Filter */}
             <Select value={selectedProperty} onValueChange={setSelectedProperty}>
               <SelectTrigger>
-                <SelectValue placeholder="All Properties" />
+                <SelectValue placeholder={t('invoices.allProperties')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Properties</SelectItem>
+                <SelectItem value="all">{t('invoices.allProperties')}</SelectItem>
                 {properties.map((property) => (
                   <SelectItem key={property.property_id} value={property.property_id!}>
                     {property.property_name}
@@ -273,16 +275,16 @@ export default function Invoices() {
             {/* Status Filter */}
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
               <SelectTrigger>
-                <SelectValue placeholder="All Statuses" />
+                <SelectValue placeholder={t('invoices.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-                <SelectItem value="refunded">Refunded</SelectItem>
+                <SelectItem value="all">{t('invoices.allStatuses')}</SelectItem>
+                <SelectItem value="draft">{t('invoices.status.draft')}</SelectItem>
+                <SelectItem value="sent">{t('invoices.status.sent')}</SelectItem>
+                <SelectItem value="paid">{t('invoices.status.paid')}</SelectItem>
+                <SelectItem value="overdue">{t('invoices.status.overdue')}</SelectItem>
+                <SelectItem value="cancelled">{t('invoices.status.cancelled')}</SelectItem>
+                <SelectItem value="refunded">{t('invoices.status.refunded')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -291,7 +293,7 @@ export default function Invoices() {
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              placeholder="Date from"
+              placeholder={t('invoices.dateFrom')}
             />
 
             {/* Date To */}
@@ -299,7 +301,7 @@ export default function Invoices() {
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              placeholder="Date to"
+              placeholder={t('invoices.dateTo')}
             />
           </div>
         </CardContent>
@@ -315,24 +317,24 @@ export default function Invoices() {
           ) : invoices.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
               <FileText className="h-16 w-16 mb-4 opacity-20" />
-              <p className="text-lg font-medium">No invoices found</p>
-              <p className="text-sm">Create your first invoice to get started</p>
+              <p className="text-lg font-medium">{t('invoices.noInvoicesFound')}</p>
+              <p className="text-sm">{t('invoices.createFirstInvoice')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Guest</TableHead>
-                    <TableHead>Property</TableHead>
-                    <TableHead>Issue Date</TableHead>
-                    <TableHead>Due Date</TableHead>
+                    <TableHead>{t('invoices.invoiceHash')}</TableHead>
+                    <TableHead>{t('invoices.guest')}</TableHead>
+                    <TableHead>{t('invoices.property')}</TableHead>
+                    <TableHead>{t('invoices.issueDate')}</TableHead>
+                    <TableHead>{t('invoices.dueDate')}</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">{t('invoices.amount')}</TableHead>
                     <TableHead className="text-right">Paid</TableHead>
-                    <TableHead className="text-right">Balance</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">{t('invoices.balance')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -344,7 +346,7 @@ export default function Invoices() {
                           {(invoice as any).booking_id && (
                             <span
                               className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded flex items-center gap-1"
-                              title="Linked to booking"
+                              title={t('invoices.linkedToBooking')}
                             >
                               <Calendar className="h-3 w-3" />
                             </span>
@@ -383,7 +385,7 @@ export default function Invoices() {
                             variant="ghost"
                             size="sm"
                             onClick={() => navigate(`/invoices/${invoice.invoice_id}`)}
-                            title="View Invoice"
+                            title={t('invoices.viewInvoice')}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -392,7 +394,7 @@ export default function Invoices() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDownloadPDF(invoice)}
-                            title="Download PDF"
+                            title={t('invoices.downloadPDF')}
                           >
                             <Download className="h-4 w-4" />
                           </Button>
@@ -402,7 +404,7 @@ export default function Invoices() {
                               variant="ghost"
                               size="sm"
                               onClick={() => setPaymentDialogInvoice(invoice)}
-                              title="Record Payment"
+                              title={t('invoices.recordPayment')}
                               className="text-green-600 hover:text-green-700 hover:bg-green-50"
                             >
                               <CreditCard className="h-4 w-4" />
@@ -414,7 +416,7 @@ export default function Invoices() {
                               variant="ghost"
                               size="sm"
                               onClick={() => setEmailDialogInvoice(invoice)}
-                              title="Send via Email"
+                              title={t('invoices.sendViaEmail')}
                               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             >
                               <Send className="h-4 w-4" />

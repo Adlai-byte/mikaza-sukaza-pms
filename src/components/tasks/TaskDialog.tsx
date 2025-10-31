@@ -40,6 +40,7 @@ import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatUserDisplay } from '@/lib/user-display';
+import { useTranslation } from 'react-i18next';
 
 interface TaskDialogProps {
   open: boolean;
@@ -56,6 +57,7 @@ export function TaskDialog({
   isSubmitting = false,
   task,
 }: TaskDialogProps) {
+  const { t } = useTranslation();
   const isEditing = !!task;
   const { properties } = usePropertiesOptimized();
 
@@ -114,15 +116,15 @@ export function TaskDialog({
     const newErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) {
-      newErrors.title = 'Task title is required';
+      newErrors.title = t('taskDialog.validation.titleRequired');
     }
 
     if (formData.due_date && formData.due_date.length > 0 && !/^\d{4}-\d{2}-\d{2}$/.test(formData.due_date)) {
-      newErrors.due_date = 'Invalid date format';
+      newErrors.due_date = t('taskDialog.validation.invalidDateFormat');
     }
 
     if (formData.due_time && formData.due_time.length > 0 && !/^\d{2}:\d{2}(:\d{2})?$/.test(formData.due_time)) {
-      newErrors.due_time = 'Invalid time format';
+      newErrors.due_time = t('taskDialog.validation.invalidTimeFormat');
     }
 
     setErrors(newErrors);
@@ -197,12 +199,12 @@ export function TaskDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <CheckSquare className="h-6 w-6 text-primary" />
-            {isEditing ? 'Edit Task' : 'Create New Task'}
+            {isEditing ? t('taskDialog.editTask') : t('taskDialog.createNewTask')}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? 'Update task details and checklist items'
-              : 'Fill in the details to create a new task'}
+              ? t('taskDialog.updateTaskDetails')
+              : t('taskDialog.fillDetailsToCreate')}
           </DialogDescription>
         </DialogHeader>
 
@@ -210,13 +212,13 @@ export function TaskDialog({
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title" className="required">
-              Task Title *
+              {t('taskDialog.taskTitleRequired')}
             </Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => handleChange('title', e.target.value)}
-              placeholder="Enter task title..."
+              placeholder={t('taskDialog.taskTitlePlaceholder')}
               className={errors.title ? 'border-red-500' : ''}
             />
             {errors.title && (
@@ -229,12 +231,12 @@ export function TaskDialog({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t('taskDialog.description')}</Label>
             <Textarea
               id="description"
               value={formData.description || ''}
               onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="Enter task description..."
+              placeholder={t('taskDialog.descriptionPlaceholder')}
               className="min-h-[100px]"
             />
           </div>
@@ -244,17 +246,17 @@ export function TaskDialog({
             <div className="space-y-2">
               <Label htmlFor="property_id" className="flex items-center gap-2">
                 <Building className="h-4 w-4" />
-                Property (Optional)
+                {t('taskDialog.propertyOptional')}
               </Label>
               <Select
                 value={formData.property_id || 'none'}
                 onValueChange={(value) => handleChange('property_id', value === 'none' ? null : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a property..." />
+                  <SelectValue placeholder={t('taskDialog.selectProperty')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No property</SelectItem>
+                  <SelectItem value="none">{t('taskDialog.noProperty')}</SelectItem>
                   {properties.map((property) => (
                     <SelectItem key={property.property_id} value={property.property_id!}>
                       {property.property_name} - {property.property_type}
@@ -274,17 +276,17 @@ export function TaskDialog({
             <div className="space-y-2">
               <Label htmlFor="assigned_to" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                Assign To (Optional)
+                {t('taskDialog.assignToOptional')}
               </Label>
               <Select
                 value={formData.assigned_to || 'none'}
                 onValueChange={(value) => handleChange('assigned_to', value === 'none' ? null : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a user..." />
+                  <SelectValue placeholder={t('taskDialog.selectUser')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
+                  <SelectItem value="none">{t('taskDialog.unassigned')}</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.user_id} value={user.user_id}>
                       {formatUserDisplay(user)}
@@ -309,7 +311,7 @@ export function TaskDialog({
             <div className="space-y-2">
               <Label htmlFor="status" className="flex items-center gap-2">
                 <Flag className="h-4 w-4" />
-                Status
+                {t('taskDialog.status')}
               </Label>
               <Select
                 value={formData.status}
@@ -319,21 +321,21 @@ export function TaskDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="pending">{t('taskDialog.statusOptions.pending')}</SelectItem>
+                  <SelectItem value="in_progress">{t('taskDialog.statusOptions.inProgress')}</SelectItem>
+                  <SelectItem value="completed">{t('taskDialog.statusOptions.completed')}</SelectItem>
+                  <SelectItem value="cancelled">{t('taskDialog.statusOptions.cancelled')}</SelectItem>
                 </SelectContent>
               </Select>
               <Badge className={getStatusColor(formData.status)}>
-                {formData.status.replace('_', ' ')}
+                {t(`taskDialog.statusOptions.${formData.status === 'in_progress' ? 'inProgress' : formData.status}`)}
               </Badge>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="priority" className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
-                Priority
+                {t('taskDialog.priority')}
               </Label>
               <Select
                 value={formData.priority}
@@ -343,21 +345,21 @@ export function TaskDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="low">{t('taskDialog.priorityOptions.low')}</SelectItem>
+                  <SelectItem value="medium">{t('taskDialog.priorityOptions.medium')}</SelectItem>
+                  <SelectItem value="high">{t('taskDialog.priorityOptions.high')}</SelectItem>
+                  <SelectItem value="urgent">{t('taskDialog.priorityOptions.urgent')}</SelectItem>
                 </SelectContent>
               </Select>
               <Badge className={getPriorityColor(formData.priority)}>
-                {formData.priority}
+                {t(`taskDialog.priorityOptions.${formData.priority}`)}
               </Badge>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="category" className="flex items-center gap-2">
                 <Tag className="h-4 w-4" />
-                Category
+                {t('taskDialog.category')}
               </Label>
               <Select
                 value={formData.category}
@@ -367,13 +369,13 @@ export function TaskDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cleaning">Cleaning</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="check_in_prep">Check-in Prep</SelectItem>
-                  <SelectItem value="check_out_prep">Check-out Prep</SelectItem>
-                  <SelectItem value="inspection">Inspection</SelectItem>
-                  <SelectItem value="repair">Repair</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="cleaning">{t('taskDialog.categoryOptions.cleaning')}</SelectItem>
+                  <SelectItem value="maintenance">{t('taskDialog.categoryOptions.maintenance')}</SelectItem>
+                  <SelectItem value="check_in_prep">{t('taskDialog.categoryOptions.checkInPrep')}</SelectItem>
+                  <SelectItem value="check_out_prep">{t('taskDialog.categoryOptions.checkOutPrep')}</SelectItem>
+                  <SelectItem value="inspection">{t('taskDialog.categoryOptions.inspection')}</SelectItem>
+                  <SelectItem value="repair">{t('taskDialog.categoryOptions.repair')}</SelectItem>
+                  <SelectItem value="other">{t('taskDialog.categoryOptions.other')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -384,7 +386,7 @@ export function TaskDialog({
             <div className="space-y-2">
               <Label htmlFor="due_date" className="flex items-center gap-2">
                 <CalendarIcon className="h-4 w-4" />
-                Due Date (Optional)
+                {t('taskDialog.dueDateOptional')}
               </Label>
               <Input
                 id="due_date"
@@ -401,7 +403,7 @@ export function TaskDialog({
             <div className="space-y-2">
               <Label htmlFor="due_time" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Due Time (Optional)
+                {t('taskDialog.dueTimeOptional')}
               </Label>
               <Input
                 id="due_time"
@@ -420,13 +422,13 @@ export function TaskDialog({
           <div className="space-y-4">
             <Label className="flex items-center gap-2">
               <CheckSquare className="h-4 w-4" />
-              Checklist Items (Optional)
+              {t('taskDialog.checklistItemsOptional')}
             </Label>
             <div className="flex gap-2">
               <Input
                 value={newChecklistItem}
                 onChange={(e) => setNewChecklistItem(e.target.value)}
-                placeholder="Add a checklist item..."
+                placeholder={t('taskDialog.addChecklistItem')}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -471,7 +473,7 @@ export function TaskDialog({
               disabled={isSubmitting}
             >
               <X className="mr-2 h-4 w-4" />
-              Cancel
+              {t('taskDialog.cancel')}
             </Button>
             <Button
               type="submit"
@@ -481,11 +483,11 @@ export function TaskDialog({
               <Save className="mr-2 h-4 w-4" />
               {isSubmitting
                 ? isEditing
-                  ? 'Updating...'
-                  : 'Creating...'
+                  ? t('taskDialog.updating')
+                  : t('taskDialog.creating')
                 : isEditing
-                  ? 'Update Task'
-                  : 'Create Task'}
+                  ? t('taskDialog.updateTask')
+                  : t('taskDialog.createTask')}
             </Button>
           </DialogFooter>
         </form>

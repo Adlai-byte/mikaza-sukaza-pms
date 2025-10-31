@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,15 +9,25 @@ interface SignaturePadProps {
   signatureName: string;
   onNameChange: (name: string) => void;
   disabled?: boolean;
+  initialSignature?: string | null;
+  viewMode?: boolean;
 }
 
-export function SignaturePad({ onSave, signatureName, onNameChange, disabled = false }: SignaturePadProps) {
+export function SignaturePad({ onSave, signatureName, onNameChange, disabled = false, initialSignature = null, viewMode = false }: SignaturePadProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [isEmpty, setIsEmpty] = useState(true);
+  const [currentSignature, setCurrentSignature] = useState<string | null>(initialSignature);
+
+  // Update currentSignature when initialSignature changes (e.g., when loading a different record)
+  useEffect(() => {
+    setCurrentSignature(initialSignature);
+  }, [initialSignature]);
 
   const clear = () => {
     sigCanvas.current?.clear();
     setIsEmpty(true);
+    setCurrentSignature(null);
+    onSave(''); // Clear the signature in parent component
   };
 
   const save = () => {
@@ -58,36 +68,67 @@ export function SignaturePad({ onSave, signatureName, onNameChange, disabled = f
           />
         </div>
 
-        {/* Signature canvas */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Draw Signature</label>
-          <div className="border border-input rounded-md bg-white">
-            <SignatureCanvas
-              ref={sigCanvas}
-              canvasProps={{
-                className: 'w-full h-40 cursor-crosshair',
-                style: { touchAction: 'none' }
-              }}
-              onEnd={handleEnd}
-              disabled={disabled}
-            />
+        {/* Signature display or canvas */}
+        {currentSignature ? (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Signature</label>
+            <div className="border border-input rounded-md bg-white p-4">
+              <img
+                src={currentSignature}
+                alt="Signature"
+                className="w-full h-40 object-contain"
+              />
+            </div>
+            {!viewMode && (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clear}
+                  disabled={disabled}
+                >
+                  <Eraser className="h-4 w-4 mr-2" />
+                  Clear & Redraw
+                </Button>
+              </div>
+            )}
           </div>
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={clear}
-              disabled={disabled || isEmpty}
-            >
-              <Eraser className="h-4 w-4 mr-2" />
-              Clear
-            </Button>
+        ) : (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Draw Signature</label>
+            <div className="border border-input rounded-md bg-white">
+              <SignatureCanvas
+                ref={sigCanvas}
+                canvasProps={{
+                  className: 'w-full h-40 cursor-crosshair',
+                  style: { touchAction: 'none' }
+                }}
+                onEnd={handleEnd}
+                disabled={disabled}
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={clear}
+                disabled={disabled || isEmpty}
+              >
+                <Eraser className="h-4 w-4 mr-2" />
+                Clear
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         <p className="text-xs text-muted-foreground">
-          Draw your signature in the box above. The signature will be saved automatically.
+          {currentSignature
+            ? viewMode
+              ? 'Signature on record'
+              : 'Click "Clear & Redraw" to create a new signature'
+            : 'Draw your signature in the box above. The signature will be saved automatically.'}
         </p>
       </CardContent>
     </Card>

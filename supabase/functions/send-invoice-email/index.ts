@@ -268,11 +268,20 @@ serve(async (req) => {
     const resendData = await resendResponse.json();
 
     if (!resendResponse.ok) {
-      console.error('Resend API error:', resendData);
+      console.error('Resend API error:', {
+        status: resendResponse.status,
+        statusText: resendResponse.statusText,
+        responseData: resendData,
+        recipientEmail,
+        invoiceNumber: invoice.invoice_number
+      });
       return new Response(
         JSON.stringify({
           error: 'Failed to send email',
-          details: resendData.message || 'Error from Resend API'
+          details: resendData.message || resendData.error || 'Error from Resend API',
+          resendError: resendData,
+          statusCode: resendResponse.status,
+          recipientEmail: recipientEmail
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

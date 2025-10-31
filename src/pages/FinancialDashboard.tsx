@@ -35,10 +35,12 @@ import {
   useFinancialOverTime,
 } from '@/hooks/useFinancialDashboard';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
 export default function FinancialDashboard() {
+  const { t } = useTranslation();
   const [dateFrom, setDateFrom] = useState(() => {
     const date = new Date();
     return new Date(date.getFullYear() - 1, date.getMonth(), 1).toISOString().split('T')[0];
@@ -89,7 +91,7 @@ export default function FinancialDashboard() {
             Financial Dashboard
           </h1>
           <p className="text-muted-foreground mt-1">
-            Comprehensive financial analytics and insights
+            {t('financialDashboard.subtitle')}
           </p>
         </div>
       </div>
@@ -97,12 +99,12 @@ export default function FinancialDashboard() {
       {/* Date Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Date Range</CardTitle>
+          <CardTitle className="text-lg">{t('financialDashboard.dateRange')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="dateFrom">From Date</Label>
+              <Label htmlFor="dateFrom">{t('financialDashboard.fromDate')}</Label>
               <Input
                 id="dateFrom"
                 type="date"
@@ -111,7 +113,7 @@ export default function FinancialDashboard() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dateTo">To Date</Label>
+              <Label htmlFor="dateTo">{t('financialDashboard.toDate')}</Label>
               <Input
                 id="dateTo"
                 type="date"
@@ -135,12 +137,12 @@ export default function FinancialDashboard() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-green-700">Total Revenue</p>
+                    <p className="text-sm font-medium text-green-700">{t('financialDashboard.summaryCards.totalRevenue')}</p>
                     <h3 className="text-2xl font-bold text-green-900 mt-1">
                       {formatCurrency(summary?.total_revenue || 0)}
                     </h3>
                     <p className="text-xs text-green-600 mt-1">
-                      {summary?.paid_invoices || 0} paid invoices
+                      {summary?.paid_invoices || 0} {t('financialDashboard.summaryCards.paidInvoices')}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
@@ -154,11 +156,11 @@ export default function FinancialDashboard() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-red-700">Total Expenses</p>
+                    <p className="text-sm font-medium text-red-700">{t('financialDashboard.summaryCards.totalExpenses')}</p>
                     <h3 className="text-2xl font-bold text-red-900 mt-1">
                       {formatCurrency(summary?.total_expenses || 0)}
                     </h3>
-                    <p className="text-xs text-red-600 mt-1">All categories</p>
+                    <p className="text-xs text-red-600 mt-1">{t('financialDashboard.summaryCards.allCategories')}</p>
                   </div>
                   <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
                     <TrendingDown className="h-6 w-6 text-white" />
@@ -201,7 +203,7 @@ export default function FinancialDashboard() {
                         (summary?.net_income || 0) >= 0 ? 'text-emerald-600' : 'text-orange-600'
                       )}
                     >
-                      {(summary?.net_income || 0) >= 0 ? 'Profit' : 'Loss'}
+                      {(summary?.net_income || 0) >= 0 ? t('financialDashboard.summaryCards.profit') : t('financialDashboard.summaryCards.loss')}
                     </p>
                   </div>
                   <div
@@ -220,12 +222,12 @@ export default function FinancialDashboard() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-blue-700">Active Properties</p>
+                    <p className="text-sm font-medium text-blue-700">{t('financialDashboard.summaryCards.activeProperties')}</p>
                     <h3 className="text-2xl font-bold text-blue-900 mt-1">
                       {summary?.total_properties || 0}
                     </h3>
                     <p className="text-xs text-blue-600 mt-1">
-                      {summary?.active_bookings || 0} active bookings
+                      {summary?.active_bookings || 0} {t('financialDashboard.summaryCards.activeBookings')}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
@@ -242,7 +244,7 @@ export default function FinancialDashboard() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Paid Invoices</p>
+                    <p className="text-sm text-muted-foreground">{t('financialDashboard.invoiceStatus.paidInvoices')}</p>
                     <p className="text-2xl font-bold text-green-600">{summary?.paid_invoices || 0}</p>
                   </div>
                   <FileText className="h-8 w-8 text-green-600" />
@@ -254,7 +256,7 @@ export default function FinancialDashboard() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Pending Invoices</p>
+                    <p className="text-sm text-muted-foreground">{t('financialDashboard.invoiceStatus.pendingInvoices')}</p>
                     <p className="text-2xl font-bold text-yellow-600">{summary?.pending_invoices || 0}</p>
                   </div>
                   <FileText className="h-8 w-8 text-yellow-600" />
@@ -266,7 +268,7 @@ export default function FinancialDashboard() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Overdue Invoices</p>
+                    <p className="text-sm text-muted-foreground">{t('financialDashboard.invoiceStatus.overdueInvoices')}</p>
                     <p className="text-2xl font-bold text-red-600">{summary?.overdue_invoices || 0}</p>
                   </div>
                   <FileText className="h-8 w-8 text-red-600" />
@@ -282,11 +284,11 @@ export default function FinancialDashboard() {
                 <Calendar className="h-5 w-5" />
                 Revenue & Expenses Over Time
               </CardTitle>
-              <CardDescription>Monthly financial performance trend</CardDescription>
+              <CardDescription>{t('financialDashboard.charts.monthlyTrend')}</CardDescription>
             </CardHeader>
             <CardContent>
               {financialOverTime.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No financial data available for this period</p>
+                <p className="text-center text-muted-foreground py-8">{t('financialDashboard.charts.noFinancialData')}</p>
               ) : (
                 <ResponsiveContainer width="100%" height={400}>
                   <LineChart data={financialOverTime}>
@@ -303,7 +305,7 @@ export default function FinancialDashboard() {
                       dataKey="revenue"
                       stroke="#22c55e"
                       strokeWidth={2}
-                      name="Revenue"
+                      name={t('financialDashboard.charts.revenue')}
                       dot={{ r: 4 }}
                     />
                     <Line
@@ -311,7 +313,7 @@ export default function FinancialDashboard() {
                       dataKey="expenses"
                       stroke="#ef4444"
                       strokeWidth={2}
-                      name="Expenses"
+                      name={t('financialDashboard.charts.expenses')}
                       dot={{ r: 4 }}
                     />
                     <Line
@@ -319,7 +321,7 @@ export default function FinancialDashboard() {
                       dataKey="net_income"
                       stroke="#3b82f6"
                       strokeWidth={2}
-                      name="Net Income"
+                      name={t('financialDashboard.charts.netIncome')}
                       dot={{ r: 4 }}
                     />
                   </LineChart>
@@ -337,11 +339,11 @@ export default function FinancialDashboard() {
                   <Building2 className="h-5 w-5" />
                   Revenue by Property
                 </CardTitle>
-                <CardDescription>Top performing properties</CardDescription>
+                <CardDescription>{t('financialDashboard.charts.topPerforming')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {revenueByProperty.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No property revenue data available</p>
+                  <p className="text-center text-muted-foreground py-8">{t('financialDashboard.charts.noPropertyRevenue')}</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={350}>
                     <BarChart data={revenueByProperty} layout="horizontal">
@@ -368,11 +370,11 @@ export default function FinancialDashboard() {
                   <Receipt className="h-5 w-5" />
                   Expenses by Category
                 </CardTitle>
-                <CardDescription>Expense distribution breakdown</CardDescription>
+                <CardDescription>{t('financialDashboard.charts.expenseBreakdown')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {expensesByCategory.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No expense data available</p>
+                  <p className="text-center text-muted-foreground py-8">{t('financialDashboard.charts.noExpenseData')}</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={350}>
                     <PieChart>
@@ -411,21 +413,21 @@ export default function FinancialDashboard() {
                 <Building2 className="h-5 w-5" />
                 Property Performance Details
               </CardTitle>
-              <CardDescription>Comprehensive property metrics</CardDescription>
+              <CardDescription>{t('financialDashboard.propertyPerformance.subtitle')}</CardDescription>
             </CardHeader>
             <CardContent>
               {revenueByProperty.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No property data available</p>
+                <p className="text-center text-muted-foreground py-8">{t('financialDashboard.propertyPerformance.noPropertyData')}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-semibold">Property</th>
-                        <th className="text-right py-3 px-4 font-semibold">Revenue</th>
-                        <th className="text-right py-3 px-4 font-semibold">Invoices</th>
-                        <th className="text-right py-3 px-4 font-semibold">Occupancy Days</th>
-                        <th className="text-right py-3 px-4 font-semibold">Avg/Invoice</th>
+                        <th className="text-left py-3 px-4 font-semibold">{t('financialDashboard.propertyPerformance.tableHeaders.property')}</th>
+                        <th className="text-right py-3 px-4 font-semibold">{t('financialDashboard.propertyPerformance.tableHeaders.revenue')}</th>
+                        <th className="text-right py-3 px-4 font-semibold">{t('financialDashboard.propertyPerformance.tableHeaders.invoices')}</th>
+                        <th className="text-right py-3 px-4 font-semibold">{t('financialDashboard.propertyPerformance.tableHeaders.occupancyDays')}</th>
+                        <th className="text-right py-3 px-4 font-semibold">{t('financialDashboard.propertyPerformance.tableHeaders.avgPerInvoice')}</th>
                       </tr>
                     </thead>
                     <tbody>

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,7 @@ export function DocumentUploadDialog({
   onSuccess,
 }: DocumentUploadDialogProps) {
   const { uploadFile, uploadProgress, isUploading } = useDocumentUpload();
+  const { t } = useTranslation();
   const { properties } = usePropertiesOptimized();
   const { users: allUsers = [], loading: usersLoading } = useUsers();
 
@@ -171,16 +173,16 @@ export function DocumentUploadDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Upload {DOCUMENT_CATEGORIES[category]}</DialogTitle>
+          <DialogTitle>{t('dialogs.documentUpload.title')} {DOCUMENT_CATEGORIES[category]}</DialogTitle>
           <DialogDescription>
-            Upload a new document to the system. Supported formats: PDF, images, Word, Excel.
+            {t('dialogs.documentUpload.description')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* File upload area */}
           <div className="space-y-2">
-            <Label>File *</Label>
+            <Label>{t('dialogs.documentUpload.fields.file')} *</Label>
             {!selectedFile ? (
               <div
                 className={cn(
@@ -195,10 +197,10 @@ export function DocumentUploadDialog({
               >
                 <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-sm font-medium mb-1">
-                  Click to upload or drag and drop
+                  {t('dialogs.documentUpload.fields.clickToUpload')}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  PDF, images, Word, or Excel files up to 50MB
+                  {t('dialogs.documentUpload.fields.fileTypes')}
                 </p>
                 <input
                   id="file-input"
@@ -233,24 +235,24 @@ export function DocumentUploadDialog({
 
           {/* Document name */}
           <div className="space-y-2">
-            <Label htmlFor="document-name">Document Name *</Label>
+            <Label htmlFor="document-name">{t('dialogs.documentUpload.fields.documentName')} *</Label>
             <Input
               id="document-name"
               value={documentName}
               onChange={(e) => setDocumentName(e.target.value)}
-              placeholder="Enter document name"
+              placeholder={t('dialogs.documentUpload.fields.documentNamePlaceholder')}
               disabled={isUploading}
             />
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Description (Optional)</Label>
+            <Label htmlFor="description">{t('dialogs.documentUpload.fields.description')}</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add a description..."
+              placeholder={t('dialogs.documentUpload.fields.descriptionPlaceholder')}
               rows={3}
               disabled={isUploading}
             />
@@ -259,10 +261,10 @@ export function DocumentUploadDialog({
           {/* Contract Type selection */}
           {category === 'contracts' && (
             <div className="space-y-2">
-              <Label htmlFor="contract-type">Contract Type *</Label>
+              <Label htmlFor="contract-type">{t('dialogs.documentUpload.fields.contractType')} *</Label>
               <Select value={contractType} onValueChange={setContractType} disabled={isUploading}>
                 <SelectTrigger id="contract-type">
-                  <SelectValue placeholder="Select contract type" />
+                  <SelectValue placeholder={t('dialogs.documentUpload.fields.selectContractType')} />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(CONTRACT_TYPES).map(([value, label]) => (
@@ -278,10 +280,10 @@ export function DocumentUploadDialog({
           {/* Property selection */}
           {requiresProperty && (
             <div className="space-y-2">
-              <Label htmlFor="property">Property *</Label>
+              <Label htmlFor="property">{t('dialogs.documentUpload.fields.property')} *</Label>
               <Select value={propertyId} onValueChange={setPropertyId} disabled={isUploading}>
                 <SelectTrigger id="property">
-                  <SelectValue placeholder="Select a property" />
+                  <SelectValue placeholder={t('dialogs.documentUpload.fields.selectProperty')} />
                 </SelectTrigger>
                 <SelectContent>
                   {properties.map((property) => (
@@ -297,7 +299,7 @@ export function DocumentUploadDialog({
           {/* Expiry date */}
           {allowsExpiry && (
             <div className="space-y-2">
-              <Label htmlFor="expiry-date">Expiry Date (Optional)</Label>
+              <Label htmlFor="expiry-date">{t('dialogs.documentUpload.fields.expiryDate')}</Label>
               <Input
                 id="expiry-date"
                 type="date"
@@ -311,14 +313,14 @@ export function DocumentUploadDialog({
           {/* Employee Assignment */}
           {category === 'employee' && (
             <div className="space-y-2">
-              <Label htmlFor="assigned-user">Assign to Employee (Optional)</Label>
+              <Label htmlFor="assigned-user">{t('dialogs.documentUpload.fields.assignToEmployee')}</Label>
               <Select value={assignedUserId || "none"} onValueChange={(value) => setAssignedUserId(value === "none" ? "" : value)} disabled={isUploading}>
                 <SelectTrigger id="assigned-user">
-                  <SelectValue placeholder="Select an employee" />
+                  <SelectValue placeholder={t('dialogs.documentUpload.fields.selectEmployee')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">
-                    <span className="text-muted-foreground">None</span>
+                    <span className="text-muted-foreground">{t('dialogs.documentUpload.fields.none')}</span>
                   </SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.user_id} value={user.user_id}>
@@ -331,23 +333,23 @@ export function DocumentUploadDialog({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Automatically organizes the document in the employee's folder
+                {t('dialogs.documentUpload.fields.employeeDescription')}
               </p>
             </div>
           )}
 
           {/* Tags */}
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags (Optional)</Label>
+            <Label htmlFor="tags">{t('dialogs.documentUpload.fields.tags')}</Label>
             <Input
               id="tags"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              placeholder="Enter tags separated by commas"
+              placeholder={t('dialogs.documentUpload.fields.tagsPlaceholder')}
               disabled={isUploading}
             />
             <p className="text-xs text-muted-foreground">
-              Example: urgent, renovation, 2025
+              {t('dialogs.documentUpload.fields.tagsExample')}
             </p>
           </div>
 
@@ -356,10 +358,10 @@ export function DocumentUploadDialog({
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium">
-                  {uploadProgress.status === 'uploading' && 'Uploading...'}
-                  {uploadProgress.status === 'processing' && 'Processing...'}
-                  {uploadProgress.status === 'completed' && 'Upload complete!'}
-                  {uploadProgress.status === 'error' && 'Upload failed'}
+                  {uploadProgress.status === 'uploading' && t('dialogs.documentUpload.uploadProgress.uploading')}
+                  {uploadProgress.status === 'processing' && t('dialogs.documentUpload.uploadProgress.processing')}
+                  {uploadProgress.status === 'completed' && t('dialogs.documentUpload.uploadProgress.completed')}
+                  {uploadProgress.status === 'error' && t('dialogs.documentUpload.uploadProgress.error')}
                 </span>
                 <span className="text-muted-foreground">
                   {uploadProgress.progress}%
@@ -375,7 +377,7 @@ export function DocumentUploadDialog({
               {uploadProgress.status === 'completed' && (
                 <div className="flex items-center gap-2 text-sm text-green-600">
                   <CheckCircle className="h-4 w-4" />
-                  <span>Document uploaded successfully</span>
+                  <span>{t('dialogs.documentUpload.uploadProgress.success')}</span>
                 </div>
               )}
             </div>
@@ -384,7 +386,7 @@ export function DocumentUploadDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} disabled={isUploading}>
-            Cancel
+            {t('dialogs.documentUpload.buttons.cancel')}
           </Button>
           <Button
             onClick={handleUpload}
@@ -396,7 +398,7 @@ export function DocumentUploadDialog({
               isUploading
             }
           >
-            {isUploading ? "Uploading..." : "Upload Document"}
+            {isUploading ? t('dialogs.documentUpload.buttons.uploading') : t('dialogs.documentUpload.buttons.upload')}
           </Button>
         </DialogFooter>
       </DialogContent>

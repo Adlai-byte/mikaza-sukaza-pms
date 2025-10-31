@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +77,8 @@ export default function VendorCOIs() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editCOI, setEditCOI] = useState<VendorCOI | null>(null);
 
+  const { t } = useTranslation();
+
   // Hooks
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useCOIDashboardStats();
   const { data: expiringCOIs = [] } = useExpiringCOIs(30);
@@ -146,6 +149,24 @@ export default function VendorCOIs() {
     setEditCOI(null);
   };
 
+  const handleDelete = (coiId: string) => {
+    if (confirm(t('vendorCOIs.confirmations.delete'))) {
+      deleteCOI(coiId);
+    }
+  };
+
+  const handleDownloadCOI = (coi: VendorCOI) => {
+    if (coi.file_url) {
+      const link = document.createElement('a');
+      link.href = coi.file_url;
+      link.download = coi.file_name || `COI_${coi.policy_number}.pdf`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const styles = {
       active: 'bg-green-100 text-green-800 border-green-200',
@@ -168,7 +189,7 @@ export default function VendorCOIs() {
     return (
       <Badge variant="outline" className={styles[status as keyof typeof styles] || ''}>
         <Icon className="h-3 w-3 mr-1" />
-        {status.replace('_', ' ')}
+        {t(`vendorCOIs.status.${status}`)}
       </Badge>
     );
   };
@@ -193,10 +214,10 @@ export default function VendorCOIs() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
               <Shield className="h-7 w-7 text-primary" />
-              Vendor Insurance (COI)
+              {t('vendorCOIs.title')}
             </h1>
             <p className="text-muted-foreground">
-              Manage vendor certificates of insurance and compliance tracking
+              {t('vendorCOIs.subtitle')}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
@@ -208,12 +229,10 @@ export default function VendorCOIs() {
                   onClick={handleRefresh}
                   disabled={isLoading}
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />{t('vendorCOIs.refresh')}</Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Refresh COI data</p>
+                <p>{t('vendorCOIs.refreshTooltip')}</p>
               </TooltipContent>
             </Tooltip>
             {canCreate && (
@@ -223,12 +242,10 @@ export default function VendorCOIs() {
                     className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
                     onClick={handleAddCOI}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add COI
-                  </Button>
+                    <Plus className="h-4 w-4 mr-2" />{t('vendorCOIs.addCOI')}</Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Upload new vendor certificate of insurance</p>
+                  <p>{t('vendorCOIs.addCOITooltip')}</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -241,11 +258,11 @@ export default function VendorCOIs() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-700">Active COIs</p>
+                  <p className="text-sm font-medium text-green-700">{t('vendorCOIs.stats.activeCOIs')}</p>
                   <h3 className="text-3xl font-bold text-green-900 mt-1">
                     {statsLoading ? '...' : stats?.active_cois || 0}
                   </h3>
-                  <p className="text-xs text-green-600 mt-1">Current & valid</p>
+                  <p className="text-xs text-green-600 mt-1">{t('vendorCOIs.stats.currentValid')}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
                   <CheckCircle2 className="h-6 w-6 text-white" />
@@ -258,11 +275,11 @@ export default function VendorCOIs() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-yellow-700">Expiring Soon</p>
+                  <p className="text-sm font-medium text-yellow-700">{t('vendorCOIs.stats.expiringSoon')}</p>
                   <h3 className="text-3xl font-bold text-yellow-900 mt-1">
                     {statsLoading ? '...' : stats?.expiring_soon || 0}
                   </h3>
-                  <p className="text-xs text-yellow-600 mt-1">Within 30 days</p>
+                  <p className="text-xs text-yellow-600 mt-1">{t('vendorCOIs.stats.within30Days')}</p>
                 </div>
                 <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
                   <Clock className="h-6 w-6 text-white" />
@@ -275,11 +292,11 @@ export default function VendorCOIs() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-700">Expired</p>
+                  <p className="text-sm font-medium text-red-700">{t('vendorCOIs.stats.expired')}</p>
                   <h3 className="text-3xl font-bold text-red-900 mt-1">
                     {statsLoading ? '...' : stats?.expired_cois || 0}
                   </h3>
-                  <p className="text-xs text-red-600 mt-1">Requires renewal</p>
+                  <p className="text-xs text-red-600 mt-1">{t('vendorCOIs.stats.requiresRenewal')}</p>
                 </div>
                 <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
                   <XCircle className="h-6 w-6 text-white" />
@@ -292,11 +309,11 @@ export default function VendorCOIs() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">Vendors Covered</p>
+                  <p className="text-sm font-medium text-blue-700">{t('vendorCOIs.stats.vendorsCovered')}</p>
                   <h3 className="text-3xl font-bold text-blue-900 mt-1">
                     {statsLoading ? '...' : stats?.vendors_with_cois || 0}
                   </h3>
-                  <p className="text-xs text-blue-600 mt-1">With insurance</p>
+                  <p className="text-xs text-blue-600 mt-1">{t('vendorCOIs.stats.withInsurance')}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
                   <Building2 className="h-6 w-6 text-white" />
@@ -311,7 +328,7 @@ export default function VendorCOIs() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              Filters
+              {t('vendorCOIs.filters')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -319,7 +336,7 @@ export default function VendorCOIs() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search COIs..."
+                  placeholder={t('vendorCOIs.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -328,10 +345,10 @@ export default function VendorCOIs() {
 
               <Select value={selectedVendor || "all"} onValueChange={(val) => setSelectedVendor(val === "all" ? "" : val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Vendors" />
+                  <SelectValue placeholder={t('vendorCOIs.allVendors')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Vendors</SelectItem>
+                  <SelectItem value="all">{t('vendorCOIs.allVendors')}</SelectItem>
                   {vendors.map((vendor) => (
                     <SelectItem key={vendor.provider_id} value={vendor.provider_id}>
                       {vendor.provider_name}
@@ -342,10 +359,10 @@ export default function VendorCOIs() {
 
               <Select value={selectedProperty || "all"} onValueChange={(val) => setSelectedProperty(val === "all" ? "" : val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Properties" />
+                  <SelectValue placeholder={t('vendorCOIs.allProperties')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Properties</SelectItem>
+                  <SelectItem value="all">{t('vendorCOIs.allProperties')}</SelectItem>
                   {properties.map((property) => (
                     <SelectItem key={property.property_id} value={property.property_id}>
                       {property.property_name || property.property_type}
@@ -356,10 +373,10 @@ export default function VendorCOIs() {
 
               <Select value={selectedCoverageType || "all"} onValueChange={(val) => setSelectedCoverageType(val === "all" ? "" : val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Coverage Types" />
+                  <SelectValue placeholder={t('vendorCOIs.allCoverageTypes')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Coverage Types</SelectItem>
+                  <SelectItem value="all">{t('vendorCOIs.allCoverageTypes')}</SelectItem>
                   {Object.entries(COI_COVERAGE_TYPES).map(([key, label]) => (
                     <SelectItem key={key} value={key}>
                       {label}
@@ -370,10 +387,10 @@ export default function VendorCOIs() {
 
               <Select value={selectedStatus || "all"} onValueChange={(val) => setSelectedStatus(val === "all" ? "" : val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Statuses" />
+                  <SelectValue placeholder={t('vendorCOIs.allStatuses')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="all">{t('vendorCOIs.allStatuses')}</SelectItem>
                   {Object.entries(COI_STATUS).map(([key, label]) => (
                     <SelectItem key={key} value={key}>
                       {label}
@@ -399,11 +416,11 @@ export default function VendorCOIs() {
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <CardTitle className="flex items-center gap-2">
-                  <span>Certificates of Insurance</span>
+                  <span>{t('vendorCOIs.tableTitle')}</span>
                   <Badge variant="outline">{filteredCOIs.length} total</Badge>
                 </CardTitle>
                 <CardDescription className="mt-1.5">
-                  View and manage all vendor insurance certificates
+                  {t('vendorCOIs.tableDescription')}
                 </CardDescription>
               </div>
 
@@ -412,11 +429,11 @@ export default function VendorCOIs() {
                 <TabsList>
                   <TabsTrigger value="tree" className="gap-2">
                     <FolderTree className="h-4 w-4" />
-                    <span className="hidden sm:inline">Tree View</span>
+                    <span className="hidden sm:inline">{t('vendorCOIs.viewMode.treeView')}</span>
                   </TabsTrigger>
                   <TabsTrigger value="list" className="gap-2">
                     <List className="h-4 w-4" />
-                    <span className="hidden sm:inline">List View</span>
+                    <span className="hidden sm:inline">{t('vendorCOIs.viewMode.listView')}</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -426,20 +443,18 @@ export default function VendorCOIs() {
             {filteredCOIs.length === 0 ? (
               <div className="text-center py-12">
                 <Shield className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-20" />
-                <h3 className="text-lg font-semibold mb-2">No COIs Found</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('vendorCOIs.emptyState.title')}</h3>
                 <p className="text-muted-foreground mb-4">
                   {searchTerm || selectedVendor || selectedProperty || selectedCoverageType || selectedStatus
-                    ? 'Try adjusting your filters'
-                    : 'Get started by adding your first vendor certificate of insurance'}
+                    ? t('vendorCOIs.emptyState.tryAdjusting')
+                    : t('vendorCOIs.emptyState.getStarted')}
                 </p>
                 {canCreate && !searchTerm && !selectedVendor && (
                   <Button
                     className="bg-gradient-primary hover:bg-gradient-secondary"
                     onClick={handleAddCOI}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add First COI
-                  </Button>
+                    <Plus className="h-4 w-4 mr-2" />{t('vendorCOIs.emptyState.addFirstCOI')}</Button>
                 )}
               </div>
             ) : viewMode === 'tree' ? (
@@ -447,6 +462,7 @@ export default function VendorCOIs() {
                 cois={filteredCOIs}
                 onEditCOI={canEdit ? handleEditCOI : undefined}
                 onDeleteCOI={canDelete ? handleDelete : undefined}
+                onDownloadCOI={handleDownloadCOI}
                 canEdit={canEdit}
                 canDelete={canDelete}
               />
@@ -455,16 +471,16 @@ export default function VendorCOIs() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Vendor</TableHead>
-                      <TableHead>Coverage Type</TableHead>
-                      <TableHead>Policy Number</TableHead>
-                      <TableHead>Insurance Company</TableHead>
-                      <TableHead>Coverage Amount</TableHead>
-                      <TableHead>Valid Through</TableHead>
+                      <TableHead>{t('vendorCOIs.tableHeaders.vendor')}</TableHead>
+                      <TableHead>{t('vendorCOIs.tableHeaders.coverageType')}</TableHead>
+                      <TableHead>{t('vendorCOIs.tableHeaders.policyNumber')}</TableHead>
+                      <TableHead>{t('vendorCOIs.tableHeaders.insuranceCompany')}</TableHead>
+                      <TableHead>{t('vendorCOIs.tableHeaders.coverageAmount')}</TableHead>
+                      <TableHead>{t('vendorCOIs.tableHeaders.validThrough')}</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Property</TableHead>
-                      <TableHead>Verified</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t('vendorCOIs.tableHeaders.property')}</TableHead>
+                      <TableHead>{t('vendorCOIs.tableHeaders.verified')}</TableHead>
+                      <TableHead className="text-right">{t('vendorCOIs.tableHeaders.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -495,12 +511,12 @@ export default function VendorCOIs() {
                               <span>{format(parseISO(coi.valid_through), 'MMM dd, yyyy')}</span>
                               {isExpiringSoon && !isExpired && (
                                 <span className="text-xs text-yellow-600 font-medium">
-                                  {daysUntilExpiry} days left
+                                  {daysUntilExpiry} {t('vendorCOIs.badges.daysLeft')}
                                 </span>
                               )}
                               {isExpired && (
                                 <span className="text-xs text-red-600 font-medium">
-                                  Expired {Math.abs(daysUntilExpiry)} days ago
+                                  {t('vendorCOIs.badges.expiredDaysAgo', { days: Math.abs(daysUntilExpiry) })}
                                 </span>
                               )}
                             </div>
@@ -510,7 +526,7 @@ export default function VendorCOIs() {
                             {coi.property?.property_type ? (
                               <span className="text-sm">{coi.property.property_type}</span>
                             ) : (
-                              <span className="text-muted-foreground text-sm italic">All properties</span>
+                              <span className="text-muted-foreground text-sm italic">{t('vendorCOIs.badges.allProperties')}</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -519,7 +535,7 @@ export default function VendorCOIs() {
                                 <TooltipTrigger>
                                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
-                                    Verified
+                                    {t('vendorCOIs.badges.verified')}
                                   </Badge>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -529,7 +545,7 @@ export default function VendorCOIs() {
                               </Tooltip>
                             ) : (
                               <Badge variant="outline" className="bg-gray-50 text-gray-600">
-                                Not verified
+                                {t('vendorCOIs.badges.notVerified')}
                               </Badge>
                             )}
                           </TableCell>
@@ -548,10 +564,26 @@ export default function VendorCOIs() {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Verify COI</p>
+                                    <p>{t('vendorCOIs.actions.verify')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDownloadCOI(coi)}
+                                    disabled={!coi.file_url}
+                                  >
+                                    <Download className="h-4 w-4 text-blue-600" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{t('vendorCOIs.actions.download')}</p>
+                                </TooltipContent>
+                              </Tooltip>
 
                               {canEdit && (
                                 <Tooltip>
@@ -565,7 +597,7 @@ export default function VendorCOIs() {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Edit COI</p>
+                                    <p>{t('vendorCOIs.actions.edit')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -577,7 +609,7 @@ export default function VendorCOIs() {
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => {
-                                        if (confirm('Are you sure you want to delete this COI?')) {
+                                        if (confirm(t('vendorCOIs.confirmations.delete'))) {
                                           deleteCOI(coi.coi_id);
                                         }
                                       }}
@@ -587,7 +619,7 @@ export default function VendorCOIs() {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Delete COI</p>
+                                    <p>{t('vendorCOIs.actions.delete')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}

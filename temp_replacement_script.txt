@@ -1,0 +1,80 @@
+Location Details|{t('propertyForm.locationDetails')}
+Physical address and geographic coordinates|{t('propertyForm.locationDetailsDesc')}
+Select on Map|{t('propertyForm.selectOnMap')}
+Address Information|{t('propertyForm.addressInformation')}
+Street Address|{t('propertyForm.streetAddress')}
+123 Main Street|{t('propertyForm.streetAddressPlaceholder')}
+City|{t('propertyForm.city')}
+Miami|{t('propertyForm.cityPlaceholder')}
+State|{t('propertyForm.state')}
+Florida|{t('propertyForm.statePlaceholder')}
+Postal Code|{t('propertyForm.postalCode')}
+33101|{t('propertyForm.postalCodePlaceholder')}
+Geographic Coordinates|{t('propertyForm.geographicCoordinates')}
+Latitude|{t('propertyForm.latitude')}
+25.7617|{t('propertyForm.latitudePlaceholder')}
+Longitude|{t('propertyForm.longitude')}
+-80.1918|{t('propertyForm.longitudePlaceholder')}
+Property Details|{t('propertyForm.propertyDetails')}
+Size, capacity, and room specifications|{t('propertyForm.propertyDetailsDesc')}
+Size (sq ft)|{t('propertyForm.sizeSqft')}
+Capacity|{t('propertyForm.capacity')}
+Max Capacity|{t('propertyForm.maxCapacity')}
+Bedrooms|{t('propertyForm.bedrooms')}
+Bathrooms|{t('propertyForm.bathrooms')}
+Half Baths|{t('propertyForm.halfBaths')}
+WCs|{t('propertyForm.wcs')}
+Kitchens|{t('propertyForm.kitchens')}
+Living Rooms|{t('propertyForm.livingRooms')}
+Property Units|{t('propertyForm.propertyUnits')}
+Manage individual units within this property (optional)|{t('propertyForm.propertyUnitsDesc')}
+Add Unit|{t('propertyForm.addUnit')}
+Property name|{t('propertyForm.propertyNamePlaceholderUnit')}
+License number|{t('propertyForm.licenseNumberPlaceholder')}
+Folio|{t('propertyForm.folioPlaceholder')}
+Communication Details|{t('propertyForm.communicationDetails')}
+Contact information and internet access details for this property|{t('propertyForm.communicationDetailsDesc')}
+Contact Information|{t('propertyForm.contactInformation')}
+Phone Number|{t('propertyForm.phoneNumber')}
++1 (555) 123-4567|{t('propertyForm.phoneNumberPlaceholder')}
+WiFi Network Name|{t('propertyForm.wifiNetworkName')}
+MyPropertyWiFi|{t('propertyForm.wifiNamePlaceholder')}
+WiFi Password|{t('propertyForm.wifiPassword')}
+Enter WiFi password|{t('propertyForm.wifiPasswordPlaceholder')}
+Access Information|{t('propertyForm.accessInformation')}
+Security codes and entry information for property access|{t('propertyForm.accessInformationDesc')}
+Security Access|{t('propertyForm.securityAccess')}
+Gate Code|{t('propertyForm.gateCode')}
+1234#|{t('propertyForm.gateCodePlaceholder')}
+Door Lock Password|{t('propertyForm.doorLockPassword')}
+Enter lock code|{t('propertyForm.doorLockPasswordPlaceholder')}
+Alarm Passcode|{t('propertyForm.alarmPasscode')}
+Security alarm code|{t('propertyForm.alarmPasscodePlaceholder')}
+Additional Property Features|{t('propertyForm.additionalPropertyFeatures')}
+Storage Number|{t('propertyForm.storageNumber')}
+Storage unit #|{t('propertyForm.storageNumberPlaceholder')}
+Storage Code|{t('propertyForm.storageCode')}
+Access code|{t('propertyForm.storageCodePlaceholder')}
+Garage Number|{t('propertyForm.garageNumber')}
+Parking spot #|{t('propertyForm.garageNumberPlaceholder')}
+Front Desk|{t('propertyForm.frontDesk')}
+Front desk info|{t('propertyForm.frontDeskPlaceholder')}
+Mailing Box|{t('propertyForm.mailingBox')}
+Mailbox number|{t('propertyForm.mailingBoxPlaceholder')}
+Pool Access Code|{t('propertyForm.poolAccessCode')}
+Pool code|{t('propertyForm.poolAccessCodePlaceholder')}
+Amenities|{t('propertyForm.amenities')}
+Select all amenities available at this property|{t('propertyForm.amenitiesDesc')}
+Rules|{t('propertyForm.rules')}
+Select all rules that apply to this property|{t('propertyForm.rulesDesc')}
+Property Profile Image|{t('propertyForm.propertyProfileImage')}
+Upload one profile image to represent this property|{t('propertyForm.propertyProfileImageDesc')}
+Upload Profile Image|{t('propertyForm.uploadProfileImage')}
+Remove|{t('propertyForm.remove')}
+Image Title (Optional)|{t('propertyForm.imageTitleOptional')}
+Enter image title or description|{t('propertyForm.imageTitlePlaceholder')}
+Cancel|{t('propertyForm.cancel')}
+Updating...|{t('propertyForm.updating')}
+Creating...|{t('propertyForm.creating')}
+Update Property|{t('propertyForm.updateProperty')}
+Create Property|{t('propertyForm.createProperty')}

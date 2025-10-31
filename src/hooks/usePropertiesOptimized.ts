@@ -157,23 +157,33 @@ const fetchPropertyDetail = async (propertyId: string): Promise<Property> => {
 
 // Fetch amenities
 const fetchAmenities = async (): Promise<Amenity[]> => {
+  console.log('🔍 Fetching amenities from database...');
   const { data, error } = await supabase
     .from('amenities')
     .select('*')
     .order('amenity_name');
 
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Error fetching amenities:', error);
+    throw error;
+  }
+  console.log('✅ Fetched amenities:', data?.length || 0, 'items');
   return data || [];
 };
 
 // Fetch rules
 const fetchRules = async (): Promise<Rule[]> => {
+  console.log('🔍 Fetching rules from database...');
   const { data, error } = await supabase
     .from('rules')
     .select('*')
     .order('rule_name');
 
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Error fetching rules:', error);
+    throw error;
+  }
+  console.log('✅ Fetched rules:', data?.length || 0, 'items');
   return data || [];
 };
 

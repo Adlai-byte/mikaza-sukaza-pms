@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +43,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { formatUserDisplay } from '@/lib/user-display';
 
 export default function Issues() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [showIssueDialog, setShowIssueDialog] = useState(false);
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
@@ -226,15 +228,15 @@ export default function Issues() {
           <div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
               <AlertTriangle className="h-8 w-8 text-primary" />
-              Issues & Photos
+              {t('issues.title')}
             </h1>
             <p className="text-muted-foreground mt-2">
-              Track property issues, maintenance, and document with photos
+              {t('issues.subtitle')}
             </p>
           </div>
           <Button onClick={handleCreateIssue} className="bg-primary hover:bg-primary/90">
             <Plus className="mr-2 h-4 w-4" />
-            Report Issue
+            {t('issues.reportIssue')}
           </Button>
         </div>
 
@@ -244,9 +246,9 @@ export default function Issues() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">Total Issues</p>
+                  <p className="text-sm font-medium text-blue-700">{t('issues.stats.totalIssues')}</p>
                   <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
-                  <p className="text-xs text-blue-600 mt-1">All reported issues</p>
+                  <p className="text-xs text-blue-600 mt-1">{t('issues.stats.totalIssuesDesc')}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
                   <AlertTriangle className="h-6 w-6 text-white" />
@@ -259,9 +261,9 @@ export default function Issues() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-700">Open Issues</p>
+                  <p className="text-sm font-medium text-red-700">{t('issues.stats.openIssues')}</p>
                   <h3 className="text-3xl font-bold text-red-900 mt-1">{stats.open}</h3>
-                  <p className="text-xs text-red-600 mt-1">Requires attention</p>
+                  <p className="text-xs text-red-600 mt-1">{t('issues.stats.openIssuesDesc')}</p>
                 </div>
                 <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
                   <XCircle className="h-6 w-6 text-white" />
@@ -274,9 +276,9 @@ export default function Issues() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-700">Resolved</p>
+                  <p className="text-sm font-medium text-green-700">{t('issues.stats.resolved')}</p>
                   <h3 className="text-3xl font-bold text-green-900 mt-1">{stats.resolved}</h3>
-                  <p className="text-xs text-green-600 mt-1">Completed issues</p>
+                  <p className="text-xs text-green-600 mt-1">{t('issues.stats.resolvedDesc')}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
                   <CheckCircle className="h-6 w-6 text-white" />
@@ -289,9 +291,9 @@ export default function Issues() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-700">Total Cost</p>
+                  <p className="text-sm font-medium text-purple-700">{t('issues.stats.totalCost')}</p>
                   <h3 className="text-3xl font-bold text-purple-900 mt-1">${stats.totalCost.toFixed(2)}</h3>
-                  <p className="text-xs text-purple-600 mt-1">Actual costs</p>
+                  <p className="text-xs text-purple-600 mt-1">{t('issues.stats.totalCostDesc')}</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                   <DollarSign className="h-6 w-6 text-white" />
@@ -306,19 +308,19 @@ export default function Issues() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              Filters & Search
+              {t('issues.filters.title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {/* Search */}
               <div className="space-y-2 lg:col-span-2">
-                <Label htmlFor="search">Search Issues</Label>
+                <Label htmlFor="search">{t('issues.filters.searchIssues')}</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder="Search by title, description, location..."
+                    placeholder={t('issues.filters.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -328,10 +330,10 @@ export default function Issues() {
 
               {/* Property Filter */}
               <div className="space-y-2">
-                <Label htmlFor="property">Property</Label>
+                <Label htmlFor="property">{t('issues.filters.property')}</Label>
                 <Select value={propertyFilter || undefined} onValueChange={(value) => setPropertyFilter(value || '')}>
                   <SelectTrigger id="property">
-                    <SelectValue placeholder="All properties" />
+                    <SelectValue placeholder={t('issues.filters.allProperties')} />
                   </SelectTrigger>
                   <SelectContent>
                     {properties.map(property => (
@@ -345,13 +347,13 @@ export default function Issues() {
 
               {/* Assignee Filter */}
               <div className="space-y-2">
-                <Label htmlFor="assignee">Assigned To</Label>
+                <Label htmlFor="assignee">{t('issues.filters.assignedTo')}</Label>
                 <Select value={assignedFilter || "default"} onValueChange={(value) => setAssignedFilter(value === "default" ? '' : value)}>
                   <SelectTrigger id="assignee">
-                    <SelectValue placeholder="My Issues (assigned or reported)" />
+                    <SelectValue placeholder={t('issues.filters.myIssues')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="default">My Issues (assigned or reported)</SelectItem>
+                    <SelectItem value="default">{t('issues.filters.myIssues')}</SelectItem>
                     {users.map(u => (
                       <SelectItem key={u.user_id} value={u.user_id}>
                         {formatUserDisplay(u)}
@@ -370,21 +372,21 @@ export default function Issues() {
                 className="cursor-pointer"
                 onClick={() => toggleStatusFilter('open')}
               >
-                Open
+                {t('issues.status.open')}
               </Badge>
               <Badge
                 variant={statusFilter.includes('in_progress') ? 'default' : 'outline'}
                 className="cursor-pointer"
                 onClick={() => toggleStatusFilter('in_progress')}
               >
-                In Progress
+                {t('issues.status.inProgress')}
               </Badge>
               <Badge
                 variant={statusFilter.includes('resolved') ? 'default' : 'outline'}
                 className="cursor-pointer"
                 onClick={() => toggleStatusFilter('resolved')}
               >
-                Resolved
+                {t('issues.status.resolved')}
               </Badge>
 
               {/* Priority Filters */}
@@ -393,14 +395,14 @@ export default function Issues() {
                 className="cursor-pointer"
                 onClick={() => togglePriorityFilter('urgent')}
               >
-                Urgent
+                {t('issues.priority.urgent')}
               </Badge>
               <Badge
                 variant={priorityFilter.includes('high') ? 'default' : 'outline'}
                 className="cursor-pointer bg-orange-500 hover:bg-orange-600"
                 onClick={() => togglePriorityFilter('high')}
               >
-                High Priority
+                {t('issues.priority.highPriority')}
               </Badge>
 
               {/* Clear Filters */}
@@ -412,13 +414,13 @@ export default function Issues() {
                   className="h-7"
                 >
                   <XCircle className="mr-1 h-3 w-3" />
-                  Clear All
+                  {t('issues.filters.clearAll')}
                 </Button>
               )}
 
               {/* Results Count */}
               <Badge variant="secondary" className="ml-auto">
-                {issues.length} result{issues.length !== 1 ? 's' : ''}
+                {issues.length} {issues.length !== 1 ? t('issues.resultsPlural') : t('issues.results')}
               </Badge>
             </div>
           </CardContent>
@@ -431,7 +433,7 @@ export default function Issues() {
           onDelete={handleDeleteIssue}
           onStatusChange={handleStatusChange}
           onViewPhotos={handleViewPhotos}
-          emptyMessage="No issues found. Report your first issue to get started."
+          emptyMessage={t('issues.noIssuesFound')}
           isDeleting={deleteIssue.isPending}
         />
 

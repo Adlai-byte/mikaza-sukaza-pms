@@ -45,6 +45,8 @@ import VendorCOIs from "./pages/VendorCOIs";
 import AccessAuthorizations from "./pages/AccessAuthorizations";
 import CheckInOut from "./pages/CheckInOut";
 import ChecklistTemplates from "./pages/ChecklistTemplates";
+import Media from "./pages/Media";
+import Highlights from "./pages/Highlights";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
@@ -464,7 +466,7 @@ const App = () => (
                   path="/media"
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.MEDIA_VIEW}>
-                      <div className="p-8 text-center text-muted-foreground">Media - Coming Soon</div>
+                      <Media />
                     </RBACProtectedRoute>
                   }
                 />
@@ -489,12 +491,12 @@ const App = () => (
                   }
                 />
 
-                {/* Highlights - Both can access */}
+                {/* Highlights - Finance team can access */}
                 <Route
                   path="/highlights"
                   element={
-                    <RBACProtectedRoute permission={PERMISSIONS.HIGHLIGHTS_VIEW}>
-                      <div className="p-8 text-center text-muted-foreground">Highlights - Coming Soon</div>
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <Highlights />
                     </RBACProtectedRoute>
                   }
                 />

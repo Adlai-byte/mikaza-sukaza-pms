@@ -38,6 +38,7 @@ import { generateInvoicePDF } from '@/lib/pdf-generator';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { formatUserDisplay } from '@/lib/user-display';
+import { useTranslation } from 'react-i18next';
 
 const INVOICE_STATUSES = ['draft', 'sent', 'paid', 'overdue', 'cancelled', 'refunded'];
 const LINE_ITEM_TYPES = ['accommodation', 'cleaning', 'extras', 'tax', 'commission', 'other'];
@@ -48,6 +49,7 @@ const toSentenceCase = (str: string) => {
 };
 
 export default function InvoiceForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { invoiceId, bookingId } = useParams();
   const isEditing = !!invoiceId;
@@ -247,8 +249,8 @@ export default function InvoiceForm() {
       setNextLineNumber(lineNumber);
 
       toast({
-        title: 'Invoice Pre-filled from Booking',
-        description: `${generatedItems.length} line items auto-generated. You can edit before saving.`,
+        title: t('invoices.invoicePrefilledFromBooking'),
+        description: t('invoices.invoicePrefilledDesc', { count: generatedItems.length }),
       });
     }
   }, [booking, isFromBooking, isEditing]);
@@ -328,8 +330,8 @@ export default function InvoiceForm() {
   const handleAddTip = () => {
     if (!invoiceId) {
       toast({
-        title: 'Save Invoice First',
-        description: 'Please save the invoice before adding tips',
+        title: t('invoices.saveInvoiceFirst'),
+        description: t('invoices.saveInvoiceFirstDesc'),
         variant: 'destructive',
       });
       return;
@@ -337,8 +339,8 @@ export default function InvoiceForm() {
 
     if (!tipRecipient || !tipAmount) {
       toast({
-        title: 'Missing Information',
-        description: 'Please select a staff member and enter a tip amount',
+        title: t('invoices.missingInformation'),
+        description: t('invoices.selectStaffAndAmount'),
         variant: 'destructive',
       });
       return;
@@ -347,8 +349,8 @@ export default function InvoiceForm() {
     const amount = parseFloat(tipAmount);
     if (isNaN(amount) || amount <= 0) {
       toast({
-        title: 'Invalid Amount',
-        description: 'Please enter a valid tip amount',
+        title: t('invoices.invalidTipAmount'),
+        description: t('invoices.enterValidTipAmount'),
         variant: 'destructive',
       });
       return;
@@ -373,7 +375,7 @@ export default function InvoiceForm() {
   };
 
   const handleRemoveTip = (tipId: string) => {
-    if (confirm('Are you sure you want to remove this tip?')) {
+    if (confirm(t('invoices.confirmRemoveTip'))) {
       deleteTip.mutate(tipId);
     }
   };
@@ -389,8 +391,8 @@ export default function InvoiceForm() {
   const handleDownloadPDF = () => {
     if (!invoice) {
       toast({
-        title: 'Error',
-        description: 'Invoice data not available. Please save the invoice first.',
+        title: t('common.error'),
+        description: t('invoices.invoiceDataNotAvailable'),
         variant: 'destructive',
       });
       return;
@@ -413,14 +415,14 @@ export default function InvoiceForm() {
       generateInvoicePDF(invoiceWithDetails);
 
       toast({
-        title: 'Success',
-        description: 'Invoice PDF downloaded successfully',
+        title: t('common.success'),
+        description: t('invoices.pdfGenSuccess'),
       });
     } catch (error) {
       console.error('PDF generation error:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to generate PDF. Please try again.',
+        title: t('common.error'),
+        description: t('invoices.pdfGenError'),
         variant: 'destructive',
       });
     }
@@ -428,7 +430,7 @@ export default function InvoiceForm() {
 
   const handleSubmit = form.handleSubmit(async (data) => {
     if (lineItems.length === 0) {
-      alert('Please add at least one line item');
+      alert(t('invoices.pleaseAddLineItem'));
       return;
     }
 
@@ -471,16 +473,16 @@ export default function InvoiceForm() {
         if (insertError) throw insertError;
 
         toast({
-          title: 'Success',
-          description: 'Invoice updated successfully with all line items',
+          title: t('common.success'),
+          description: t('invoices.invoiceUpdatedSuccess'),
         });
 
         navigate('/invoices');
       } catch (error: any) {
         console.error('❌ Error updating invoice:', error);
         toast({
-          title: 'Error',
-          description: error.message || 'Failed to update invoice',
+          title: t('common.error'),
+          description: error.message || t('invoices.invoiceUpdateError'),
           variant: 'destructive',
         });
       }
@@ -503,7 +505,7 @@ export default function InvoiceForm() {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="text-muted-foreground">Loading invoice data...</p>
+        <p className="text-muted-foreground">{t('invoices.loadingInvoice')}</p>
       </div>
     );
   }
@@ -513,11 +515,11 @@ export default function InvoiceForm() {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4">
         <div className="text-destructive text-xl">⚠️</div>
-        <h2 className="text-xl font-semibold">Invoice Not Found</h2>
-        <p className="text-muted-foreground">The invoice you're trying to edit doesn't exist or you don't have permission to view it.</p>
+        <h2 className="text-xl font-semibold">{t('invoices.invoiceNotFound')}</h2>
+        <p className="text-muted-foreground">{t('invoices.invoiceNotFoundDesc')}</p>
         <Button onClick={() => navigate('/invoices')} variant="outline">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Invoices
+          {t('invoices.backToInvoices')}
         </Button>
       </div>
     );
@@ -534,17 +536,17 @@ export default function InvoiceForm() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-bold">
-                {isEditing ? 'Edit Invoice' : 'New Invoice'}
+                {isEditing ? t('invoices.editInvoice') : t('invoices.newInvoice')}
               </h1>
               {isFromBooking && booking && (
                 <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  From Booking
+                  {t('invoices.fromBooking')}
                 </span>
               )}
             </div>
             <p className="text-muted-foreground mt-1">
-              {isEditing ? 'Update invoice details' : isFromBooking ? 'Review and edit auto-generated invoice' : 'Create a new invoice for a guest'}
+              {isEditing ? t('invoices.updateInvoiceDetails') : isFromBooking ? t('invoices.reviewAutoGeneratedInvoice') : t('invoices.createNewInvoiceDesc')}
             </p>
           </div>
         </div>
@@ -557,7 +559,7 @@ export default function InvoiceForm() {
                 onClick={handleDownloadPDF}
               >
                 <Download className="h-4 w-4 mr-2" />
-                Download PDF
+                {t('invoices.downloadPDF')}
               </Button>
               {invoice.guest_email && (
                 <Button
@@ -567,35 +569,35 @@ export default function InvoiceForm() {
                   className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  Send via Email
+                  {t('invoices.sendViaEmail')}
                 </Button>
               )}
             </>
           )}
           <Button onClick={handleSubmit} size="lg" disabled={createInvoice.isPending || updateInvoice.isPending}>
             <Save className="h-4 w-4 mr-2" />
-            {isEditing ? 'Update' : 'Create'} Invoice
+            {isEditing ? t('invoices.updateInvoice') : t('invoices.createInvoice')}
           </Button>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Invoice Details */}
+        {/* {t('invoices.invoiceDetails')} */}
         <Card>
           <CardHeader>
-            <CardTitle>Invoice Details</CardTitle>
-            <CardDescription>Basic information about the invoice</CardDescription>
+            <CardTitle>{t('invoices.invoiceDetails')}</CardTitle>
+            <CardDescription>{t('invoices.invoiceDetailsDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="property_id">Property *</Label>
+                <Label htmlFor="property_id">{t('invoices.property')} *</Label>
                 <Select
                   value={form.watch('property_id')}
                   onValueChange={(value) => form.setValue('property_id', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select property" />
+                    <SelectValue placeholder={t('invoices.selectProperty')} />
                   </SelectTrigger>
                   <SelectContent>
                     {properties.map((property) => (
@@ -608,7 +610,7 @@ export default function InvoiceForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
+                <Label htmlFor="status">{t('common.status')} *</Label>
                 <Select
                   value={form.watch('status')}
                   onValueChange={(value) => form.setValue('status', value as any)}
@@ -619,7 +621,7 @@ export default function InvoiceForm() {
                   <SelectContent>
                     {INVOICE_STATUSES.map((status) => (
                       <SelectItem key={status} value={status}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                        {t(`invoices.status.${status}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -631,46 +633,46 @@ export default function InvoiceForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="guest_name">Guest Name *</Label>
+                <Label htmlFor="guest_name">{t('invoices.guestName')} *</Label>
                 <Input
                   {...form.register('guest_name')}
-                  placeholder="John Doe"
+                  placeholder={t('invoices.guestNamePlaceholder')}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="guest_email">Guest Email</Label>
+                <Label htmlFor="guest_email">{t('invoices.guestEmail')}</Label>
                 <Input
                   {...form.register('guest_email')}
                   type="email"
-                  placeholder="guest@example.com"
+                  placeholder={t('invoices.guestEmailPlaceholder')}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="guest_phone">Guest Phone</Label>
+                <Label htmlFor="guest_phone">{t('invoices.guestPhone')}</Label>
                 <Input
                   {...form.register('guest_phone')}
-                  placeholder="+1 234 567 8900"
+                  placeholder={t('invoices.guestPhonePlaceholder')}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="payment_method">Payment Method</Label>
+                <Label htmlFor="payment_method">{t('invoices.paymentMethod')}</Label>
                 <Input
                   {...form.register('payment_method')}
-                  placeholder="Credit Card, Cash, etc."
+                  placeholder={t('invoices.paymentMethodPlaceholder')}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="guest_address">Guest Address</Label>
+              <Label htmlFor="guest_address">{t('invoices.guestAddress')}</Label>
               <Textarea
                 {...form.register('guest_address')}
-                placeholder="123 Main St, City, State, ZIP"
+                placeholder={t('invoices.guestAddressPlaceholder')}
                 rows={2}
               />
             </div>
@@ -679,7 +681,7 @@ export default function InvoiceForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="issue_date">Issue Date *</Label>
+                <Label htmlFor="issue_date">{t('invoices.issueDate')} *</Label>
                 <Input
                   type="date"
                   {...form.register('issue_date')}
@@ -687,7 +689,7 @@ export default function InvoiceForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="due_date">Due Date *</Label>
+                <Label htmlFor="due_date">{t('invoices.dueDate')} *</Label>
                 <Input
                   type="date"
                   {...form.register('due_date')}
@@ -696,19 +698,19 @@ export default function InvoiceForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="terms">Payment Terms</Label>
+              <Label htmlFor="terms">{t('invoices.paymentTerms')}</Label>
               <Textarea
                 {...form.register('terms')}
-                placeholder="Payment due upon receipt"
+                placeholder={t('invoices.paymentTermsPlaceholder')}
                 rows={2}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">{t('invoices.invoiceNotes')}</Label>
               <Textarea
                 {...form.register('notes')}
-                placeholder="Additional notes or comments"
+                placeholder={t('invoices.invoiceNotesPlaceholder')}
                 rows={3}
               />
             </div>
@@ -723,24 +725,24 @@ export default function InvoiceForm() {
           />
         )}
 
-        {/* Line Items */}
+        {/* {t('invoices.lineItems')} */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Line Items</CardTitle>
-                <CardDescription>Items and charges included in this invoice</CardDescription>
+                <CardTitle>{t('invoices.lineItems')}</CardTitle>
+                <CardDescription>{t('invoices.lineItemsDesc')}</CardDescription>
               </div>
               <Button type="button" variant="outline" onClick={addLineItem}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Line Item
+                {t('invoices.addLineItem')}
               </Button>
             </div>
           </CardHeader>
           <CardContent>
             {lineItems.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <p>No line items yet. Click "Add Line Item" to get started.</p>
+                <p>No line items yet. Click "{t('invoices.addLineItem')}" to get started.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -748,13 +750,13 @@ export default function InvoiceForm() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12">#</TableHead>
-                      <TableHead className="min-w-[200px]">Description</TableHead>
-                      <TableHead className="w-32">Type</TableHead>
-                      <TableHead className="w-32">Qty</TableHead>
-                      <TableHead className="w-36">Unit Price</TableHead>
-                      <TableHead className="w-32">Tax %</TableHead>
-                      <TableHead className="w-32">Tax Amount</TableHead>
-                      <TableHead className="w-32">Total</TableHead>
+                      <TableHead className="min-w-[200px]">{t('invoices.description')}</TableHead>
+                      <TableHead className="w-32">{t('invoices.type')}</TableHead>
+                      <TableHead className="w-40">{t('invoices.qty')}</TableHead>
+                      <TableHead className="w-36">{t('invoices.unitPrice')}</TableHead>
+                      <TableHead className="w-40">{t('invoices.taxPercent')}</TableHead>
+                      <TableHead className="w-40">{t('common.tax')}</TableHead>
+                      <TableHead className="w-32">{t('common.total')}</TableHead>
                       <TableHead className="w-16"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -768,7 +770,7 @@ export default function InvoiceForm() {
                             <Input
                               value={item.description}
                               onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                              placeholder="Item description"
+                              placeholder={t('invoices.itemDescriptionPlaceholder')}
                             />
                           </TableCell>
                           <TableCell>
@@ -782,7 +784,7 @@ export default function InvoiceForm() {
                               <SelectContent>
                                 {LINE_ITEM_TYPES.map((type) => (
                                   <SelectItem key={type} value={type}>
-                                    {toSentenceCase(type)}
+                                    {t(`invoices.lineItemType.${type}`)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -838,24 +840,33 @@ export default function InvoiceForm() {
           </CardContent>
         </Card>
 
-        {/* Tips for Staff */}
+        {/* {t('invoices.tipsForStaff')} */}
         {isEditing && (
           <Card>
             <CardHeader>
-              <CardTitle>Tips for Staff</CardTitle>
+              <CardTitle>{t('invoices.tipsForStaff')}</CardTitle>
               <CardDescription>
-                Add gratuities for staff members who provided exceptional service
+                {t('invoices.tipsForStaffDesc')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {/* Add Tip Form */}
+                {/* Warning when invoice is not saved */}
+                {!invoiceId && (
+                  <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-md">
+                    <p className="text-sm font-medium">
+                      💡 {t('invoices.saveInvoiceBeforeTips', 'Please save this invoice first before adding tips')}
+                    </p>
+                  </div>
+                )}
+
+                {/* {t('invoices.addTip')} Form */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-muted rounded-lg">
                   <div className="space-y-2">
-                    <Label>Staff Member</Label>
+                    <Label>{t('invoices.staffMember')}</Label>
                     <Select value={tipRecipient} onValueChange={setTipRecipient}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select staff" />
+                        <SelectValue placeholder={t('invoices.selectStaff')} />
                       </SelectTrigger>
                       <SelectContent>
                         {users
@@ -870,7 +881,7 @@ export default function InvoiceForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Tip Amount ($)</Label>
+                    <Label>{t('invoices.tipAmount')}</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -882,28 +893,28 @@ export default function InvoiceForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Reason (Optional)</Label>
+                    <Label>{t('invoices.reasonOptional')}</Label>
                     <Select
                       value={tipReason}
                       onValueChange={setTipReason}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select or type reason" />
+                        <SelectValue placeholder={t('invoices.selectOrTypeReason')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Excellent cleaning service">Excellent cleaning service</SelectItem>
-                        <SelectItem value="Outstanding guest communication">Outstanding guest communication</SelectItem>
-                        <SelectItem value="Quick response time">Quick response time</SelectItem>
-                        <SelectItem value="Professional maintenance work">Professional maintenance work</SelectItem>
-                        <SelectItem value="Exceptional hospitality">Exceptional hospitality</SelectItem>
-                        <SelectItem value="Property walkthrough service">Property walkthrough service</SelectItem>
-                        <SelectItem value="Guest amenities setup">Guest amenities setup</SelectItem>
-                        <SelectItem value="Emergency response">Emergency response</SelectItem>
-                        <SelectItem value="Above and beyond service">Above and beyond service</SelectItem>
+                        <SelectItem value="Excellent cleaning service">{t('invoices.tipReasons.excellentCleaning')}</SelectItem>
+                        <SelectItem value="Outstanding guest communication">{t('invoices.tipReasons.outstandingCommunication')}</SelectItem>
+                        <SelectItem value="Quick response time">{t('invoices.tipReasons.quickResponse')}</SelectItem>
+                        <SelectItem value="Professional maintenance work">{t('invoices.tipReasons.professionalMaintenance')}</SelectItem>
+                        <SelectItem value="Exceptional hospitality">{t('invoices.tipReasons.exceptionalHospitality')}</SelectItem>
+                        <SelectItem value="Property walkthrough service">{t('invoices.tipReasons.propertyWalkthrough')}</SelectItem>
+                        <SelectItem value="Guest amenities setup">{t('invoices.tipReasons.guestAmenities')}</SelectItem>
+                        <SelectItem value="Emergency response">{t('invoices.tipReasons.emergencyResponse')}</SelectItem>
+                        <SelectItem value="Above and beyond service">{t('invoices.tipReasons.aboveAndBeyond')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <Input
-                      placeholder="Or type custom reason"
+                      placeholder={t('invoices.orTypeCustomReason')}
                       value={tipReason}
                       onChange={(e) => setTipReason(e.target.value)}
                       className="mt-2"
@@ -911,9 +922,9 @@ export default function InvoiceForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Notes (Optional)</Label>
+                    <Label>{t('invoices.notesOptional')}</Label>
                     <Input
-                      placeholder="Additional notes"
+                      placeholder={t('invoices.additionalNotes')}
                       value={tipNotes}
                       onChange={(e) => setTipNotes(e.target.value)}
                     />
@@ -923,11 +934,12 @@ export default function InvoiceForm() {
                     <Button
                       type="button"
                       onClick={handleAddTip}
-                      disabled={!tipRecipient || !tipAmount}
+                      disabled={!invoiceId || !tipRecipient || !tipAmount}
                       className="w-full"
+                      title={!invoiceId ? 'Save invoice first to add tips' : ''}
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Add Tip
+                      {t('invoices.addTip')}
                     </Button>
                   </div>
                 </div>
@@ -935,14 +947,14 @@ export default function InvoiceForm() {
                 {/* Existing Tips List */}
                 {existingTips && existingTips.length > 0 && (
                   <div className="space-y-2">
-                    <Label>Added Tips</Label>
+                    <Label>{t('invoices.addedTips')}</Label>
                     <div className="border rounded-md">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Staff Member</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Reason</TableHead>
+                            <TableHead>{t('invoices.staffMember')}</TableHead>
+                            <TableHead>{t('invoices.amount')}</TableHead>
+                            <TableHead>{t('invoices.reason')}</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="w-[50px]"></TableHead>
                           </TableRow>
@@ -978,7 +990,7 @@ export default function InvoiceForm() {
                       </Table>
                     </div>
                     <p className="text-sm text-muted-foreground mt-2">
-                      Tips will be converted to commissions when processed
+                      {t('invoices.tipsWillBeConvertedToCommissions')}
                     </p>
                   </div>
                 )}
@@ -987,35 +999,14 @@ export default function InvoiceForm() {
           </Card>
         )}
 
-        {/* Totals */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-3 max-w-md ml-auto">
-              <div className="flex justify-between text-lg">
-                <span>Subtotal:</span>
-                <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg">
-                <span>Tax:</span>
-                <span className="font-medium">${totals.taxAmount.toFixed(2)}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between text-2xl font-bold">
-                <span>Total:</span>
-                <span className="text-green-600">${totals.total.toFixed(2)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Actions */}
         <div className="flex items-center justify-between">
           <Button type="button" variant="outline" onClick={() => navigate('/invoices')}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={createInvoice.isPending || updateInvoice.isPending}>
             <Save className="h-4 w-4 mr-2" />
-            {isEditing ? 'Update' : 'Create'} Invoice
+            {isEditing ? t('invoices.updateInvoice') : t('invoices.createInvoice')}
           </Button>
         </div>
       </form>

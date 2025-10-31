@@ -42,6 +42,7 @@ import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatUserDisplay } from '@/lib/user-display';
+import { useTranslation } from 'react-i18next';
 
 // Job form schema
 const jobFormSchema = z.object({
@@ -71,6 +72,7 @@ interface JobDialogProps {
 }
 
 export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = false }: JobDialogProps) {
+  const { t } = useTranslation();
   const { properties } = usePropertiesOptimized();
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
@@ -166,9 +168,9 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{job ? 'Edit Job' : 'Create New Job'}</DialogTitle>
+          <DialogTitle>{job ? t('jobDialog.editTitle') : t('jobDialog.createTitle')}</DialogTitle>
           <DialogDescription>
-            {job ? 'Update the job details below' : 'Fill in the details to create a new work order'}
+            {job ? t('jobDialog.editDescription') : t('jobDialog.createDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -181,11 +183,11 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                 name="property_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Property *</FormLabel>
+                    <FormLabel>{t('jobDialog.property')} {t('jobDialog.requiredField')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select property" />
+                          <SelectValue placeholder={t('jobDialog.propertyPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -207,23 +209,23 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                 name="job_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Job Type *</FormLabel>
+                    <FormLabel>{t('jobDialog.jobType')} {t('jobDialog.requiredField')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select job type" />
+                          <SelectValue placeholder={t('jobDialog.jobTypePlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                        <SelectItem value="cleaning">Cleaning</SelectItem>
-                        <SelectItem value="inspection">Inspection</SelectItem>
-                        <SelectItem value="check_in">Check In</SelectItem>
-                        <SelectItem value="check_out">Check Out</SelectItem>
-                        <SelectItem value="repair">Repair</SelectItem>
-                        <SelectItem value="emergency">Emergency</SelectItem>
-                        <SelectItem value="preventive">Preventive</SelectItem>
+                        <SelectItem value="general">{t('jobDialog.types.general')}</SelectItem>
+                        <SelectItem value="maintenance">{t('jobDialog.types.maintenance')}</SelectItem>
+                        <SelectItem value="cleaning">{t('jobDialog.types.cleaning')}</SelectItem>
+                        <SelectItem value="inspection">{t('jobDialog.types.inspection')}</SelectItem>
+                        <SelectItem value="check_in">{t('jobDialog.types.checkIn')}</SelectItem>
+                        <SelectItem value="check_out">{t('jobDialog.types.checkOut')}</SelectItem>
+                        <SelectItem value="repair">{t('jobDialog.types.repair')}</SelectItem>
+                        <SelectItem value="emergency">{t('jobDialog.types.emergency')}</SelectItem>
+                        <SelectItem value="preventive">{t('jobDialog.types.preventive')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -238,9 +240,9 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Job Title *</FormLabel>
+                  <FormLabel>{t('jobDialog.jobTitle')} {t('jobDialog.requiredField')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Fix AC unit in master bedroom" {...field} />
+                    <Input placeholder={t('jobDialog.jobTitlePlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -253,10 +255,10 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t('jobDialog.description')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Detailed description of the work to be done..."
+                      placeholder={t('jobDialog.descriptionPlaceholder')}
                       className="min-h-[100px]"
                       {...field}
                     />
@@ -272,11 +274,11 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
               name="location_notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location Notes</FormLabel>
+                  <FormLabel>{t('jobDialog.locationNotes')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Kitchen - under sink" {...field} />
+                    <Input placeholder={t('jobDialog.locationNotesPlaceholder')} {...field} />
                   </FormControl>
-                  <FormDescription>Specific location within the property</FormDescription>
+                  <FormDescription>{t('jobDialog.locationNotesDescription')}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -289,19 +291,19 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status *</FormLabel>
+                    <FormLabel>{t('jobDialog.status')} {t('jobDialog.requiredField')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
+                          <SelectValue placeholder={t('jobDialog.statusPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="review">Review</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="pending">{t('jobDialog.statuses.pending')}</SelectItem>
+                        <SelectItem value="in_progress">{t('jobDialog.statuses.inProgress')}</SelectItem>
+                        <SelectItem value="review">{t('jobDialog.statuses.review')}</SelectItem>
+                        <SelectItem value="completed">{t('jobDialog.statuses.completed')}</SelectItem>
+                        <SelectItem value="cancelled">{t('jobDialog.statuses.cancelled')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -315,18 +317,18 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                 name="priority"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Priority *</FormLabel>
+                    <FormLabel>{t('jobDialog.priority')} {t('jobDialog.requiredField')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select priority" />
+                          <SelectValue placeholder={t('jobDialog.priorityPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="urgent">{t('jobDialog.priorities.urgent')}</SelectItem>
+                        <SelectItem value="high">{t('jobDialog.priorities.high')}</SelectItem>
+                        <SelectItem value="normal">{t('jobDialog.priorities.normal')}</SelectItem>
+                        <SelectItem value="low">{t('jobDialog.priorities.low')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -340,19 +342,19 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                 name="recurring_schedule"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Recurring</FormLabel>
+                    <FormLabel>{t('jobDialog.recurring')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select recurrence" />
+                          <SelectValue placeholder={t('jobDialog.recurringPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="biweekly">Biweekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="none">{t('jobDialog.recurrenceOptions.none')}</SelectItem>
+                        <SelectItem value="daily">{t('jobDialog.recurrenceOptions.daily')}</SelectItem>
+                        <SelectItem value="weekly">{t('jobDialog.recurrenceOptions.weekly')}</SelectItem>
+                        <SelectItem value="biweekly">{t('jobDialog.recurrenceOptions.biweekly')}</SelectItem>
+                        <SelectItem value="monthly">{t('jobDialog.recurrenceOptions.monthly')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -367,15 +369,15 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
               name="assigned_to"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Assign To</FormLabel>
+                  <FormLabel>{t('jobDialog.assignTo')}</FormLabel>
                   <Select onValueChange={(value) => field.onChange(value === 'unassigned' ? '' : value)} value={field.value || 'unassigned'}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select assignee (optional)" />
+                        <SelectValue placeholder={t('jobDialog.assignToPlaceholder')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      <SelectItem value="unassigned">{t('jobDialog.unassigned')}</SelectItem>
                       {users.map((user) => (
                         <SelectItem key={user.user_id} value={user.user_id}>
                           {formatUserDisplay(user)}
@@ -391,7 +393,7 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Due Date */}
               <FormItem>
-                <FormLabel>Due Date</FormLabel>
+                <FormLabel>{t('jobDialog.dueDate')}</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -402,7 +404,7 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                           !dueDate && 'text-muted-foreground'
                         )}
                       >
-                        {dueDate ? format(dueDate, 'PPP') : <span>Pick a date</span>}
+                        {dueDate ? format(dueDate, 'PPP') : <span>{t('jobDialog.dueDatePlaceholder')}</span>}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
@@ -416,12 +418,12 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                     />
                   </PopoverContent>
                 </Popover>
-                <FormDescription>When the job should be completed</FormDescription>
+                <FormDescription>{t('jobDialog.dueDateDescription')}</FormDescription>
               </FormItem>
 
               {/* Scheduled Date */}
               <FormItem>
-                <FormLabel>Scheduled Date</FormLabel>
+                <FormLabel>{t('jobDialog.scheduledDate')}</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -432,7 +434,7 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                           !scheduledDate && 'text-muted-foreground'
                         )}
                       >
-                        {scheduledDate ? format(scheduledDate, 'PPP') : <span>Pick a date</span>}
+                        {scheduledDate ? format(scheduledDate, 'PPP') : <span>{t('jobDialog.scheduledDatePlaceholder')}</span>}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
@@ -446,7 +448,7 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                     />
                   </PopoverContent>
                 </Popover>
-                <FormDescription>When work is scheduled to start</FormDescription>
+                <FormDescription>{t('jobDialog.scheduledDateDescription')}</FormDescription>
               </FormItem>
             </div>
 
@@ -457,18 +459,18 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                 name="estimated_hours"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Estimated Hours</FormLabel>
+                    <FormLabel>{t('jobDialog.estimatedHours')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         step="0.5"
                         min="0"
-                        placeholder="0"
+                        placeholder={t('jobDialog.estimatedHoursPlaceholder')}
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                       />
                     </FormControl>
-                    <FormDescription>Expected time to complete</FormDescription>
+                    <FormDescription>{t('jobDialog.estimatedHoursDescription')}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -480,18 +482,18 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                 name="estimated_cost"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Estimated Cost ($)</FormLabel>
+                    <FormLabel>{t('jobDialog.estimatedCost')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         step="0.01"
                         min="0"
-                        placeholder="0.00"
+                        placeholder={t('jobDialog.estimatedCostPlaceholder')}
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                       />
                     </FormControl>
-                    <FormDescription>Expected cost of materials/labor</FormDescription>
+                    <FormDescription>{t('jobDialog.estimatedCostDescription')}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -505,11 +507,11 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
               >
-                Cancel
+                {t('jobDialog.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {job ? 'Update Job' : 'Create Job'}
+                {job ? t('jobDialog.updateJob') : t('jobDialog.createJob')}
               </Button>
             </DialogFooter>
           </form>

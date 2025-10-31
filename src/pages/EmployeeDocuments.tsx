@@ -13,11 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { DocumentSummary } from "@/lib/schemas";
+import { useTranslation } from "react-i18next";
 
 export default function EmployeeDocuments() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
   const { hasPermission } = usePermissions();
+  const { t } = useTranslation();
   const { downloadDocument } = useDocumentDownload();
 
   // Fetch employee documents
@@ -57,7 +59,7 @@ export default function EmployeeDocuments() {
             Employee Documents
           </h1>
           <p className="text-muted-foreground">
-            Manage employee records, HR documents, and confidential files
+            {t('employeeDocuments.subtitle')}
           </p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
@@ -82,8 +84,8 @@ export default function EmployeeDocuments() {
       <Alert className="border-orange-200 bg-orange-50">
         <Shield className="h-4 w-4 text-orange-600" />
         <AlertDescription className="text-orange-800">
-          <strong>Confidential:</strong> Employee documents contain sensitive personal information.
-          Access is restricted and all actions are logged for security and compliance purposes.
+          <strong>{t('employeeDocuments.privacyNotice.confidential')}</strong> {t('employeeDocuments.privacyNotice.message')}
+          {t('employeeDocuments.privacyNotice.accessRestricted')}
         </AlertDescription>
       </Alert>
 
@@ -93,11 +95,11 @@ export default function EmployeeDocuments() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">Total Documents</p>
+                <p className="text-sm font-medium text-purple-700">{t('employeeDocuments.stats.totalDocuments')}</p>
                 <h3 className="text-3xl font-bold text-purple-900 mt-1">
                   {employeeDocs.length}
                 </h3>
-                <p className="text-xs text-purple-600 mt-1">Employee files</p>
+                <p className="text-xs text-purple-600 mt-1">{t('employeeDocuments.stats.employeeFiles')}</p>
               </div>
               <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                 <Users className="h-6 w-6 text-white" />
@@ -110,11 +112,11 @@ export default function EmployeeDocuments() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-indigo-700">Document Types</p>
+                <p className="text-sm font-medium text-indigo-700">{t('employeeDocuments.stats.documentTypes')}</p>
                 <h3 className="text-3xl font-bold text-indigo-900 mt-1">
                   {new Set(employeeDocs.map(d => d.tags || []).flat()).size}
                 </h3>
-                <p className="text-xs text-indigo-600 mt-1">Categories</p>
+                <p className="text-xs text-indigo-600 mt-1">{t('employeeDocuments.stats.categories')}</p>
               </div>
               <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center">
                 <Shield className="h-6 w-6 text-white" />
@@ -130,11 +132,11 @@ export default function EmployeeDocuments() {
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <CardTitle className="flex items-center gap-2">
-                <span>All Employee Documents</span>
-                <Badge variant="outline">{employeeDocs.length} total</Badge>
+                <span>{t('employeeDocuments.allEmployeeDocuments')}</span>
+                <Badge variant="outline">{employeeDocs.length} {t('employeeDocuments.total')}</Badge>
               </CardTitle>
               <CardDescription className="mt-1.5">
-                Employment contracts, certifications, training records, and HR files
+                {t('employeeDocuments.description')}
               </CardDescription>
             </div>
 
@@ -143,11 +145,11 @@ export default function EmployeeDocuments() {
               <TabsList>
                 <TabsTrigger value="tree" className="gap-2">
                   <FolderTree className="h-4 w-4" />
-                  <span className="hidden sm:inline">Tree View</span>
+                  <span className="hidden sm:inline">{t('employeeDocuments.viewMode.treeView')}</span>
                 </TabsTrigger>
                 <TabsTrigger value="list" className="gap-2">
                   <List className="h-4 w-4" />
-                  <span className="hidden sm:inline">List View</span>
+                  <span className="hidden sm:inline">{t('employeeDocuments.viewMode.listView')}</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -157,11 +159,11 @@ export default function EmployeeDocuments() {
           {employeeDocs.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-20" />
-              <h3 className="text-lg font-semibold mb-2">No Employee Documents</h3>
+              <h3 className="text-lg font-semibold mb-2">{t('employeeDocuments.emptyState.title')}</h3>
               <p className="text-muted-foreground mb-4">
-                Upload employee records, certifications, and HR documents.
+                {t('employeeDocuments.emptyState.message')}
                 <br />
-                <span className="text-sm">Tag documents with employee names to organize them automatically.</span>
+                <span className="text-sm">{t('employeeDocuments.emptyState.tagHint')}</span>
               </p>
               {canManage && (
                 <Button

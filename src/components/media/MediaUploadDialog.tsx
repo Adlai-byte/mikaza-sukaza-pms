@@ -34,6 +34,7 @@ import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react";
 import { mediaUploadSchema, type MediaUploadInput, MEDIA_CATEGORIES } from "@/lib/schemas";
 import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
 import { useUploadMedia } from "@/hooks/useMedia";
+import { useTranslation } from "react-i18next";
 
 interface MediaUploadDialogProps {
   open: boolean;
@@ -46,6 +47,7 @@ export function MediaUploadDialog({
   onOpenChange,
   defaultPropertyId,
 }: MediaUploadDialogProps) {
+  const { t } = useTranslation();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
@@ -154,11 +156,11 @@ export function MediaUploadDialog({
               name="property_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Property *</FormLabel>
+                  <FormLabel>{t('dialogs.mediaUpload.fields.property')} *</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a property" />
+                        <SelectValue placeholder={t('dialogs.mediaUpload.fields.selectProperty')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -176,7 +178,7 @@ export function MediaUploadDialog({
 
             {/* File Upload */}
             <div className="space-y-3">
-              <FormLabel>Images *</FormLabel>
+              <FormLabel>{t('dialogs.mediaUpload.fields.images')} *</FormLabel>
               <div className="border-2 border-dashed rounded-lg p-6 text-center">
                 <input
                   type="file"
@@ -192,7 +194,7 @@ export function MediaUploadDialog({
                 >
                   <ImageIcon className="h-10 w-10 text-muted-foreground" />
                   <div className="space-y-1">
-                    <p className="text-sm font-medium">Click to upload images</p>
+                    <p className="text-sm font-medium">{t('dialogs.mediaUpload.fields.clickToUpload')}</p>
                     <p className="text-xs text-muted-foreground">
                       PNG, JPG, JPEG up to 10MB
                     </p>
@@ -203,7 +205,7 @@ export function MediaUploadDialog({
               {/* Selected Files */}
               {selectedFiles.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Selected Files ({selectedFiles.length})</p>
+                  <p className="text-sm font-medium">{t('dialogs.mediaUpload.fields.selectedFiles')} ({selectedFiles.length})</p>
                   <div className="grid grid-cols-2 gap-2">
                     {selectedFiles.map((file, index) => (
                       <div
@@ -236,9 +238,9 @@ export function MediaUploadDialog({
               name="image_title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>{t('dialogs.mediaUpload.fields.title')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Living Room View" {...field} />
+                    <Input placeholder={t('dialogs.mediaUpload.fields.titlePlaceholder')} {...field} />
                   </FormControl>
                   <FormDescription>
                     Leave empty to use filename as title
@@ -254,10 +256,10 @@ export function MediaUploadDialog({
               name="image_description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t('dialogs.mediaUpload.fields.description')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Describe the image..."
+                      placeholder={t('dialogs.mediaUpload.fields.descriptionPlaceholder')}
                       rows={3}
                       {...field}
                     />
@@ -269,7 +271,7 @@ export function MediaUploadDialog({
 
             {/* Categories/Tags */}
             <div className="space-y-3">
-              <FormLabel>Categories</FormLabel>
+              <FormLabel>{t('dialogs.mediaUpload.fields.categories')}</FormLabel>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(MEDIA_CATEGORIES).map(([key, label]) => (
                   <Badge
@@ -286,10 +288,10 @@ export function MediaUploadDialog({
 
             {/* Custom Tags */}
             <div className="space-y-3">
-              <FormLabel>Custom Tags</FormLabel>
+              <FormLabel>{t('dialogs.mediaUpload.fields.customTags')}</FormLabel>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Add a custom tag..."
+                  placeholder={t('dialogs.mediaUpload.fields.addTag')}
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
@@ -331,7 +333,7 @@ export function MediaUploadDialog({
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>Set as Primary Image</FormLabel>
+                      <FormLabel>{t('dialogs.mediaUpload.fields.setPrimary')}</FormLabel>
                       <FormDescription>
                         This image will be displayed as the main photo for the property
                       </FormDescription>

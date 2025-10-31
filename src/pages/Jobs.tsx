@@ -39,8 +39,10 @@ import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 export default function Jobs() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const { properties } = usePropertiesOptimized();
@@ -54,10 +56,10 @@ export default function Jobs() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <XCircle className="h-6 w-6 text-red-500" />
-              Access Denied
+              {t('jobs.accessDenied')}
             </CardTitle>
             <CardDescription>
-              You don't have permission to access the Jobs module. This feature is restricted to administrators only.
+              {t('jobs.noPermission')}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -195,14 +197,14 @@ export default function Jobs() {
         updates: { status },
       });
       toast({
-        title: "Status Updated",
-        description: `Job status changed to ${status.replace('_', ' ')}`,
+        title: t('common.statusUpdated'),
+        description: t('jobs.statusChanged', { status: t(`jobs.status.${status}`) }),
       });
     } catch (error) {
       console.error('Error updating job status:', error);
       toast({
-        title: "Error",
-        description: "Failed to update job status",
+        title: t('common.error'),
+        description: t('jobs.statusChangeFailed'),
         variant: "destructive",
       });
     }
@@ -267,9 +269,9 @@ export default function Jobs() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Active Jobs</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t('jobs.title')}</h1>
           <p className="text-muted-foreground">
-            Property work orders and maintenance tracking (Admin Only)
+            {t('jobs.subtitle')}
           </p>
         </div>
         <div className="flex space-x-3">
@@ -279,14 +281,14 @@ export default function Jobs() {
             disabled={isLoading || isFetching}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('common.refresh')}
           </Button>
           <Button
             className="bg-gradient-primary hover:bg-gradient-secondary"
             onClick={handleCreateJob}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Create New Job
+            {t('jobs.newJob')}
           </Button>
         </div>
       </div>
@@ -297,9 +299,9 @@ export default function Jobs() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Jobs</p>
+                <p className="text-sm font-medium text-blue-700">{t('jobs.totalJobs')}</p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">{isLoading ? '...' : stats.total}</h3>
-                <p className="text-xs text-blue-600 mt-1">All work orders</p>
+                <p className="text-xs text-blue-600 mt-1">{t('jobs.allWorkOrders')}</p>
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
                 <BriefcaseIcon className="h-6 w-6 text-white" />
@@ -312,9 +314,9 @@ export default function Jobs() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">In Progress</p>
+                <p className="text-sm font-medium text-purple-700">{t('jobs.inProgressJobs')}</p>
                 <h3 className="text-3xl font-bold text-purple-900 mt-1">{isLoading ? '...' : stats.in_progress}</h3>
-                <p className="text-xs text-purple-600 mt-1">Active assignments</p>
+                <p className="text-xs text-purple-600 mt-1">{t('jobs.activeAssignments')}</p>
               </div>
               <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                 <Clock className="h-6 w-6 text-white" />
@@ -327,9 +329,9 @@ export default function Jobs() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-700">Pending</p>
+                <p className="text-sm font-medium text-orange-700">{t('jobs.pendingJobs')}</p>
                 <h3 className="text-3xl font-bold text-orange-900 mt-1">{isLoading ? '...' : stats.pending}</h3>
-                <p className="text-xs text-orange-600 mt-1">Awaiting action</p>
+                <p className="text-xs text-orange-600 mt-1">{t('jobs.awaitingAction')}</p>
               </div>
               <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
                 <AlertTriangle className="h-6 w-6 text-white" />
@@ -342,10 +344,10 @@ export default function Jobs() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Completed</p>
+                <p className="text-sm font-medium text-green-700">{t('jobs.completedJobs')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">{isLoading ? '...' : stats.completed}</h3>
                 <p className="text-xs text-green-600 mt-1">
-                  {stats.urgent > 0 ? `${stats.urgent} urgent` : 'All finished'}
+                  {stats.urgent > 0 ? `${stats.urgent} ${t('jobs.priority.urgent')}` : t('jobs.allFinished')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
@@ -361,19 +363,19 @@ export default function Jobs() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Filters & Search
+            {t('jobs.filtersAndSearch')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {/* Search */}
             <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="search">Search Jobs</Label>
+              <Label htmlFor="search">{t('jobs.searchJobs')}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder="Search by title or description..."
+                  placeholder={t('jobs.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -383,13 +385,13 @@ export default function Jobs() {
 
             {/* Property Filter */}
             <div className="space-y-2">
-              <Label htmlFor="property">Property</Label>
+              <Label htmlFor="property">{t('jobs.property')}</Label>
               <Select value={propertyFilter || undefined} onValueChange={(value) => setPropertyFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger id="property">
-                  <SelectValue placeholder="All properties" />
+                  <SelectValue placeholder={t('jobs.allProperties')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Properties</SelectItem>
+                  <SelectItem value="all">{t('jobs.allProperties')}</SelectItem>
                   {properties.map(property => (
                     <SelectItem key={property.property_id} value={property.property_id!}>
                       {property.property_name}
@@ -401,13 +403,13 @@ export default function Jobs() {
 
             {/* Assignee Filter */}
             <div className="space-y-2">
-              <Label htmlFor="assignee">Assigned To</Label>
+              <Label htmlFor="assignee">{t('jobs.assignedTo')}</Label>
               <Select value={assignedFilter || undefined} onValueChange={(value) => setAssignedFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger id="assignee">
-                  <SelectValue placeholder="All users" />
+                  <SelectValue placeholder={t('jobs.allUsers')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Users</SelectItem>
+                  <SelectItem value="all">{t('jobs.allUsers')}</SelectItem>
                   {users.map(u => (
                     <SelectItem key={u.user_id} value={u.user_id}>
                       {u.first_name} {u.last_name}
@@ -419,22 +421,22 @@ export default function Jobs() {
 
             {/* Job Type Filter */}
             <div className="space-y-2">
-              <Label htmlFor="job-type">Job Type</Label>
+              <Label htmlFor="job-type">{t('jobs.jobType')}</Label>
               <Select value={jobTypeFilter || undefined} onValueChange={(value) => setJobTypeFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger id="job-type">
-                  <SelectValue placeholder="All types" />
+                  <SelectValue placeholder={t('jobs.allTypes')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="general">General</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="cleaning">Cleaning</SelectItem>
-                  <SelectItem value="inspection">Inspection</SelectItem>
-                  <SelectItem value="check_in">Check In</SelectItem>
-                  <SelectItem value="check_out">Check Out</SelectItem>
-                  <SelectItem value="repair">Repair</SelectItem>
-                  <SelectItem value="emergency">Emergency</SelectItem>
-                  <SelectItem value="preventive">Preventive</SelectItem>
+                  <SelectItem value="all">{t('jobs.allTypes')}</SelectItem>
+                  <SelectItem value="general">{t('jobs.types.general')}</SelectItem>
+                  <SelectItem value="maintenance">{t('jobs.types.maintenance')}</SelectItem>
+                  <SelectItem value="cleaning">{t('jobs.types.cleaning')}</SelectItem>
+                  <SelectItem value="inspection">{t('jobs.types.inspection')}</SelectItem>
+                  <SelectItem value="check_in">{t('jobs.types.checkIn')}</SelectItem>
+                  <SelectItem value="check_out">{t('jobs.types.checkOut')}</SelectItem>
+                  <SelectItem value="repair">{t('jobs.types.repair')}</SelectItem>
+                  <SelectItem value="emergency">{t('jobs.types.emergency')}</SelectItem>
+                  <SelectItem value="preventive">{t('jobs.types.preventive')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -448,28 +450,28 @@ export default function Jobs() {
               className="cursor-pointer"
               onClick={() => toggleStatusFilter('pending')}
             >
-              Pending
+              {t('jobs.status.pending')}
             </Badge>
             <Badge
               variant={statusFilter.includes('in_progress') ? 'default' : 'outline'}
               className="cursor-pointer"
               onClick={() => toggleStatusFilter('in_progress')}
             >
-              In Progress
+              {t('jobs.status.inProgress')}
             </Badge>
             <Badge
               variant={statusFilter.includes('review') ? 'default' : 'outline'}
               className="cursor-pointer"
               onClick={() => toggleStatusFilter('review')}
             >
-              Review
+              {t('jobs.status.review')}
             </Badge>
             <Badge
               variant={statusFilter.includes('completed') ? 'default' : 'outline'}
               className="cursor-pointer"
               onClick={() => toggleStatusFilter('completed')}
             >
-              Completed
+              {t('jobs.status.completed')}
             </Badge>
 
             {/* Priority Filters */}
@@ -478,14 +480,14 @@ export default function Jobs() {
               className="cursor-pointer"
               onClick={() => togglePriorityFilter('urgent')}
             >
-              Urgent
+              {t('jobs.priority.urgent')}
             </Badge>
             <Badge
               variant={priorityFilter.includes('high') ? 'default' : 'outline'}
               className="cursor-pointer bg-orange-500 hover:bg-orange-600"
               onClick={() => togglePriorityFilter('high')}
             >
-              High Priority
+              {t('jobs.highPriority')}
             </Badge>
 
             {/* Clear Filters */}
@@ -497,13 +499,13 @@ export default function Jobs() {
                 className="h-7"
               >
                 <XCircle className="mr-1 h-3 w-3" />
-                Clear All
+                {t('jobs.clearAll')}
               </Button>
             )}
 
             {/* Results Count */}
             <Badge variant="secondary" className="ml-auto">
-              {jobs.length} result{jobs.length !== 1 ? 's' : ''}
+              {jobs.length} {jobs.length !== 1 ? t('jobs.results') : t('jobs.result')}
             </Badge>
           </div>
         </CardContent>
@@ -514,15 +516,15 @@ export default function Jobs() {
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="active" className="flex items-center gap-2">
             <List className="h-4 w-4" />
-            Active Jobs ({activeJobs.length})
+            {t('jobs.activeJobs')} ({activeJobs.length})
           </TabsTrigger>
           <TabsTrigger value="board" className="flex items-center gap-2">
             <LayoutGrid className="h-4 w-4" />
-            Board View
+            {t('jobs.boardView')}
           </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2">
             <History className="h-4 w-4" />
-            Job History ({historyJobs.length})
+            {t('jobs.jobHistory')} ({historyJobs.length})
           </TabsTrigger>
         </TabsList>
 
@@ -531,7 +533,7 @@ export default function Jobs() {
             <Card>
               <CardContent className="p-12 flex flex-col items-center justify-center">
                 <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                <span className="text-muted-foreground">Loading jobs...</span>
+                <span className="text-muted-foreground">{t('jobs.loadingJobs')}</span>
               </CardContent>
             </Card>
           ) : (
@@ -539,7 +541,7 @@ export default function Jobs() {
               jobs={activeJobs}
               onEdit={handleEditJob}
               onView={handleViewJob}
-              emptyMessage="No active jobs found. Create your first work order to get started."
+              emptyMessage={t('jobs.noActiveJobs')}
             />
           )}
         </TabsContent>
@@ -549,7 +551,7 @@ export default function Jobs() {
             <Card>
               <CardContent className="p-12 flex flex-col items-center justify-center">
                 <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                <span className="text-muted-foreground">Loading jobs...</span>
+                <span className="text-muted-foreground">{t('jobs.loadingJobs')}</span>
               </CardContent>
             </Card>
           ) : (
@@ -566,7 +568,7 @@ export default function Jobs() {
           <JobsTable
             jobs={historyJobs}
             onView={handleViewJob}
-            emptyMessage="No completed or cancelled jobs yet."
+            emptyMessage={t('jobs.noCompletedJobs')}
           />
         </TabsContent>
       </Tabs>

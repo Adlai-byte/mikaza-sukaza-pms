@@ -34,8 +34,10 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addDays } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { stats, isLoading, refetch } = useDashboardData();
   const navigate = useNavigate();
 
@@ -90,9 +92,9 @@ export default function Dashboard() {
         {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t('dashboard.title')}</h1>
           <p className="text-muted-foreground">
-            Welcome to Casa & Concierge Property Management System
+            {t('dashboard.welcome')}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
@@ -105,11 +107,11 @@ export default function Dashboard() {
                 disabled={isLoading}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
+                {t('dashboard.refresh')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Refresh dashboard data</p>
+              <p>{t('dashboard.refreshTooltip')}</p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
@@ -119,11 +121,11 @@ export default function Dashboard() {
                 onClick={() => navigate('/calendar')}
               >
                 <Calendar className="h-4 w-4 mr-2" />
-                View Calendar
+                {t('dashboard.viewCalendar')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Open property calendar view</p>
+              <p>{t('dashboard.viewCalendarTooltip')}</p>
             </TooltipContent>
           </Tooltip>
         </div>
@@ -139,12 +141,12 @@ export default function Dashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Properties</p>
+                <p className="text-sm font-medium text-blue-700">{t('dashboard.totalProperties')}</p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">
                   {isLoading ? '...' : stats.totalProperties}
                 </h3>
                 <p className="text-xs text-blue-600 mt-1">
-                  {stats.activeProperties} active
+                  {stats.activeProperties} {t('dashboard.active')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
@@ -162,12 +164,12 @@ export default function Dashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Today's Activity</p>
+                <p className="text-sm font-medium text-green-700">{t('dashboard.todayActivity')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">
                   {isLoading ? '...' : stats.todayCheckIns + stats.todayCheckOuts}
                 </h3>
                 <p className="text-xs text-green-600 mt-1">
-                  {stats.todayCheckIns} in • {stats.todayCheckOuts} out
+                  {t('dashboard.checkinsCheckouts', { checkins: stats.todayCheckIns, checkouts: stats.todayCheckOuts })}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
@@ -185,12 +187,12 @@ export default function Dashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-700">Active Tasks</p>
+                <p className="text-sm font-medium text-orange-700">{t('dashboard.activeTasks')}</p>
                 <h3 className="text-3xl font-bold text-orange-900 mt-1">
                   {isLoading ? '...' : stats.activeTasks}
                 </h3>
                 <p className="text-xs text-orange-600 mt-1">
-                  {stats.overdueTasksCount > 0 ? `${stats.overdueTasksCount} overdue` : `${stats.pendingTasks} pending`}
+                  {stats.overdueTasksCount > 0 ? `${stats.overdueTasksCount} ${t('dashboard.overdue')}` : `${stats.pendingTasks} ${t('dashboard.pending')}`}
                 </p>
               </div>
               <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
@@ -208,12 +210,12 @@ export default function Dashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-700">Open Issues</p>
+                <p className="text-sm font-medium text-red-700">{t('dashboard.openIssues')}</p>
                 <h3 className="text-3xl font-bold text-red-900 mt-1">
                   {isLoading ? '...' : stats.openIssues}
                 </h3>
                 <p className="text-xs text-red-600 mt-1">
-                  {stats.urgentIssues > 0 ? `${stats.urgentIssues} urgent` : 'Requiring attention'}
+                  {stats.urgentIssues > 0 ? `${stats.urgentIssues} ${t('dashboard.urgent')}` : t('dashboard.requiresAttention')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
@@ -231,9 +233,9 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <BriefcaseIcon className="h-5 w-5 text-primary" />
-              <span>Jobs Overview</span>
+              <span>{t('dashboard.jobsOverview')}</span>
             </CardTitle>
-            <CardDescription>Current status of all work orders</CardDescription>
+            <CardDescription>{t('dashboard.jobsOverviewDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {isLoading || !jobsData ? (
@@ -247,8 +249,8 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                       <Clock className="h-5 w-5 text-orange-600" />
                       <div>
-                        <p className="text-sm font-medium">Pending</p>
-                        <p className="text-xs text-muted-foreground">Awaiting start</p>
+                        <p className="text-sm font-medium">{t('dashboard.pendingJobs')}</p>
+                        <p className="text-xs text-muted-foreground">{t('dashboard.awaitingStart')}</p>
                       </div>
                     </div>
                     <span className="text-2xl font-bold text-orange-600">{jobsData.pending}</span>
@@ -258,8 +260,8 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                       <PlayCircle className="h-5 w-5 text-blue-600" />
                       <div>
-                        <p className="text-sm font-medium">In Progress</p>
-                        <p className="text-xs text-muted-foreground">Currently active</p>
+                        <p className="text-sm font-medium">{t('dashboard.inProgressJobs')}</p>
+                        <p className="text-xs text-muted-foreground">{t('dashboard.currentlyActive')}</p>
                       </div>
                     </div>
                     <span className="text-2xl font-bold text-blue-600">{jobsData.inProgress}</span>
@@ -269,8 +271,8 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                       <PauseCircle className="h-5 w-5 text-purple-600" />
                       <div>
-                        <p className="text-sm font-medium">In Review</p>
-                        <p className="text-xs text-muted-foreground">Quality check</p>
+                        <p className="text-sm font-medium">{t('dashboard.inReview')}</p>
+                        <p className="text-xs text-muted-foreground">{t('dashboard.qualityCheck')}</p>
                       </div>
                     </div>
                     <span className="text-2xl font-bold text-purple-600">{jobsData.review}</span>
@@ -280,8 +282,8 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
                       <div>
-                        <p className="text-sm font-medium">Completed</p>
-                        <p className="text-xs text-muted-foreground">This month</p>
+                        <p className="text-sm font-medium">{t('dashboard.completedJobs')}</p>
+                        <p className="text-xs text-muted-foreground">{t('dashboard.thisMonth')}</p>
                       </div>
                     </div>
                     <span className="text-2xl font-bold text-green-600">{jobsData.completed}</span>
@@ -295,12 +297,12 @@ export default function Dashboard() {
                       variant="outline"
                       onClick={() => navigate('/jobs')}
                     >
-                      View All Jobs
+                      {t('dashboard.viewAllJobs')}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>See all active and completed jobs</p>
+                    <p>{t('dashboard.viewAllJobsTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               </>
@@ -313,15 +315,15 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Calendar className="h-5 w-5 text-primary" />
-              <span>Upcoming Bookings</span>
+              <span>{t('dashboard.upcomingBookings')}</span>
             </CardTitle>
-            <CardDescription>Next 7 days check-ins</CardDescription>
+            <CardDescription>{t('dashboard.upcomingBookingsDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             {upcomingBookings.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Calendar className="h-12 w-12 mx-auto mb-2 opacity-20" />
-                <p className="text-sm">No upcoming bookings</p>
+                <p className="text-sm">{t('dashboard.noUpcomingBookings')}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -364,11 +366,11 @@ export default function Dashboard() {
                         size="sm"
                         onClick={() => navigate('/bookings')}
                       >
-                        View All Bookings
+                        {t('dashboard.viewAllBookings')}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>See all property bookings</p>
+                      <p>{t('dashboard.viewAllBookingsTooltip')}</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -382,14 +384,14 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              <span>Performance Metrics</span>
+              <span>{t('dashboard.performanceMetrics')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             {/* Occupancy Rate */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Occupancy Rate</span>
+                <span className="text-sm text-muted-foreground">{t('dashboard.occupancyRate')}</span>
                 <span className={`font-semibold ${stats.occupancyRate >= 80 ? 'text-green-600' : stats.occupancyRate >= 50 ? 'text-orange-500' : 'text-red-600'}`}>
                   {isLoading ? '...' : `${stats.occupancyRate}%`}
                 </span>
@@ -402,7 +404,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Revenue MTD</p>
+                  <p className="text-xs text-muted-foreground">{t('dashboard.revenueMTD')}</p>
                   <p className="text-lg font-bold text-green-600">
                     {isLoading ? '...' : `$${stats.monthlyRevenue.toLocaleString()}`}
                   </p>
@@ -414,7 +416,7 @@ export default function Dashboard() {
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <CalendarClock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Total Bookings</span>
+                <span className="text-sm text-muted-foreground">{t('dashboard.totalBookings')}</span>
               </div>
               <span className="font-semibold">
                 {isLoading ? '...' : stats.totalBookings}
@@ -425,7 +427,7 @@ export default function Dashboard() {
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Active Staff</span>
+                <span className="text-sm text-muted-foreground">{t('dashboard.activeStaff')}</span>
               </div>
               <span className="font-semibold">
                 {isLoading ? '...' : `${stats.activeUsers}/${stats.totalUsers}`}
@@ -436,7 +438,7 @@ export default function Dashboard() {
             {(stats.completedTasks + stats.activeTasks) > 0 && (
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Task Completion</span>
+                  <span className="text-sm text-muted-foreground">{t('dashboard.taskCompletion')}</span>
                   <span className="font-semibold">
                     {Math.round((stats.completedTasks / (stats.completedTasks + stats.activeTasks)) * 100)}%
                   </span>
@@ -447,7 +449,7 @@ export default function Dashboard() {
 
             {/* Quick Actions */}
             <div className="space-y-2 pt-4 border-t">
-              <p className="text-sm font-semibold mb-2">Quick Actions</p>
+              <p className="text-sm font-semibold mb-2">{t('dashboard.quickActions')}</p>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -456,11 +458,11 @@ export default function Dashboard() {
                     onClick={() => navigate('/bookings?new=true')}
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    New Booking
+                    {t('dashboard.newBooking')}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Create a new property booking</p>
+                  <p>{t('dashboard.newBookingTooltip')}</p>
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
@@ -472,11 +474,11 @@ export default function Dashboard() {
                     onClick={() => navigate('/todos')}
                   >
                     <FileText className="h-4 w-4 mr-2" />
-                    Create Task
+                    {t('dashboard.createTask')}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Add a new task to your to-do list</p>
+                  <p>{t('dashboard.createTaskTooltip')}</p>
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
@@ -488,11 +490,11 @@ export default function Dashboard() {
                     onClick={() => navigate('/issues')}
                   >
                     <AlertTriangle className="h-4 w-4 mr-2" />
-                    Report Issue
+                    {t('dashboard.reportIssue')}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Report a property issue or problem</p>
+                  <p>{t('dashboard.reportIssueTooltip')}</p>
                 </TooltipContent>
               </Tooltip>
             </div>

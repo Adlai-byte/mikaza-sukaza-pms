@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import { Provider, ProviderInsert } from "@/lib/schemas";
 import { CasaSpinner } from "@/components/ui/casa-loader";
 
 export default function Providers() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'service' | 'utility'>('service');
 
   // Service providers
@@ -177,9 +179,9 @@ export default function Providers() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Providers</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('providers.title')}</h1>
           <p className="text-muted-foreground">
-            Manage service contractors and utility companies
+            {t('providers.subtitle')}
           </p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
@@ -189,12 +191,12 @@ export default function Providers() {
             disabled={isFetching}
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('common.refresh')}
           </Button>
           {((activeTab === 'service' && canCreateService) || (activeTab === 'utility' && canCreateUtility)) && (
             <Button onClick={() => activeTab === 'service' ? setIsServiceFormOpen(true) : setIsUtilityFormOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add {activeTab === 'service' ? 'Service' : 'Utility'} Provider
+              {activeTab === 'service' ? t('providers.addServiceProvider') : t('providers.addUtilityProvider')}
             </Button>
           )}
         </div>
@@ -206,12 +208,15 @@ export default function Providers() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Providers</p>
+                <p className="text-sm font-medium text-blue-700">{t('providers.metrics.totalProviders')}</p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">
                   {loading ? '...' : totalProviders}
                 </h3>
                 <p className="text-xs text-blue-600 mt-1">
-                  {serviceProviders.length} service, {utilityProviders.length} utility
+                  {t('providers.metrics.serviceUtilityBreakdown', {
+                    service: serviceProviders.length,
+                    utility: utilityProviders.length
+                  })}
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
@@ -225,12 +230,12 @@ export default function Providers() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Active Providers</p>
+                <p className="text-sm font-medium text-green-700">{t('providers.metrics.activeProviders')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">
                   {loading ? '...' : activeProviders}
                 </h3>
                 <p className="text-xs text-green-600 mt-1">
-                  {totalProviders - activeProviders} inactive
+                  {totalProviders - activeProviders} {t('providers.metrics.inactive')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
@@ -244,11 +249,11 @@ export default function Providers() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">Preferred Vendors</p>
+                <p className="text-sm font-medium text-purple-700">{t('providers.metrics.preferredVendors')}</p>
                 <h3 className="text-3xl font-bold text-purple-900 mt-1">
                   {loading ? '...' : preferredProviders}
                 </h3>
-                <p className="text-xs text-purple-600 mt-1">Top rated vendors</p>
+                <p className="text-xs text-purple-600 mt-1">{t('providers.metrics.topRatedVendors')}</p>
               </div>
               <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                 <Star className="h-6 w-6 text-white" />
@@ -261,11 +266,11 @@ export default function Providers() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-700">Average Rating</p>
+                <p className="text-sm font-medium text-orange-700">{t('providers.metrics.averageRating')}</p>
                 <h3 className="text-3xl font-bold text-orange-900 mt-1">
                   {loading ? '...' : averageRating}
                 </h3>
-                <p className="text-xs text-orange-600 mt-1">Out of 5.00 stars</p>
+                <p className="text-xs text-orange-600 mt-1">{t('providers.metrics.outOfFive')}</p>
               </div>
               <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
                 <TrendingUp className="h-6 w-6 text-white" />
@@ -279,11 +284,11 @@ export default function Providers() {
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="service" className="flex items-center gap-2">
             <Wrench className="h-4 w-4" />
-            Service Providers
+            {t('providers.tabs.serviceProviders')}
           </TabsTrigger>
           <TabsTrigger value="utility" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
-            Utility Providers
+            {t('providers.tabs.utilityProviders')}
           </TabsTrigger>
         </TabsList>
 

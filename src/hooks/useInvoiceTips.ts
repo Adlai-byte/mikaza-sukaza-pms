@@ -28,10 +28,6 @@ export interface InvoiceTip {
     invoice_number: string;
     guest_name: string;
   };
-  commission?: {
-    commission_id: string;
-    status: string;
-  };
 }
 
 export interface InvoiceTipInsert {
@@ -68,8 +64,7 @@ const fetchInvoiceTips = async (filters?: InvoiceTipFilters): Promise<InvoiceTip
     .select(`
       *,
       recipient:users!invoice_tips_recipient_user_id_fkey(user_id, first_name, last_name, email, user_type),
-      invoice:invoices(invoice_id, invoice_number, guest_name),
-      commission:commissions(commission_id, status)
+      invoice:invoices(invoice_id, invoice_number, guest_name)
     `)
     .order('created_at', { ascending: false });
 
@@ -98,8 +93,7 @@ const fetchInvoiceTip = async (tipId: string): Promise<InvoiceTip> => {
     .select(`
       *,
       recipient:users!invoice_tips_recipient_user_id_fkey(user_id, first_name, last_name, email, user_type),
-      invoice:invoices(invoice_id, invoice_number, guest_name),
-      commission:commissions(commission_id, status)
+      invoice:invoices(invoice_id, invoice_number, guest_name)
     `)
     .eq('tip_id', tipId)
     .single();
@@ -290,11 +284,9 @@ export function useProcessInvoiceTip() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: invoiceTipKeys.lists() });
       queryClient.invalidateQueries({ queryKey: invoiceTipKeys.detail(data.tip_id) });
-      // Also invalidate commissions as a new commission was created
-      queryClient.invalidateQueries({ queryKey: ['commissions'] });
       toast({
         title: 'Success',
-        description: 'Tip processed and converted to commission',
+        description: 'Tip processed',
       });
     },
     onError: (error: Error) => {

@@ -4550,6 +4550,315 @@ For each owner:
 ✅ **Save time** - No manual calculations
 ✅ **Mobile accessible** - Check anywhere`,
         },
+        {
+          question: 'How do I use Financial Highlights for real-time KPIs and alerts?',
+          answer: `**Financial Highlights Overview:**
+
+The Financial Highlights dashboard provides real-time KPIs, historical trends, and critical alerts for your business.
+
+**Accessing Financial Highlights:**
+1. Go to Finance → Highlights
+2. View comprehensive financial overview
+
+**KEY PERFORMANCE INDICATORS (KPIs)** 📊
+
+**1. MONTH REVENUE** 💰
+• Total revenue from paid invoices this month
+• Trend comparison vs last month
+• Visual indicator (green = up, red = down)
+
+**Example:**
+Month Revenue: $45,280
+↗️ +15.2% from last month
+
+**2. ACCOUNTS RECEIVABLE AGING** ⏰
+• Current (not yet due): $9,250
+• 1-30 Days overdue: $2,400
+• 31-60 Days overdue: $800
+• 60+ Days overdue: $0
+• Total A/R: $12,450
+
+**What it means:**
+• Current = Healthy cash flow
+• 30-60 Days = Need follow-up
+• 60+ Days = Urgent collection needed
+
+**3. DELINQUENCIES** ⚠️
+• Number of accounts >60 days overdue
+• Total amount at risk
+• Requires immediate attention
+
+**Example:**
+Delinquencies: 2 accounts
+$1,200 outstanding
+
+**4. COMMISSIONS DUE** 💵
+• Pending commission count
+• Total amount pending approval
+• Helps with cash planning
+
+**Example:**
+Commissions Due: $4,250
+8 commissions pending
+
+**5. MONTH COSTS** 📉
+• Total expenses for current month
+• Trend comparison vs last month
+• Includes all expense categories
+
+**Example:**
+Month Costs: $18,920
+↗️ +8.1% from last month
+
+**6. AVERAGE MARGIN** 📈
+• Profit margin percentage
+• (Revenue - Costs) / Revenue
+• Trend vs last month
+
+**Example:**
+Avg. Margin: 58.2%
+↗️ +3.1% from last month
+
+**HISTORICAL TRENDS** 📊
+
+**6-Month Financial Trends Chart:**
+
+**What it shows:**
+• Revenue trend (green line)
+• Costs trend (orange line)
+• Margin percentage (purple dashed line)
+• Last 6 months of data
+
+**How to use:**
+✅ Identify seasonal patterns
+✅ Spot revenue growth/decline
+✅ Monitor cost increases
+✅ Track margin stability
+
+**Example Insights:**
+• Summer months show 40% higher revenue
+• Costs remain relatively stable
+• Margin improves during peak season
+• Q4 shows declining trend
+
+**REVENUE VS COSTS COMPARISON** 📊
+
+**Bar Chart showing:**
+• Last Month vs This Month
+• Side-by-side comparison
+• Revenue in green
+• Costs in orange
+
+**Use cases:**
+• Quick visual health check
+• Identify cost spikes
+• Validate revenue growth
+• Spot unusual patterns
+
+**A/R AGING DISTRIBUTION** 🥧
+
+**Pie Chart showing:**
+• Current receivables (green)
+• 1-30 Days (yellow)
+• 31-60 Days (orange)
+• 60+ Days (red)
+
+**Ideal distribution:**
+✅ 75%+ in Current
+✅ <15% in 1-30 Days
+✅ <5% in 31-60 Days
+✅ 0% in 60+ Days
+
+**FINANCIAL HEALTH INSIGHTS** 💡
+
+**1. PROFIT MARGIN HEALTH**
+• Excellent: >30% margin
+• Good: 15-30% margin
+• Needs Attention: <15% margin
+
+**2. CASH FLOW STATUS**
+• Strong: A/R < 50% of monthly revenue
+• Moderate: A/R < 100% of monthly revenue
+• Critical: A/R > monthly revenue
+
+**3. DELINQUENCY RISK**
+• Excellent: 0 delinquent accounts
+• Manageable: 1-4 delinquent accounts
+• High Risk: 5+ delinquent accounts
+
+**CRITICAL ALERTS** 🚨
+
+**1. INVOICES NEARING DUE**
+**Shows:**
+• Invoices due within 14 days
+• Guest name
+• Amount
+• Days until due
+
+**Action items:**
+✅ Send payment reminders
+✅ Follow up with guests
+✅ Prepare for collections
+
+**Example:**
+📄 INV-1234 - John Smith
+$2,100 - Due in 5 days
+
+**2. COIs EXPIRING SOON**
+**Shows:**
+• Vendor COIs expiring within 30 days
+• Vendor name
+• Insurance type
+• Days until expiry
+
+**Action items:**
+✅ Request updated COI
+✅ Follow up with vendor
+✅ Don't schedule work without valid COI
+
+**Example:**
+🛡️ ABC Plumbing - General Liability
+Expires in 12 days
+
+**3. SLAs AT RISK**
+**Shows:**
+• Jobs approaching completion deadline
+• Job title
+• Property
+• Hours remaining
+
+**Action items:**
+✅ Check job progress
+✅ Allocate resources
+✅ Communicate with client
+✅ Update timeline if needed
+
+**Example:**
+⚠️ HVAC Repair - Sunset Villa
+Due in 8 hours
+
+**PDF EXPORT FEATURE** 📄
+
+**Generating Reports:**
+1. Click "Export PDF" button (top right)
+2. Wait for generation (5-10 seconds)
+3. PDF automatically downloads
+
+**Report includes:**
+✅ All KPI metrics with trends
+✅ Financial health insights
+✅ Critical alerts (top 10 each)
+✅ Visual charts as images
+✅ Professional formatting
+✅ Company branding
+✅ Generation timestamp
+
+**Report sections:**
+1. Cover page with date
+2. KPI Summary table
+3. Financial Health Insights
+4. Invoices Nearing Due
+5. COIs Expiring Soon
+6. SLAs at Risk
+7. Visual Analytics (charts)
+8. Page numbers & confidential footer
+
+**Best uses:**
+✅ Board meetings
+✅ Investor presentations
+✅ Monthly reviews
+✅ Archival records
+✅ Email to stakeholders
+
+**AUTO-REFRESH** 🔄
+
+• Data refreshes every 5 minutes
+• Charts update automatically
+• No page reload needed
+• Always current information
+
+**BEST PRACTICES** ✅
+
+**Daily Review:**
+1. Check critical alerts first
+2. Review delinquencies
+3. Monitor cash flow status
+4. Address urgent items
+
+**Weekly Review:**
+1. Analyze revenue trends
+2. Review expense patterns
+3. Update forecasts
+4. Plan collections
+
+**Monthly Review:**
+1. Export PDF report
+2. Compare to budget
+3. Review KPI trends
+4. Share with stakeholders
+5. Plan next month
+
+**COMMON SCENARIOS:**
+
+**Scenario 1: High Delinquency**
+🚨 Alert: 8 delinquent accounts, $12,400
+
+**Actions:**
+1. Review delinquency list
+2. Send collection letters
+3. Call top 3 delinquent accounts
+4. Consider payment plans
+5. Escalate if needed
+
+**Scenario 2: Declining Margin**
+📉 Margin: 42% → 28% (down 14%)
+
+**Actions:**
+1. Review recent expenses
+2. Identify cost increases
+3. Analyze pricing strategy
+4. Look for inefficiencies
+5. Adjust as needed
+
+**Scenario 3: Cash Flow Concern**
+💰 A/R = $45,000, Monthly Revenue = $38,000
+
+**Actions:**
+1. Accelerate collections
+2. Offer early payment discounts
+3. Follow up on overdue invoices
+4. Review payment terms
+5. Consider factoring
+
+**TROUBLESHOOTING:**
+
+**Q: KPIs show $0**
+A: No invoices/expenses this month yet
+
+**Q: Charts not loading**
+A: Refresh page, check internet connection
+
+**Q: PDF export fails**
+A: Try again, contact support if persists
+
+**Q: Data seems incorrect**
+A: Verify invoices are properly recorded
+   Check expense categorization
+   Confirm date ranges
+
+**ACCESS REQUIREMENTS:**
+
+✅ Finance View permission required
+✅ Available to:
+  • Admins (full access)
+  • Finance team
+  • Operations managers (view only)
+
+❌ Not available to:
+  • Basic users
+  • Guests
+  • Limited access roles`,
+        },
       ],
     },
     {

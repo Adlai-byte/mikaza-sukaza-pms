@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Shield, Building2, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Shield, Building2, CheckCircle2, Clock, XCircle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VendorCOI } from "@/lib/schemas";
@@ -17,6 +17,7 @@ interface COITreeViewProps {
   onViewCOI?: (coi: VendorCOI) => void;
   onEditCOI?: (coi: VendorCOI) => void;
   onDeleteCOI?: (coiId: string) => void;
+  onDownloadCOI?: (coi: VendorCOI) => void;
   canEdit?: boolean;
   canDelete?: boolean;
 }
@@ -38,6 +39,7 @@ export function COITreeView({
   cois,
   onEditCOI,
   onDeleteCOI,
+  onDownloadCOI,
   canEdit = false,
   canDelete = false,
 }: COITreeViewProps) {
@@ -247,6 +249,25 @@ export function COITreeView({
 
         {/* Actions */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {onDownloadCOI && coi.file_url && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => onDownloadCOI(coi)}
+                  >
+                    <Download className="h-4 w-4 text-blue-600" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Download COI</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {canEdit && onEditCOI && (
             <TooltipProvider>
               <Tooltip>

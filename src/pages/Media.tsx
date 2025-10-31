@@ -39,8 +39,10 @@ import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
 import { MediaUploadDialog } from "@/components/media/MediaUploadDialog";
 import { PropertyImageWithDetails, MediaFilters } from "@/lib/schemas";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useTranslation } from "react-i18next";
 
 export default function Media() {
+  const { t } = useTranslation();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState("");
@@ -124,10 +126,10 @@ export default function Media() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
             <ImageIcon className="h-7 w-7 text-primary" />
-            Photos & Videos
+            {t('media.title')}
           </h1>
           <p className="text-muted-foreground">
-            Manage property photos, videos, and media assets
+            {t('media.subtitle')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -152,7 +154,7 @@ export default function Media() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Images</p>
+                <p className="text-sm font-medium text-blue-700">{t('media.stats.totalImages')}</p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
@@ -166,7 +168,7 @@ export default function Media() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-yellow-700">Primary Images</p>
+                <p className="text-sm font-medium text-yellow-700">{t('media.stats.primaryImages')}</p>
                 <h3 className="text-3xl font-bold text-yellow-900 mt-1">{stats.primary}</h3>
               </div>
               <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
@@ -180,9 +182,9 @@ export default function Media() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Properties</p>
+                <p className="text-sm font-medium text-green-700">{t('media.stats.properties')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">{stats.properties}</h3>
-                <p className="text-xs text-green-600 mt-1">With media</p>
+                <p className="text-xs text-green-600 mt-1">{t('media.stats.withMedia')}</p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
                 <ImageIcon className="h-6 w-6 text-white" />
@@ -195,7 +197,7 @@ export default function Media() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">Storage Used</p>
+                <p className="text-sm font-medium text-purple-700">{t('media.stats.storageUsed')}</p>
                 <h3 className="text-3xl font-bold text-purple-900 mt-1">
                   {storageLoading ? '...' : formatBytes(storageStats?.totalSize || 0)}
                 </h3>
@@ -225,7 +227,7 @@ export default function Media() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by title or description..."
+                placeholder={t('media.filters.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -235,10 +237,10 @@ export default function Media() {
             {/* Property Filter */}
             <Select value={selectedProperty} onValueChange={setSelectedProperty}>
               <SelectTrigger>
-                <SelectValue placeholder="All Properties" />
+                <SelectValue placeholder={t('media.filters.allProperties')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Properties</SelectItem>
+                <SelectItem value="all">{t('media.filters.allProperties')}</SelectItem>
                 {properties.map((property) => (
                   <SelectItem key={property.property_id} value={property.property_id}>
                     {property.property_name}
@@ -276,7 +278,7 @@ export default function Media() {
                   onCheckedChange={handleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {selectedImages.size} of {media.length} selected
+                  {selectedImages.size} {t('media.bulkActions.selected')} {media.length}
                 </span>
               </div>
               <Button
@@ -301,8 +303,8 @@ export default function Media() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Media Library</CardTitle>
-              <CardDescription>{media.length} images</CardDescription>
+              <CardTitle>{t('media.library.title')}</CardTitle>
+              <CardDescription>{media.length} {t('media.library.images')}</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button
@@ -330,7 +332,7 @@ export default function Media() {
           ) : media.length === 0 ? (
             <div className="text-center py-12">
               <ImageIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-20" />
-              <h3 className="text-lg font-semibold mb-2">No Images Found</h3>
+              <h3 className="text-lg font-semibold mb-2">{t('media.emptyState.noImages')}</h3>
               <p className="text-muted-foreground mb-4">
                 {selectedProperty !== "all" || searchTerm
                   ? "Try adjusting your filters"
@@ -373,13 +375,13 @@ export default function Media() {
                   {viewMode === 'grid' ? (
                     <img
                       src={image.image_url}
-                      alt={image.image_title || 'Property image'}
+                      alt={image.image_title || t('media.actions.untitled')}
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     <img
                       src={image.image_url}
-                      alt={image.image_title || 'Property image'}
+                      alt={image.image_title || t('media.actions.untitled')}
                       className="w-24 h-24 object-cover rounded flex-shrink-0"
                     />
                   )}
@@ -393,7 +395,7 @@ export default function Media() {
                     <div className="space-y-2">
                       <div>
                         <h4 className={`font-medium truncate ${viewMode === 'grid' ? 'text-white' : ''}`}>
-                          {image.image_title || 'Untitled'}
+                          {image.image_title || t('media.actions.untitled')}
                         </h4>
                         {image.property && (
                           <p className={`text-sm truncate ${viewMode === 'grid' ? 'text-gray-300' : 'text-muted-foreground'}`}>
@@ -451,13 +453,13 @@ export default function Media() {
       <AlertDialog open={!!imageToDelete} onOpenChange={() => setImageToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Image?</AlertDialogTitle>
+            <AlertDialogTitle>{t('media.deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{imageToDelete?.image_title}"? This action cannot be undone.
+              {t('media.deleteDialog.description', { title: imageToDelete?.image_title })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('media.deleteDialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

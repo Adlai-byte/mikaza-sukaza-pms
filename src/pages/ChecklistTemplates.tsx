@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -48,6 +49,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function ChecklistTemplates() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [propertyFilter, setPropertyFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -117,9 +119,9 @@ export default function ChecklistTemplates() {
 
   const getTypeBadge = (type: string) => {
     const config = {
-      check_in: { label: 'Check-In', className: 'bg-green-500' },
-      check_out: { label: 'Check-Out', className: 'bg-blue-500' },
-      inspection: { label: 'Inspection', className: 'bg-purple-500' },
+      check_in: { label: t('checklistTemplates.types.checkIn'), className: 'bg-green-500' },
+      check_out: { label: t('checklistTemplates.types.checkOut'), className: 'bg-blue-500' },
+      inspection: { label: t('checklistTemplates.types.inspection'), className: 'bg-purple-500' },
     };
 
     const item = config[type as keyof typeof config] || { label: type, className: 'bg-gray-500' };
@@ -137,9 +139,9 @@ export default function ChecklistTemplates() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Checklist Templates</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t('checklistTemplates.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Create and manage reusable checklists for check-ins, check-outs, and inspections
+            {t('checklistTemplates.subtitle')}
           </p>
         </div>
         <Button
@@ -147,7 +149,7 @@ export default function ChecklistTemplates() {
           className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
-          New Template
+          {t('checklistTemplates.newTemplate')}
         </Button>
       </div>
 
@@ -157,12 +159,12 @@ export default function ChecklistTemplates() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-indigo-700">Total Templates</p>
+                <p className="text-sm font-medium text-indigo-700">{t('checklistTemplates.statsCards.totalTemplates')}</p>
                 <h3 className="text-3xl font-bold text-indigo-900 mt-1">
                   {templates.length}
                 </h3>
                 <p className="text-xs text-indigo-600 mt-1">
-                  Reusable checklists
+                  {t('checklistTemplates.reusableChecklists')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center">
@@ -176,12 +178,12 @@ export default function ChecklistTemplates() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Check-In Templates</p>
+                <p className="text-sm font-medium text-green-700">{t('checklistTemplates.statsCards.checkInTemplates')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">
                   {templates.filter(t => t.template_type === 'check_in').length}
                 </h3>
                 <p className="text-xs text-green-600 mt-1">
-                  {templates.filter(t => t.template_type === 'check_in' && t.is_active).length} active
+                  {templates.filter(t => t.template_type === 'check_in' && t.is_active).length} {t('checklistTemplates.active')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
@@ -195,12 +197,12 @@ export default function ChecklistTemplates() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Check-Out Templates</p>
+                <p className="text-sm font-medium text-blue-700">{t('checklistTemplates.statsCards.checkOutTemplates')}</p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">
                   {templates.filter(t => t.template_type === 'check_out').length}
                 </h3>
                 <p className="text-xs text-blue-600 mt-1">
-                  {templates.filter(t => t.template_type === 'check_out' && t.is_active).length} active
+                  {templates.filter(t => t.template_type === 'check_out' && t.is_active).length} {t('checklistTemplates.active')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
@@ -214,12 +216,12 @@ export default function ChecklistTemplates() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-teal-700">Active Templates</p>
+                <p className="text-sm font-medium text-teal-700">{t('checklistTemplates.statsCards.activeTemplates')}</p>
                 <h3 className="text-3xl font-bold text-teal-900 mt-1">
                   {templates.filter(t => t.is_active).length}
                 </h3>
                 <p className="text-xs text-teal-600 mt-1">
-                  {templates.filter(t => !t.is_active).length} inactive
+                  {templates.filter(t => !t.is_active).length} {t('checklistTemplates.inactive')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center">
@@ -235,7 +237,7 @@ export default function ChecklistTemplates() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Filter className="h-4 w-4" />
-            Filters
+            {t('checklistTemplates.filters.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -243,7 +245,7 @@ export default function ChecklistTemplates() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search templates..."
+                placeholder={t('checklistTemplates.filters.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -252,10 +254,10 @@ export default function ChecklistTemplates() {
 
             <Select value={propertyFilter} onValueChange={setPropertyFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="All Properties" />
+                <SelectValue placeholder={t('checklistTemplates.filters.allProperties')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Properties</SelectItem>
+                <SelectItem value="all">{t('checklistTemplates.filters.allProperties')}</SelectItem>
                 {properties.map((property) => (
                   <SelectItem key={property.property_id} value={property.property_id}>
                     {property.property_name}
@@ -266,24 +268,24 @@ export default function ChecklistTemplates() {
 
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="All Types" />
+                <SelectValue placeholder={t('checklistTemplates.filters.allTypes')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="check_in">Check-In</SelectItem>
-                <SelectItem value="check_out">Check-Out</SelectItem>
-                <SelectItem value="inspection">Inspection</SelectItem>
+                <SelectItem value="all">{t('checklistTemplates.filters.allTypes')}</SelectItem>
+                <SelectItem value="check_in">{t('checklistTemplates.types.checkIn')}</SelectItem>
+                <SelectItem value="check_out">{t('checklistTemplates.types.checkOut')}</SelectItem>
+                <SelectItem value="inspection">{t('checklistTemplates.types.inspection')}</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={activeFilter} onValueChange={setActiveFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="All Status" />
+                <SelectValue placeholder={t('checklistTemplates.filters.allStatus')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active Only</SelectItem>
-                <SelectItem value="inactive">Inactive Only</SelectItem>
+                <SelectItem value="all">{t('checklistTemplates.filters.allStatus')}</SelectItem>
+                <SelectItem value="active">{t('checklistTemplates.filters.activeOnly')}</SelectItem>
+                <SelectItem value="inactive">{t('checklistTemplates.filters.inactiveOnly')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -296,26 +298,26 @@ export default function ChecklistTemplates() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Template Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Property</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('checklistTemplates.table.templateName')}</TableHead>
+                <TableHead>{t('checklistTemplates.table.type')}</TableHead>
+                <TableHead>{t('checklistTemplates.table.property')}</TableHead>
+                <TableHead>{t('checklistTemplates.table.items')}</TableHead>
+                <TableHead>{t('checklistTemplates.table.status')}</TableHead>
+                <TableHead>{t('checklistTemplates.table.created')}</TableHead>
+                <TableHead className="text-right">{t('checklistTemplates.table.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
-                    Loading templates...
+                    {t('checklistTemplates.messages.loadingTemplates')}
                   </TableCell>
                 </TableRow>
               ) : filteredTemplates.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
-                    No checklist templates found. Create one to get started!
+                    {t('checklistTemplates.messages.noTemplatesFound')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -336,20 +338,20 @@ export default function ChecklistTemplates() {
                       {template.property ? (
                         <div className="text-sm">{template.property.property_name}</div>
                       ) : (
-                        <span className="text-muted-foreground text-sm">All Properties</span>
+                        <span className="text-muted-foreground text-sm">{t('checklistTemplates.allProperties')}</span>
                       )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <CheckSquare className="h-4 w-4 text-muted-foreground" />
-                        <span>{(template.checklist_items as any[])?.length || 0} items</span>
+                        <span>{(template.checklist_items as any[])?.length || 0} {t('checklistTemplates.items')}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       {template.is_active ? (
-                        <StatusBadge status="Active" variant="default" />
+                        <StatusBadge status={t('checklistTemplates.status.active')} variant="default" />
                       ) : (
-                        <StatusBadge status="Inactive" variant="secondary" />
+                        <StatusBadge status={t('checklistTemplates.status.inactive')} variant="secondary" />
                       )}
                     </TableCell>
                     <TableCell>
@@ -395,18 +397,18 @@ export default function ChecklistTemplates() {
       <AlertDialog open={!!templateToDelete} onOpenChange={() => setTemplateToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogTitle>{t('checklistTemplates.messages.deleteConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this checklist template? This action cannot be undone.
+              {t('checklistTemplates.messages.deleteConfirmMessage')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

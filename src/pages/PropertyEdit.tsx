@@ -9,7 +9,8 @@ import {
   Users,
   Car,
   FileText,
-  Zap
+  Zap,
+  Sparkles
 } from 'lucide-react';
 import { CasaSpinner } from '@/components/ui/casa-loader';
 import { usePropertyDetail } from '@/hooks/usePropertiesOptimized';
@@ -26,10 +27,12 @@ import {
 
 // Tab Components
 import { GeneralTabOptimized } from '@/components/PropertyEdit/GeneralTabOptimized';
+import { FeaturesTabOptimized } from '@/components/PropertyEdit/FeaturesTabOptimized';
 import { ProvidersTabOptimized } from '@/components/PropertyEdit/ProvidersTabOptimized';
 import { UnitOwnersTabOptimized } from '@/components/PropertyEdit/UnitOwnersTabOptimized';
 import { VehiclesTabOptimized } from '@/components/PropertyEdit/VehiclesTabOptimized';
 import { NotesTabOptimized } from '@/components/PropertyEdit/NotesTabOptimized';
+import { HighlightsTab } from '@/components/PropertyEdit/HighlightsTab';
 
 export default function PropertyEdit() {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -204,10 +207,18 @@ export default function PropertyEdit() {
           <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={handleTabChange}>
               <div className="bg-gradient-secondary p-1 m-6 rounded-lg overflow-x-auto">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 bg-transparent gap-1 min-w-max">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 bg-transparent gap-1 min-w-max">
                   <TabsTrigger value="general" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
                     <Home className="h-4 w-4" />
                     <span className="hidden sm:inline">General</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="features" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    <span className="hidden sm:inline">Features</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="highlights" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    <span className="hidden sm:inline">Highlights</span>
                   </TabsTrigger>
                   <TabsTrigger value="providers" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
                     <Zap className="h-4 w-4" />
@@ -231,6 +242,14 @@ export default function PropertyEdit() {
               <div className="p-6">
                 <TabsContent value="general" className="mt-0">
                   <GeneralTabOptimized property={property} />
+                </TabsContent>
+
+                <TabsContent value="features" className="mt-0">
+                  <FeaturesTabOptimized propertyId={property.property_id} />
+                </TabsContent>
+
+                <TabsContent value="highlights" className="mt-0">
+                  <HighlightsTab propertyId={property.property_id} />
                 </TabsContent>
 
                 <TabsContent value="providers" className="mt-0">

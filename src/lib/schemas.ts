@@ -1732,3 +1732,119 @@ export type CheckInOutFilters = {
   search?: string;
 };
 
+// ============================================
+// PROPERTY HIGHLIGHTS SCHEMAS
+// ============================================
+
+// Photo structure for highlights
+export const highlightPhotoSchema = z.object({
+  url: z.string().url(),
+  caption: z.string().optional(),
+  display_order: z.number().default(0),
+});
+
+export type HighlightPhoto = z.infer<typeof highlightPhotoSchema>;
+
+// Property Highlight Schema
+export const propertyHighlightSchema = z.object({
+  property_id: z.string().uuid("Invalid property ID"),
+  title: z.string().min(1, "Title is required").max(255),
+  description: z.string().optional(),
+  icon_name: z.string().max(100).optional(), // e.g., 'beach', 'pool', 'wifi'
+  highlight_type: z.enum(['feature', 'amenity', 'location', 'access', 'view', 'other']).default('feature'),
+  photos: z.array(highlightPhotoSchema).default([]),
+  display_order: z.number().default(0),
+  is_active: z.boolean().default(true),
+});
+
+export type PropertyHighlightInsert = z.infer<typeof propertyHighlightSchema>;
+
+export type PropertyHighlight = PropertyHighlightInsert & {
+  highlight_id: string;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  property?: {
+    property_id: string;
+    property_name: string;
+  };
+};
+
+// Property Highlight filters
+export type PropertyHighlightFilters = {
+  property_id?: string;
+  highlight_type?: 'feature' | 'amenity' | 'location' | 'access' | 'view' | 'other';
+  is_active?: boolean;
+  search?: string;
+};
+
+// Common highlight icons
+export const HIGHLIGHT_ICONS = {
+  // Location & Views
+  beach: 'Beach Access',
+  ocean_view: 'Ocean View',
+  mountain_view: 'Mountain View',
+  city_view: 'City View',
+  waterfront: 'Waterfront',
+
+  // Amenities
+  pool: 'Swimming Pool',
+  hot_tub: 'Hot Tub/Jacuzzi',
+  gym: 'Fitness Center',
+  spa: 'Spa',
+  sauna: 'Sauna',
+
+  // Technology
+  wifi: 'High-Speed WiFi',
+  smart_home: 'Smart Home',
+  tv: 'Smart TV',
+  sound_system: 'Sound System',
+
+  // Outdoor
+  garden: 'Garden',
+  patio: 'Patio/Deck',
+  bbq: 'BBQ/Grill',
+  outdoor_dining: 'Outdoor Dining',
+  fire_pit: 'Fire Pit',
+
+  // Parking & Access
+  parking: 'Parking',
+  garage: 'Garage',
+  elevator: 'Elevator',
+  wheelchair: 'Wheelchair Accessible',
+
+  // Kitchen & Dining
+  kitchen: 'Full Kitchen',
+  dining: 'Dining Area',
+  bar: 'Bar',
+  wine_cellar: 'Wine Cellar',
+
+  // Bedroom & Comfort
+  bedroom: 'Luxury Bedrooms',
+  bathroom: 'Spa Bathrooms',
+  ac: 'Air Conditioning',
+  heating: 'Heating',
+  fireplace: 'Fireplace',
+
+  // Entertainment
+  game_room: 'Game Room',
+  theater: 'Home Theater',
+  library: 'Library',
+  office: 'Home Office',
+
+  // Security & Services
+  security: 'Security System',
+  concierge: 'Concierge Service',
+  housekeeping: 'Housekeeping',
+
+  // Pet-Friendly
+  pet_friendly: 'Pet Friendly',
+
+  // Other
+  eco_friendly: 'Eco-Friendly',
+  luxury: 'Luxury Finishes',
+  new: 'Newly Renovated',
+} as const;
+
+export type HighlightIconName = keyof typeof HIGHLIGHT_ICONS;
+

@@ -31,9 +31,11 @@ import { useCommissions } from '@/hooks/useCommissions';
 import { useInvoiceTips } from '@/hooks/useInvoiceTips';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 export default function MyCommissions() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -72,22 +74,22 @@ export default function MyCommissions() {
     const variants: Record<string, { className: string; label: string; icon: React.ReactNode }> = {
       pending: {
         className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200',
-        label: 'Pending',
+        label: t('commissions.status.pending'),
         icon: <Clock className="h-3 w-3" />,
       },
       approved: {
         className: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
-        label: 'Approved',
+        label: t('commissions.status.approved'),
         icon: <CheckCircle className="h-3 w-3" />,
       },
       paid: {
         className: 'bg-green-100 text-green-800 hover:bg-green-200',
-        label: 'Paid',
+        label: t('commissions.status.paid'),
         icon: <CheckCircle className="h-3 w-3" />,
       },
       processed: {
         className: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
-        label: 'Processed',
+        label: t('myCommissions.status.processed'),
         icon: <CheckCircle className="h-3 w-3" />,
       },
     };
@@ -124,7 +126,7 @@ export default function MyCommissions() {
           My Earnings
         </h1>
         <p className="text-muted-foreground mt-1">
-          Track your commissions and tips
+          {t('myCommissions.subtitle')}
         </p>
       </div>
 
@@ -134,13 +136,13 @@ export default function MyCommissions() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-emerald-700">Total Earnings</p>
+                <p className="text-sm font-medium text-emerald-700">{t('myCommissions.summaryCards.totalEarnings')}</p>
                 <h3 className="text-3xl font-bold text-emerald-900 mt-1">
                   ${(stats.totalEarnings + stats.tipsReceived).toFixed(2)}
                 </h3>
                 <div className="text-xs text-emerald-600 mt-1 space-y-0.5">
-                  <div>Commissions: ${stats.totalEarnings.toFixed(2)}</div>
-                  <div>Tips: ${stats.tipsReceived.toFixed(2)}</div>
+                  <div>{t('myCommissions.summaryCards.commissionsLabel')} ${stats.totalEarnings.toFixed(2)}</div>
+                  <div>{t('myCommissions.summaryCards.tipsLabel')} ${stats.tipsReceived.toFixed(2)}</div>
                 </div>
               </div>
               <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
@@ -154,13 +156,13 @@ export default function MyCommissions() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-amber-700">Pending Approval</p>
+                <p className="text-sm font-medium text-amber-700">{t('myCommissions.summaryCards.pendingApproval')}</p>
                 <h3 className="text-3xl font-bold text-amber-900 mt-1">
                   ${(stats.pending + stats.tipsPending).toFixed(2)}
                 </h3>
                 <p className="text-xs text-amber-600 mt-1">
                   {commissions.filter(c => c.status === 'pending').length +
-                   tips.filter(t => t.status === 'pending').length} items
+                   tips.filter(t => t.status === 'pending').length} {t('commissions.itemsCount')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
@@ -174,12 +176,12 @@ export default function MyCommissions() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Paid Out</p>
+                <p className="text-sm font-medium text-green-700">{t('myCommissions.summaryCards.paidOut')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">
                   ${stats.paid.toFixed(2)}
                 </h3>
                 <p className="text-xs text-green-600 mt-1">
-                  {commissions.filter(c => c.status === 'paid').length} payments
+                  {commissions.filter(c => c.status === 'paid').length} {t('myCommissions.summaryCards.payments')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
@@ -193,45 +195,45 @@ export default function MyCommissions() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filter Earnings</CardTitle>
+          <CardTitle>{t('myCommissions.filterEarnings')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>{t('commissions.status.label')}</Label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
+                  <SelectValue placeholder={t('commissions.status.allPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="all">{t('commissions.status.all')}</SelectItem>
+                  <SelectItem value="pending">{t('commissions.status.pending')}</SelectItem>
+                  <SelectItem value="approved">{t('commissions.status.approved')}</SelectItem>
+                  <SelectItem value="paid">{t('commissions.status.paid')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label>{t('myCommissions.type')}</Label>
               <Select value={selectedType} onValueChange={setSelectedType}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All types" />
+                  <SelectValue placeholder={t('myCommissions.allTypesPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="booking">Booking</SelectItem>
-                  <SelectItem value="invoice">Invoice</SelectItem>
-                  <SelectItem value="service">Service</SelectItem>
-                  <SelectItem value="tip">Tip</SelectItem>
-                  <SelectItem value="referral">Referral</SelectItem>
-                  <SelectItem value="bonus">Bonus</SelectItem>
+                  <SelectItem value="all">{t('myCommissions.allTypes')}</SelectItem>
+                  <SelectItem value="booking">{t('commissions.sourceType.booking')}</SelectItem>
+                  <SelectItem value="invoice">{t('commissions.sourceType.invoice')}</SelectItem>
+                  <SelectItem value="service">{t('commissions.sourceType.service')}</SelectItem>
+                  <SelectItem value="tip">{t('commissions.sourceType.tip')}</SelectItem>
+                  <SelectItem value="referral">{t('commissions.sourceType.referral')}</SelectItem>
+                  <SelectItem value="bonus">{t('commissions.sourceType.bonus')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Date From</Label>
+              <Label>{t('commissions.dateFrom')}</Label>
               <Input
                 type="date"
                 value={dateFrom}
@@ -240,7 +242,7 @@ export default function MyCommissions() {
             </div>
 
             <div className="space-y-2">
-              <Label>Date To</Label>
+              <Label>{t('commissions.dateTo')}</Label>
               <Input
                 type="date"
                 value={dateTo}
@@ -255,8 +257,8 @@ export default function MyCommissions() {
       {tips.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Tips Received</CardTitle>
-            <CardDescription>{tips.length} tip(s) from guests</CardDescription>
+            <CardTitle>{t('myCommissions.tipsReceived.title')}</CardTitle>
+            <CardDescription>{tips.length} {t('myCommissions.tipsReceived.count')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="rounded-md border">
@@ -314,9 +316,9 @@ export default function MyCommissions() {
       {/* Commissions Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Commission History</CardTitle>
+          <CardTitle>{t('myCommissions.commissionHistory.title')}</CardTitle>
           <CardDescription>
-            {loading ? 'Loading...' : `${commissions.length} commission record(s)`}
+            {loading ? t('commissions.loading') : `${commissions.length} ${t('commissions.recordsCount')}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -338,13 +340,13 @@ export default function MyCommissions() {
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8">
-                      Loading your earnings...
+                      {t('myCommissions.commissionHistory.loadingYourEarnings')}
                     </TableCell>
                   </TableRow>
                 ) : commissions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No commissions found
+                      {t('myCommissions.commissionHistory.noCommissionsFound')}
                     </TableCell>
                   </TableRow>
                 ) : (

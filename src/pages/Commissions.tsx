@@ -45,6 +45,7 @@ import { useUsers } from '@/hooks/useUsers';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '@/components/StatusBadge';
 import {
   Dialog,
@@ -57,6 +58,7 @@ import {
 import { Label } from '@/components/ui/label';
 
 export default function Commissions() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<string>('all');
@@ -90,7 +92,7 @@ export default function Commissions() {
   const markAsPaid = useMarkCommissionAsPaid();
 
   const handleDelete = (commissionId: string) => {
-    if (confirm('Are you sure you want to delete this commission?')) {
+    if (confirm(t('commissions.deleteConfirm'))) {
       deleteCommission.mutate(commissionId);
     }
   };
@@ -128,31 +130,31 @@ export default function Commissions() {
       pending: {
         variant: 'secondary',
         icon: <Clock className="h-3 w-3" />,
-        label: 'Pending',
+        label: t('commissions.status.pending'),
         className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200',
       },
       approved: {
         variant: 'default',
         icon: <CheckCircle className="h-3 w-3" />,
-        label: 'Approved',
+        label: t('commissions.status.approved'),
         className: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
       },
       paid: {
         variant: 'default',
         icon: <CheckCircle className="h-3 w-3" />,
-        label: 'Paid',
+        label: t('commissions.status.paid'),
         className: 'bg-green-100 text-green-800 hover:bg-green-200',
       },
       cancelled: {
         variant: 'destructive',
         icon: <XCircle className="h-3 w-3" />,
-        label: 'Cancelled',
+        label: t('commissions.status.cancelled'),
         className: 'bg-red-100 text-red-800 hover:bg-red-200',
       },
       on_hold: {
         variant: 'outline',
         icon: <Clock className="h-3 w-3" />,
-        label: 'On Hold',
+        label: t('commissions.status.on_hold'),
         className: 'bg-gray-100 text-gray-800 hover:bg-gray-200',
       },
     };
@@ -202,15 +204,15 @@ export default function Commissions() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <DollarSign className="h-8 w-8" />
-            Commissions & Tips
+            {t('commissions.title')}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Track staff commissions, tips, and earnings
+            {t('commissions.subtitle')}
           </p>
         </div>
         <Button size="lg" disabled>
           <Plus className="h-4 w-4 mr-2" />
-          Add Commission
+          {t('commissions.addCommission')}
         </Button>
       </div>
 
@@ -220,11 +222,11 @@ export default function Commissions() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">Total Commissions</p>
+                <p className="text-sm font-medium text-purple-700">{t('commissions.totalCommissions')}</p>
                 <h3 className="text-3xl font-bold text-purple-900 mt-1">
                   ${stats.totalAmount.toFixed(2)}
                 </h3>
-                <p className="text-xs text-purple-600 mt-1">{stats.total} commissions</p>
+                <p className="text-xs text-purple-600 mt-1">{stats.total} {t('commissions.commissionsCount')}</p>
               </div>
               <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                 <DollarSign className="h-6 w-6 text-white" />
@@ -237,7 +239,7 @@ export default function Commissions() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-yellow-700">Pending</p>
+                <p className="text-sm font-medium text-yellow-700">{t('commissions.pending')}</p>
                 <h3 className="text-3xl font-bold text-yellow-900 mt-1">
                   ${stats.pending.toFixed(2)}
                 </h3>
@@ -256,7 +258,7 @@ export default function Commissions() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Approved</p>
+                <p className="text-sm font-medium text-blue-700">{t('commissions.approved')}</p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">
                   ${stats.approved.toFixed(2)}
                 </h3>
@@ -275,7 +277,7 @@ export default function Commissions() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Paid Out</p>
+                <p className="text-sm font-medium text-green-700">{t('commissions.paidOut')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">
                   ${stats.paid.toFixed(2)}
                 </h3>
@@ -302,13 +304,13 @@ export default function Commissions() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="space-y-2">
-              <Label>Staff Member</Label>
+              <Label>{t('commissions.staffMember')}</Label>
               <Select value={selectedUser} onValueChange={setSelectedUser}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All staff" />
+                  <SelectValue placeholder={t('commissions.allStaffPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Staff</SelectItem>
+                  <SelectItem value="all">{t('commissions.allStaff')}</SelectItem>
                   {staffUsers.map((user) => (
                     <SelectItem key={user.user_id} value={user.user_id!}>
                       {user.first_name} {user.last_name}
@@ -319,13 +321,13 @@ export default function Commissions() {
             </div>
 
             <div className="space-y-2">
-              <Label>Property</Label>
+              <Label>{t('commissions.property')}</Label>
               <Select value={selectedProperty} onValueChange={setSelectedProperty}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All properties" />
+                  <SelectValue placeholder={t('commissions.allPropertiesPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Properties</SelectItem>
+                  <SelectItem value="all">{t('commissions.allProperties')}</SelectItem>
                   {properties.map((property) => (
                     <SelectItem key={property.property_id} value={property.property_id!}>
                       {property.property_name}
@@ -336,42 +338,42 @@ export default function Commissions() {
             </div>
 
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>{t('commissions.status.label')}</Label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
+                  <SelectValue placeholder={t('commissions.status.allPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="on_hold">On Hold</SelectItem>
+                  <SelectItem value="all">{t('commissions.status.all')}</SelectItem>
+                  <SelectItem value="pending">{t('commissions.status.pending')}</SelectItem>
+                  <SelectItem value="approved">{t('commissions.status.approved')}</SelectItem>
+                  <SelectItem value="paid">{t('commissions.status.paid')}</SelectItem>
+                  <SelectItem value="cancelled">{t('commissions.status.cancelled')}</SelectItem>
+                  <SelectItem value="on_hold">{t('commissions.status.on_hold')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Source Type</Label>
+              <Label>{t('commissions.sourceType.label')}</Label>
               <Select value={selectedSourceType} onValueChange={setSelectedSourceType}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All types" />
+                  <SelectValue placeholder={t('commissions.sourceType.allPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="booking">Booking</SelectItem>
-                  <SelectItem value="invoice">Invoice</SelectItem>
-                  <SelectItem value="service">Service</SelectItem>
-                  <SelectItem value="tip">Tip</SelectItem>
-                  <SelectItem value="referral">Referral</SelectItem>
-                  <SelectItem value="bonus">Bonus</SelectItem>
+                  <SelectItem value="all">{t('commissions.sourceType.all')}</SelectItem>
+                  <SelectItem value="booking">{t('commissions.sourceType.booking')}</SelectItem>
+                  <SelectItem value="invoice">{t('commissions.sourceType.invoice')}</SelectItem>
+                  <SelectItem value="service">{t('commissions.sourceType.service')}</SelectItem>
+                  <SelectItem value="tip">{t('commissions.sourceType.tip')}</SelectItem>
+                  <SelectItem value="referral">{t('commissions.sourceType.referral')}</SelectItem>
+                  <SelectItem value="bonus">{t('commissions.sourceType.bonus')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Date From</Label>
+              <Label>{t('commissions.dateFrom')}</Label>
               <Input
                 type="date"
                 value={dateFrom}
@@ -380,7 +382,7 @@ export default function Commissions() {
             </div>
 
             <div className="space-y-2">
-              <Label>Date To</Label>
+              <Label>{t('commissions.dateTo')}</Label>
               <Input
                 type="date"
                 value={dateTo}
@@ -394,9 +396,9 @@ export default function Commissions() {
       {/* Commissions Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Commission Records</CardTitle>
+          <CardTitle>{t('commissions.commissionRecords')}</CardTitle>
           <CardDescription>
-            {loading ? 'Loading...' : `${commissions.length} commission record(s)`}
+            {loading ? t('commissions.loading') : `${commissions.length} ${t('commissions.recordsCount')}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -404,29 +406,29 @@ export default function Commissions() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Staff Member</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Base Amount</TableHead>
-                  <TableHead className="text-right">Rate</TableHead>
-                  <TableHead className="text-right">Commission</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Payment Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('commissions.tableHeaders.date')}</TableHead>
+                  <TableHead>{t('commissions.tableHeaders.staffMember')}</TableHead>
+                  <TableHead>{t('commissions.tableHeaders.source')}</TableHead>
+                  <TableHead>{t('commissions.tableHeaders.type')}</TableHead>
+                  <TableHead className="text-right">{t('commissions.tableHeaders.baseAmount')}</TableHead>
+                  <TableHead className="text-right">{t('commissions.tableHeaders.rate')}</TableHead>
+                  <TableHead className="text-right">{t('commissions.tableHeaders.commission')}</TableHead>
+                  <TableHead>{t('commissions.tableHeaders.status')}</TableHead>
+                  <TableHead>{t('commissions.tableHeaders.paymentDate')}</TableHead>
+                  <TableHead className="text-right">{t('commissions.tableHeaders.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-8">
-                      Loading commissions...
+                      {t('commissions.loadingCommissions')}
                     </TableCell>
                   </TableRow>
                 ) : commissions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                      No commissions found
+                      {t('commissions.noCommissionsFound')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -511,37 +513,37 @@ export default function Commissions() {
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Mark Commission as Paid</DialogTitle>
+            <DialogTitle>{t('commissions.paymentDialog.title')}</DialogTitle>
             <DialogDescription>
-              Record payment details for this commission
+              {t('commissions.paymentDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Payment Method</Label>
+              <Label>{t('commissions.paymentDialog.paymentMethod')}</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select payment method" />
+                  <SelectValue placeholder={t('commissions.paymentDialog.selectPaymentMethod')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="check">Check</SelectItem>
-                  <SelectItem value="paypal">PayPal</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="bank_transfer">{t('commissions.paymentDialog.paymentMethods.bank_transfer')}</SelectItem>
+                  <SelectItem value="cash">{t('commissions.paymentDialog.paymentMethods.cash')}</SelectItem>
+                  <SelectItem value="check">{t('commissions.paymentDialog.paymentMethods.check')}</SelectItem>
+                  <SelectItem value="paypal">{t('commissions.paymentDialog.paymentMethods.paypal')}</SelectItem>
+                  <SelectItem value="other">{t('commissions.paymentDialog.paymentMethods.other')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Payment Reference</Label>
+              <Label>{t('commissions.paymentDialog.paymentReference')}</Label>
               <Input
-                placeholder="Transaction ID or reference number"
+                placeholder={t('commissions.paymentDialog.paymentReferencePlaceholder')}
                 value={paymentReference}
                 onChange={(e) => setPaymentReference(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label>Payment Date</Label>
+              <Label>{t('commissions.paymentDialog.paymentDate')}</Label>
               <Input
                 type="date"
                 value={paymentDate}
@@ -552,13 +554,13 @@ export default function Commissions() {
               <div className="p-4 bg-muted rounded-md">
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Staff:</span>
+                    <span className="text-muted-foreground">{t('commissions.paymentDialog.staff')}</span>
                     <span className="font-medium">
                       {selectedCommission.user?.first_name} {selectedCommission.user?.last_name}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Commission Amount:</span>
+                    <span className="text-muted-foreground">{t('commissions.paymentDialog.commissionAmount')}</span>
                     <span className="font-semibold text-lg">
                       ${selectedCommission.commission_amount.toFixed(2)}
                     </span>

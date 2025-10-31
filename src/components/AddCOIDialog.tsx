@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -32,7 +33,7 @@ import { useVendorCOIs } from "@/hooks/useVendorCOIs";
 import { useProviders } from "@/hooks/useProviders";
 import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
 import { COI_COVERAGE_TYPES, type VendorCOI } from "@/lib/schemas";
-import { Upload, FileText, Loader2, X } from "lucide-react";
+import { Upload, FileText, Loader2, X, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
@@ -75,6 +76,7 @@ interface AddCOIDialogProps {
 
 export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -84,20 +86,7 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
 
   const form = useForm<COIFormData>({
     resolver: zodResolver(coiFormSchema),
-    defaultValues: editCOI ? {
-      vendor_id: editCOI.vendor_id,
-      property_id: editCOI.property_id || undefined,
-      coverage_type: editCOI.coverage_type,
-      coverage_amount: editCOI.coverage_amount,
-      valid_from: editCOI.valid_from,
-      valid_through: editCOI.valid_through,
-      insurance_company: editCOI.insurance_company || "",
-      policy_number: editCOI.policy_number || "",
-      file_url: editCOI.file_url,
-      file_name: editCOI.file_name,
-      status: editCOI.status,
-      notes: editCOI.notes || "",
-    } : {
+    defaultValues: {
       vendor_id: "",
       property_id: undefined,
       coverage_type: "general_liability",
@@ -113,14 +102,53 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
     },
   });
 
+  // Reset form when dialog opens or editCOI changes
+  useEffect(() => {
+    if (open) {
+      if (editCOI) {
+        form.reset({
+          vendor_id: editCOI.vendor_id,
+          property_id: editCOI.property_id || undefined,
+          coverage_type: editCOI.coverage_type,
+          coverage_amount: editCOI.coverage_amount,
+          valid_from: editCOI.valid_from,
+          valid_through: editCOI.valid_through,
+          insurance_company: editCOI.insurance_company || "",
+          policy_number: editCOI.policy_number || "",
+          file_url: editCOI.file_url,
+          file_name: editCOI.file_name,
+          status: editCOI.status,
+          notes: editCOI.notes || "",
+        });
+      } else {
+        form.reset({
+          vendor_id: "",
+          property_id: undefined,
+          coverage_type: "general_liability",
+          coverage_amount: 0,
+          valid_from: "",
+          valid_through: "",
+          insurance_company: "",
+          policy_number: "",
+          file_url: "",
+          file_name: "",
+          status: "active",
+          notes: "",
+        });
+      }
+      // Reset uploaded file when dialog opens
+      setUploadedFile(null);
+    }
+  }, [open, editCOI, form]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type
       if (!file.type.includes('pdf') && !file.type.includes('image')) {
         toast({
-          title: "Invalid file type",
-          description: "Please upload a PDF or image file",
+          title: t('dialogs.coi.fileUpload.invalidType'),
+          description: t('dialogs.coi.fileUpload.invalidTypeDescription'),
           variant: "destructive",
         });
         return;
@@ -129,8 +157,8 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
       // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast({
-          title: "File too large",
-          description: "File size must be less than 10MB",
+          title: t('dialogs.coi.fileUpload.fileTooLarge'),
+          description: t('dialogs.coi.fileUpload.fileTooLargeDescription'),
           variant: "destructive",
         });
         return;
@@ -138,6 +166,27 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
 
       setUploadedFile(file);
       form.setValue('file_name', file.name);
+    }
+  };
+
+  const handleDownloadFile = () => {
+    const fileUrl = form.getValues('file_url');
+    const fileName = form.getValues('file_name') || 'coi_document';
+
+    if (fileUrl) {
+      // Create a temporary link element and trigger download
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.download = fileName;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: t('common.success'),
+        description: 'Document download started',
+      });
     }
   };
 
@@ -158,8 +207,8 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
       // Validate file URL exists
       if (!fileUrl) {
         toast({
-          title: "File required",
-          description: "Please upload a COI document",
+          title: t('dialogs.coi.fileUpload.fileRequired'),
+          description: t('dialogs.coi.fileUpload.fileRequiredDescription'),
           variant: "destructive",
         });
         return;
@@ -178,15 +227,15 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
         });
 
         toast({
-          title: "Success",
-          description: "COI updated successfully",
+          title: t('common.success'),
+          description: t('dialogs.coi.toasts.updateSuccess'),
         });
       } else {
         await createCOI(coiData);
 
         toast({
-          title: "Success",
-          description: "COI created successfully",
+          title: t('common.success'),
+          description: t('dialogs.coi.toasts.createSuccess'),
         });
       }
 
@@ -196,8 +245,8 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
       onOpenChange(false);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to save COI",
+        title: t('common.error'),
+          description: error.message || t('dialogs.coi.toasts.error'),
         variant: "destructive",
       });
     } finally {
@@ -211,9 +260,9 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editCOI ? 'Edit' : 'Add'} Certificate of Insurance</DialogTitle>
+          <DialogTitle>{editCOI ? t('dialogs.coi.titleEdit') : t('dialogs.coi.titleAdd')}</DialogTitle>
           <DialogDescription>
-            {editCOI ? 'Update' : 'Upload'} vendor insurance certificate and coverage details
+            {editCOI ? t('dialogs.coi.descriptionUpdate') : t('dialogs.coi.descriptionUpload')}
           </DialogDescription>
         </DialogHeader>
 
@@ -225,11 +274,11 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
               name="vendor_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Vendor *</FormLabel>
+                  <FormLabel>{t('dialogs.coi.fields.vendor')} *</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select vendor" />
+                        <SelectValue placeholder={t('dialogs.coi.fields.selectVendor')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -241,7 +290,7 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Select the service provider for this certificate
+                    {t('dialogs.coi.fields.vendorDescription')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -254,18 +303,18 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
               name="property_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Property (Optional)</FormLabel>
+                  <FormLabel>{t('dialogs.coi.fields.property')}</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(value === "none" ? undefined : value)}
                     value={field.value || "none"}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select property (optional)" />
+                        <SelectValue placeholder={t('dialogs.coi.fields.selectProperty')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="none">No specific property</SelectItem>
+                      <SelectItem value="none">{t('dialogs.coi.fields.noSpecificProperty')}</SelectItem>
                       {properties.map((property) => (
                         <SelectItem key={property.property_id} value={property.property_id}>
                           {property.property_name || property.property_type}
@@ -274,7 +323,7 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Link to a specific property if applicable
+                    {t('dialogs.coi.fields.propertyDescription')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -287,7 +336,7 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
               name="file_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>COI Document *</FormLabel>
+                  <FormLabel>{t('dialogs.coi.fields.coiDocument')} *</FormLabel>
                   <FormControl>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -317,15 +366,27 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
                           <span>{uploadedFile.name}</span>
                         </div>
                       ) : field.value ? (
-                        <div className="flex items-center gap-2 text-sm text-blue-600">
-                          <FileText className="h-4 w-4" />
-                          <span>{field.value}</span>
+                        <div className="flex items-center justify-between p-2 bg-blue-50 rounded-md border border-blue-200">
+                          <div className="flex items-center gap-2 text-sm text-blue-600">
+                            <FileText className="h-4 w-4" />
+                            <span>{field.value}</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleDownloadFile}
+                            className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Download
+                          </Button>
                         </div>
                       ) : null}
                     </div>
                   </FormControl>
                   <FormDescription>
-                    Upload PDF or image file (max 10MB)
+                    {t('dialogs.coi.fields.uploadDescription')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -338,11 +399,11 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
               name="coverage_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Coverage Type *</FormLabel>
+                  <FormLabel>{t('dialogs.coi.fields.coverageType')} *</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select coverage type" />
+                        <SelectValue placeholder={t('dialogs.coi.fields.selectCoverageType')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -364,7 +425,7 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
               name="coverage_amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Coverage Amount *</FormLabel>
+                  <FormLabel>{t('dialogs.coi.fields.coverageAmount')} *</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -374,7 +435,7 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
                     />
                   </FormControl>
                   <FormDescription>
-                    Coverage amount in dollars
+                    {t('dialogs.coi.fields.coverageAmountDescription')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -387,9 +448,9 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
               name="insurance_company"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Insurance Company</FormLabel>
+                  <FormLabel>{t('dialogs.coi.fields.insuranceCompany')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., State Farm, Allstate" {...field} />
+                    <Input placeholder={t('dialogs.coi.fields.insuranceCompanyPlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -402,9 +463,9 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
               name="policy_number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Policy Number</FormLabel>
+                  <FormLabel>{t('dialogs.coi.fields.policyNumber')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., POL-123456" {...field} />
+                    <Input placeholder={t('dialogs.coi.fields.policyNumberPlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -418,7 +479,7 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
                 name="valid_from"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valid From *</FormLabel>
+                    <FormLabel>{t('dialogs.coi.fields.validFrom')} *</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -432,7 +493,7 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
                 name="valid_through"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valid Through *</FormLabel>
+                    <FormLabel>{t('dialogs.coi.fields.validThrough')} *</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -448,10 +509,10 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes</FormLabel>
+                  <FormLabel>{t('dialogs.coi.fields.notes')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Additional notes about this certificate..."
+                      placeholder={t('dialogs.coi.fields.notesPlaceholder')}
                       className="resize-none"
                       rows={3}
                       {...field}
@@ -473,7 +534,7 @@ export function AddCOIDialog({ open, onOpenChange, editCOI }: AddCOIDialogProps)
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editCOI ? 'Update' : 'Create'} COI
+                {editCOI ? t('dialogs.coi.buttons.updateCOI') : t('dialogs.coi.buttons.createCOI')}
               </Button>
             </DialogFooter>
           </form>

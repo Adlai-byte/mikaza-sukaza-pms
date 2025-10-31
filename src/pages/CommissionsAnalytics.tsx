@@ -48,6 +48,7 @@ import { useUsers } from '@/hooks/useUsers';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -77,6 +78,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 export default function CommissionsAnalytics() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<string>('all');
@@ -110,7 +112,7 @@ export default function CommissionsAnalytics() {
   const markAsPaid = useMarkCommissionAsPaid();
 
   const handleDelete = (commissionId: string) => {
-    if (confirm('Are you sure you want to delete this commission?')) {
+    if (confirm(t('commissions.deleteConfirm'))) {
       deleteCommission.mutate(commissionId);
     }
   };
@@ -148,31 +150,31 @@ export default function CommissionsAnalytics() {
       pending: {
         variant: 'secondary',
         icon: <Clock className="h-3 w-3" />,
-        label: 'Pending',
+        label: t('commissions.status.pending'),
         className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200',
       },
       approved: {
         variant: 'default',
         icon: <CheckCircle className="h-3 w-3" />,
-        label: 'Approved',
+        label: t('commissions.status.approved'),
         className: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
       },
       paid: {
         variant: 'default',
         icon: <CheckCircle className="h-3 w-3" />,
-        label: 'Paid',
+        label: t('commissions.status.paid'),
         className: 'bg-green-100 text-green-800 hover:bg-green-200',
       },
       cancelled: {
         variant: 'destructive',
         icon: <XCircle className="h-3 w-3" />,
-        label: 'Cancelled',
+        label: t('commissions.status.cancelled'),
         className: 'bg-red-100 text-red-800 hover:bg-red-200',
       },
       on_hold: {
         variant: 'outline',
         icon: <Clock className="h-3 w-3" />,
-        label: 'On Hold',
+        label: t('commissions.status.on_hold'),
         className: 'bg-gray-100 text-gray-800 hover:bg-gray-200',
       },
     };
@@ -246,7 +248,7 @@ export default function CommissionsAnalytics() {
             Commission Analytics
           </h1>
           <p className="text-muted-foreground mt-1">
-            Performance insights and staff commission management
+            {t('commissionsAnalytics.subtitle')}
           </p>
         </div>
         <Button size="lg" disabled>
@@ -266,7 +268,7 @@ export default function CommissionsAnalytics() {
           </CardHeader>
           <CardContent>
             <p className="text-blue-800">
-              <strong>More Commissions = Better Performance!</strong> Your top performers are driving higher earnings.
+              <strong>{t('commissionsAnalytics.performanceInsight.moreCommissionsLabel')}</strong> {t('commissionsAnalytics.performanceInsight.topPerformersMessage')}
               {analytics.topPerformers[0] && (
                 <>
                   {' '}<strong>{analytics.topPerformers[0].name}</strong> is leading with{' '}
@@ -286,11 +288,11 @@ export default function CommissionsAnalytics() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">Total Commissions</p>
+                <p className="text-sm font-medium text-purple-700">{t('commissions.totalCommissions')}</p>
                 <h3 className="text-3xl font-bold text-purple-900 mt-1">
                   ${stats.totalAmount.toFixed(2)}
                 </h3>
-                <p className="text-xs text-purple-600 mt-1">{stats.total} commissions</p>
+                <p className="text-xs text-purple-600 mt-1">{stats.total} {t('commissions.commissionsCount')}</p>
               </div>
               <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                 <DollarSign className="h-6 w-6 text-white" />
@@ -303,7 +305,7 @@ export default function CommissionsAnalytics() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-yellow-700">Pending</p>
+                <p className="text-sm font-medium text-yellow-700">{t('commissions.pending')}</p>
                 <h3 className="text-3xl font-bold text-yellow-900 mt-1">
                   ${stats.pending.toFixed(2)}
                 </h3>
@@ -322,7 +324,7 @@ export default function CommissionsAnalytics() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Approved</p>
+                <p className="text-sm font-medium text-blue-700">{t('commissions.approved')}</p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">
                   ${stats.approved.toFixed(2)}
                 </h3>
@@ -341,7 +343,7 @@ export default function CommissionsAnalytics() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Paid Out</p>
+                <p className="text-sm font-medium text-green-700">{t('commissions.paidOut')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">
                   ${stats.paid.toFixed(2)}
                 </h3>
@@ -360,7 +362,7 @@ export default function CommissionsAnalytics() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-indigo-700">Active Staff</p>
+                <p className="text-sm font-medium text-indigo-700">{t('commissionsAnalytics.activeStaff')}</p>
                 <h3 className="text-3xl font-bold text-indigo-900 mt-1">
                   {analytics?.totalStaff || 0}
                 </h3>
@@ -379,9 +381,9 @@ export default function CommissionsAnalytics() {
       {/* Analytics Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="data">Commission Data</TabsTrigger>
+          <TabsTrigger value="overview">{t('commissionsAnalytics.tabs.overview')}</TabsTrigger>
+          <TabsTrigger value="performance">{t('commissionsAnalytics.tabs.performance')}</TabsTrigger>
+          <TabsTrigger value="data">{t('commissionsAnalytics.tabs.commissionData')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -390,8 +392,8 @@ export default function CommissionsAnalytics() {
             {/* Monthly Trend Chart */}
             <Card>
               <CardHeader>
-                <CardTitle>Monthly Commission Trend</CardTitle>
-                <CardDescription>Commission earnings over the last 12 months</CardDescription>
+                <CardTitle>{t('commissionsAnalytics.charts.monthlyTrend')}</CardTitle>
+                <CardDescription>{t('commissionsAnalytics.charts.monthlyTrendDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {monthlyTrendData.length > 0 ? (
@@ -407,7 +409,7 @@ export default function CommissionsAnalytics() {
                         dataKey="amount"
                         stroke="#8884d8"
                         strokeWidth={2}
-                        name="Total Amount ($)"
+                        name={t('commissionsAnalytics.charts.totalAmount')}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -422,8 +424,8 @@ export default function CommissionsAnalytics() {
             {/* Source Type Breakdown */}
             <Card>
               <CardHeader>
-                <CardTitle>Commission Sources</CardTitle>
-                <CardDescription>Breakdown by commission source type</CardDescription>
+                <CardTitle>{t('commissionsAnalytics.charts.commissionSources')}</CardTitle>
+                <CardDescription>{t('commissionsAnalytics.charts.commissionSourcesDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {sourceTypeData.length > 0 ? (
@@ -463,11 +465,11 @@ export default function CommissionsAnalytics() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-orange-700">Avg Time to Payment</p>
+                    <p className="text-sm font-medium text-orange-700">{t('commissionsAnalytics.performanceMetrics.avgTimeToPayment')}</p>
                     <h3 className="text-3xl font-bold text-orange-900 mt-1">
-                      {(analytics?.performanceMetrics.avg_time_to_payment || 0).toFixed(1)} days
+                      {(analytics?.performanceMetrics.avg_time_to_payment || 0).toFixed(1)} {t('commissionsAnalytics.performanceMetrics.days')}
                     </h3>
-                    <p className="text-xs text-orange-600 mt-1">From approval to payout</p>
+                    <p className="text-xs text-orange-600 mt-1">{t('commissionsAnalytics.performanceMetrics.fromApprovalToPayout')}</p>
                   </div>
                   <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
                     <Clock className="h-6 w-6 text-white" />
@@ -480,11 +482,11 @@ export default function CommissionsAnalytics() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-teal-700">Conversion Rate</p>
+                    <p className="text-sm font-medium text-teal-700">{t('commissionsAnalytics.performanceMetrics.conversionRate')}</p>
                     <h3 className="text-3xl font-bold text-teal-900 mt-1">
                       {(analytics?.performanceMetrics.conversion_rate || 0).toFixed(1)}%
                     </h3>
-                    <p className="text-xs text-teal-600 mt-1">Approved or paid commissions</p>
+                    <p className="text-xs text-teal-600 mt-1">{t('commissionsAnalytics.performanceMetrics.approvedOrPaid')}</p>
                   </div>
                   <div className="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center">
                     <TrendingUp className="h-6 w-6 text-white" />
@@ -497,11 +499,11 @@ export default function CommissionsAnalytics() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-pink-700">Avg per Staff Member</p>
+                    <p className="text-sm font-medium text-pink-700">{t('commissionsAnalytics.performanceMetrics.avgPerStaffMember')}</p>
                     <h3 className="text-3xl font-bold text-pink-900 mt-1">
                       ${(analytics?.performanceMetrics.avg_commission_per_staff || 0).toFixed(2)}
                     </h3>
-                    <p className="text-xs text-pink-600 mt-1">Average earnings per person</p>
+                    <p className="text-xs text-pink-600 mt-1">{t('commissionsAnalytics.performanceMetrics.averageEarnings')}</p>
                   </div>
                   <div className="w-12 h-12 bg-pink-500 rounded-lg flex items-center justify-center">
                     <Users className="h-6 w-6 text-white" />
@@ -514,8 +516,8 @@ export default function CommissionsAnalytics() {
           {/* Top Performers Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Top 5 Performers</CardTitle>
-              <CardDescription>Staff members with highest commission earnings</CardDescription>
+              <CardTitle>{t('commissionsAnalytics.topPerformers.title')}</CardTitle>
+              <CardDescription>{t('commissionsAnalytics.topPerformers.subtitle')}</CardDescription>
             </CardHeader>
             <CardContent>
               {topPerformersData.length > 0 ? (
@@ -526,7 +528,7 @@ export default function CommissionsAnalytics() {
                     <YAxis />
                     <RechartsTooltip />
                     <Legend />
-                    <Bar dataKey="amount" fill="#8884d8" name="Total Earnings ($)" />
+                    <Bar dataKey="amount" fill="#8884d8" name={t('commissionsAnalytics.topPerformers.totalEarnings')} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -540,20 +542,20 @@ export default function CommissionsAnalytics() {
           {/* Top Performers Table */}
           <Card>
             <CardHeader>
-              <CardTitle>All Performers</CardTitle>
-              <CardDescription>Complete staff performance ranking</CardDescription>
+              <CardTitle>{t('commissionsAnalytics.topPerformers.allPerformers')}</CardTitle>
+              <CardDescription>{t('commissionsAnalytics.topPerformers.allPerformersDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Rank</TableHead>
-                      <TableHead>Staff Member</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead className="text-right">Commissions</TableHead>
-                      <TableHead className="text-right">Total Earned</TableHead>
-                      <TableHead className="text-right">Avg per Commission</TableHead>
+                      <TableHead>{t('commissionsAnalytics.topPerformers.tableHeaders.rank')}</TableHead>
+                      <TableHead>{t('commissionsAnalytics.topPerformers.tableHeaders.staffMember')}</TableHead>
+                      <TableHead>{t('commissionsAnalytics.topPerformers.tableHeaders.role')}</TableHead>
+                      <TableHead className="text-right">{t('commissionsAnalytics.topPerformers.tableHeaders.commissions')}</TableHead>
+                      <TableHead className="text-right">{t('commissionsAnalytics.topPerformers.tableHeaders.totalEarned')}</TableHead>
+                      <TableHead className="text-right">{t('commissionsAnalytics.topPerformers.tableHeaders.avgPerCommission')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -581,7 +583,7 @@ export default function CommissionsAnalytics() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          No performance data available
+                          {t('commissionsAnalytics.topPerformers.noPerformanceData')}
                         </TableCell>
                       </TableRow>
                     )}
@@ -604,13 +606,13 @@ export default function CommissionsAnalytics() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div className="space-y-2">
-                  <Label>Staff Member</Label>
+                  <Label>{t('commissions.staffMember')}</Label>
                   <Select value={selectedUser} onValueChange={setSelectedUser}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All staff" />
+                      <SelectValue placeholder={t('commissions.allStaffPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Staff</SelectItem>
+                      <SelectItem value="all">{t('commissions.allStaff')}</SelectItem>
                       {staffUsers.map((user) => (
                         <SelectItem key={user.user_id} value={user.user_id!}>
                           {user.first_name} {user.last_name}
@@ -621,13 +623,13 @@ export default function CommissionsAnalytics() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Property</Label>
+                  <Label>{t('commissions.property')}</Label>
                   <Select value={selectedProperty} onValueChange={setSelectedProperty}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All properties" />
+                      <SelectValue placeholder={t('commissions.allPropertiesPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Properties</SelectItem>
+                      <SelectItem value="all">{t('commissions.allProperties')}</SelectItem>
                       {properties.map((property) => (
                         <SelectItem key={property.property_id} value={property.property_id!}>
                           {property.property_name}
@@ -638,42 +640,42 @@ export default function CommissionsAnalytics() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Status</Label>
+                  <Label>{t('commissions.status.label')}</Label>
                   <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All statuses" />
+                      <SelectValue placeholder={t('commissions.status.allPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                      <SelectItem value="on_hold">On Hold</SelectItem>
+                      <SelectItem value="all">{t('commissions.status.all')}</SelectItem>
+                      <SelectItem value="pending">{t('commissions.status.pending')}</SelectItem>
+                      <SelectItem value="approved">{t('commissions.status.approved')}</SelectItem>
+                      <SelectItem value="paid">{t('commissions.status.paid')}</SelectItem>
+                      <SelectItem value="cancelled">{t('commissions.status.cancelled')}</SelectItem>
+                      <SelectItem value="on_hold">{t('commissions.status.on_hold')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Source Type</Label>
+                  <Label>{t('commissions.sourceType.label')}</Label>
                   <Select value={selectedSourceType} onValueChange={setSelectedSourceType}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All types" />
+                      <SelectValue placeholder={t('commissions.sourceType.allPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="booking">Booking</SelectItem>
-                      <SelectItem value="invoice">Invoice</SelectItem>
-                      <SelectItem value="service">Service</SelectItem>
-                      <SelectItem value="tip">Tip</SelectItem>
-                      <SelectItem value="referral">Referral</SelectItem>
-                      <SelectItem value="bonus">Bonus</SelectItem>
+                      <SelectItem value="all">{t('commissions.sourceType.all')}</SelectItem>
+                      <SelectItem value="booking">{t('commissions.sourceType.booking')}</SelectItem>
+                      <SelectItem value="invoice">{t('commissions.sourceType.invoice')}</SelectItem>
+                      <SelectItem value="service">{t('commissions.sourceType.service')}</SelectItem>
+                      <SelectItem value="tip">{t('commissions.sourceType.tip')}</SelectItem>
+                      <SelectItem value="referral">{t('commissions.sourceType.referral')}</SelectItem>
+                      <SelectItem value="bonus">{t('commissions.sourceType.bonus')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Date From</Label>
+                  <Label>{t('commissions.dateFrom')}</Label>
                   <Input
                     type="date"
                     value={dateFrom}
@@ -682,7 +684,7 @@ export default function CommissionsAnalytics() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Date To</Label>
+                  <Label>{t('commissions.dateTo')}</Label>
                   <Input
                     type="date"
                     value={dateTo}
@@ -696,9 +698,9 @@ export default function CommissionsAnalytics() {
           {/* Commissions Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Commission Records</CardTitle>
+              <CardTitle>{t('commissions.commissionRecords')}</CardTitle>
               <CardDescription>
-                {loading ? 'Loading...' : `${commissions.length} commission record(s)`}
+                {loading ? t('commissions.loading') : `${commissions.length} ${t('commissions.recordsCount')}`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -706,29 +708,29 @@ export default function CommissionsAnalytics() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
+                      <TableHead>{t('commissions.tableHeaders.date')}</TableHead>
                       <TableHead>Staff Member</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Base Amount</TableHead>
-                      <TableHead className="text-right">Rate</TableHead>
-                      <TableHead className="text-right">Commission</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Payment Date</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t('commissions.tableHeaders.source')}</TableHead>
+                      <TableHead>{t('commissions.tableHeaders.type')}</TableHead>
+                      <TableHead className="text-right">{t('commissions.tableHeaders.baseAmount')}</TableHead>
+                      <TableHead className="text-right">{t('commissions.tableHeaders.rate')}</TableHead>
+                      <TableHead className="text-right">{t('commissions.tableHeaders.commission')}</TableHead>
+                      <TableHead>{t('commissions.tableHeaders.status')}</TableHead>
+                      <TableHead>{t('commissions.tableHeaders.paymentDate')}</TableHead>
+                      <TableHead className="text-right">{t('commissions.tableHeaders.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loading ? (
                       <TableRow>
                         <TableCell colSpan={10} className="text-center py-8">
-                          Loading commissions...
+                          {t('commissions.loadingCommissions')}
                         </TableCell>
                       </TableRow>
                     ) : commissions.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                          No commissions found
+                          {t('commissions.noCommissionsFound')}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -815,37 +817,37 @@ export default function CommissionsAnalytics() {
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Mark Commission as Paid</DialogTitle>
+            <DialogTitle>{t('commissions.paymentDialog.title')}</DialogTitle>
             <DialogDescription>
-              Record payment details for this commission
+              {t('commissions.paymentDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Payment Method</Label>
+              <Label>{t('commissions.paymentDialog.paymentMethod')}</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select payment method" />
+                  <SelectValue placeholder={t('commissions.paymentDialog.selectPaymentMethod')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="check">Check</SelectItem>
-                  <SelectItem value="paypal">PayPal</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="bank_transfer">{t('commissions.paymentDialog.paymentMethods.bank_transfer')}</SelectItem>
+                  <SelectItem value="cash">{t('commissions.paymentDialog.paymentMethods.cash')}</SelectItem>
+                  <SelectItem value="check">{t('commissions.paymentDialog.paymentMethods.check')}</SelectItem>
+                  <SelectItem value="paypal">{t('commissions.paymentDialog.paymentMethods.paypal')}</SelectItem>
+                  <SelectItem value="other">{t('commissions.paymentDialog.paymentMethods.other')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Payment Reference</Label>
+              <Label>{t('commissions.paymentDialog.paymentReference')}</Label>
               <Input
-                placeholder="Transaction ID or reference number"
+                placeholder={t('commissions.paymentDialog.paymentReferencePlaceholder')}
                 value={paymentReference}
                 onChange={(e) => setPaymentReference(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label>Payment Date</Label>
+              <Label>{t('commissions.paymentDialog.paymentDate')}</Label>
               <Input
                 type="date"
                 value={paymentDate}
@@ -856,13 +858,13 @@ export default function CommissionsAnalytics() {
               <div className="p-4 bg-muted rounded-md">
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Staff:</span>
+                    <span className="text-muted-foreground">{t('commissions.paymentDialog.staff')}</span>
                     <span className="font-medium">
                       {selectedCommission.user?.first_name} {selectedCommission.user?.last_name}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Commission Amount:</span>
+                    <span className="text-muted-foreground">{t('commissions.paymentDialog.commissionAmount')}</span>
                     <span className="font-semibold text-lg">
                       ${selectedCommission.commission_amount.toFixed(2)}
                     </span>

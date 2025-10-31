@@ -51,65 +51,64 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS, Permission } from "@/lib/rbac/permissions";
 import { useUnseenExpiringCounts } from "@/hooks/useExpiringDocumentsCount";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 
 // Define menu items with their required permissions
 // Organized by frequency of use: Daily → Weekly → Occasional
 const mainMenuItems = [
   // Daily Operations (High Frequency)
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, permission: null }, // Everyone can access
-  { title: "Bookings", url: "/bookings", icon: CalendarDays, permission: PERMISSIONS.BOOKINGS_VIEW },
-  { title: "Calendar", url: "/calendar", icon: Calendar, permission: PERMISSIONS.BOOKINGS_VIEW },
-  { title: "Properties", url: "/properties", icon: Building, permission: PERMISSIONS.PROPERTIES_VIEW },
-  { title: "Active Jobs", url: "/jobs", icon: BriefcaseIcon, permission: PERMISSIONS.JOBS_VIEW },
-  { title: "To-Do List", url: "/todos", icon: CheckSquare, permission: PERMISSIONS.TODOS_VIEW_OWN },
+  { titleKey: "sidebar.dashboard", url: "/", icon: LayoutDashboard, permission: null }, // Everyone can access
+  { titleKey: "sidebar.bookings", url: "/bookings", icon: CalendarDays, permission: PERMISSIONS.BOOKINGS_VIEW },
+  { titleKey: "sidebar.calendar", url: "/calendar", icon: Calendar, permission: PERMISSIONS.BOOKINGS_VIEW },
+  { titleKey: "sidebar.properties", url: "/properties", icon: Building, permission: PERMISSIONS.PROPERTIES_VIEW },
+  { titleKey: "sidebar.activeJobs", url: "/jobs", icon: BriefcaseIcon, permission: PERMISSIONS.JOBS_VIEW },
+  { titleKey: "sidebar.todoList", url: "/todos", icon: CheckSquare, permission: PERMISSIONS.TODOS_VIEW_OWN },
 
   // Weekly Operations (Medium Frequency)
-  { title: "Issues & Photos", url: "/issues", icon: AlertTriangle, permission: PERMISSIONS.ISSUES_VIEW },
-  { title: "Check-In / Check-Out", url: "/check-in-out", icon: LogIn, permission: PERMISSIONS.PROPERTIES_VIEW },
-  { title: "Checklist Templates", url: "/checklist-templates", icon: CheckSquare, permission: PERMISSIONS.PROPERTIES_VIEW },
-  { title: "Providers", url: "/providers", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+  { titleKey: "sidebar.issuesPhotos", url: "/issues", icon: AlertTriangle, permission: PERMISSIONS.ISSUES_VIEW },
+  { titleKey: "sidebar.checkInOut", url: "/check-in-out", icon: LogIn, permission: PERMISSIONS.PROPERTIES_VIEW },
+  { titleKey: "sidebar.checklistTemplates", url: "/checklist-templates", icon: CheckSquare, permission: PERMISSIONS.PROPERTIES_VIEW },
+  { titleKey: "sidebar.providers", url: "/providers", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
 
   // Admin & System (Low Frequency)
-  { title: "User Management", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
-  { title: "Employee Docs", url: "/employee-documents", icon: FileText, permission: PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW },
-  { title: "Activity Logs", url: "/activity-logs", icon: Activity, permission: PERMISSIONS.SYSTEM_AUDIT },
+  { titleKey: "sidebar.userManagement", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
+  { titleKey: "sidebar.employeeDocs", url: "/employee-documents", icon: FileText, permission: PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW },
+  { titleKey: "sidebar.activityLogs", url: "/activity-logs", icon: Activity, permission: PERMISSIONS.SYSTEM_AUDIT },
 ];
 
 const supportMenuItems = [
-  { title: "Help & Support", url: "/help", icon: HelpCircle, permission: null }, // Everyone can access
+  { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, permission: null }, // Everyone can access
 ];
 
 const documentMenuItems = [
-  { title: "Vendor COIs", url: "/vendor-cois", icon: Shield, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
-  { title: "Access Control", url: "/access-authorizations", icon: KeyRound, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
-  { title: "Service Docs", url: "/service-documents", icon: Wrench, permission: PERMISSIONS.DOCUMENTS_SERVICE_VIEW },
-  { title: "Message Templates", url: "/message-templates", icon: MessageSquare, permission: PERMISSIONS.DOCUMENTS_MESSAGES_VIEW },
+  { titleKey: "sidebar.vendorCOIs", url: "/vendor-cois", icon: Shield, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+  { titleKey: "sidebar.accessAuth", url: "/access-authorizations", icon: KeyRound, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+  { titleKey: "sidebar.serviceDocuments", url: "/service-documents", icon: Wrench, permission: PERMISSIONS.DOCUMENTS_SERVICE_VIEW },
+  { titleKey: "sidebar.messageTemplates", url: "/message-templates", icon: MessageSquare, permission: PERMISSIONS.DOCUMENTS_MESSAGES_VIEW },
 ];
 
 const financeMenuItems = [
   // Daily/Weekly Financial Operations
-  { title: "Contracts", url: "/contracts", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
-  { title: "Invoices", url: "/invoices", icon: Receipt, permission: PERMISSIONS.FINANCE_VIEW },
-  { title: "Expenses", url: "/expenses", icon: DollarSign, permission: PERMISSIONS.FINANCE_VIEW },
-  { title: "Bill Templates", url: "/bill-templates", icon: LayoutGrid, permission: PERMISSIONS.FINANCE_VIEW },
+  { titleKey: "sidebar.contracts", url: "/contracts", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
+  { titleKey: "sidebar.invoices", url: "/invoices", icon: Receipt, permission: PERMISSIONS.FINANCE_VIEW },
+  { titleKey: "sidebar.expenses", url: "/expenses", icon: DollarSign, permission: PERMISSIONS.FINANCE_VIEW },
+  { titleKey: "sidebar.billTemplates", url: "/bill-templates", icon: LayoutGrid, permission: PERMISSIONS.FINANCE_VIEW },
 
   // Periodic Reports & Analysis
-  { title: "Financial Dashboard", url: "/financial-dashboard", icon: BarChart3, permission: PERMISSIONS.FINANCE_VIEW },
-  { title: "Owner Statement", url: "/owner-statement", icon: FileBarChart, permission: PERMISSIONS.FINANCE_VIEW },
-  { title: "Service Pipeline", url: "/finance/pipeline", icon: DollarSign, permission: PERMISSIONS.PIPELINE_VIEW },
-  { title: "Commissions", url: "/finance/commissions", icon: BarChart3, permission: PERMISSIONS.COMMISSIONS_VIEW_ALL },
-  { title: "My Earnings", url: "/finance/my-commissions", icon: DollarSign, permission: PERMISSIONS.COMMISSIONS_VIEW_OWN },
+  { titleKey: "sidebar.highlights", url: "/highlights", icon: Star, permission: PERMISSIONS.FINANCE_VIEW },
+  { titleKey: "sidebar.financialDashboard", url: "/financial-dashboard", icon: BarChart3, permission: PERMISSIONS.FINANCE_VIEW },
+  { titleKey: "sidebar.ownerStatement", url: "/owner-statement", icon: FileBarChart, permission: PERMISSIONS.FINANCE_VIEW },
+  { titleKey: "sidebar.serviceDocuments", url: "/finance/pipeline", icon: DollarSign, permission: PERMISSIONS.PIPELINE_VIEW },
+  { titleKey: "sidebar.commissions", url: "/finance/commissions", icon: BarChart3, permission: PERMISSIONS.COMMISSIONS_VIEW_ALL },
+  { titleKey: "sidebar.myCommissions", url: "/finance/my-commissions", icon: DollarSign, permission: PERMISSIONS.COMMISSIONS_VIEW_OWN },
 ];
 
 const mediaMenuItems = [
-  { title: "Photos & Videos", url: "/media", icon: Image, permission: PERMISSIONS.MEDIA_VIEW },
-];
-
-const highlightsMenuItems = [
-  { title: "Highlights", url: "/highlights", icon: Star, permission: PERMISSIONS.HIGHLIGHTS_VIEW },
+  { titleKey: "sidebar.media", url: "/media", icon: Image, permission: PERMISSIONS.MEDIA_VIEW },
 ];
 
 export function AppSidebar() {
+  const { t } = useTranslation();
   const { state } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
@@ -123,7 +122,6 @@ export function AppSidebar() {
     finance: true,
     documents: false,
     media: false,
-    highlights: false,
     support: true,
   });
 
@@ -155,11 +153,6 @@ export function AppSidebar() {
     [hasPermission, userRole]
   );
 
-  const visibleHighlightsMenuItems = useMemo(
-    () => highlightsMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
-    [hasPermission, userRole]
-  );
-
   const visibleSupportMenuItems = useMemo(
     () => supportMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
     [hasPermission, userRole]
@@ -169,9 +162,9 @@ export function AppSidebar() {
   console.log('🔐 [AppSidebar] User Role:', userRole);
   console.log('🔐 [AppSidebar] Has USERS_VIEW?', hasPermission(PERMISSIONS.USERS_VIEW));
   console.log('📋 [AppSidebar] Main Menu Items:', mainMenuItems.length, '→ Visible:', visibleMainMenuItems.length);
-  console.log('📋 [AppSidebar] Visible Main Items:', visibleMainMenuItems.map(i => i.title));
+  console.log('📋 [AppSidebar] Visible Main Items:', visibleMainMenuItems.map(i => i.titleKey));
   console.log('📋 [AppSidebar] Finance Items:', financeMenuItems.length, '→ Visible:', visibleFinanceMenuItems.length);
-  console.log('📋 [AppSidebar] Visible Finance Items:', visibleFinanceMenuItems.map(i => i.title));
+  console.log('📋 [AppSidebar] Visible Finance Items:', visibleFinanceMenuItems.map(i => i.titleKey));
 
   const isActive = (path: string) => {
     if (path === "/") return currentPath === "/";
@@ -249,7 +242,7 @@ export function AppSidebar() {
                   {visibleMainMenuItems.map((item) => {
                     const notificationCount = getNotificationCount(item.url);
                     return (
-                      <SidebarMenuItem key={item.title}>
+                      <SidebarMenuItem key={item.url}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <SidebarMenuButton asChild className="h-10">
@@ -257,7 +250,7 @@ export function AppSidebar() {
                                 <item.icon className="h-5 w-5 min-w-5" />
                                 {!isCollapsed && (
                                   <span className="ml-3 flex items-center gap-2 flex-1">
-                                    {item.title}
+                                    {t(item.titleKey)}
                                     {notificationCount > 0 && (
                                       <Badge className="ml-auto bg-red-500 hover:bg-red-600 text-white">
                                         {notificationCount}
@@ -275,7 +268,7 @@ export function AppSidebar() {
                           </TooltipTrigger>
                           {isCollapsed && (
                             <TooltipContent side="right" className="font-medium">
-                              {item.title}
+                              {t(item.titleKey)}
                               {notificationCount > 0 && ` (${notificationCount})`}
                             </TooltipContent>
                           )}
@@ -318,7 +311,7 @@ export function AppSidebar() {
                   {visibleFinanceMenuItems.map((item) => {
                     const notificationCount = getNotificationCount(item.url);
                     return (
-                      <SidebarMenuItem key={item.title}>
+                      <SidebarMenuItem key={item.url}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <SidebarMenuButton asChild className="h-10">
@@ -326,7 +319,7 @@ export function AppSidebar() {
                                 <item.icon className="h-5 w-5 min-w-5" />
                                 {!isCollapsed && (
                                   <span className="ml-3 flex items-center gap-2 flex-1">
-                                    {item.title}
+                                    {t(item.titleKey)}
                                     {notificationCount > 0 && (
                                       <Badge className="ml-auto bg-red-500 hover:bg-red-600 text-white">
                                         {notificationCount}
@@ -344,7 +337,7 @@ export function AppSidebar() {
                           </TooltipTrigger>
                           {isCollapsed && (
                             <TooltipContent side="right" className="font-medium">
-                              {item.title}
+                              {t(item.titleKey)}
                               {notificationCount > 0 && ` (${notificationCount})`}
                             </TooltipContent>
                           )}
@@ -387,7 +380,7 @@ export function AppSidebar() {
                   {visibleDocumentMenuItems.map((item) => {
                     const notificationCount = getNotificationCount(item.url);
                     return (
-                      <SidebarMenuItem key={item.title}>
+                      <SidebarMenuItem key={item.url}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <SidebarMenuButton asChild className="h-10">
@@ -395,7 +388,7 @@ export function AppSidebar() {
                                 <item.icon className="h-5 w-5 min-w-5" />
                                 {!isCollapsed && (
                                   <span className="ml-3 flex items-center gap-2 flex-1">
-                                    {item.title}
+                                    {t(item.titleKey)}
                                     {notificationCount > 0 && (
                                       <Badge className="ml-auto bg-red-500 hover:bg-red-600 text-white">
                                         {notificationCount}
@@ -413,7 +406,7 @@ export function AppSidebar() {
                           </TooltipTrigger>
                           {isCollapsed && (
                             <TooltipContent side="right" className="font-medium">
-                              {item.title}
+                              {t(item.titleKey)}
                               {notificationCount > 0 && ` (${notificationCount})`}
                             </TooltipContent>
                           )}
@@ -454,70 +447,19 @@ export function AppSidebar() {
               <SidebarGroupContent className="px-3">
                 <SidebarMenu className="space-y-1">
                   {visibleMediaMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
+                    <SidebarMenuItem key={item.url}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <SidebarMenuButton asChild className="h-10">
                             <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
                               <item.icon className="h-5 w-5 min-w-5" />
-                              {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                              {!isCollapsed && <span className="ml-3">{t(item.titleKey)}</span>}
                             </NavLink>
                           </SidebarMenuButton>
                         </TooltipTrigger>
                         {isCollapsed && (
                           <TooltipContent side="right" className="font-medium">
-                            {item.title}
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            )}
-          </SidebarGroup>
-        )}
-
-        {/* Highlights */}
-        {visibleHighlightsMenuItems.length > 0 && (
-          <SidebarGroup>
-            {!isCollapsed && (
-              <button
-                onClick={() => toggleSection('highlights')}
-                className={`w-full flex items-center justify-between text-xs uppercase tracking-wider px-6 mb-2 hover:text-white transition-colors cursor-pointer ${
-                  hasActiveItem(visibleHighlightsMenuItems) ? 'text-white font-semibold' : 'text-white/70'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span>Highlights</span>
-                  {hasActiveItem(visibleHighlightsMenuItems) && (
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  )}
-                </div>
-                {expandedSections.highlights ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </button>
-            )}
-            {expandedSections.highlights && (
-              <SidebarGroupContent className="px-3">
-                <SidebarMenu className="space-y-1">
-                  {visibleHighlightsMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <SidebarMenuButton asChild className="h-10">
-                            <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                              <item.icon className="h-5 w-5 min-w-5" />
-                              {!isCollapsed && <span className="ml-3">{item.title}</span>}
-                            </NavLink>
-                          </SidebarMenuButton>
-                        </TooltipTrigger>
-                        {isCollapsed && (
-                          <TooltipContent side="right" className="font-medium">
-                            {item.title}
+                            {t(item.titleKey)}
                           </TooltipContent>
                         )}
                       </Tooltip>
@@ -535,19 +477,19 @@ export function AppSidebar() {
             <SidebarGroupContent className="px-3">
               <SidebarMenu className="space-y-1">
                 {visibleSupportMenuItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.url}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <SidebarMenuButton asChild className="h-10">
                           <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
                             <item.icon className="h-5 w-5 min-w-5" />
-                            {!isCollapsed && <span className="ml-3">{item.title}</span>}
+                            {!isCollapsed && <span className="ml-3">{t(item.titleKey)}</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
                       {isCollapsed && (
                         <TooltipContent side="right" className="font-medium">
-                          {item.title}
+                          {t(item.titleKey)}
                         </TooltipContent>
                       )}
                     </Tooltip>

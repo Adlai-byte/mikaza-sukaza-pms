@@ -1557,6 +1557,83 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
         </CardContent>
       </Card>
 
+      {/* Amenities & Rules */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Amenities */}
+        <Card className="border-l-4 border-l-teal-500">
+          <CardHeader className="bg-gradient-to-r from-teal-50 to-teal-100">
+            <CardTitle className="flex items-center gap-3 text-teal-900">
+              ✨ Amenities
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {property.amenities && property.amenities.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {property.amenities.map((amenity: any) => (
+                    <Badge
+                      key={amenity.amenity_id}
+                      variant="secondary"
+                      className="bg-teal-100 text-teal-800 hover:bg-teal-200"
+                    >
+                      {amenity.amenity_name}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-md">
+                  <p className="text-sm text-teal-800 flex items-center gap-2">
+                    <Check className="h-4 w-4" />
+                    <span><strong>{property.amenities.length}</strong> amenity features</span>
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                <p className="text-gray-500 mb-2">No amenities selected</p>
+                <p className="text-xs text-gray-400">Edit this property to add amenities in the Features tab</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Rules */}
+        <Card className="border-l-4 border-l-rose-500">
+          <CardHeader className="bg-gradient-to-r from-rose-50 to-rose-100">
+            <CardTitle className="flex items-center gap-3 text-rose-900">
+              📋 Rules
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {property.rules && property.rules.length > 0 ? (
+              <div className="space-y-3">
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {property.rules.map((rule: any) => (
+                    <div
+                      key={rule.rule_id}
+                      className="flex items-start gap-2 p-2 rounded hover:bg-rose-50 transition-colors"
+                    >
+                      <div className="w-1.5 h-1.5 bg-rose-500 rounded-full mt-2 flex-shrink-0" />
+                      <span className="text-sm text-gray-700">{rule.rule_name}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-md">
+                  <p className="text-sm text-rose-800 flex items-center gap-2">
+                    <Check className="h-4 w-4" />
+                    <span><strong>{property.rules.length}</strong> property rules</span>
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                <p className="text-gray-500 mb-2">No rules selected</p>
+                <p className="text-xs text-gray-400">Edit this property to add rules in the Features tab</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Save Section */}
       <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t p-4 rounded-t-lg">
         <div className="flex items-center justify-between">

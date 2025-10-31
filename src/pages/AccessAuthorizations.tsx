@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +83,8 @@ export default function AccessAuthorizations() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editAuth, setEditAuth] = useState<AccessAuthorization | null>(null);
 
+  const { t } = useTranslation();
+
   // Hooks
   const { data: todayAccess = [] } = useTodayAccessAuthorizations();
   const { data: upcomingAccess = [] } = useUpcomingAccessAuthorizations(7);
@@ -158,36 +161,36 @@ export default function AccessAuthorizations() {
     return (
       <Badge variant="outline" className={config.color}>
         <Icon className="h-3 w-3 mr-1" />
-        {config.label}
+        {t(`accessAuthorizations.status.${status}`)}
       </Badge>
     );
   };
 
   const handleApprove = async (access_auth_id: string) => {
-    if (confirm('Approve this access request?')) {
+    if (confirm(t('accessAuthorizations.confirmations.approve'))) {
       await approveAuthorization(access_auth_id);
     }
   };
 
   const handleCheckIn = async (access_auth_id: string) => {
-    if (confirm('Mark vendor as arrived and in progress?')) {
+    if (confirm(t('accessAuthorizations.confirmations.checkIn'))) {
       await markInProgress(access_auth_id);
     }
   };
 
   const handleComplete = async (access_auth_id: string) => {
-    const notes = prompt('Optional completion notes:');
+    const notes = prompt(t('accessAuthorizations.confirmations.completionNotes'));
     await completeAuthorization({ access_auth_id, completion_notes: notes || undefined });
   };
 
   const handleCancel = async (access_auth_id: string) => {
-    if (confirm('Cancel this access authorization?')) {
+    if (confirm(t('accessAuthorizations.confirmations.cancel'))) {
       await cancelAuthorization(access_auth_id);
     }
   };
 
   const handleDelete = async (access_auth_id: string) => {
-    if (confirm('Are you sure you want to delete this authorization?')) {
+    if (confirm(t('accessAuthorizations.confirmations.delete'))) {
       await deleteAuthorization(access_auth_id);
     }
   };
@@ -217,7 +220,7 @@ export default function AccessAuthorizations() {
       await generateAccessAuthorizationPDF(authData);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
+      alert(t('accessAuthorizations.errors.pdfFailed'));
     }
   };
 
@@ -237,10 +240,10 @@ export default function AccessAuthorizations() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
               <KeyRound className="h-7 w-7 text-primary" />
-              Access Authorizations
+              {t('accessAuthorizations.title')}
             </h1>
             <p className="text-muted-foreground">
-              Manage vendor access requests and building entry permissions
+              {t('accessAuthorizations.subtitle')}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
@@ -252,12 +255,10 @@ export default function AccessAuthorizations() {
                   onClick={() => refetch()}
                   disabled={isLoading}
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />{t('accessAuthorizations.refresh')}</Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Refresh access data</p>
+                <p>{t('accessAuthorizations.refreshTooltip')}</p>
               </TooltipContent>
             </Tooltip>
             {canCreate && (
@@ -267,12 +268,10 @@ export default function AccessAuthorizations() {
                     className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
                     onClick={handleAddRequest}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Request Access
-                  </Button>
+                    <Plus className="h-4 w-4 mr-2" />{t('accessAuthorizations.requestAccess')}</Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Create new vendor access request</p>
+                  <p>{t('accessAuthorizations.requestAccessTooltip')}</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -285,11 +284,11 @@ export default function AccessAuthorizations() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">Today's Access</p>
+                  <p className="text-sm font-medium text-blue-700">{t('accessAuthorizations.stats.todaysAccess')}</p>
                   <h3 className="text-3xl font-bold text-blue-900 mt-1">
                     {todayAccess.length}
                   </h3>
-                  <p className="text-xs text-blue-600 mt-1">Scheduled for today</p>
+                  <p className="text-xs text-blue-600 mt-1">{t('accessAuthorizations.stats.scheduledForToday')}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
                   <CalendarIcon className="h-6 w-6 text-white" />
@@ -302,11 +301,11 @@ export default function AccessAuthorizations() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-700">Upcoming (7 days)</p>
+                  <p className="text-sm font-medium text-green-700">{t('accessAuthorizations.stats.upcomingSeven')}</p>
                   <h3 className="text-3xl font-bold text-green-900 mt-1">
                     {upcomingAccess.length}
                   </h3>
-                  <p className="text-xs text-green-600 mt-1">Pending approvals</p>
+                  <p className="text-xs text-green-600 mt-1">{t('accessAuthorizations.stats.pendingApprovals')}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
                   <Clock className="h-6 w-6 text-white" />
@@ -319,11 +318,11 @@ export default function AccessAuthorizations() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-700">Total Active</p>
+                  <p className="text-sm font-medium text-purple-700">{t('accessAuthorizations.stats.totalActive')}</p>
                   <h3 className="text-3xl font-bold text-purple-900 mt-1">
                     {authorizations.filter(a => ['requested', 'approved', 'in_progress'].includes(a.status)).length}
                   </h3>
-                  <p className="text-xs text-purple-600 mt-1">Authorizations</p>
+                  <p className="text-xs text-purple-600 mt-1">{t('accessAuthorizations.stats.authorizations')}</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                   <KeyRound className="h-6 w-6 text-white" />
@@ -338,7 +337,7 @@ export default function AccessAuthorizations() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              Filters
+              {t('accessAuthorizations.filters')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -346,7 +345,7 @@ export default function AccessAuthorizations() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search authorizations..."
+                  placeholder={t('accessAuthorizations.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -355,10 +354,10 @@ export default function AccessAuthorizations() {
 
               <Select value={selectedVendor || "all"} onValueChange={(val) => setSelectedVendor(val === "all" ? "" : val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Vendors" />
+                  <SelectValue placeholder={t('accessAuthorizations.allVendors')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Vendors</SelectItem>
+                  <SelectItem value="all">{t('accessAuthorizations.allVendors')}</SelectItem>
                   {vendors.map((vendor) => (
                     <SelectItem key={vendor.provider_id} value={vendor.provider_id}>
                       {vendor.provider_name}
@@ -369,10 +368,10 @@ export default function AccessAuthorizations() {
 
               <Select value={selectedProperty || "all"} onValueChange={(val) => setSelectedProperty(val === "all" ? "" : val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Properties" />
+                  <SelectValue placeholder={t('accessAuthorizations.allProperties')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Properties</SelectItem>
+                  <SelectItem value="all">{t('accessAuthorizations.allProperties')}</SelectItem>
                   {properties.map((property) => (
                     <SelectItem key={property.property_id} value={property.property_id}>
                       {property.property_name || property.property_type}
@@ -383,10 +382,10 @@ export default function AccessAuthorizations() {
 
               <Select value={selectedStatus || "all"} onValueChange={(val) => setSelectedStatus(val === "all" ? "" : val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Statuses" />
+                  <SelectValue placeholder={t('accessAuthorizations.allStatuses')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="all">{t('accessAuthorizations.allStatuses')}</SelectItem>
                   {Object.entries(ACCESS_AUTH_STATUS).map(([key, label]) => (
                     <SelectItem key={key} value={key}>
                       {label}
@@ -412,11 +411,11 @@ export default function AccessAuthorizations() {
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <CardTitle className="flex items-center gap-2">
-                  <span>Access Authorizations</span>
+                  <span>{t('accessAuthorizations.tableTitle')}</span>
                   <Badge variant="outline">{filteredAuthorizations.length} total</Badge>
                 </CardTitle>
                 <CardDescription className="mt-1.5">
-                  View and manage all vendor access requests and approvals
+                  {t('accessAuthorizations.tableDescription')}
                 </CardDescription>
               </div>
 
@@ -425,11 +424,11 @@ export default function AccessAuthorizations() {
                 <TabsList>
                   <TabsTrigger value="tree" className="gap-2">
                     <FolderTree className="h-4 w-4" />
-                    <span className="hidden sm:inline">Tree View</span>
+                    <span className="hidden sm:inline">{t('accessAuthorizations.viewMode.treeView')}</span>
                   </TabsTrigger>
                   <TabsTrigger value="list" className="gap-2">
                     <List className="h-4 w-4" />
-                    <span className="hidden sm:inline">List View</span>
+                    <span className="hidden sm:inline">{t('accessAuthorizations.viewMode.listView')}</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -439,20 +438,18 @@ export default function AccessAuthorizations() {
             {filteredAuthorizations.length === 0 ? (
               <div className="text-center py-12">
                 <KeyRound className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-20" />
-                <h3 className="text-lg font-semibold mb-2">No Authorizations Found</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('accessAuthorizations.emptyState.title')}</h3>
                 <p className="text-muted-foreground mb-4">
                   {searchTerm || selectedVendor || selectedProperty || selectedStatus
-                    ? 'Try adjusting your filters'
-                    : 'Get started by creating your first access authorization'}
+                    ? t('accessAuthorizations.emptyState.tryAdjusting')
+                    : t('accessAuthorizations.emptyState.getStarted')}
                 </p>
                 {canCreate && !searchTerm && !selectedVendor && (
                   <Button
                     className="bg-gradient-primary hover:bg-gradient-secondary"
                     onClick={handleAddRequest}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Request Access
-                  </Button>
+                    <Plus className="h-4 w-4 mr-2" />{t('accessAuthorizations.requestAccess')}</Button>
                 )}
               </div>
             ) : viewMode === 'tree' ? (
@@ -466,15 +463,15 @@ export default function AccessAuthorizations() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Vendor</TableHead>
-                      <TableHead>Property</TableHead>
-                      <TableHead>Access Date</TableHead>
-                      <TableHead>Time Window</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Personnel</TableHead>
+                      <TableHead>{t('accessAuthorizations.tableHeaders.vendor')}</TableHead>
+                      <TableHead>{t('accessAuthorizations.tableHeaders.property')}</TableHead>
+                      <TableHead>{t('accessAuthorizations.tableHeaders.accessDate')}</TableHead>
+                      <TableHead>{t('accessAuthorizations.tableHeaders.timeWindow')}</TableHead>
+                      <TableHead>{t('accessAuthorizations.tableHeaders.contact')}</TableHead>
+                      <TableHead>{t('accessAuthorizations.tableHeaders.personnel')}</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>COI Valid</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t('accessAuthorizations.tableHeaders.coiValid')}</TableHead>
+                      <TableHead className="text-right">{t('accessAuthorizations.tableHeaders.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -505,7 +502,7 @@ export default function AccessAuthorizations() {
                               </span>
                               {isToday && (
                                 <Badge variant="outline" className="text-xs w-fit bg-blue-100 text-blue-800">
-                                  Today
+                                  {t('accessAuthorizations.badges.today')}
                                 </Badge>
                               )}
                             </div>
@@ -516,7 +513,7 @@ export default function AccessAuthorizations() {
                                 {auth.access_time_start} - {auth.access_time_end}
                               </span>
                             ) : (
-                              <span className="text-muted-foreground italic text-sm">All day</span>
+                              <span className="text-muted-foreground italic text-sm">{t('accessAuthorizations.badges.allDay')}</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -542,7 +539,7 @@ export default function AccessAuthorizations() {
                                 <TooltipTrigger>
                                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                                     <Shield className="h-3 w-3 mr-1" />
-                                    Valid
+                                    {t('accessAuthorizations.badges.valid')}
                                   </Badge>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -551,7 +548,7 @@ export default function AccessAuthorizations() {
                               </Tooltip>
                             ) : (
                               <Badge variant="outline" className="bg-gray-50 text-gray-600">
-                                No COI
+                                {t('accessAuthorizations.badges.noCOI')}
                               </Badge>
                             )}
                           </TableCell>
@@ -569,7 +566,7 @@ export default function AccessAuthorizations() {
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Download access pass (PDF)</p>
+                                  <p>{t('accessAuthorizations.actions.downloadPDF')}</p>
                                 </TooltipContent>
                               </Tooltip>
 
@@ -586,7 +583,7 @@ export default function AccessAuthorizations() {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Approve access</p>
+                                    <p>{t('accessAuthorizations.actions.approve')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -604,7 +601,7 @@ export default function AccessAuthorizations() {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Check in vendor</p>
+                                    <p>{t('accessAuthorizations.actions.checkIn')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -622,7 +619,7 @@ export default function AccessAuthorizations() {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Complete access</p>
+                                    <p>{t('accessAuthorizations.actions.complete')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -640,7 +637,7 @@ export default function AccessAuthorizations() {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Cancel authorization</p>
+                                    <p>{t('accessAuthorizations.actions.cancel')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -657,7 +654,7 @@ export default function AccessAuthorizations() {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Edit authorization</p>
+                                    <p>{t('accessAuthorizations.actions.edit')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -675,7 +672,7 @@ export default function AccessAuthorizations() {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Delete authorization</p>
+                                    <p>{t('accessAuthorizations.actions.delete')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
