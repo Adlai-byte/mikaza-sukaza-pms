@@ -25,33 +25,73 @@ export function FeaturesTabOptimized({ propertyId }: FeaturesTabOptimizedProps) 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [initialAmenities, setInitialAmenities] = useState<string[]>([]);
   const [initialRules, setInitialRules] = useState<string[]>([]);
+  const [featuresLoading, setFeaturesLoading] = useState(true);
 
   // Fetch currently selected amenities and rules for this property
   useEffect(() => {
     const fetchPropertyFeatures = async () => {
-      // Fetch amenities
-      const { data: propertyAmenities } = await supabase
-        .from('property_amenities')
-        .select('amenity_id')
-        .eq('property_id', propertyId);
+      if (!propertyId) {
+        console.warn('No propertyId provided to FeaturesTabOptimized');
+        setFeaturesLoading(false);
+        return;
+      }
 
-      // Fetch rules
-      const { data: propertyRules } = await supabase
-        .from('property_rules')
-        .select('rule_id')
-        .eq('property_id', propertyId);
+      setFeaturesLoading(true);
+      try {
+        // Fetch amenities
+        const { data: propertyAmenities, error: amenitiesError } = await supabase
+          .from('property_amenities')
+          .select('amenity_id')
+          .eq('property_id', propertyId);
 
-      const amenityIds = propertyAmenities?.map(pa => pa.amenity_id) || [];
-      const ruleIds = propertyRules?.map(pr => pr.rule_id) || [];
+        if (amenitiesError) {
+          console.error('Error fetching property amenities:', amenitiesError);
+        }
 
-      setSelectedAmenities(amenityIds);
-      setSelectedRules(ruleIds);
-      setInitialAmenities(amenityIds);
-      setInitialRules(ruleIds);
+        // Fetch rules
+        const { data: propertyRules, error: rulesError } = await supabase
+          .from('property_rules')
+          .select('rule_id')
+          .eq('property_id', propertyId);
+
+        if (rulesError) {
+          console.error('Error fetching property rules:', rulesError);
+        }
+
+        const amenityIds = propertyAmenities?.map(pa => pa.amenity_id).filter(Boolean) || [];
+        const ruleIds = propertyRules?.map(pr => pr.rule_id).filter(Boolean) || [];
+
+        console.log('Loaded property features:', {
+          propertyId,
+          amenityIds,
+          ruleIds,
+          amenitiesCount: amenityIds.length,
+          rulesCount: ruleIds.length
+        });
+
+        setSelectedAmenities(amenityIds);
+        setSelectedRules(ruleIds);
+        setInitialAmenities(amenityIds);
+        setInitialRules(ruleIds);
+      } catch (error) {
+        console.error('Error fetching property features:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load property features',
+          variant: 'destructive',
+        });
+      } finally {
+        setFeaturesLoading(false);
+      }
     };
 
-    fetchPropertyFeatures();
-  }, [propertyId]);
+    // Add a small delay to ensure property data is loaded
+    const timeoutId = setTimeout(() => {
+      fetchPropertyFeatures();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [propertyId, toast]);
 
   // Track changes
   useEffect(() => {
@@ -68,11 +108,26 @@ export function FeaturesTabOptimized({ propertyId }: FeaturesTabOptimizedProps) 
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      console.log('Saving property features:', {
+        propertyId,
+        selectedAmenities,
+        selectedRules
+      });
+
       // Delete existing amenities and rules
-      await Promise.all([
+      const [deleteAmenitiesResult, deleteRulesResult] = await Promise.all([
         supabase.from('property_amenities').delete().eq('property_id', propertyId),
         supabase.from('property_rules').delete().eq('property_id', propertyId),
       ]);
+
+      if (deleteAmenitiesResult.error) {
+        console.error('Error deleting existing amenities:', deleteAmenitiesResult.error);
+        throw deleteAmenitiesResult.error;
+      }
+      if (deleteRulesResult.error) {
+        console.error('Error deleting existing rules:', deleteRulesResult.error);
+        throw deleteRulesResult.error;
+      }
 
       // Insert new amenities
       if (selectedAmenities.length > 0) {
@@ -80,7 +135,14 @@ export function FeaturesTabOptimized({ propertyId }: FeaturesTabOptimizedProps) 
           property_id: propertyId,
           amenity_id: amenityId,
         }));
-        await supabase.from('property_amenities').insert(amenityInserts);
+        const { error: amenityError } = await supabase
+          .from('property_amenities')
+          .insert(amenityInserts);
+
+        if (amenityError) {
+          console.error('Error inserting amenities:', amenityError);
+          throw amenityError;
+        }
       }
 
       // Insert new rules
@@ -89,8 +151,17 @@ export function FeaturesTabOptimized({ propertyId }: FeaturesTabOptimizedProps) 
           property_id: propertyId,
           rule_id: ruleId,
         }));
-        await supabase.from('property_rules').insert(ruleInserts);
+        const { error: ruleError } = await supabase
+          .from('property_rules')
+          .insert(ruleInserts);
+
+        if (ruleError) {
+          console.error('Error inserting rules:', ruleError);
+          throw ruleError;
+        }
       }
+
+      console.log('Successfully saved property features');
     },
     onSuccess: () => {
       // Update initial values
@@ -140,10 +211,11 @@ export function FeaturesTabOptimized({ propertyId }: FeaturesTabOptimizedProps) 
     saveMutation.mutate();
   };
 
-  if (amenitiesLoading || rulesLoading) {
+  if (amenitiesLoading || rulesLoading || featuresLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-3 text-muted-foreground">Loading property features...</span>
       </div>
     );
   }
