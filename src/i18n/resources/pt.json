@@ -280,6 +280,7 @@
     "deleteJob": "Excluir Trabalho",
     "jobTitle": "Título do Trabalho",
     "jobType": "Tipo de Trabalho",
+    "priorityLabel": "Prioridade",
     "priority": {
       "low": "Baixa",
       "medium": "Média",

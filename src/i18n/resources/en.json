@@ -319,6 +319,7 @@
     "deleteJob": "Delete Job",
     "jobTitle": "Job Title",
     "jobType": "Job Type",
+    "priorityLabel": "Priority",
     "priority": {
       "low": "Low",
       "medium": "Medium",

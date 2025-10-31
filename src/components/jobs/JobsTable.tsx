@@ -148,7 +148,7 @@ export function JobsTable({
                   <TableHead>{t('jobs.property')}</TableHead>
                   <TableHead>{t('jobs.assignedTo')}</TableHead>
                   <TableHead>{t('jobs.dueDate')}</TableHead>
-                  <TableHead>{t('jobs.priority')}</TableHead>
+                  <TableHead>{t('jobs.priorityLabel')}</TableHead>
                   <TableHead>{t('common.status')}</TableHead>
                   <TableHead className="text-right">{t('jobs.actions')}</TableHead>
                 </TableRow>

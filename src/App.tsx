@@ -47,6 +47,7 @@ import CheckInOut from "./pages/CheckInOut";
 import ChecklistTemplates from "./pages/ChecklistTemplates";
 import Media from "./pages/Media";
 import Highlights from "./pages/Highlights";
+import Notifications from "./pages/Notifications";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
@@ -276,6 +277,9 @@ const App = () => (
 
                 {/* Help - Everyone can access */}
                 <Route path="/help" element={<Help />} />
+
+                {/* Notifications - Everyone can access */}
+                <Route path="/notifications" element={<Notifications />} />
 
                 {/* Issues & Photos - Both can access */}
                 <Route

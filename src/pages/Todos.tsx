@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageHeader } from '@/components/ui/page-header';
 import {
   Select,
   SelectContent,
@@ -219,18 +220,11 @@ export default function Todos() {
 
   return (
     <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
-              <CheckSquare className="h-8 w-8 text-primary" />
-              {t('todos:title')}
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              {t('todos:subtitle')}
-            </p>
-          </div>
-        </div>
+      <PageHeader
+        title={t('title')}
+        subtitle={t('subtitle')}
+        icon={CheckSquare}
+      />
 
         {/* Statistics Dashboard */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">

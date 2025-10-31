@@ -49,6 +49,13 @@ import {
   Bug,
   Send,
   X,
+  Home,
+  Briefcase,
+  Image,
+  FolderOpen,
+  Lock,
+  Mail,
+  Phone,
 } from 'lucide-react';
 
 export default function Help() {
@@ -70,7 +77,6 @@ export default function Help() {
     setIsSendingBugReport(true);
 
     try {
-      // Call Supabase Edge Function to send bug report email
       const reporterName = profile?.first_name && profile?.last_name
         ? `${profile.first_name} ${profile.last_name}`
         : profile?.first_name || 'Anonymous User';
@@ -88,8 +94,7 @@ export default function Help() {
 
       if (error) {
         console.error('Error sending bug report:', error);
-        // Fallback to mailto if edge function fails
-        const mailtoLink = `mailto:vinzlloydalferez@gmail.com?subject=Bug Report: ${encodeURIComponent(bugTitle)}&body=${encodeURIComponent(
+        const mailtoLink = `mailto:support@casaconcierge.com?subject=Bug Report: ${encodeURIComponent(bugTitle)}&body=${encodeURIComponent(
           `Bug Report\n\n` +
           `Title: ${bugTitle}\n\n` +
           `Priority: ${bugPriority}\n\n` +
@@ -98,20 +103,19 @@ export default function Help() {
           `Reported by: ${reporterName} (${user?.email || 'N/A'})\n` +
           `Date: ${new Date().toLocaleString()}`
         )}`;
-        window.open(mailtoLink, '_blank');
-        toast.info('Opening email client as fallback. Please send the pre-filled email.');
+        window.location.href = mailtoLink;
+        toast.success('Opening your email client to send bug report');
       } else {
-        toast.success('Bug report sent successfully! Thank you for your feedback.');
+        toast.success('Bug report sent successfully! We\'ll review it shortly.');
       }
 
-      // Reset form
+      setBugReportOpen(false);
       setBugTitle('');
       setBugDescription('');
       setBugSteps('');
       setBugPriority('medium');
-      setBugReportOpen(false);
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.error('Error:', error);
       toast.error('Failed to send bug report. Please try again.');
     } finally {
       setIsSendingBugReport(false);
@@ -128,87 +132,190 @@ export default function Help() {
       topics: [
         {
           question: 'What is Casa & Concierge PMS?',
-          answer: `Casa & Concierge is a comprehensive Property Management System designed for vacation rental properties. It helps you manage:
+          answer: `Casa & Concierge is a comprehensive Property Management System specifically designed for vacation rental and short-term property management. Our platform helps property managers streamline operations, maximize revenue, and deliver exceptional guest experiences.
 
-• **Properties & Units** - Organize your rental properties and units
-• **Bookings & Calendar** - Track reservations and availability
-• **Tasks & Jobs** - Manage cleaning, maintenance, and operations
-• **Invoices & Expenses** - Handle billing and financial tracking
-• **Guests & Providers** - Maintain relationships with guests and service providers
+**Key Features:**
 
-The system is built to streamline your property management workflow and improve operational efficiency.`,
+• **Property Management** - Organize unlimited properties with detailed profiles, amenities, and rules
+• **Smart Calendar** - Visual booking calendar with drag-and-drop functionality and conflict prevention
+• **Task Automation** - Auto-generate cleaning and maintenance tasks for each booking
+• **Financial Tracking** - Invoice generation, expense tracking, and comprehensive financial reporting
+• **Team Collaboration** - Role-based access control for different team members
+• **Guest Management** - Track guest information, preferences, and booking history
+• **Document Management** - Centralized storage for contracts, COIs, and property documents
+• **Real-time Notifications** - Stay updated on bookings, tasks, and important events
+
+**Built for:**
+- Vacation rental managers
+- Property management companies
+- Concierge services
+- Real estate investors
+- Short-term rental hosts
+
+The system is cloud-based, accessible from anywhere, and designed to scale with your business.`,
         },
         {
           question: 'How do I navigate the system?',
-          answer: `**Sidebar Navigation:**
+          answer: `**System Navigation Guide:**
 
-The left sidebar contains all main modules organized by function:
+The Casa & Concierge interface is organized into logical sections for easy access:
 
-**Main Section:**
-• Dashboard - Overview of key metrics
-• Bookings - Manage reservations
-• Calendar - Visual booking calendar
-• Properties - Property management
-• Active Jobs - Track ongoing work
-• To-Do List - Your personal tasks
+**📊 Main Dashboard**
+Access from the home icon - provides real-time overview of:
+- Today's check-ins and check-outs
+- Pending tasks and jobs
+- Revenue summary
+- Occupancy rates
+- Recent bookings
 
-**Finance Section:**
-• Invoices - Billing management
-• Expenses - Track costs
-• Financial Dashboard - Revenue analytics
-• Owner Statement - Generate owner reports
-• Service Pipeline - Track service requests
-• My Commissions - View your earnings
-• Bill Templates - Recurring billing
+**🏢 Property Section:**
+• **Properties** - View and manage all properties
+• **Calendar** - Visual booking calendar with timeline view
+• **Bookings** - List view of all reservations
+• **Highlights** - Feature special property highlights
 
-**Operations Section:**
-• Check-In/Check-Out - Property inspections
-• Checklist Templates - Reusable checklists
-• Vendor COIs - Insurance certificates
-• Access Authorizations - Property access control
+**💼 Operations:**
+• **Jobs** - Track cleaning, maintenance, and repair tasks
+• **To-Do List** - Personal task management
+• **Check-In/Check-Out** - Property inspection workflows
+• **Checklist Templates** - Reusable inspection checklists
+• **Access Authorizations** - Manage property access codes and keys
 
-**Documents Section:**
-• Contracts - Contract management
-• Service Documents - Vendor documentation
-• Employee Documents - HR files
-• Message Templates - Guest communications
+**💰 Financial Management:**
+• **Invoices** - Create and manage guest invoices
+• **Expenses** - Track property-related costs
+• **Financial Dashboard** - Revenue analytics and KPIs
+• **Commissions** - Track and calculate team commissions
+• **Bill Templates** - Recurring billing automation
 
-**Additional Sections:**
-• Media - Photos & videos (with tree view)
-• User Management - Team administration (Admin only)
-• Activity Logs - System audit trail (Admin only)
+**📁 Documents & Media:**
+• **Contracts** - Store and manage legal documents
+• **Documents** - Centralized document repository with tree view
+• **Media** - Property photos and videos with organization
+• **COIs** - Vendor Certificate of Insurance tracking
 
-Click any menu item to navigate to that module. The active page is highlighted in green.`,
+**👥 Administration (Admin Only):**
+• **User Management** - Add/edit team members and roles
+• **Providers** - Manage service providers and vendors
+• **Activity Logs** - Audit trail of system activities
+• **Settings** - System configuration
+
+**Quick Tips:**
+- Use the search bar (⌘/Ctrl + K) for quick navigation
+- The current page is highlighted in the sidebar
+- Click your profile icon for account settings
+- Use the notification bell for real-time updates`,
         },
         {
-          question: 'What are the different user roles?',
-          answer: `The system supports 4 user roles with different permissions:
+          question: 'What are the user roles and permissions?',
+          answer: `**User Roles & Access Control:**
 
-**1. Admin** 🛡️
-• Full system access
-• Manage users and settings
-• Access all financial data
-• Delete records and configure system
+Casa & Concierge implements role-based access control (RBAC) to ensure security and appropriate access levels:
 
-**2. Ops (Operations/Internal Team)** ⚙️
-• Manage properties and bookings
-• Create jobs and tasks
-• Handle invoices and expenses
-• Cannot manage users or system settings
+**1. Administrator 🛡️**
+**Full System Access**
+- Manage all properties, bookings, and financial data
+- Add/edit/delete users and assign roles
+- Access system configuration and settings
+- View complete activity logs
+- Manage integrations and API access
+- Delete records and perform system maintenance
 
-**3. Property Manager** 🏢
-• View and manage assigned properties only
-• Create bookings and jobs
-• Limited financial access
-• Cannot access system-wide data
+**2. Operations Manager ⚙️**
+**Operational Control**
+- Create and manage properties
+- Handle all bookings and calendar management
+- Create jobs, tasks, and assignments
+- Manage invoices and expenses
+- Access financial reports
+- Cannot manage users or system settings
+- Cannot delete critical records
 
-**4. Cleaner/Maintenance** 🧹
-• View assigned tasks only
-• Update task status
-• Read-only property access
-• No financial or admin access
+**3. Property Manager 🏢**
+**Limited Property Access**
+- View and manage assigned properties only
+- Create bookings for assigned properties
+- Create tasks and jobs for their properties
+- View financial data for their properties
+- Limited access to system-wide reports
+- Cannot manage users or vendors
 
-Your role is displayed in the top-right corner with your profile.`,
+**4. Service Provider/Cleaner 🧹**
+**Task-Focused Access**
+- View assigned tasks and jobs only
+- Update task status and completion
+- Upload photos for completed work
+- Read-only access to property details
+- No financial or admin access
+- Cannot create or delete records
+
+**5. Guest/Owner (View Only) 👤**
+**Read-Only Portal Access**
+- View their property bookings
+- Access invoices and statements
+- Download reports
+- No edit or create permissions
+
+**Permission Highlights:**
+- Admins can override all permissions
+- Permissions are enforced at database level (RLS)
+- Users can only see data they're authorized to access
+- Activity logs track all user actions
+- Failed permission attempts are logged
+
+**Your Role:**
+Your current role is displayed next to your name in the top-right corner.`,
+        },
+        {
+          question: 'How do I update my profile and settings?',
+          answer: `**Profile Management:**
+
+**Accessing Your Profile:**
+1. Click your avatar/name in the top-right corner
+2. Select "Profile Settings" from the dropdown
+
+**Update Personal Information:**
+- First Name and Last Name
+- Email address (requires verification)
+- Phone number
+- Profile photo
+- Language preference (English, Spanish, Portuguese)
+- Timezone settings
+
+**Password Management:**
+1. Go to Profile Settings
+2. Click "Change Password"
+3. Enter current password
+4. Enter new password (min. 8 characters)
+5. Confirm new password
+6. Click "Update Password"
+
+**Password Requirements:**
+- Minimum 8 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+- At least one special character
+
+**Notification Preferences:**
+Configure which notifications you receive:
+- Email notifications for bookings
+- SMS alerts for urgent tasks
+- In-app notifications
+- Daily digest emails
+- Weekly summary reports
+
+**Security Settings:**
+- Two-factor authentication (2FA)
+- Active sessions management
+- Login history
+- API access tokens
+
+**Pro Tips:**
+- Keep your email updated for important notifications
+- Enable 2FA for enhanced security
+- Review active sessions regularly
+- Update your profile photo for better team collaboration`,
         },
       ],
     },
@@ -221,312 +328,1634 @@ Your role is displayed in the top-right corner with your profile.`,
       topics: [
         {
           question: 'How do I add a new property?',
-          answer: `**Step-by-Step: Adding a Property**
+          answer: `**Complete Property Setup Guide:**
 
-1. **Navigate to Properties**
-   • Click "Properties" in the sidebar
+**Step 1: Navigate to Properties**
+- Click "Properties" in the sidebar
+- Click the "Add Property" button (top-right)
 
-2. **Click "Add Property" Button**
-   • Located at the top-right of the properties table
+**Step 2: Basic Information (General Tab)**
+Required Fields:
+- **Property Name** - Unique identifier (e.g., "Sunset Villa")
+- **Property Type** - House, Apartment, Condo, Villa, etc.
+- **Status** - Active, Inactive, Under Maintenance
 
-3. **Fill in Required Information:**
-   • Property Name (required)
-   • Property Type (House, Apartment, Condo, etc.)
-   • Address and Location
-   • Number of Bedrooms
-   • Number of Bathrooms
+Location Information:
+- **Street Address**
+- **City**
+- **State/Province**
+- **ZIP/Postal Code**
+- **Country**
+- **Latitude/Longitude** (for map display)
 
-4. **Add Optional Details:**
-   • Amenities (WiFi, Pool, Parking, etc.)
-   • House Rules
-   • Check-in/Check-out instructions
-   • Property photos
+Property Details:
+- **Number of Bedrooms**
+- **Number of Bathrooms**
+- **Property Size** (sq ft/meters)
+- **Maximum Occupancy**
+- **Minimum Night Stay**
+- **Check-in Time** (default: 3:00 PM)
+- **Check-out Time** (default: 11:00 AM)
 
-5. **Click "Save"**
-   • Property will appear in your properties list
-   • You can now create bookings for this property
+**Step 3: Amenities & Features (Features Tab)**
+Select available amenities:
+- WiFi, Cable/Satellite TV
+- Pool, Hot Tub, Gym
+- Parking (Free/Paid)
+- Air Conditioning, Heating
+- Kitchen (Full/Partial)
+- Washer/Dryer
+- Pet-Friendly
+- Wheelchair Accessible
 
-**Pro Tip:** Add all property details upfront to avoid incomplete booking information later.`,
+**Step 4: Property Rules**
+Define house rules:
+- No Smoking
+- No Parties/Events
+- No Pets (or Pet Policy)
+- Quiet Hours
+- Additional Guest Fees
+- Security Deposit Amount
+
+**Step 5: Access Information**
+Add access details for your team:
+- **Lock Box Code**
+- **Door Code**
+- **WiFi Password**
+- **Alarm Code**
+- **Gate Code**
+- **Parking Instructions**
+
+**Step 6: Media & Photos**
+Upload high-quality photos:
+- Exterior shots
+- Living areas
+- Bedrooms
+- Bathrooms
+- Kitchen
+- Amenities (pool, gym, etc.)
+- Parking area
+
+Tip: Upload 10-15 professional photos for best results
+
+**Step 7: Pricing & Availability (Optional)**
+Set up default pricing:
+- **Base Nightly Rate**
+- **Weekend Rate**
+- **Holiday Rate**
+- **Cleaning Fee**
+- **Additional Guest Fee**
+- **Security Deposit**
+
+**Step 8: Save & Review**
+- Click "Save Property"
+- Review the property card
+- Make any necessary edits
+- Property is now ready for bookings!
+
+**Pro Tips:**
+- Complete all information upfront to avoid incomplete booking data
+- Use descriptive property names for easy identification
+- Update photos seasonally
+- Keep access codes current and secure`,
         },
         {
-          question: 'How do I manage multi-unit properties?',
-          answer: `For properties with multiple units (e.g., apartment buildings):
+          question: 'How do I edit an existing property?',
+          answer: `**Editing Property Information:**
 
-**Option 1: Create Separate Properties**
-• Create each unit as a separate property
-• Example: "Sunset Apartments - Unit 101", "Sunset Apartments - Unit 102"
-• Good for units with different amenities or pricing
-
-**Option 2: Use the Units Feature**
-1. Create the main property (e.g., "Sunset Apartments")
-2. Navigate to property details
-3. Click "Add Unit" button
-4. Enter unit-specific details:
-   • Unit Name/Number
-   • Floor
-   • Bedrooms/Bathrooms
-   • Unit-specific amenities
-5. Link bookings to specific units
-
-**When to use Units:**
-• Building with multiple identical units
-• Easier bulk management
-• Shared amenities and rules`,
-        },
-        {
-          question: 'How do I edit or deactivate a property?',
-          answer: `**Editing a Property:**
+**Quick Edit:**
 1. Go to Properties page
-2. Click on the property name or Edit icon
-3. Modify the information
-4. Click "Update" to save changes
+2. Find your property in the list
+3. Click the pencil/edit icon
+4. Make your changes
+5. Click "Save" or "Update"
+
+**Detailed Edit:**
+1. Click on the property name
+2. Navigate between tabs:
+   - **General** - Basic info, location, capacity
+   - **Features** - Amenities and rules
+   - **Providers** - Assigned service providers
+   - **Unit Owners** - Owner information
+   - **Vehicles** - Parking and vehicle details
+   - **Notes** - Internal notes and instructions
+   - **Highlights** - Featured selling points
+
+**Common Edits:**
+
+**Update Pricing:**
+- Go to General tab
+- Scroll to Pricing section
+- Update rates as needed
+- Save changes
+
+**Modify Amenities:**
+- Go to Features tab
+- Check/uncheck amenities
+- Add new features as available
+- Save selections
+
+**Update Access Codes:**
+- Go to General tab
+- Find Access Information section
+- Update codes securely
+- Save immediately
+- Notify your team of changes
+
+**Change Property Status:**
+- **Active** - Available for bookings
+- **Inactive** - Hidden from booking system
+- **Maintenance** - Temporarily unavailable
+
+**Update Photos:**
+- Navigate to property details
+- Click on Media/Photos section
+- Upload new images
+- Reorder by drag-and-drop
+- Set featured image
+- Delete outdated photos
+
+**Best Practices:**
+- Review and update property info quarterly
+- Keep access codes rotated for security
+- Update photos annually
+- Maintain accurate amenity lists
+- Log all significant changes in Notes`,
+        },
+        {
+          question: 'How do I manage property highlights and features?',
+          answer: `**Property Highlights System:**
+
+Property highlights showcase your property's best features to potential guests and help with marketing.
+
+**Accessing Highlights:**
+1. Go to Properties
+2. Click on a property
+3. Select the "Highlights" tab OR
+4. Navigate to Highlights page (sidebar)
+
+**Creating a New Highlight:**
+1. Click "Add Highlight"
+2. Fill in the form:
+   - **Title** - Brief, catchy title (e.g., "Ocean View Deck")
+   - **Description** - Detailed description (200-500 chars)
+   - **Category** - Select from:
+     • Location & Views
+     • Amenities & Features
+     • Recent Upgrades
+     • Special Experiences
+     • Seasonal Highlights
+   - **Icon** - Choose representing icon
+   - **Priority** - Set display order (1-10)
+   - **Status** - Active/Inactive
+   - **Featured** - Toggle for homepage display
+
+3. Optionally add:
+   - Photos (up to 5 images)
+   - Video URL (YouTube/Vimeo)
+   - External links
+
+4. Click "Save Highlight"
+
+**Example Highlights:**
+- "5-Minute Walk to Beach" (Location)
+- "Newly Renovated Kitchen" (Upgrades)
+- "Private Pool & Hot Tub" (Amenities)
+- "Mountain Views from Every Room" (Views)
+- "Smart Home Technology" (Features)
+- "Perfect for Fall Colors" (Seasonal)
+
+**Managing Highlights:**
+
+**Reordering:**
+- Drag and drop highlights to change display order
+- Higher priority (1) shows first
+- Lower priority (10) shows last
+
+**Editing:**
+- Click pencil icon on highlight card
+- Update any field
+- Save changes
+
+**Activating/Deactivating:**
+- Toggle the status switch
+- Inactive highlights don't display publicly
+- Useful for seasonal highlights
+
+**Best Practices:**
+- Keep 5-8 highlights per property
+- Update seasonally
+- Use high-quality images
+- Keep descriptions concise and compelling
+- Rotate highlights to keep content fresh
+- Feature your best highlight on homepage
+- Use specific, measurable claims
+- Highlight recent renovations/upgrades`,
+        },
+        {
+          question: 'How do I deactivate or delete a property?',
+          answer: `**Property Deactivation & Deletion:**
 
 **Deactivating a Property:**
-1. Edit the property
-2. Toggle the "Active" switch to OFF
-3. Save changes
-• Inactive properties won't show in booking dropdowns
-• Existing bookings remain unaffected
-• You can reactivate anytime
+
+**When to Deactivate:**
+- Property under renovation
+- Seasonal closure
+- Temporarily unavailable
+- Switching management companies (temporary)
+
+**Steps:**
+1. Navigate to Properties
+2. Click on the property to edit
+3. Go to General tab
+4. Find "Property Status" field
+5. Change from "Active" to "Inactive"
+6. Click "Save"
+
+**Effects of Deactivation:**
+- Property won't appear in booking search
+- Existing bookings remain unaffected
+- Historical data preserved
+- Can be reactivated anytime
+- Team still has view access
+
+---
 
 **Deleting a Property:**
-⚠️ **Warning:** Only admins can delete properties
-• Cannot delete if there are active bookings
-• Use deactivate instead of delete to preserve history`,
+
+**⚠️ IMPORTANT WARNINGS:**
+- Deletion is permanent and cannot be undone
+- All booking history will be lost
+- Financial records may become incomplete
+- Only Administrators can delete properties
+- Cannot delete if active bookings exist
+
+**When to Delete:**
+- Property permanently sold
+- Property no longer managed
+- Duplicate entry created by mistake
+- Test property that's no longer needed
+
+**Steps:**
+1. Ensure no active bookings exist
+2. Navigate to Properties
+3. Click on property to edit
+4. Scroll to bottom of page
+5. Click "Delete Property" (red button)
+6. Confirm deletion in popup
+7. Enter property name to verify
+8. Click "Permanently Delete"
+
+**Before Deleting:**
+1. **Export Data:**
+   - Download booking history
+   - Export financial reports
+   - Save property photos
+   - Backup documents
+
+2. **Complete Pending Items:**
+   - Finish all jobs/tasks
+   - Process final invoices
+   - Generate final reports
+   - Archive important notes
+
+3. **Notify Team:**
+   - Inform staff of deletion
+   - Update service providers
+   - Update owners if applicable
+
+**Recommended Alternative:**
+Instead of deletion, consider:
+- **Deactivation** - Preserves history
+- **Archive Status** - Keep for records
+- **Export & Backup** - Then delete
+
+**Recovery:**
+Once deleted, properties cannot be recovered. Contact system administrator if deleted by mistake (recovery may not be possible).`,
         },
       ],
     },
     {
       id: 'bookings',
-      title: 'Bookings & Calendar',
+      title: 'Bookings & Calendar Management',
       icon: CalendarDays,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       topics: [
         {
           question: 'How do I create a new booking?',
-          answer: `**Creating a Booking (Step-by-Step):**
+          answer: `**Complete Booking Creation Guide:**
 
-1. **Navigate to Bookings**
-   • Click "Bookings" in sidebar OR
-   • Use Calendar view and click "New Booking"
+**Method 1: From Bookings Page**
+1. Click "Bookings" in sidebar
+2. Click "New Booking" button (top-right)
+3. Fill in booking form
+4. Click "Create Booking"
 
-2. **Select Property**
-   • Choose from dropdown
-   • System checks availability automatically
-
-3. **Enter Guest Information:**
-   • Guest Name (required)
-   • Email Address
-   • Phone Number
-   • Number of Guests
-
-4. **Set Dates:**
-   • Check-in Date
-   • Check-out Date
-   • System prevents double-booking automatically
-
-5. **Enter Pricing:**
-   • Total Amount
-   • Payment Status
-   • Booking Source (Airbnb, Direct, etc.)
-
-6. **Click "Save"**
-   • Invoice auto-generated (if configured)
-   • Booking appears on calendar
-   • Guest record created
-
-**What Happens Next:**
-✅ Calendar updated with booking
-✅ Invoice created automatically
-✅ Cleaning/turnover tasks can be scheduled
-✅ Notifications sent (if enabled)`,
-        },
-        {
-          question: 'How do I check property availability?',
-          answer: `**3 Ways to Check Availability:**
-
-**Method 1: Calendar View** 📅
+**Method 2: From Calendar**
 1. Click "Calendar" in sidebar
-2. View all bookings in monthly/weekly view
-3. Vacant dates appear empty
-4. Booked dates show booking details
-5. Color-coded by booking status
+2. Navigate to desired date
+3. Click on property row for that date
+4. Booking dialog opens
+5. Complete and save
 
-**Method 2: When Creating Booking** 🔍
-1. Start creating a new booking
-2. Select property
-3. Choose dates
-4. System shows error if dates overlap existing booking
-5. Suggests alternative dates
+**Required Information:**
 
-**Method 3: Property Details** 🏠
-1. Go to Properties
-2. Click on a property
-3. View "Upcoming Bookings" section
-4. See all current and future bookings
+**Guest Details:**
+- Guest Name* (required)
+- Email Address*
+- Phone Number*
+- Number of Guests
+- Additional Guest Names
+- Special Requests
 
-**Booking Status Colors:**
-🟢 Confirmed - Green
-🟡 Pending - Yellow
-🔴 Cancelled - Red
-🔵 Checked-in - Blue`,
+**Booking Details:**
+- Property* (select from dropdown)
+- Check-in Date*
+- Check-out Date*
+- Booking Status:
+  • **Confirmed** - Paid, guaranteed booking
+  • **Pending** - Awaiting confirmation/payment
+  • **Cancelled** - Cancelled by guest or host
+  • **Blocked** - Property unavailable (maintenance, personal use)
+
+**Channel/Source:**
+Select where booking originated:
+- Direct (website, phone)
+- Airbnb
+- VRBO/HomeAway
+- Booking.com
+- Expedia
+- Other OTA
+- Returning Guest
+- Referral
+
+**Financial Information:**
+- **Total Amount** - Calculated automatically or manual override
+- **Deposit Amount** - Initial payment received
+- **Balance Due** - Remaining payment
+- **Payment Status**:
+  • Paid in Full
+  • Deposit Received
+  • Balance Due
+  • Refund Pending
+  • Cancelled
+
+**Additional Options:**
+- Auto-generate cleaning task (recommended)
+- Send confirmation email to guest
+- Create invoice automatically
+- Set up automatic reminders
+- Add booking notes/special instructions
+
+**Step-by-Step Process:**
+
+1. **Select Property & Dates**
+   - System checks availability
+   - Prevents double-booking
+   - Shows pricing if configured
+
+2. **Enter Guest Information**
+   - Search existing guests or create new
+   - System links to guest history
+   - Auto-fills if returning guest
+
+3. **Set Booking Status**
+   - Use "Pending" for quotes
+   - Use "Confirmed" for secured bookings
+   - Use "Blocked" for personal use
+
+4. **Calculate Pricing**
+   - Base rate × nights
+   - + Cleaning fee
+   - + Additional guest fees
+   - - Discounts if applicable
+   - = Total Amount
+
+5. **Save & Confirm**
+   - System validates dates
+   - Checks for conflicts
+   - Creates booking record
+   - Auto-generates tasks (if enabled)
+   - Sends confirmation (if enabled)
+
+**Post-Booking Actions:**
+- Booking appears on calendar
+- Tasks created automatically
+- Invoice generated (if configured)
+- Confirmation email sent to guest
+- Team notified of new booking
+
+**Pro Tips:**
+- Complete all guest information for better tracking
+- Use booking notes for special requests
+- Enable auto-task generation to save time
+- Link to guest history for preferences
+- Set payment reminders for balance due`,
         },
         {
-          question: 'How do I modify or cancel a booking?',
-          answer: `**Modifying a Booking:**
+          question: 'How do I edit or cancel a booking?',
+          answer: `**Editing Bookings:**
 
-1. **Find the Booking:**
-   • Bookings page → Click on booking OR
-   • Calendar → Click on booked date
+**Quick Edit:**
+1. Find booking in Calendar or Bookings list
+2. Click on booking
+3. Click "Edit" button
+4. Make changes
+5. Save
 
-2. **Click "Edit" Button**
+**Editable Fields:**
+- Guest information
+- Check-in/out dates
+- Number of guests
+- Booking status
+- Payment information
+- Special requests
+- Channel/source
 
-3. **Make Changes:**
-   • Update dates (checks availability)
-   • Change guest information
-   • Modify pricing
-   • Update booking status
-
-4. **Save Changes**
-   • Related invoice updated automatically
-   • Calendar refreshed
-
-**Cancelling a Booking:**
-
-1. **Open Booking Details**
-
-2. **Click "Cancel Booking" Button**
-
-3. **Confirm Cancellation:**
-   • Booking status → Cancelled
-   • Property becomes available
-   • Invoice status updated
-   • Optionally process refund
-
-4. **What Happens:**
-   ❌ Booking marked as cancelled
-   ✅ Dates freed for new bookings
-   📧 Optional notification to guest
-   💰 Refund processed (if applicable)
+**Date Changes:**
+- System automatically checks new dates for availability
+- Prevents overlapping bookings
+- Updates related tasks automatically
+- Recalculates pricing if needed
 
 **Important Notes:**
-⚠️ Cannot modify past bookings
-⚠️ Cancelled bookings remain in history
-⚠️ Always check refund policy before cancelling`,
+- Date changes may affect pricing
+- Notify guest of any modifications
+- Update invoice if financial changes
+- Tasks will be rescheduled automatically
+
+---
+
+**Cancelling Bookings:**
+
+**Before Cancelling:**
+1. Confirm cancellation with guest
+2. Determine refund amount
+3. Check cancellation policy
+4. Review pending charges
+
+**Cancellation Process:**
+
+**Option 1: Mark as Cancelled**
+1. Open booking
+2. Change status to "Cancelled"
+3. Add cancellation reason in notes
+4. Save changes
+5. Booking remains in system (for history)
+6. Property becomes available again
+
+**Option 2: Delete Booking**
+⚠️ Only for mistaken entries
+1. Open booking
+2. Click "Delete" (bottom of form)
+3. Confirm deletion
+4. Booking is permanently removed
+5. History is lost (not recommended)
+
+**After Cancellation:**
+
+**Automatic Updates:**
+- Property becomes available on calendar
+- Associated tasks are cancelled
+- Notifications sent to team
+- Calendar refreshes
+
+**Manual Actions Required:**
+1. **Process Refund:**
+   - Calculate refund amount
+   - Process payment return
+   - Update invoice status
+   - Send refund confirmation to guest
+
+2. **Update Financial Records:**
+   - Mark invoice as cancelled
+   - Record cancellation fee (if applicable)
+   - Update revenue projections
+   - Adjust owner statements
+
+3. **Cancel Services:**
+   - Cancel cleaning (if scheduled)
+   - Cancel any special services
+   - Notify service providers
+   - Update vendor schedules
+
+4. **Guest Communication:**
+   - Send cancellation confirmation
+   - Provide refund timeline
+   - Offer future discount (goodwill)
+   - Request feedback
+
+**Cancellation Best Practices:**
+- Document cancellation reason
+- Always check cancellation policy first
+- Process refunds promptly
+- Keep communication professional
+- Learn from cancellation patterns
+- Update availability immediately
+- Review calendar for gaps
+
+**Cancellation Policies:**
+Set your policies in Settings:
+- **Flexible** - Full refund up to 24 hours before
+- **Moderate** - Full refund up to 5 days before
+- **Strict** - 50% refund up to 30 days before
+- **Custom** - Define your own terms`,
+        },
+        {
+          question: 'How do I use the Calendar view?',
+          answer: `**Calendar View Masterclass:**
+
+The Calendar is your visual command center for managing bookings across all properties.
+
+**Accessing Calendar:**
+Click "Calendar" in the sidebar
+
+**Calendar Layout:**
+
+**Left Panel (Fixed):**
+- Lists all active properties
+- Shows property name and key details
+- Click property name to highlight its bookings
+- Scroll to see more properties
+
+**Right Panel (Scrollable):**
+- Timeline view of dates
+- Color-coded booking bars
+- Spans horizontally (scroll for future dates)
+- Today is highlighted in blue
+
+**Date Navigation:**
+
+**Time Range Selection:**
+- **Week View** - 7 days at a glance
+- **2 Weeks** - Default view, most popular
+- **Month** - 30-day overview
+- **3 Months** - Long-term planning
+
+**Navigation Controls:**
+- **← Previous** - Move backward in time
+- **Today** - Jump to current date
+- **Next →** - Move forward in time
+- **Date Picker** - Jump to specific date
+
+**Understanding Booking Bars:**
+
+**Color Coding:**
+- **Blue** - Confirmed booking
+- **Yellow** - Pending/tentative
+- **Gray** - Blocked dates
+- **Red** - Cancelled (if still showing)
+- **Green** - Check-out day
+
+**Bar Information:**
+Hover over any booking bar to see:
+- Guest name
+- Check-in and check-out dates
+- Number of nights
+- Number of guests
+- Booking status
+- Total amount
+
+**Creating Bookings:**
+
+**Click-and-Drag Method:**
+1. Click on property row at start date
+2. Hold and drag to end date
+3. Release mouse
+4. Booking form opens
+5. Fill in details
+6. Save
+
+**Single-Click Method:**
+1. Click on specific date for a property
+2. Booking form opens
+3. Select dates in form
+4. Complete booking details
+5. Save
+
+**Editing from Calendar:**
+1. Click on existing booking bar
+2. Booking details appear
+3. Click "Edit" button
+4. Make changes
+5. Save updates
+
+**Calendar Features:**
+
+**Filtering:**
+- Filter by property type
+- Filter by status (confirmed, pending)
+- Filter by channel (Airbnb, direct, etc.)
+- Search by guest name
+
+**Bulk Selection:**
+1. Enable "Bulk Select" mode
+2. Click multiple properties
+3. Perform actions:
+   - Block dates
+   - Export data
+   - Generate reports
+
+**Export Options:**
+- Export to CSV
+- Export to iCal
+- Print calendar view
+- Share with team
+
+**Calendar Tips & Tricks:**
+
+**Keyboard Shortcuts:**
+- **←/→** - Navigate dates
+- **Ctrl/Cmd + Click** - Multi-select
+- **Esc** - Close dialogs
+- **/** - Focus search
+
+**Mobile View:**
+- Optimized for tablets
+- Swipe to navigate
+- Tap to create/edit
+- Pinch to zoom
+
+**Performance:**
+- Shows 2-3 months of data
+- Loads more as you scroll
+- Fast rendering even with 100+ properties
+- Real-time updates via websockets
+
+**Advanced Features:**
+
+**Conflict Detection:**
+- System prevents double-booking
+- Highlights overlapping attempts
+- Suggests alternative dates
+
+**Occupancy View:**
+- Toggle to see occupancy percentages
+- Green = low occupancy
+- Yellow = moderate
+- Red = high occupancy
+
+**Revenue Overlay:**
+- View expected revenue per property
+- See totals by date range
+- Compare to historical data
+
+**Synchronization:**
+- Calendar syncs with external calendars
+- Import from Airbnb, VRBO
+- Export via iCal feed
+- Bi-directional sync available
+
+**Common Calendar Workflows:**
+
+**Daily Check:**
+1. Open calendar
+2. Click "Today"
+3. Review check-ins/check-outs
+4. Verify tasks are assigned
+5. Confirm no conflicts
+
+**Weekly Planning:**
+1. Switch to Week view
+2. Review upcoming bookings
+3. Assign team members
+4. Coordinate cleanings
+5. Prepare supplies
+
+**Monthly Strategy:**
+1. Use Month view
+2. Identify availability gaps
+3. Plan promotions
+4. Schedule maintenance
+5. Review pricing strategy`,
+        },
+        {
+          question: 'How do I manage booking channels and imports?',
+          answer: `**Multi-Channel Management:**
+
+Casa & Concierge supports integration with major booking platforms to centralize your operations.
+
+**Supported Channels:**
+- Airbnb
+- VRBO/HomeAway
+- Booking.com
+- Expedia
+- TripAdvisor
+- Direct Bookings
+- Custom OTAs
+
+**Channel Selection:**
+When creating a booking, select the source channel to:
+- Track performance by platform
+- Calculate channel-specific fees
+- Analyze which channels perform best
+- Generate platform-specific reports
+
+**Calendar Synchronization:**
+
+**Import Bookings:**
+1. Go to Calendar page
+2. Click "Sync Calendar" button
+3. Select "Import from Channel"
+4. Choose your platform
+5. Follow authentication steps
+6. Select properties to sync
+7. Click "Import Bookings"
+
+**Export Calendar:**
+1. Go to Calendar page
+2. Click "Sync Calendar"
+3. Select "Export iCal"
+4. Choose properties
+5. Copy iCal URL
+6. Add to external platform
+
+**Airbnb Integration:**
+1. Click "Sync with Airbnb"
+2. Log in to Airbnb account
+3. Authorize access
+4. Select listings
+5. Choose sync frequency:
+   - Real-time (recommended)
+   - Every 6 hours
+   - Daily
+   - Manual only
+6. Save settings
+
+**VRBO Integration:**
+1. Click "Sync with VRBO"
+2. Enter API credentials
+3. Map properties to listings
+4. Set sync preferences
+5. Enable two-way sync
+6. Save configuration
+
+**Booking.com Integration:**
+1. Navigate to Settings > Integrations
+2. Click "Connect Booking.com"
+3. Enter partner ID
+4. Set up API connection
+5. Map properties
+6. Enable synchronization
+
+**Sync Management:**
+
+**Sync Status:**
+Check sync health:
+- Last sync time
+- Success/failure status
+- Pending updates
+- Conflict notifications
+
+**Conflict Resolution:**
+When double-bookings detected:
+1. System alerts you immediately
+2. Review conflict details
+3. Choose resolution:
+   - Keep external booking
+   - Keep internal booking
+   - Contact guest to resolve
+4. Update calendars accordingly
+
+**Manual Sync:**
+Force immediate synchronization:
+1. Go to Calendar
+2. Click "Sync Now"
+3. Wait for completion
+4. Review sync report
+
+**Channel Performance:**
+
+**Analytics by Channel:**
+View metrics for each platform:
+- Total bookings
+- Revenue generated
+- Average booking value
+- Cancellation rate
+- Guest ratings
+- Commission costs
+
+**Optimize Channel Mix:**
+Use data to decide:
+- Which channels to prioritize
+- Where to adjust pricing
+- Which platforms generate best ROI
+- Where to invest in advertising
+
+**Best Practices:**
+- Enable real-time sync when possible
+- Check sync status daily
+- Resolve conflicts immediately
+- Keep property info consistent across platforms
+- Monitor channel performance monthly
+- Adjust strategy based on data
+- Maintain accurate availability everywhere`,
         },
       ],
     },
     {
       id: 'tasks-jobs',
-      title: 'Tasks & Jobs',
+      title: 'Tasks & Jobs Management',
       icon: ClipboardCheck,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
       topics: [
         {
           question: 'What is the difference between Tasks and Jobs?',
-          answer: `**Jobs vs Tasks - Understanding the Difference:**
+          answer: `**Tasks vs. Jobs - Understanding the Difference:**
 
-**Jobs** 🎯 (Higher Level)
-• A collection of related tasks
-• Represents a complete work project
-• Example: "Spring Cleaning - Villa #5"
-• Has overall status and deadline
-• Can contain multiple tasks
+**Tasks** 🎯
+Personal to-do items and reminders
 
-**Tasks** ✅ (Individual Actions)
-• Specific action items
-• Can be standalone OR part of a job
-• Example: "Clean kitchen", "Replace air filter"
-• Assigned to specific person
-• Has its own due date and status
+**Purpose:**
+- Personal task management
+- Individual to-do lists
+- Quick reminders
+- Non-property-specific items
 
-**Example Workflow:**
+**Characteristics:**
+- Assigned to individuals
+- Not linked to properties
+- Simple priority levels
+- Personal notes only
+- No time tracking
+- Quick completion
 
-**Job:** "Guest Turnover - Sunset Villa"
-  └─ Task 1: Strip and wash linens
-  └─ Task 2: Deep clean bathrooms
-  └─ Task 3: Restock amenities
-  └─ Task 4: Final walkthrough inspection
+**Examples:**
+- "Call property owner"
+- "Order supplies"
+- "Review weekly reports"
+- "Follow up with new guest"
+- "Update pricing spreadsheet"
 
-**When to Use:**
-• **Job** → Complex project with multiple steps
-• **Task** → Simple, single-step action`,
+**Access:** To-Do List (sidebar)
+
+---
+
+**Jobs** 🔧
+Property-related work orders and service requests
+
+**Purpose:**
+- Property maintenance
+- Cleaning schedules
+- Repairs and fixes
+- Vendor coordination
+- Service delivery
+
+**Characteristics:**
+- Linked to specific property
+- Assigned to team or vendors
+- Detailed descriptions
+- Photo documentation
+- Time and cost tracking
+- Status workflow
+- Historical record
+
+**Job Types:**
+- **Cleaning** - Pre/post-guest turnover
+- **Maintenance** - Repairs and fixes
+- **Inspection** - Property checks
+- **Setup** - Event or seasonal prep
+- **Emergency** - Urgent issues
+- **Preventive** - Scheduled maintenance
+
+**Job Statuses:**
+1. **Pending** - Just created, not started
+2. **Assigned** - Team member assigned
+3. **In Progress** - Work started
+4. **Completed** - Work finished
+5. **Verified** - Quality checked
+6. **Cancelled** - No longer needed
+
+**Examples:**
+- "Deep clean after checkout"
+- "Fix leaking kitchen faucet"
+- "Replace HVAC filter"
+- "Pool maintenance"
+- "Inspect smoke detectors"
+- "Landscaping service"
+
+**Access:** Jobs (sidebar)
+
+---
+
+**When to Use What:**
+
+**Use Tasks for:**
+- Personal reminders
+- Admin work
+- Follow-ups
+- Planning
+- Non-urgent items
+
+**Use Jobs for:**
+- Any property-related work
+- Team assignments
+- Vendor services
+- Maintenance tracking
+- Quality control
+- Cost tracking
+
+**Quick Rule:**
+If it involves a property or costs money → Job
+If it's personal or administrative → Task`,
         },
         {
-          question: 'How do I create and assign tasks?',
-          answer: `**Creating a Task (Step-by-Step):**
+          question: 'How do I create and assign jobs?',
+          answer: `**Complete Job Creation Guide:**
 
-**Method 1: Standalone Task**
-1. Go to "To-Do List" page
-2. Click "Add Task" button
-3. Fill in details:
-   • Task Title (required)
-   • Description
-   • Assigned To (select team member)
-   • Due Date
-   • Priority (Low/Medium/High/Critical)
-4. Click "Save"
+**Creating a Job:**
 
-**Method 2: Task as Part of Job**
-1. Go to "Active Jobs" page
-2. Open a job or create new one
-3. Click "Add Task" within the job
-4. Fill in task details (linked to job automatically)
-5. Save
+**Method 1: From Jobs Page**
+1. Click "Jobs" in sidebar
+2. Click "Create Job" button
+3. Fill in job form
+4. Save
 
-**Task Information:**
-📝 **Title** - What needs to be done
-👤 **Assigned To** - Who does it
-📅 **Due Date** - When it's due
-🎯 **Priority** - How urgent
-🔗 **Job Link** - Parent job (optional)
+**Method 2: From Property Page**
+1. Go to Properties
+2. Click on a property
+3. Click "Create Job" button
+4. Form pre-fills property
+5. Complete and save
 
-**What Happens After Creation:**
-✅ Assignee receives notification
-✅ Task appears in their To-Do List
-✅ Shows in job details (if linked)
-✅ Tracked in dashboard metrics`,
+**Method 3: Auto-Generated**
+- Cleaning jobs auto-create with bookings (if enabled)
+- Maintenance jobs from checklists
+- Recurring jobs from templates
+
+**Job Form Fields:**
+
+**Basic Information:**
+- **Job Title*** - Brief description (e.g., "Post-checkout cleaning")
+- **Property*** - Select from dropdown
+- **Job Type*** - Cleaning, Maintenance, Inspection, etc.
+- **Priority:**
+  • Low - Can wait 3-7 days
+  • Medium - Within 2-3 days
+  • High - Within 24 hours
+  • Critical - Immediate attention
+
+**Scheduling:**
+- **Due Date*** - When job must be completed
+- **Estimated Duration** - Time needed (hours)
+- **Scheduled Time** - Specific time slot
+- **Recurring** - One-time or repeat
+
+**Assignment:**
+- **Assigned To** - Team member or vendor
+- **Backup Assignee** - If primary unavailable
+- **Team Assignment** - Assign to group
+- **Auto-Assign** - Let system assign based on availability
+
+**Description & Instructions:**
+- **Detailed Description** - What needs to be done
+- **Special Instructions** - Important notes
+- **Required Materials** - Supplies needed
+- **Access Information** - How to enter property
+- **Safety Notes** - Precautions required
+
+**Cost Tracking:**
+- **Estimated Cost** - Expected expense
+- **Actual Cost** - Final amount (after completion)
+- **Labor Cost** - Team member costs
+- **Materials Cost** - Supplies used
+- **Invoice Number** - Link to billing
+
+**Attachments:**
+- **Before Photos** - Document initial state
+- **Instructions PDF** - Detailed guides
+- **Floor Plans** - Property layout
+- **Product Links** - Required materials
+
+**Advanced Options:**
+- **Requires Approval** - Manager must approve before start
+- **Send Notification** - Alert assignee immediately
+- **Block Calendar** - Mark property unavailable
+- **Link to Booking** - Connect to reservation
+- **Link to Invoice** - Connect to billing
+
+---
+
+**Assigning Jobs:**
+
+**Individual Assignment:**
+1. Select team member from dropdown
+2. System checks their schedule
+3. Sends notification
+4. Shows on their dashboard
+
+**Team Assignment:**
+1. Select team or department
+2. System notifies all members
+3. First to accept gets the job
+4. Others are notified it's taken
+
+**Vendor Assignment:**
+1. Select vendor from list
+2. System sends email/SMS
+3. Includes all job details
+4. Tracks acceptance
+
+**Auto-Assignment Rules:**
+Set up automatic assignment based on:
+- Job type (cleaning → cleaners)
+- Property location (closest team member)
+- Availability (who's free)
+- Skill match (HVAC → HVAC tech)
+- Workload balance (even distribution)
+- Cost optimization (lowest rate)
+
+**Managing Assignments:**
+
+**Reassign Job:**
+1. Open job
+2. Click "Reassign"
+3. Select new assignee
+4. Add reason
+5. System notifies both parties
+
+**Unassign Job:**
+1. Open job
+2. Click "Unassign"
+3. Job returns to pending
+4. Available for new assignment
+
+**Multiple Assignees:**
+For large jobs:
+1. Create job
+2. Add multiple assignees
+3. Define responsibilities for each
+4. Track individual progress
+
+---
+
+**Job Notifications:**
+
+**Assignee receives:**
+- Email notification
+- SMS alert (if enabled)
+- In-app notification
+- Calendar event
+- Includes all job details
+
+**Manager receives:**
+- Job creation confirmation
+- Status updates
+- Completion notification
+- Issue alerts
+
+**Property owner receives:**
+- Job started notification (optional)
+- Completion confirmation (optional)
+- Photo updates (optional)
+
+---
+
+**Tracking Job Progress:**
+
+**Status Updates:**
+Assignee updates status:
+- Started → In Progress
+- Paused → On Hold
+- Resumed → In Progress
+- Finished → Completed
+
+**Time Tracking:**
+- Auto-starts on "In Progress"
+- Auto-stops on "Completed"
+- Manual adjustments allowed
+- Tracks total time spent
+
+**Progress Notes:**
+Assignee can add:
+- Text updates
+- Photos of work
+- Issues encountered
+- Materials used
+- Additional work needed
+
+**Manager Monitoring:**
+- Real-time status dashboard
+- Overdue job alerts
+- Quality check reminders
+- Cost tracking
+- Performance metrics
+
+---
+
+**Best Practices:**
+
+**When Creating Jobs:**
+- Be specific in description
+- Set realistic due dates
+- Include all necessary details
+- Attach relevant documents
+- Consider assignee's schedule
+
+**When Assigning:**
+- Match skills to job type
+- Consider travel time
+- Balance workload
+- Rotate assignments fairly
+- Communicate clearly
+
+**After Completion:**
+- Verify work quality
+- Review photos
+- Process payment
+- Update property status
+- Archive documentation
+- Rate performance (optional)`,
         },
         {
-          question: 'How do I track task completion?',
-          answer: `**Task Lifecycle & Status Updates:**
+          question: 'How do I track job completion and quality?',
+          answer: `**Job Completion & Quality Control:**
 
-**Task Statuses:**
-1. **Pending** ⏸️ - Not started
-2. **In Progress** 🔄 - Currently working
-3. **Completed** ✅ - Finished
+**Marking Jobs Complete:**
 
-**Updating Task Status:**
+**For Assignees:**
+1. Open assigned job
+2. Complete all work items
+3. Upload "after" photos
+4. Add completion notes:
+   - What was done
+   - Materials used
+   - Time spent
+   - Any issues found
+5. Enter actual costs
+6. Click "Mark as Complete"
+7. System notifies manager
 
-**As Task Owner:**
-1. Go to "To-Do List"
-2. View your assigned tasks
-3. Click on task to open details
-4. Update status dropdown
-5. Add completion notes (optional)
-6. Click "Mark Complete"
+**For Managers:**
+Job completion notification includes:
+- Completion time
+- Total duration
+- Before/after photos
+- Assignee notes
+- Cost information
 
-**As Job Manager:**
-1. Go to "Active Jobs"
-2. Open the job
-3. View all tasks in job
-4. See real-time status of each task
-5. Job auto-completes when all tasks done
+---
 
-**Tracking & Reporting:**
-📊 Dashboard shows:
-   • Total tasks assigned to you
-   • Tasks due today
-   • Overdue tasks
-   • Completion rate
+**Quality Verification Process:**
 
-🔔 **Notifications:**
-   • Task assigned to you
-   • Task due soon (24hrs before)
-   • Task completed by team member
-   • Job completed`,
+**Manager Review:**
+1. Open completed job
+2. Review all information:
+   - Compare before/after photos
+   - Check completion notes
+   - Verify all items addressed
+   - Review cost accuracy
+3. Choose action:
+   - **Approve** - Quality meets standards
+   - **Request Changes** - Work needs improvement
+   - **Reject** - Unacceptable quality
+
+**Approval Actions:**
+1. Click "Approve" button
+2. Add quality rating (1-5 stars)
+3. Add performance notes
+4. Job status → "Verified"
+5. Property becomes available
+6. Assignee receives confirmation
+7. Payment can be processed
+
+**Request Changes:**
+1. Click "Request Changes"
+2. Describe issues found
+3. Set deadline for rework
+4. Send back to assignee
+5. Job status → "Rework Required"
+6. Assignee notified with details
+7. Track until resolved
+
+**Rejection:**
+1. Click "Reject"
+2. Document reasons
+3. Reassign to different team member
+4. Original assignee notified
+5. May affect performance rating
+6. Triggers escalation if needed
+
+---
+
+**Quality Standards & Checklists:**
+
+**Setting Standards:**
+Create quality checklists per job type:
+
+**Cleaning Checklist:**
+- [ ] All surfaces wiped down
+- [ ] Floors vacuumed/mopped
+- [ ] Bathrooms sanitized
+- [ ] Kitchen appliances cleaned
+- [ ] Linens changed
+- [ ] Trash removed
+- [ ] Supplies restocked
+- [ ] No odors present
+- [ ] All lights working
+- [ ] Thermostat adjusted
+
+**Maintenance Checklist:**
+- [ ] Issue diagnosed correctly
+- [ ] Proper parts/materials used
+- [ ] Work completed per specs
+- [ ] Safety standards followed
+- [ ] Area cleaned after work
+- [ ] System tested/operational
+- [ ] Warranty documented
+- [ ] Photos of work provided
+
+**Using Checklists:**
+1. Attach checklist to job
+2. Assignee checks off items
+3. System requires all items checked
+4. Manager reviews completed checklist
+5. Ensures nothing missed
+
+---
+
+**Photo Documentation:**
+
+**Photo Requirements:**
+
+**Before Photos:**
+- Document initial state
+- Show all affected areas
+- Capture damage/issues clearly
+- Include timestamp
+
+**During Photos:**
+- Work in progress
+- Materials being used
+- Team at work
+- Issue diagnosis
+
+**After Photos:**
+- Completed work
+- All angles of area
+- Close-ups of repairs
+- Final state comparison
+
+**Photo Standards:**
+- Good lighting
+- Clear focus
+- Multiple angles
+- Include context
+- Professional appearance
+
+**Photo Review:**
+Managers check:
+- Quality of work visible
+- Standards met
+- Issues resolved
+- Professional presentation
+
+---
+
+**Performance Tracking:**
+
+**Individual Metrics:**
+Track for each team member:
+- **Completion Rate** - % of jobs finished on time
+- **Quality Score** - Average rating (1-5 stars)
+- **Speed** - Average time per job type
+- **Cost Accuracy** - Estimated vs actual
+- **Customer Satisfaction** - Guest/owner feedback
+- **Reliability** - Shows up on time
+- **Communication** - Updates and notes quality
+
+**Team Metrics:**
+Overall performance:
+- Total jobs completed
+- Average completion time
+- Quality score trends
+- Cost variance
+- On-time percentage
+- Customer complaints
+- Rework frequency
+
+**Performance Reports:**
+Generate reports:
+- Weekly team performance
+- Monthly individual reviews
+- Job type analysis
+- Cost effectiveness
+- Quality trends
+- Improvement areas
+
+---
+
+**Quality Improvement:**
+
+**Training Needs:**
+Identify from:
+- Low quality scores
+- Frequent rework
+- Customer complaints
+- Recurring issues
+- New job types
+
+**Feedback Loop:**
+1. Manager reviews performance
+2. Identifies improvement areas
+3. Provides specific feedback
+4. Offers training/resources
+5. Sets improvement goals
+6. Tracks progress
+
+**Recognition:**
+Reward high performers:
+- Bonus for quality scores
+- Recognition in team meetings
+- Preferred job assignments
+- Additional responsibilities
+- Public acknowledgment
+
+---
+
+**Common Quality Issues:**
+
+**Cleaning:**
+- Missed areas
+- Improper products used
+- Damage to property
+- Supplies not restocked
+- Odor issues
+
+**Maintenance:**
+- Temporary fixes instead of proper repair
+- Wrong parts used
+- Safety issues
+- Incomplete work
+- Poor communication
+
+**Solutions:**
+- Detailed checklists
+- Regular training
+- Clear standards
+- Photo requirements
+- Follow-up inspections
+- Accountability measures
+
+**Best Practices:**
+- Inspect randomly (surprise checks)
+- Review all first-time assignees
+- Document everything
+- Address issues immediately
+- Provide constructive feedback
+- Celebrate excellence
+- Use data to drive improvements`,
+        },
+        {
+          question: 'How do I create recurring jobs and schedules?',
+          answer: `**Recurring Jobs System:**
+
+Automate routine maintenance and cleaning with recurring job schedules.
+
+**Creating Recurring Jobs:**
+
+**From Scratch:**
+1. Go to Jobs page
+2. Click "Create Job"
+3. Fill in job details
+4. Toggle "Recurring Job" ON
+5. Configure recurrence
+6. Save
+
+**From Existing Job:**
+1. Open completed job
+2. Click "Make Recurring"
+3. Adjust frequency
+4. Save as template
+
+---
+
+**Recurrence Patterns:**
+
+**Daily:**
+- **Every Day** - 7 days/week
+- **Weekdays Only** - Monday-Friday
+- **Weekends Only** - Saturday-Sunday
+- **Every X Days** - Custom interval
+
+Example: "Daily pool check (Every Day)"
+
+**Weekly:**
+- Select specific days
+- Multiple days allowed
+- Skip holidays option
+
+Example: "Weekly cleaning (Mon, Wed, Fri)"
+
+**Monthly:**
+- **By Date** - e.g., "Every 15th of month"
+- **By Day** - e.g., "First Monday of month"
+- **Last Day** - "Last day of each month"
+- **Multiple Days** - e.g., "1st and 15th"
+
+Example: "HVAC filter check (First Monday)"
+
+**Quarterly:**
+- Every 3 months
+- Specify start month
+- Choose specific date or day
+
+Example: "Deep clean (Quarterly - Jan, Apr, Jul, Oct)"
+
+**Annually:**
+- Once per year
+- Set month and date
+- Advance notice settings
+
+Example: "Annual safety inspection (July 1st)"
+
+**Custom:**
+Define complex patterns:
+- Varies by season
+- Different frequencies
+- Conditional triggers
+
+Example: "Landscaping (Weekly in summer, bi-weekly in winter)"
+
+---
+
+**Recurrence Settings:**
+
+**Basic Settings:**
+- **Pattern** - How often job repeats
+- **Start Date** - When to begin
+- **End Date** - When to stop (optional)
+- **No End Date** - Continue indefinitely
+
+**Advanced Settings:**
+
+**Generate Jobs:**
+- **1 week ahead** - Creates jobs weekly
+- **1 month ahead** - Creates jobs monthly
+- **Custom** - Define your timing
+
+**Assignment:**
+- **Same Assignee** - Always assign to same person
+- **Rotate** - Cycle through team members
+- **Auto-Assign** - Based on availability
+- **Manager Assigns** - Leave unassigned for manual assignment
+
+**Notifications:**
+- **When Created** - Alert on generation
+- **Before Due** - Reminder X days before
+- **Day Before** - 24-hour reminder
+- **On Due Date** - Morning of due date
+- **If Overdue** - Alert if not completed
+
+**Cost Settings:**
+- **Use Template Cost** - Same estimate each time
+- **Update Costs** - Allow adjustments per instance
+- **Track Actual** - Record real costs separately
+
+---
+
+**Managing Recurring Jobs:**
+
+**View Recurring Jobs:**
+1. Go to Jobs page
+2. Click "Recurring" tab
+3. See all recurring job templates
+4. View next scheduled date
+
+**Edit Recurring Job:**
+1. Open recurring job template
+2. Click "Edit Template"
+3. Modify settings
+4. Choose scope:
+   - **This Instance Only** - One occurrence
+   - **This and Future** - From now on
+   - **All Instances** - Entire series
+5. Save changes
+
+**Pause Recurring Job:**
+1. Open template
+2. Toggle "Active" to OFF
+3. No new jobs generated
+4. Existing jobs unaffected
+5. Can resume anytime
+
+**Stop Recurring Job:**
+1. Open template
+2. Set end date to today
+3. Or delete template
+4. No future jobs created
+
+**Skip Instance:**
+1. Find next scheduled job
+2. Mark as "Skipped"
+3. Add skip reason
+4. Next instance generates normally
+
+---
+
+**Common Recurring Job Schedules:**
+
+**Cleaning & Housekeeping:**
+- Guest turnover: Per booking (auto-generated)
+- Deep clean: Monthly
+- Linen service: Weekly
+- Supply restock: Bi-weekly
+- Carpet cleaning: Quarterly
+
+**HVAC & Climate:**
+- Filter change: Monthly
+- System inspection: Quarterly
+- Duct cleaning: Annually
+- Thermostat check: Monthly
+
+**Plumbing:**
+- Water heater flush: Semi-annually
+- Drain maintenance: Monthly
+- Leak check: Quarterly
+- Pipe inspection: Annually
+
+**Electrical:**
+- Smoke detector test: Monthly
+- GFCI outlet test: Quarterly
+- Panel inspection: Annually
+- Lighting check: Bi-weekly
+
+**Exterior:**
+- Lawn mowing: Weekly (seasonal)
+- Landscaping: Bi-weekly
+- Gutter cleaning: Semi-annually
+- Power washing: Annually
+- Pool service: 2x weekly (summer)
+
+**Safety & Compliance:**
+- Fire extinguisher check: Monthly
+- Emergency exit check: Monthly
+- Safety equipment test: Quarterly
+- Insurance inspection: Annually
+
+---
+
+**Automation Tips:**
+
+**Link to Property Events:**
+- Before guest arrival (3 days)
+- After guest departure (same day)
+- During vacant periods
+- Based on occupancy rate
+
+**Seasonal Adjustments:**
+- More frequent in high season
+- Reduced in off-season
+- Weather-dependent scheduling
+- Holiday modifications
+
+**Cost Optimization:**
+- Bundle jobs for same day
+- Route optimization for team
+- Batch materials purchasing
+- Volume discounts with vendors
+
+**Quality Assurance:**
+- Random inspection jobs
+- Follow-up verification
+- Owner walkthroughs
+- Quarterly deep audits
+
+---
+
+**Best Practices:**
+
+**Setup:**
+- Start with critical maintenance
+- Add more as comfortable
+- Test with short intervals first
+- Adjust based on results
+
+**Assignment:**
+- Balance workload across team
+- Consider skill requirements
+- Account for vacation/time off
+- Have backup assignees
+
+**Monitoring:**
+- Review recurring job list monthly
+- Adjust frequencies as needed
+- Track completion rates
+- Monitor costs vs. benefits
+
+**Documentation:**
+- Maintain detailed checklists
+- Update procedures regularly
+- Photo documentation
+- Performance tracking
+
+**Communication:**
+- Share schedules with team
+- Coordinate with owners
+- Inform guests if needed
+- Clear escalation path`,
         },
       ],
     },
@@ -5632,302 +7061,280 @@ Check status page:
     },
   ];
 
-  const quickLinks = [
-    { icon: Video, title: 'Video Tutorials', description: 'Watch step-by-step guides', badge: 'Coming Soon', onClick: null },
-    { icon: BookOpen, title: 'User Manual', description: 'Download PDF guide', badge: 'PDF', onClick: () => window.open('/user-manual.pdf', '_blank') },
-    { icon: Bug, title: 'Report a Bug', description: 'Submit bug reports to our team', badge: 'Email', onClick: () => setBugReportOpen(true) },
-  ];
-
-  const filteredSections = searchQuery
-    ? helpSections.map(section => ({
-        ...section,
-        topics: section.topics.filter(
-          topic =>
-            topic.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            topic.answer.toLowerCase().includes(searchQuery.toLowerCase())
-        ),
-      })).filter(section => section.topics.length > 0)
-    : helpSections;
+  const filteredSections = helpSections.map(section => ({
+    ...section,
+    topics: section.topics.filter(
+      topic =>
+        topic.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        topic.answer.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+  })).filter(section => section.topics.length > 0);
 
   return (
-    <div className="container max-w-7xl mx-auto py-8 px-4">
+    <div className="container mx-auto p-6 max-w-7xl">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 bg-primary/10 rounded-lg">
-            <BookOpen className="h-8 w-8 text-primary" />
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+            <BookOpen className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-4xl font-bold tracking-tight">Help Center</h1>
-            <p className="text-muted-foreground mt-1">
-              Comprehensive guides and documentation for Casa & Concierge PMS
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900">Help & Documentation</h1>
+            <p className="text-gray-600">Comprehensive guide to Casa & Concierge PMS</p>
           </div>
         </div>
 
         {/* Search */}
-        <div className="relative max-w-2xl">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        <div className="relative mt-6">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <Input
-            type="text"
-            placeholder="Search for help articles, guides, or topics..."
-            className="pl-10 py-6 text-lg"
+            placeholder="Search for help topics..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-4 py-6 text-lg border-2 border-gray-200 focus:border-blue-500 rounded-lg"
           />
         </div>
       </div>
 
-      {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {quickLinks.map((link, index) => (
-          <Card
-            key={index}
-            className="hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={link.onClick || undefined}
-          >
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-3">
-                <link.icon className="h-6 w-6 text-primary" />
-                <Badge variant="secondary" className="text-xs">
-                  {link.badge}
-                </Badge>
-              </div>
-              <h3 className="font-semibold mb-1">{link.title}</h3>
-              <p className="text-sm text-muted-foreground">{link.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Quick Access Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-500">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <Video className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-lg">Video Tutorials</CardTitle>
+            </div>
+            <CardDescription>Watch step-by-step guides</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Badge variant="secondary">Coming Soon</Badge>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-green-500">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <BookOpen className="h-5 w-5 text-green-600" />
+              <CardTitle className="text-lg">User Manual</CardTitle>
+            </div>
+            <CardDescription>Download comprehensive PDF guide</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Badge variant="secondary">PDF Download</Badge>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-orange-500"
+          onClick={() => setBugReportOpen(true)}
+        >
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <Bug className="h-5 w-5 text-orange-600" />
+              <CardTitle className="text-lg">Report a Bug</CardTitle>
+            </div>
+            <CardDescription>Submit issues to our team</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Badge variant="secondary">Email Support</Badge>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Main Content - Tabs by Category */}
+      {/* Help Sections */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Documentation & Guides
-          </CardTitle>
+          <CardTitle>Browse Help Topics</CardTitle>
           <CardDescription>
-            Browse comprehensive guides organized by module. Click any section to learn more.
+            {filteredSections.length === helpSections.length
+              ? 'Select a topic to learn more'
+              : `Found ${filteredSections.reduce((acc, section) => acc + section.topics.length, 0)} results`}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="getting-started" className="w-full">
-            <div className="w-full overflow-x-auto mb-6">
-              <TabsList className="inline-flex w-auto min-w-full h-auto flex-wrap gap-2 p-2">
-                {helpSections.map((section) => (
-                  <TabsTrigger
-                    key={section.id}
-                    value={section.id}
-                    className="flex items-center gap-2 whitespace-nowrap px-4 py-2"
-                  >
-                    <section.icon className={`h-4 w-4 ${section.color}`} />
-                    <span>{section.title}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
+          <Tabs defaultValue={filteredSections[0]?.id} className="w-full">
+            <TabsList className="w-full flex flex-wrap h-auto gap-2 bg-transparent">
+              {filteredSections.map((section) => (
+                <TabsTrigger
+                  key={section.id}
+                  value={section.id}
+                  className={`flex items-center gap-2 ${section.color} data-[state=active]:bg-${section.bgColor}`}
+                >
+                  <section.icon className="h-4 w-4" />
+                  {section.title}
+                  <Badge variant="outline" className="ml-2">
+                    {section.topics.length}
+                  </Badge>
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
             {filteredSections.map((section) => (
-              <TabsContent key={section.id} value={section.id}>
-                <div className={`p-6 rounded-lg ${section.bgColor} mb-6`}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <section.icon className={`h-8 w-8 ${section.color}`} />
-                    <h2 className="text-2xl font-bold">{section.title}</h2>
-                  </div>
-                  <p className="text-muted-foreground">
-                    {section.topics.length} article{section.topics.length !== 1 ? 's' : ''} in this section
-                  </p>
-                </div>
-
-                <Accordion type="single" collapsible className="w-full">
-                  {section.topics.map((topic, index) => (
-                    <AccordionItem key={index} value={`item-${index}`}>
-                      <AccordionTrigger className="text-left hover:no-underline">
-                        <div className="flex items-start gap-3 pr-4">
-                          <CheckCircle2 className={`h-5 w-5 mt-0.5 ${section.color} flex-shrink-0`} />
-                          <span className="font-medium">{topic.question}</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="pl-8 pr-4 pt-2 pb-4">
-                          <div className="prose prose-sm max-w-none">
-                            {topic.answer.split('\n').map((paragraph, i) => {
-                              if (paragraph.trim().startsWith('•')) {
-                                return (
-                                  <div key={i} className="flex items-start gap-2 my-2">
-                                    <ArrowRight className="h-4 w-4 mt-1 text-primary flex-shrink-0" />
-                                    <span>{paragraph.replace('•', '').trim()}</span>
-                                  </div>
-                                );
-                              }
-                              if (paragraph.trim().startsWith('**') && paragraph.trim().endsWith('**')) {
-                                const text = paragraph.replace(/\*\*/g, '');
-                                return (
-                                  <h4 key={i} className="font-semibold text-lg mt-4 mb-2 flex items-center gap-2">
-                                    <ShieldCheck className="h-5 w-5 text-primary" />
-                                    {text}
-                                  </h4>
-                                );
-                              }
-                              if (paragraph.trim()) {
-                                return (
-                                  <p key={i} className="mb-3 text-foreground leading-relaxed whitespace-pre-wrap">
-                                    {paragraph}
-                                  </p>
-                                );
-                              }
-                              return null;
-                            })}
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
+              <TabsContent key={section.id} value={section.id} className="mt-6">
+                <Card className={`border-l-4 border-l-${section.color.replace('text-', '')}`}>
+                  <CardHeader className={section.bgColor}>
+                    <div className="flex items-center gap-3">
+                      <section.icon className={`h-6 w-6 ${section.color}`} />
+                      <CardTitle>{section.title}</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <Accordion type="single" collapsible className="w-full">
+                      {section.topics.map((topic, index) => (
+                        <AccordionItem key={index} value={`item-${index}`}>
+                          <AccordionTrigger className="text-left hover:no-underline">
+                            <div className="flex items-start gap-3">
+                              <CheckCircle2 className={`h-5 w-5 ${section.color} mt-1 flex-shrink-0`} />
+                              <span className="font-medium">{topic.question}</span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="text-gray-700">
+                            <div className="ml-8 mt-2 prose prose-sm max-w-none">
+                              {topic.answer.split('\n').map((paragraph, i) => {
+                                if (paragraph.trim().startsWith('•')) {
+                                  return (
+                                    <li key={i} className="ml-4">
+                                      {paragraph.trim().substring(1).trim()}
+                                    </li>
+                                  );
+                                } else if (paragraph.trim().startsWith('**') && paragraph.trim().endsWith('**')) {
+                                  return (
+                                    <h4 key={i} className="font-semibold text-gray-900 mt-4 mb-2">
+                                      {paragraph.trim().slice(2, -2)}
+                                    </h4>
+                                  );
+                                } else if (paragraph.trim()) {
+                                  return (
+                                    <p key={i} className="mb-3">
+                                      {paragraph}
+                                    </p>
+                                  );
+                                }
+                                return null;
+                              })}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  </CardContent>
+                </Card>
               </TabsContent>
             ))}
           </Tabs>
         </CardContent>
       </Card>
 
-      {/* Footer */}
-      <div className="mt-8 text-center">
-        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-          <CardContent className="py-8">
-            <h3 className="text-xl font-semibold mb-2">Still need help?</h3>
-            <p className="text-muted-foreground mb-4">
-              Can't find what you're looking for? Our support team is here to help.
-            </p>
-            <div className="flex gap-3 justify-center">
-              <Badge variant="outline" className="px-4 py-2 cursor-pointer hover:bg-primary hover:text-primary-foreground">
-                📧 support@casaandconcierge.com
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Bug Report Dialog */}
       <Dialog open={bugReportOpen} onOpenChange={setBugReportOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Bug className="h-5 w-5 text-red-500" />
+              <Bug className="h-5 w-5 text-orange-600" />
               Report a Bug
             </DialogTitle>
             <DialogDescription>
-              Help us improve Casa & Concierge by reporting bugs. Your feedback is valuable!
+              Help us improve Casa & Concierge by reporting issues you encounter
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Bug Title */}
-            <div className="space-y-2">
-              <Label htmlFor="bugTitle">
-                Bug Title <span className="text-red-500">*</span>
-              </Label>
+            <div>
+              <Label htmlFor="bug-title">Bug Title *</Label>
               <Input
-                id="bugTitle"
-                type="text"
-                placeholder="Brief description of the bug"
+                id="bug-title"
+                placeholder="Brief description of the issue"
                 value={bugTitle}
                 onChange={(e) => setBugTitle(e.target.value)}
-                required
+                className="mt-1"
               />
             </div>
 
-            {/* Priority */}
-            <div className="space-y-2">
-              <Label htmlFor="bugPriority">Priority</Label>
+            <div>
+              <Label htmlFor="bug-priority">Priority Level *</Label>
               <Select value={bugPriority} onValueChange={(value: any) => setBugPriority(value)}>
-                <SelectTrigger id="bugPriority">
-                  <SelectValue placeholder="Select priority" />
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low - Minor issue, workaround available</SelectItem>
-                  <SelectItem value="medium">Medium - Affects functionality but not critical</SelectItem>
-                  <SelectItem value="high">High - Significant impact on usage</SelectItem>
-                  <SelectItem value="critical">Critical - System unusable or data loss</SelectItem>
+                  <SelectItem value="low">Low - Minor inconvenience</SelectItem>
+                  <SelectItem value="medium">Medium - Affects workflow</SelectItem>
+                  <SelectItem value="high">High - Major functionality broken</SelectItem>
+                  <SelectItem value="critical">Critical - System unusable</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Bug Description */}
-            <div className="space-y-2">
-              <Label htmlFor="bugDescription">
-                Description <span className="text-red-500">*</span>
-              </Label>
+            <div>
+              <Label htmlFor="bug-description">Description *</Label>
               <Textarea
-                id="bugDescription"
-                placeholder="Describe what happened, what you expected to happen, and any error messages you saw..."
+                id="bug-description"
+                placeholder="Describe the bug in detail..."
                 value={bugDescription}
                 onChange={(e) => setBugDescription(e.target.value)}
-                rows={6}
-                className="resize-none"
-                required
+                className="mt-1 min-h-[100px]"
               />
             </div>
 
-            {/* Steps to Reproduce */}
-            <div className="space-y-2">
-              <Label htmlFor="bugSteps">Steps to Reproduce (Optional)</Label>
+            <div>
+              <Label htmlFor="bug-steps">Steps to Reproduce</Label>
               <Textarea
-                id="bugSteps"
-                placeholder="1. Go to...\n2. Click on...\n3. See error..."
+                id="bug-steps"
+                placeholder="1. Go to...&#10;2. Click on...&#10;3. See error..."
                 value={bugSteps}
                 onChange={(e) => setBugSteps(e.target.value)}
-                rows={4}
-                className="resize-none"
+                className="mt-1 min-h-[100px]"
               />
-              <p className="text-xs text-muted-foreground">
-                Help us reproduce the bug by listing the exact steps you took
-              </p>
-            </div>
-
-            {/* Reporter Info Display */}
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">
-                <strong>Your information:</strong> This report will be sent from{' '}
-                <strong>
-                  {profile?.first_name && profile?.last_name
-                    ? `${profile.first_name} ${profile.last_name}`
-                    : profile?.first_name || 'Anonymous'}
-                </strong>{' '}
-                ({user?.email || 'No email'}) to the development team at{' '}
-                <strong>vinzlloydalferez@gmail.com</strong>
-              </p>
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setBugReportOpen(false)}
-              disabled={isSendingBugReport}
-            >
-              <X className="h-4 w-4 mr-2" />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBugReportOpen(false)} disabled={isSendingBugReport}>
               Cancel
             </Button>
-            <Button
-              onClick={handleBugReportSubmit}
-              disabled={!bugTitle.trim() || !bugDescription.trim() || isSendingBugReport}
-            >
+            <Button onClick={handleBugReportSubmit} disabled={isSendingBugReport}>
               {isSendingBugReport ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <Send className="mr-2 h-4 w-4 animate-spin" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send Bug Report
+                  <Send className="mr-2 h-4 w-4" />
+                  Submit Bug Report
                 </>
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Footer */}
+      <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Still need help?</h3>
+          <p className="text-gray-600 mb-4">
+            Our support team is here to assist you
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a
+              href="mailto:support@casaconcierge.com"
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+            >
+              <Mail className="h-4 w-4" />
+              support@casaconcierge.com
+            </a>
+            <span className="hidden sm:inline text-gray-400">|</span>
+            <a
+              href="tel:+1234567890"
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+            >
+              <Phone className="h-4 w-4" />
+              +1 (234) 567-890
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
