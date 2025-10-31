@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Plus, RefreshCw, Zap, Power, Wifi, Droplet } from "lucide-react";
 import { useUtilityProviders } from "@/hooks/useUtilityProviders";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
@@ -84,26 +85,25 @@ export default function UtilityProviders() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Utility Providers</h1>
-          <p className="text-muted-foreground">
-            Manage utility companies and service providers
-          </p>
-        </div>
-        <div className="flex gap-2 self-start sm:self-auto">
-          <Button onClick={() => refetch()} variant="outline" disabled={isFetching}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          {canCreate && (
-            <Button onClick={() => setIsFormOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Provider
+      <PageHeader
+        title="Utility Providers"
+        subtitle="Manage utility companies and service providers"
+        icon={Zap}
+        actions={
+          <>
+            <Button onClick={() => refetch()} variant="outline" disabled={isFetching}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
-          )}
-        </div>
-      </div>
+            {canCreate && (
+              <Button onClick={() => setIsFormOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Provider
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

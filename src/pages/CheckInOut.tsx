@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -37,6 +38,7 @@ import {
   CheckCircle,
   LogIn,
   LogOut,
+  DoorOpen,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -179,21 +181,20 @@ export default function CheckInOut() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t('checkInOut.title')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('checkInOut.subtitle')}
-          </p>
-        </div>
-        <Button
-          onClick={handleCreate}
-          className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {t('checkInOut.newRecord')}
-        </Button>
-      </div>
+      <PageHeader
+        icon={DoorOpen}
+        title={t('checkInOut.title')}
+        subtitle={t('checkInOut.subtitle')}
+        action={
+          <Button
+            onClick={handleCreate}
+            className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t('checkInOut.newRecord')}
+          </Button>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

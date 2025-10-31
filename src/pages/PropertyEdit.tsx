@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import {
   ArrowLeft,
   Home,
@@ -187,20 +188,17 @@ export default function PropertyEdit() {
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto p-6">
         {/* Enhanced Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+        <PageHeader
+          icon={Home}
+          title={`Edit: ${property.property_name}`}
+          subtitle={`Property ID: ${property.property_id}`}
+          action={
             <Button variant="outline" onClick={() => navigate('/properties')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                Edit: {property.property_name}
-              </h1>
-              <p className="text-muted-foreground">Property ID: {property.property_id}</p>
-            </div>
-          </div>
-        </div>
+          }
+        />
 
         {/* Enhanced Tabs Card */}
         <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">

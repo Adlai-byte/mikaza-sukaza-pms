@@ -8,6 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   Building,
@@ -28,6 +29,7 @@ import {
   XCircle,
   PauseCircle,
   PlayCircle,
+  LayoutDashboard,
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useNavigate } from "react-router-dom";
@@ -90,46 +92,44 @@ export default function Dashboard() {
     <TooltipProvider delayDuration={300}>
       <div className="space-y-6">
         {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t('dashboard.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('dashboard.welcome')}
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => refetch()}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                {t('dashboard.refresh')}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('dashboard.refreshTooltip')}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
-                onClick={() => navigate('/calendar')}
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                {t('dashboard.viewCalendar')}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('dashboard.viewCalendarTooltip')}</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
+        <PageHeader
+          title={t('dashboard.title')}
+          subtitle={t('dashboard.welcome')}
+          icon={LayoutDashboard}
+          actions={
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    onClick={() => refetch()}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                    {t('dashboard.refresh')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('dashboard.refreshTooltip')}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    className="bg-gradient-primary hover:bg-gradient-secondary"
+                    onClick={() => navigate('/calendar')}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    {t('dashboard.viewCalendar')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('dashboard.viewCalendarTooltip')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </>
+          }
+        />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

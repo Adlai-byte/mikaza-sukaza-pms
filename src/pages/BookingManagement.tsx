@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -203,31 +204,27 @@ export default function BookingManagement() {
   return (
     <div className="space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
-              <CalendarDays className="h-8 w-8 text-primary" />
-              {t('bookings.title')}
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              {t('bookings.subtitle')}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => refetch()} disabled={loading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              {t('common.refresh')}
-            </Button>
-            <Button variant="outline" onClick={handleExportBookings}>
-              <Download className="mr-2 h-4 w-4" />
-              {t('common.export')}
-            </Button>
-            <Button onClick={handleCreateBooking} className="bg-primary hover:bg-primary/90">
-              <Plus className="mr-2 h-4 w-4" />
-              {t('bookings.newBooking')}
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title={t('bookings.title')}
+          subtitle={t('bookings.subtitle')}
+          icon={CalendarDays}
+          actions={
+            <>
+              <Button variant="outline" onClick={() => refetch()} disabled={loading}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                {t('common.refresh')}
+              </Button>
+              <Button variant="outline" onClick={handleExportBookings}>
+                <Download className="mr-2 h-4 w-4" />
+                {t('common.export')}
+              </Button>
+              <Button onClick={handleCreateBooking} className="bg-primary hover:bg-primary/90">
+                <Plus className="mr-2 h-4 w-4" />
+                {t('bookings.newBooking')}
+              </Button>
+            </>
+          }
+        />
 
         {/* Statistics Dashboard */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">

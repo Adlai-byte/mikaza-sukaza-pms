@@ -11,14 +11,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
-import { 
-  User as UserIcon, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Building2, 
+import {
+  User as UserIcon,
+  Mail,
+  Phone,
+  MapPin,
+  Building2,
   Calendar,
-  Activity 
+  Activity,
+  Shield,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  CreditCard,
+  Globe
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -129,125 +136,285 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
     return formattedDetails.length > 0 ? formattedDetails.join(' • ') : null;
   };
 
+  const getStatusBadge = () => {
+    if (user.account_status === 'suspended') {
+      return <Badge variant="destructive" className="text-sm">⛔ Suspended</Badge>;
+    }
+    if (user.account_status === 'archived') {
+      return <Badge variant="secondary" className="text-sm">📦 Archived</Badge>;
+    }
+    return user.is_active ? (
+      <Badge variant="default" className="text-sm">✓ Active</Badge>
+    ) : (
+      <Badge variant="destructive" className="text-sm">✗ Inactive</Badge>
+    );
+  };
+
+  const getRoleBadge = () => {
+    const roleMap: Record<string, { label: string; variant: any }> = {
+      admin: { label: '👑 Admin', variant: 'default' },
+      ops: { label: '⚙️ Operations', variant: 'secondary' },
+      provider: { label: '🔧 Provider', variant: 'outline' },
+      customer: { label: '👤 Customer', variant: 'outline' },
+    };
+    const roleInfo = roleMap[user.user_type] || { label: user.user_type, variant: 'secondary' };
+    return <Badge variant={roleInfo.variant} className="text-sm">{roleInfo.label}</Badge>;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>User Details</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-2xl">User Profile</DialogTitle>
+            <div className="flex items-center gap-2">
+              {getStatusBadge()}
+              {getRoleBadge()}
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* User Profile Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <UserIcon className="h-5 w-5" />
-                Profile Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-start gap-6">
-                <Avatar className="h-20 w-20">
+          {/* Quick Summary Card */}
+          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-6">
+                <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
                   <AvatarImage src={user.photo_url} alt={`${user.first_name} ${user.last_name}`} />
-                  <AvatarFallback className="text-lg">
+                  <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground">
                     {getInitials(user.first_name, user.last_name)}
                   </AvatarFallback>
                 </Avatar>
-                
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <h3 className="text-2xl font-semibold">{user.first_name} {user.last_name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={user.user_type === 'admin' ? 'default' : 'secondary'}>
-                        {user.user_type === 'admin' ? 'Admin' : 'Ops'}
-                      </Badge>
-                      <Badge variant={user.is_active ? 'default' : 'destructive'}>
-                        {user.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
+
+                <div className="flex-1">
+                  <h2 className="text-3xl font-bold mb-2">{user.first_name} {user.last_name}</h2>
+                  <div className="flex items-center gap-3 text-muted-foreground mb-3">
+                    <Mail className="h-4 w-4" />
+                    <span>{user.email}</span>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{user.email}</span>
-                    </div>
-                    
-                    {user.cellphone_primary && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{user.cellphone_primary}</span>
-                      </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      ID: {user.user_id?.slice(0, 8)}...
+                    </Badge>
+                    {user.last_login_at && (
+                      <Badge variant="outline" className="text-xs">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Last login: {format(new Date(user.last_login_at), 'MMM dd, HH:mm')}
+                      </Badge>
                     )}
-
-                    {user.company && (
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span>{user.company}</span>
-                      </div>
-                    )}
-
-                    {user.date_of_birth && (() => {
-                      try {
-                        return (
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span>{format(new Date(user.date_of_birth), 'MMM dd, yyyy')}</span>
-                          </div>
-                        );
-                      } catch (error) {
-                        console.error('Error formatting date:', error);
-                        return (
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span>{user.date_of_birth}</span>
-                          </div>
-                        );
-                      }
-                    })()}
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Contact Information */}
-          {(user.address || user.cellphone_usa || user.whatsapp) && (
+          {/* Account Status - Show if suspended or archived */}
+          {(user.account_status === 'suspended' || user.account_status === 'archived') && (
+            <Card className="border-destructive/50 bg-destructive/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-5 w-5" />
+                  Account Status Alert
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {user.account_status === 'suspended' && (
+                  <>
+                    <div>
+                      <p className="font-medium">This account is suspended</p>
+                      {user.suspension_reason && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Reason: {user.suspension_reason}
+                        </p>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {user.suspended_at && (
+                        <div>
+                          <label className="text-muted-foreground">Suspended On</label>
+                          <p className="font-medium">{format(new Date(user.suspended_at), 'MMM dd, yyyy HH:mm')}</p>
+                        </div>
+                      )}
+                      {user.suspended_by && (
+                        <div>
+                          <label className="text-muted-foreground">Suspended By</label>
+                          <p className="font-medium">{user.suspended_by}</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+                {user.account_status === 'archived' && (
+                  <>
+                    <p className="font-medium">This account is archived</p>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {user.archived_at && (
+                        <div>
+                          <label className="text-muted-foreground">Archived On</label>
+                          <p className="font-medium">{format(new Date(user.archived_at), 'MMM dd, yyyy HH:mm')}</p>
+                        </div>
+                      )}
+                      {user.archived_by && (
+                        <div>
+                          <label className="text-muted-foreground">Archived By</label>
+                          <p className="font-medium">{user.archived_by}</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Personal Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <UserIcon className="h-5 w-5" />
+                Personal Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {user.company && (
+                  <div>
+                    <label className="text-xs text-muted-foreground">Company</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{user.company}</span>
+                    </div>
+                  </div>
+                )}
+
+                {user.date_of_birth && (() => {
+                  try {
+                    return (
+                      <div>
+                        <label className="text-xs text-muted-foreground">Date of Birth</label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{format(new Date(user.date_of_birth), 'MMM dd, yyyy')}</span>
+                        </div>
+                      </div>
+                    );
+                  } catch (error) {
+                    console.error('Error formatting date:', error);
+                    return (
+                      <div>
+                        <label className="text-xs text-muted-foreground">Date of Birth</label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{user.date_of_birth}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
+
+                {user.cellphone_primary && (
+                  <div>
+                    <label className="text-xs text-muted-foreground">Primary Phone</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{user.cellphone_primary}</span>
+                    </div>
+                  </div>
+                )}
+
+                {user.cellphone_usa && (
+                  <div>
+                    <label className="text-xs text-muted-foreground">USA Phone</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{user.cellphone_usa}</span>
+                    </div>
+                  </div>
+                )}
+
+                {user.whatsapp && (
+                  <div>
+                    <label className="text-xs text-muted-foreground">WhatsApp</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Phone className="h-4 w-4 text-green-600" />
+                      <span className="font-medium">{user.whatsapp}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Account Timestamps */}
+              {(user.created_at || user.updated_at) && (
+                <div className="mt-4 pt-4 border-t">
+                  <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
+                    {user.created_at && (
+                      <div>
+                        <label>Account Created</label>
+                        <p className="font-medium text-sm text-foreground">
+                          {format(new Date(user.created_at), 'MMM dd, yyyy HH:mm')}
+                        </p>
+                      </div>
+                    )}
+                    {user.updated_at && (
+                      <div>
+                        <label>Last Updated</label>
+                        <p className="font-medium text-sm text-foreground">
+                          {format(new Date(user.updated_at), 'MMM dd, yyyy HH:mm')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Address Information */}
+          {(user.address || user.city || user.state || user.zip || user.country) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
                   <MapPin className="h-5 w-5" />
-                  Contact Information
+                  Address
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {user.address && (
-                  <div>
-                    <p className="font-medium">Address</p>
-                    <p className="text-muted-foreground">
-                      {user.address}
-                      {user.city && `, ${user.city}`}
-                      {user.state && `, ${user.state}`}
-                      {user.zip && ` ${user.zip}`}
-                      {user.country && `, ${user.country}`}
-                    </p>
+              <CardContent>
+                <div className="space-y-3">
+                  {user.address && (
+                    <div>
+                      <label className="text-xs text-muted-foreground">Street Address</label>
+                      <p className="font-medium">{user.address}</p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {user.city && (
+                      <div>
+                        <label className="text-xs text-muted-foreground">City</label>
+                        <p className="font-medium">{user.city}</p>
+                      </div>
+                    )}
+                    {user.state && (
+                      <div>
+                        <label className="text-xs text-muted-foreground">State</label>
+                        <p className="font-medium">{user.state}</p>
+                      </div>
+                    )}
+                    {user.zip && (
+                      <div>
+                        <label className="text-xs text-muted-foreground">ZIP Code</label>
+                        <p className="font-medium">{user.zip}</p>
+                      </div>
+                    )}
+                    {user.country && (
+                      <div>
+                        <label className="text-xs text-muted-foreground">Country</label>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Globe className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-medium">{user.country}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {user.cellphone_usa && (
-                    <div>
-                      <p className="font-medium">USA Phone</p>
-                      <p className="text-muted-foreground">{user.cellphone_usa}</p>
-                    </div>
-                  )}
-
-                  {user.whatsapp && (
-                    <div>
-                      <p className="font-medium">WhatsApp</p>
-                      <p className="text-muted-foreground">{user.whatsapp}</p>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>

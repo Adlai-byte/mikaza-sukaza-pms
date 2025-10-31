@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Plus, RefreshCw, Building2, Star, UserCheck, TrendingUp } from "lucide-react";
 import { useServiceProviders } from "@/hooks/useServiceProviders";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
@@ -88,26 +89,25 @@ export default function ServiceProviders() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Service Providers</h1>
-          <p className="text-muted-foreground">
-            Manage contractors, vendors, and service companies
-          </p>
-        </div>
-        <div className="flex gap-2 self-start sm:self-auto">
-          <Button onClick={() => refetch()} variant="outline" disabled={isFetching}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          {canCreate && (
-            <Button onClick={() => setIsFormOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Provider
+      <PageHeader
+        title="Service Providers"
+        subtitle="Manage contractors, vendors, and service companies"
+        icon={Building2}
+        actions={
+          <>
+            <Button onClick={() => refetch()} variant="outline" disabled={isFetching}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
-          )}
-        </div>
-      </div>
+            {canCreate && (
+              <Button onClick={() => setIsFormOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Provider
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

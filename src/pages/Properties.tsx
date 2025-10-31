@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Home, Building2, MapPin, Users, Database, Settings } from "lucide-react";
 import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
@@ -154,24 +155,23 @@ export default function Properties() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('properties.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('properties.subtitle')}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsSettingsOpen(true)} variant="outline" className="self-start sm:self-auto">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Button>
-          <Button onClick={() => setIsFormOpen(true)} className="self-start sm:self-auto">
-            <Home className="mr-2 h-4 w-4" />
-            {t('properties.newProperty')}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={t('properties.title')}
+        subtitle={t('properties.subtitle')}
+        icon={Home}
+        actions={
+          <>
+            <Button onClick={() => setIsSettingsOpen(true)} variant="outline">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Button>
+            <Button onClick={() => setIsFormOpen(true)}>
+              <Home className="mr-2 h-4 w-4" />
+              {t('properties.newProperty')}
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

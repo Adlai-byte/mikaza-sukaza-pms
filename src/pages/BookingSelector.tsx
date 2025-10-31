@@ -32,6 +32,8 @@ import { useBookings } from '@/hooks/useBookings';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/ui/page-header';
+import { CalendarCheck } from 'lucide-react';
 
 export default function BookingSelector() {
   const navigate = useNavigate();
@@ -91,21 +93,17 @@ export default function BookingSelector() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Calendar className="h-8 w-8" />
-            Select Booking for Invoice
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Choose a booking to create an invoice, or create a manual invoice
-          </p>
-        </div>
-        <Button onClick={handleCreateManualInvoice} size="lg" variant="outline">
-          <FileText className="h-4 w-4 mr-2" />
-          Create Manual Invoice
-        </Button>
-      </div>
+      <PageHeader
+        icon={CalendarCheck}
+        title="Select Booking for Invoice"
+        subtitle="Choose a booking to create an invoice, or create a manual invoice"
+        action={
+          <Button onClick={handleCreateManualInvoice} size="lg" variant="outline">
+            <FileText className="h-4 w-4 mr-2" />
+            Create Manual Invoice
+          </Button>
+        }
+      />
 
       {/* Info Card */}
       <Card className="border-blue-200 bg-blue-50">

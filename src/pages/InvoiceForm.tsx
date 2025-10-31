@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Download, Calendar, Send } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Download, Calendar, Send, User, DollarSign, MessageSquare, StickyNote, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useCreateInvoice, useUpdateInvoice, useInvoice } from '@/hooks/useInvoices';
 import { useBookingDetail } from '@/hooks/useBookings';
@@ -752,10 +753,10 @@ export default function InvoiceForm() {
                       <TableHead className="w-12">#</TableHead>
                       <TableHead className="min-w-[200px]">{t('invoices.description')}</TableHead>
                       <TableHead className="w-32">{t('invoices.type')}</TableHead>
-                      <TableHead className="w-40">{t('invoices.qty')}</TableHead>
-                      <TableHead className="w-36">{t('invoices.unitPrice')}</TableHead>
-                      <TableHead className="w-40">{t('invoices.taxPercent')}</TableHead>
-                      <TableHead className="w-40">{t('common.tax')}</TableHead>
+                      <TableHead className="w-44">{t('invoices.qty')}</TableHead>
+                      <TableHead className="w-56">{t('invoices.unitPrice')}</TableHead>
+                      <TableHead className="w-32">{t('invoices.taxPercent')}</TableHead>
+                      <TableHead className="w-32">{t('common.tax')}</TableHead>
                       <TableHead className="w-32">{t('common.total')}</TableHead>
                       <TableHead className="w-16"></TableHead>
                     </TableRow>
@@ -840,137 +841,190 @@ export default function InvoiceForm() {
           </CardContent>
         </Card>
 
-        {/* {t('invoices.tipsForStaff')} */}
+        {/* Tips for Staff */}
         {isEditing && (
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('invoices.tipsForStaff')}</CardTitle>
-              <CardDescription>
-                {t('invoices.tipsForStaffDesc')}
-              </CardDescription>
+          <Card className="border-2 border-primary/10 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border-b">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">{t('invoices.tipsForStaff')}</CardTitle>
+                  <CardDescription className="mt-1">
+                    {t('invoices.tipsForStaffDesc')}
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="pt-6">
+              <div className="space-y-6">
                 {/* Warning when invoice is not saved */}
                 {!invoiceId && (
-                  <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-md">
-                    <p className="text-sm font-medium">
-                      💡 {t('invoices.saveInvoiceBeforeTips', 'Please save this invoice first before adding tips')}
+                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 text-yellow-900 px-4 py-3 rounded-lg flex items-start gap-3">
+                    <div className="h-8 w-8 rounded-full bg-yellow-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-lg">💡</span>
+                    </div>
+                    <p className="text-sm font-medium pt-1">
+                      {t('invoices.saveInvoiceBeforeTips', 'Please save this invoice first before adding tips')}
                     </p>
                   </div>
                 )}
 
-                {/* {t('invoices.addTip')} Form */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-muted rounded-lg">
-                  <div className="space-y-2">
-                    <Label>{t('invoices.staffMember')}</Label>
-                    <Select value={tipRecipient} onValueChange={setTipRecipient}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('invoices.selectStaff')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users
-                          .filter(u => ['ops', 'admin'].includes(u.user_type || ''))
-                          .map((user) => (
-                            <SelectItem key={user.user_id} value={user.user_id!}>
-                              {formatUserDisplay(user)}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                {/* Add Tip Form */}
+                <div className="bg-gradient-to-br from-slate-50 to-blue-50 border-2 border-slate-200 rounded-xl p-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    {/* Staff Member */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-sm font-semibold">
+                        <User className="h-4 w-4 text-blue-600" />
+                        {t('invoices.staffMember')}
+                      </Label>
+                      <Select value={tipRecipient} onValueChange={setTipRecipient}>
+                        <SelectTrigger className="bg-white border-slate-300 hover:border-blue-400 transition-colors">
+                          <SelectValue placeholder={t('invoices.selectStaff')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users
+                            .filter(u => ['ops', 'admin'].includes(u.user_type || ''))
+                            .map((user) => (
+                              <SelectItem key={user.user_id} value={user.user_id!}>
+                                {formatUserDisplay(user)}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label>{t('invoices.tipAmount')}</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      value={tipAmount}
-                      onChange={(e) => setTipAmount(e.target.value)}
-                    />
-                  </div>
+                    {/* Tip Amount */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-sm font-semibold">
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                        {t('invoices.tipAmount')}
+                      </Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={tipAmount}
+                        onChange={(e) => setTipAmount(e.target.value)}
+                        className="bg-white border-slate-300 hover:border-green-400 transition-colors"
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label>{t('invoices.reasonOptional')}</Label>
-                    <Select
-                      value={tipReason}
-                      onValueChange={setTipReason}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('invoices.selectOrTypeReason')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Excellent cleaning service">{t('invoices.tipReasons.excellentCleaning')}</SelectItem>
-                        <SelectItem value="Outstanding guest communication">{t('invoices.tipReasons.outstandingCommunication')}</SelectItem>
-                        <SelectItem value="Quick response time">{t('invoices.tipReasons.quickResponse')}</SelectItem>
-                        <SelectItem value="Professional maintenance work">{t('invoices.tipReasons.professionalMaintenance')}</SelectItem>
-                        <SelectItem value="Exceptional hospitality">{t('invoices.tipReasons.exceptionalHospitality')}</SelectItem>
-                        <SelectItem value="Property walkthrough service">{t('invoices.tipReasons.propertyWalkthrough')}</SelectItem>
-                        <SelectItem value="Guest amenities setup">{t('invoices.tipReasons.guestAmenities')}</SelectItem>
-                        <SelectItem value="Emergency response">{t('invoices.tipReasons.emergencyResponse')}</SelectItem>
-                        <SelectItem value="Above and beyond service">{t('invoices.tipReasons.aboveAndBeyond')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      placeholder={t('invoices.orTypeCustomReason')}
-                      value={tipReason}
-                      onChange={(e) => setTipReason(e.target.value)}
-                      className="mt-2"
-                    />
-                  </div>
+                    {/* Reason */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-sm font-semibold">
+                        <MessageSquare className="h-4 w-4 text-purple-600" />
+                        {t('invoices.reasonOptional')}
+                      </Label>
+                      <Select
+                        value={tipReason}
+                        onValueChange={setTipReason}
+                      >
+                        <SelectTrigger className="bg-white border-slate-300 hover:border-purple-400 transition-colors">
+                          <SelectValue placeholder={t('invoices.selectOrTypeReason')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Excellent cleaning service">{t('invoices.tipReasons.excellentCleaning')}</SelectItem>
+                          <SelectItem value="Outstanding guest communication">{t('invoices.tipReasons.outstandingCommunication')}</SelectItem>
+                          <SelectItem value="Quick response time">{t('invoices.tipReasons.quickResponse')}</SelectItem>
+                          <SelectItem value="Professional maintenance work">{t('invoices.tipReasons.professionalMaintenance')}</SelectItem>
+                          <SelectItem value="Exceptional hospitality">{t('invoices.tipReasons.exceptionalHospitality')}</SelectItem>
+                          <SelectItem value="Property walkthrough service">{t('invoices.tipReasons.propertyWalkthrough')}</SelectItem>
+                          <SelectItem value="Guest amenities setup">{t('invoices.tipReasons.guestAmenities')}</SelectItem>
+                          <SelectItem value="Emergency response">{t('invoices.tipReasons.emergencyResponse')}</SelectItem>
+                          <SelectItem value="Above and beyond service">{t('invoices.tipReasons.aboveAndBeyond')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        placeholder={t('invoices.orTypeCustomReason')}
+                        value={tipReason}
+                        onChange={(e) => setTipReason(e.target.value)}
+                        className="mt-2 bg-white border-slate-300 hover:border-purple-400 transition-colors"
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label>{t('invoices.notesOptional')}</Label>
-                    <Input
-                      placeholder={t('invoices.additionalNotes')}
-                      value={tipNotes}
-                      onChange={(e) => setTipNotes(e.target.value)}
-                    />
-                  </div>
+                    {/* Notes */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-sm font-semibold">
+                        <StickyNote className="h-4 w-4 text-amber-600" />
+                        {t('invoices.notesOptional')}
+                      </Label>
+                      <Input
+                        placeholder={t('invoices.additionalNotes')}
+                        value={tipNotes}
+                        onChange={(e) => setTipNotes(e.target.value)}
+                        className="bg-white border-slate-300 hover:border-amber-400 transition-colors"
+                      />
+                    </div>
 
-                  <div className="space-y-2 flex items-end">
-                    <Button
-                      type="button"
-                      onClick={handleAddTip}
-                      disabled={!invoiceId || !tipRecipient || !tipAmount}
-                      className="w-full"
-                      title={!invoiceId ? 'Save invoice first to add tips' : ''}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {t('invoices.addTip')}
-                    </Button>
+                    {/* Add Button */}
+                    <div className="space-y-2 flex items-end">
+                      <Button
+                        type="button"
+                        onClick={handleAddTip}
+                        disabled={!invoiceId || !tipRecipient || !tipAmount}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md"
+                        title={!invoiceId ? 'Save invoice first to add tips' : ''}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        {t('invoices.addTip')}
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Existing Tips List */}
                 {existingTips && existingTips.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>{t('invoices.addedTips')}</Label>
-                    <div className="border rounded-md">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-purple-600" />
+                      <Label className="text-base font-semibold">{t('invoices.addedTips')}</Label>
+                    </div>
+                    <div className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm">
                       <Table>
                         <TableHeader>
-                          <TableRow>
-                            <TableHead>{t('invoices.staffMember')}</TableHead>
-                            <TableHead>{t('invoices.amount')}</TableHead>
-                            <TableHead>{t('invoices.reason')}</TableHead>
-                            <TableHead>Status</TableHead>
+                          <TableRow className="bg-gradient-to-r from-slate-50 to-blue-50 border-b-2 border-slate-200">
+                            <TableHead className="font-semibold">{t('invoices.staffMember')}</TableHead>
+                            <TableHead className="font-semibold">{t('invoices.amount')}</TableHead>
+                            <TableHead className="font-semibold">{t('invoices.reason')}</TableHead>
+                            <TableHead className="font-semibold">Status</TableHead>
                             <TableHead className="w-[50px]"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {existingTips.map((tip) => (
-                            <TableRow key={tip.tip_id}>
-                              <TableCell>
-                                {formatUserDisplay(tip.recipient)}
+                            <TableRow key={tip.tip_id} className="hover:bg-blue-50/50 transition-colors">
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  <User className="h-4 w-4 text-blue-600" />
+                                  {formatUserDisplay(tip.recipient)}
+                                </div>
                               </TableCell>
-                              <TableCell className="font-semibold">
-                                ${tip.tip_amount.toFixed(2)}
-                              </TableCell>
-                              <TableCell>{tip.tip_reason || '-'}</TableCell>
                               <TableCell>
-                                <span className="capitalize">{tip.status}</span>
+                                <div className="flex items-center gap-1 font-semibold text-green-700">
+                                  <DollarSign className="h-4 w-4" />
+                                  {tip.tip_amount.toFixed(2)}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {tip.tip_reason || '-'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={tip.status === 'paid' ? 'default' : 'secondary'}
+                                  className={
+                                    tip.status === 'paid'
+                                      ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                      : tip.status === 'pending'
+                                      ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                                      : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+                                  }
+                                >
+                                  {tip.status}
+                                </Badge>
                               </TableCell>
                               <TableCell>
                                 {tip.status === 'pending' && (
@@ -979,6 +1033,7 @@ export default function InvoiceForm() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => handleRemoveTip(tip.tip_id)}
+                                    className="hover:bg-red-100 hover:text-red-700"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -989,9 +1044,12 @@ export default function InvoiceForm() {
                         </TableBody>
                       </Table>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {t('invoices.tipsWillBeConvertedToCommissions')}
-                    </p>
+                    <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <Sparkles className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-blue-900">
+                        {t('invoices.tipsWillBeConvertedToCommissions')}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

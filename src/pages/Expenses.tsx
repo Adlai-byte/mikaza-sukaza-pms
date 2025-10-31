@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from '@/components/ui/page-header';
 import {
   Dialog,
   DialogContent,
@@ -209,22 +210,17 @@ export default function Expenses() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Receipt className="h-8 w-8" />
-            {t('expenses.title')}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {t('expenses.subtitle')}
-          </p>
-        </div>
-        <Button onClick={() => handleOpenDialog()} size="lg">
-          <Plus className="h-4 w-4 mr-2" />
-          {t('expenses.newExpense')}
-        </Button>
-      </div>
+      <PageHeader
+        title={t('expenses.title')}
+        subtitle={t('expenses.subtitle')}
+        icon={Receipt}
+        actions={
+          <Button onClick={() => handleOpenDialog()} size="lg">
+            <Plus className="h-4 w-4 mr-2" />
+            {t('expenses.newExpense')}
+          </Button>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -73,6 +73,7 @@ import { cn } from '@/lib/utils';
 import {
   Checkbox,
 } from '@/components/ui/checkbox';
+import { PageHeader } from '@/components/ui/page-header';
 
 type FilterOption = 'all' | 'global' | 'property';
 
@@ -403,21 +404,17 @@ export default function BillTemplates() {
   return (
     <div className="h-full flex flex-col p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <FileText className="h-8 w-8" />
-            Bill Templates
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Create and manage reusable invoice templates for faster billing
-          </p>
-        </div>
-        <Button onClick={handleCreateNew} size="lg">
-          <Plus className="h-4 w-4 mr-2" />
-          New Template
-        </Button>
-      </div>
+      <PageHeader
+        icon={FileText}
+        title="Bill Templates"
+        subtitle="Create and manage reusable invoice templates for faster billing"
+        action={
+          <Button onClick={handleCreateNew} size="lg">
+            <Plus className="h-4 w-4 mr-2" />
+            New Template
+          </Button>
+        }
+      />
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">

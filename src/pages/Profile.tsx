@@ -12,6 +12,7 @@ import { Camera, Lock, User, Mail, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProfileImage, updateProfileImageCache } from '@/hooks/useProfileImage';
 import { useQueryClient } from '@tanstack/react-query';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function Profile() {
   const { profile, updateProfile } = useAuth();
@@ -252,12 +253,11 @@ export default function Profile() {
 
   return (
     <div className="container max-w-4xl mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Profile Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your account settings and preferences.
-        </p>
-      </div>
+      <PageHeader
+        icon={User}
+        title="Profile Settings"
+        subtitle="Manage your account settings and preferences."
+      />
 
       <Tabs defaultValue="profile" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">

@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -48,6 +49,7 @@ import {
   Download,
   FolderTree,
   List,
+  Key,
 } from "lucide-react";
 import { AccessAuthorizationTreeView } from "@/components/access/AccessAuthorizationTreeView";
 import {
@@ -236,47 +238,43 @@ export default function AccessAuthorizations() {
     <TooltipProvider delayDuration={300}>
       <div className="space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
-              <KeyRound className="h-7 w-7 text-primary" />
-              {t('accessAuthorizations.title')}
-            </h1>
-            <p className="text-muted-foreground">
-              {t('accessAuthorizations.subtitle')}
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                  onClick={() => refetch()}
-                  disabled={isLoading}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />{t('accessAuthorizations.refresh')}</Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('accessAuthorizations.refreshTooltip')}</p>
-              </TooltipContent>
-            </Tooltip>
-            {canCreate && (
+        <PageHeader
+          icon={Key}
+          title={t('accessAuthorizations.title')}
+          subtitle={t('accessAuthorizations.subtitle')}
+          action={
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
-                    onClick={handleAddRequest}
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => refetch()}
+                    disabled={isLoading}
                   >
-                    <Plus className="h-4 w-4 mr-2" />{t('accessAuthorizations.requestAccess')}</Button>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />{t('accessAuthorizations.refresh')}</Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{t('accessAuthorizations.requestAccessTooltip')}</p>
+                  <p>{t('accessAuthorizations.refreshTooltip')}</p>
                 </TooltipContent>
               </Tooltip>
-            )}
-          </div>
-        </div>
+              {canCreate && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
+                      onClick={handleAddRequest}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />{t('accessAuthorizations.requestAccess')}</Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('accessAuthorizations.requestAccessTooltip')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          }
+        />
 
         {/* Today's Access Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

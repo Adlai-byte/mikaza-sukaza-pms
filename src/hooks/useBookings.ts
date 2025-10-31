@@ -330,6 +330,23 @@ export function useBookings() {
           // Special notification for confirmation
           if (variables.bookingData.booking_status === 'confirmed') {
             await notifyBookingConfirmed(data, property.property_name, currentUserId);
+
+            // Show special toast with invoice generation option if no invoice exists
+            if (!(data as any).invoice_id) {
+              toast({
+                title: "🎉 Booking Confirmed!",
+                description: "Would you like to generate an invoice for this booking?",
+                action: {
+                  label: "Generate Invoice",
+                  onClick: () => {
+                    // Navigate to invoice creation with booking context
+                    window.location.href = `/invoices/new/${data.booking_id}`;
+                  },
+                },
+                duration: 10000, // Show for 10 seconds
+              });
+              return; // Skip regular success toast
+            }
           } else {
             await notifyBookingStatusChanged(
               data,
@@ -364,8 +381,8 @@ export function useBookings() {
   const deleteBookingMutation = useMutation({
     mutationFn: async (bookingId: string) => {
       // Check permission
-      if (!hasPermission(PERMISSIONS.BOOKINGS_DELETE)) {
-        throw new Error("You don't have permission to delete bookings");
+      if (!hasPermission(PERMISSIONS.BOOKINGS_CANCEL)) {
+        throw new Error("You don't have permission to cancel bookings");
       }
 
       // Soft delete by setting status to cancelled

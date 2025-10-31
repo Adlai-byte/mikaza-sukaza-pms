@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus, Users, Shield, List, FolderTree } from "lucide-react";
+import { RefreshCw, Plus, Users, Shield, List, FolderTree, Briefcase } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { DocumentsTable } from "@/components/documents/DocumentsTable";
 import { DocumentUploadDialog } from "@/components/documents/DocumentUploadDialog";
 import { EmployeeDocumentTree } from "@/components/documents/EmployeeDocumentTree";
@@ -52,33 +53,29 @@ export default function EmployeeDocuments() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-7 w-7 text-primary" />
-            Employee Documents
-          </h1>
-          <p className="text-muted-foreground">
-            {t('employeeDocuments.subtitle')}
-          </p>
-        </div>
-        <div className="flex gap-2 self-start sm:self-auto">
-          <Button
-            onClick={() => refetch()}
-            variant="outline"
-            disabled={isFetching}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          {canManage && (
-            <Button onClick={() => setUploadDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Upload Document
+      <PageHeader
+        icon={Briefcase}
+        title="Employee Documents"
+        subtitle={t('employeeDocuments.subtitle')}
+        action={
+          <div className="flex gap-2 self-start sm:self-auto">
+            <Button
+              onClick={() => refetch()}
+              variant="outline"
+              disabled={isFetching}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
-          )}
-        </div>
-      </div>
+            {canManage && (
+              <Button onClick={() => setUploadDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Upload Document
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {/* Privacy Notice */}
       <Alert className="border-orange-200 bg-orange-50">

@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from '@/components/ui/page-header';
 import {
   useCommissions,
   useDeleteCommission,
@@ -240,22 +241,17 @@ export default function CommissionsAnalytics() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <BarChart3 className="h-8 w-8" />
-            Commission Analytics
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {t('commissionsAnalytics.subtitle')}
-          </p>
-        </div>
-        <Button size="lg" disabled>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Commission
-        </Button>
-      </div>
+      <PageHeader
+        title="Commission Analytics"
+        subtitle={t('commissionsAnalytics.subtitle')}
+        icon={BarChart3}
+        actions={
+          <Button size="lg" disabled>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Commission
+          </Button>
+        }
+      />
 
       {/* Performance Insight - Better Performance Message */}
       {analytics && analytics.topPerformers.length > 0 && (

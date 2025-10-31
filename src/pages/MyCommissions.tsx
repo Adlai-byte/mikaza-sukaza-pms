@@ -33,6 +33,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function MyCommissions() {
   const { t } = useTranslation();
@@ -120,15 +121,11 @@ export default function MyCommissions() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <DollarSign className="h-8 w-8" />
-          My Earnings
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          {t('myCommissions.subtitle')}
-        </p>
-      </div>
+      <PageHeader
+        icon={DollarSign}
+        title="My Earnings"
+        subtitle={t('myCommissions.subtitle')}
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

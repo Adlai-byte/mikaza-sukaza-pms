@@ -1,4 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,8 +18,15 @@ import {
   Filter,
   Download,
   BarChart3,
+  GitBranch,
 } from "lucide-react";
-import { useJobs, useJobStats, JobFilters, useUpdateJob } from "@/hooks/useJobs";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  useJobs,
+  useJobStats,
+  JobFilters,
+  useUpdateJob,
+} from "@/hooks/useJobs";
 import { format, parseISO } from "date-fns";
 import { useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,10 +63,10 @@ export default function ServicePipeline() {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   // Filter states
-  const [statusFilter, setStatusFilter] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('');
-  const [propertyFilter, setPropertyFilter] = useState('');
-  const [timeRange, setTimeRange] = useState('30'); // days
+  const [statusFilter, setStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [propertyFilter, setPropertyFilter] = useState("");
+  const [timeRange, setTimeRange] = useState("30"); // days
 
   // Build filters
   const filters: JobFilters = useMemo(() => {
@@ -64,7 +77,8 @@ export default function ServicePipeline() {
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
       property_id: propertyFilter || undefined,
-      due_date_from: timeRange !== 'all' ? dateLimit.toISOString().split('T')[0] : undefined,
+      due_date_from:
+        timeRange !== "all" ? dateLimit.toISOString().split("T")[0] : undefined,
     };
   }, [statusFilter, priorityFilter, propertyFilter, timeRange]);
 
@@ -78,20 +92,20 @@ export default function ServicePipeline() {
       // This would ideally come from a cost field in the database
       // For now, using a simplified estimation based on job type and priority
       const baseValues: Record<string, number> = {
-        'maintenance': 500,
-        'cleaning': 200,
-        'inspection': 150,
-        'repair': 800,
-        'emergency': 1200,
-        'installation': 1500,
-        'other': 300,
+        maintenance: 500,
+        cleaning: 200,
+        inspection: 150,
+        repair: 800,
+        emergency: 1200,
+        installation: 1500,
+        other: 300,
       };
 
       const priorityMultiplier: Record<string, number> = {
-        'urgent': 1.5,
-        'high': 1.3,
-        'medium': 1.0,
-        'low': 0.8,
+        urgent: 1.5,
+        high: 1.3,
+        medium: 1.0,
+        low: 0.8,
       };
 
       const base = baseValues[job.job_type?.toLowerCase()] || 300;
@@ -101,18 +115,32 @@ export default function ServicePipeline() {
     };
 
     const totalValue = jobs.reduce((sum, job) => sum + getJobValue(job), 0);
-    const pendingJobs = jobs.filter(j => j.status === 'pending');
-    const inProgressJobs = jobs.filter(j => j.status === 'in_progress');
-    const completedJobs = jobs.filter(j => j.status === 'completed');
+    const pendingJobs = jobs.filter((j) => j.status === "pending");
+    const inProgressJobs = jobs.filter((j) => j.status === "in_progress");
+    const completedJobs = jobs.filter((j) => j.status === "completed");
 
-    const pendingValue = pendingJobs.reduce((sum, job) => sum + getJobValue(job), 0);
-    const inProgressValue = inProgressJobs.reduce((sum, job) => sum + getJobValue(job), 0);
-    const completedValue = completedJobs.reduce((sum, job) => sum + getJobValue(job), 0);
+    const pendingValue = pendingJobs.reduce(
+      (sum, job) => sum + getJobValue(job),
+      0,
+    );
+    const inProgressValue = inProgressJobs.reduce(
+      (sum, job) => sum + getJobValue(job),
+      0,
+    );
+    const completedValue = completedJobs.reduce(
+      (sum, job) => sum + getJobValue(job),
+      0,
+    );
 
     const averageJobValue = jobs.length > 0 ? totalValue / jobs.length : 0;
-    const conversionRate = (pendingJobs.length + inProgressJobs.length) > 0
-      ? (completedJobs.length / (completedJobs.length + pendingJobs.length + inProgressJobs.length)) * 100
-      : 0;
+    const conversionRate =
+      pendingJobs.length + inProgressJobs.length > 0
+        ? (completedJobs.length /
+            (completedJobs.length +
+              pendingJobs.length +
+              inProgressJobs.length)) *
+          100
+        : 0;
 
     return {
       totalValue,
@@ -127,17 +155,17 @@ export default function ServicePipeline() {
   // Group jobs by status for pipeline view
   const jobsByStatus = useMemo(() => {
     return {
-      pending: jobs.filter(j => j.status === 'pending'),
-      in_progress: jobs.filter(j => j.status === 'in_progress'),
-      review: jobs.filter(j => j.status === 'review'),
-      completed: jobs.filter(j => j.status === 'completed'),
+      pending: jobs.filter((j) => j.status === "pending"),
+      in_progress: jobs.filter((j) => j.status === "in_progress"),
+      review: jobs.filter((j) => j.status === "review"),
+      completed: jobs.filter((j) => j.status === "completed"),
     };
   }, [jobs]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
@@ -145,12 +173,12 @@ export default function ServicePipeline() {
 
   const getPriorityColor = (priority: string) => {
     const colors: Record<string, string> = {
-      urgent: 'bg-red-100 text-red-800',
-      high: 'bg-orange-100 text-orange-800',
-      medium: 'bg-yellow-100 text-yellow-800',
-      low: 'bg-green-100 text-green-800',
+      urgent: "bg-red-100 text-red-800",
+      high: "bg-orange-100 text-orange-800",
+      medium: "bg-yellow-100 text-yellow-800",
+      low: "bg-green-100 text-green-800",
     };
-    return colors[priority?.toLowerCase()] || 'bg-gray-100 text-gray-800';
+    return colors[priority?.toLowerCase()] || "bg-gray-100 text-gray-800";
   };
 
   // Handlers
@@ -180,29 +208,40 @@ export default function ServicePipeline() {
 
   const handleExport = () => {
     // Create CSV content
-    const headers = ['Job ID', 'Title', 'Property', 'Status', 'Priority', 'Type', 'Due Date', 'Assigned To'];
-    const rows = jobs.map(job => [
+    const headers = [
+      "Job ID",
+      "Title",
+      "Property",
+      "Status",
+      "Priority",
+      "Type",
+      "Due Date",
+      "Assigned To",
+    ];
+    const rows = jobs.map((job) => [
       job.job_id,
       job.title,
-      job.property?.property_name || 'N/A',
+      job.property?.property_name || "N/A",
       job.status,
       job.priority,
       job.job_type,
-      job.due_date ? format(parseISO(job.due_date), 'yyyy-MM-dd') : 'N/A',
-      job.assigned_user ? `${job.assigned_user.first_name} ${job.assigned_user.last_name}` : 'Unassigned'
+      job.due_date ? format(parseISO(job.due_date), "yyyy-MM-dd") : "N/A",
+      job.assigned_user
+        ? `${job.assigned_user.first_name} ${job.assigned_user.last_name}`
+        : "Unassigned",
     ]);
 
     const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
 
     // Download
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `service-pipeline-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `service-pipeline-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
 
@@ -217,12 +256,16 @@ export default function ServicePipeline() {
       <div className="p-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold"><Skeleton className="h-9 w-64" /></h1>
-            <p className="text-muted-foreground mt-1"><Skeleton className="h-5 w-96" /></p>
+            <h1 className="text-3xl font-bold">
+              <Skeleton className="h-9 w-64" />
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              <Skeleton className="h-5 w-96" />
+            </p>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map(i => (
+          {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
               <CardContent className="pt-6">
                 <Skeleton className="h-20 w-full" />
@@ -239,7 +282,9 @@ export default function ServicePipeline() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Service Pipeline</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            Service Pipeline
+          </h1>
           <p className="text-muted-foreground">
             Track service jobs and revenue opportunities through delivery stages
           </p>
@@ -251,7 +296,9 @@ export default function ServicePipeline() {
             onClick={() => refetch()}
             disabled={isFetching}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button variant="outline" size="sm" onClick={handleExport}>
@@ -272,7 +319,9 @@ export default function ServicePipeline() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Time Range</label>
+              <label className="text-sm font-medium mb-2 block">
+                Time Range
+              </label>
               <Select value={timeRange} onValueChange={setTimeRange}>
                 <SelectTrigger>
                   <SelectValue />
@@ -288,7 +337,10 @@ export default function ServicePipeline() {
 
             <div>
               <label className="text-sm font-medium mb-2 block">Status</label>
-              <Select value={statusFilter || "all"} onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}>
+              <Select
+                value={statusFilter || "all"}
+                onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
@@ -304,7 +356,10 @@ export default function ServicePipeline() {
 
             <div>
               <label className="text-sm font-medium mb-2 block">Priority</label>
-              <Select value={priorityFilter || "all"} onValueChange={(v) => setPriorityFilter(v === "all" ? "" : v)}>
+              <Select
+                value={priorityFilter || "all"}
+                onValueChange={(v) => setPriorityFilter(v === "all" ? "" : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="All priorities" />
                 </SelectTrigger>
@@ -320,14 +375,20 @@ export default function ServicePipeline() {
 
             <div>
               <label className="text-sm font-medium mb-2 block">Property</label>
-              <Select value={propertyFilter || "all"} onValueChange={(v) => setPropertyFilter(v === "all" ? "" : v)}>
+              <Select
+                value={propertyFilter || "all"}
+                onValueChange={(v) => setPropertyFilter(v === "all" ? "" : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="All properties" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All properties</SelectItem>
                   {properties?.map((property) => (
-                    <SelectItem key={property.property_id} value={property.property_id}>
+                    <SelectItem
+                      key={property.property_id}
+                      value={property.property_id}
+                    >
                       {property.property_name}
                     </SelectItem>
                   ))}
@@ -344,7 +405,9 @@ export default function ServicePipeline() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Pipeline Value</p>
+                <p className="text-sm font-medium text-blue-700">
+                  Total Pipeline Value
+                </p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">
                   {formatCurrency(pipelineStats.totalValue)}
                 </h3>
@@ -361,11 +424,15 @@ export default function ServicePipeline() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-700">Pending Value</p>
+                <p className="text-sm font-medium text-orange-700">
+                  Pending Value
+                </p>
                 <h3 className="text-3xl font-bold text-orange-900 mt-1">
                   {formatCurrency(pipelineStats.pendingValue)}
                 </h3>
-                <p className="text-xs text-orange-600 mt-1">{jobsByStatus.pending.length} jobs</p>
+                <p className="text-xs text-orange-600 mt-1">
+                  {jobsByStatus.pending.length} jobs
+                </p>
               </div>
               <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
                 <Clock className="h-6 w-6 text-white" />
@@ -378,11 +445,15 @@ export default function ServicePipeline() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">In Progress</p>
+                <p className="text-sm font-medium text-purple-700">
+                  In Progress
+                </p>
                 <h3 className="text-3xl font-bold text-purple-900 mt-1">
                   {formatCurrency(pipelineStats.inProgressValue)}
                 </h3>
-                <p className="text-xs text-purple-600 mt-1">{jobsByStatus.in_progress.length} jobs</p>
+                <p className="text-xs text-purple-600 mt-1">
+                  {jobsByStatus.in_progress.length} jobs
+                </p>
               </div>
               <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                 <TrendingUp className="h-6 w-6 text-white" />
@@ -395,11 +466,15 @@ export default function ServicePipeline() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Completed Value</p>
+                <p className="text-sm font-medium text-green-700">
+                  Completed Value
+                </p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">
                   {formatCurrency(pipelineStats.completedValue)}
                 </h3>
-                <p className="text-xs text-green-600 mt-1">{jobsByStatus.completed.length} jobs</p>
+                <p className="text-xs text-green-600 mt-1">
+                  {jobsByStatus.completed.length} jobs
+                </p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
                 <CheckCircle className="h-6 w-6 text-white" />
@@ -413,20 +488,28 @@ export default function ServicePipeline() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Average Job Value</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Average Job Value
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(pipelineStats.averageJobValue)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(pipelineStats.averageJobValue)}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Per job</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Completion Rate
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pipelineStats.conversionRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">
+              {pipelineStats.conversionRate.toFixed(1)}%
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Jobs completed</p>
           </CardContent>
         </Card>
@@ -437,9 +520,13 @@ export default function ServicePipeline() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {jobsByStatus.pending.length + jobsByStatus.in_progress.length + jobsByStatus.review.length}
+              {jobsByStatus.pending.length +
+                jobsByStatus.in_progress.length +
+                jobsByStatus.review.length}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Pending + In Progress + Review</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Pending + In Progress + Review
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -448,7 +535,9 @@ export default function ServicePipeline() {
       <Card>
         <CardHeader>
           <CardTitle>Pipeline Stages</CardTitle>
-          <CardDescription>Jobs organized by status with revenue potential</CardDescription>
+          <CardDescription>
+            Jobs organized by status with revenue potential
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
@@ -459,7 +548,10 @@ export default function ServicePipeline() {
                   <Clock className="h-4 w-4 text-orange-700 mr-2" />
                   <span className="font-medium text-orange-900">Pending</span>
                 </div>
-                <Badge variant="secondary" className="bg-orange-200 text-orange-900">
+                <Badge
+                  variant="secondary"
+                  className="bg-orange-200 text-orange-900"
+                >
                   {jobsByStatus.pending.length}
                 </Badge>
               </div>
@@ -473,8 +565,15 @@ export default function ServicePipeline() {
                     >
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
-                          <h4 className="font-medium text-sm line-clamp-2">{job.title}</h4>
-                          <Badge className={getPriorityColor(job.priority || 'medium')} variant="secondary">
+                          <h4 className="font-medium text-sm line-clamp-2">
+                            {job.title}
+                          </h4>
+                          <Badge
+                            className={getPriorityColor(
+                              job.priority || "medium",
+                            )}
+                            variant="secondary"
+                          >
                             {job.priority}
                           </Badge>
                         </div>
@@ -483,7 +582,7 @@ export default function ServicePipeline() {
                         </p>
                         {job.due_date && (
                           <p className="text-xs text-muted-foreground">
-                            Due: {format(parseISO(job.due_date), 'MMM d')}
+                            Due: {format(parseISO(job.due_date), "MMM d")}
                           </p>
                         )}
                       </div>
@@ -498,9 +597,14 @@ export default function ServicePipeline() {
               <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
                 <div className="flex items-center">
                   <TrendingUp className="h-4 w-4 text-purple-700 mr-2" />
-                  <span className="font-medium text-purple-900">In Progress</span>
+                  <span className="font-medium text-purple-900">
+                    In Progress
+                  </span>
                 </div>
-                <Badge variant="secondary" className="bg-purple-200 text-purple-900">
+                <Badge
+                  variant="secondary"
+                  className="bg-purple-200 text-purple-900"
+                >
                   {jobsByStatus.in_progress.length}
                 </Badge>
               </div>
@@ -514,8 +618,15 @@ export default function ServicePipeline() {
                     >
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
-                          <h4 className="font-medium text-sm line-clamp-2">{job.title}</h4>
-                          <Badge className={getPriorityColor(job.priority || 'medium')} variant="secondary">
+                          <h4 className="font-medium text-sm line-clamp-2">
+                            {job.title}
+                          </h4>
+                          <Badge
+                            className={getPriorityColor(
+                              job.priority || "medium",
+                            )}
+                            variant="secondary"
+                          >
                             {job.priority}
                           </Badge>
                         </div>
@@ -524,7 +635,7 @@ export default function ServicePipeline() {
                         </p>
                         {job.due_date && (
                           <p className="text-xs text-muted-foreground">
-                            Due: {format(parseISO(job.due_date), 'MMM d')}
+                            Due: {format(parseISO(job.due_date), "MMM d")}
                           </p>
                         )}
                       </div>
@@ -541,7 +652,10 @@ export default function ServicePipeline() {
                   <AlertTriangle className="h-4 w-4 text-blue-700 mr-2" />
                   <span className="font-medium text-blue-900">Review</span>
                 </div>
-                <Badge variant="secondary" className="bg-blue-200 text-blue-900">
+                <Badge
+                  variant="secondary"
+                  className="bg-blue-200 text-blue-900"
+                >
                   {jobsByStatus.review.length}
                 </Badge>
               </div>
@@ -555,8 +669,15 @@ export default function ServicePipeline() {
                     >
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
-                          <h4 className="font-medium text-sm line-clamp-2">{job.title}</h4>
-                          <Badge className={getPriorityColor(job.priority || 'medium')} variant="secondary">
+                          <h4 className="font-medium text-sm line-clamp-2">
+                            {job.title}
+                          </h4>
+                          <Badge
+                            className={getPriorityColor(
+                              job.priority || "medium",
+                            )}
+                            variant="secondary"
+                          >
                             {job.priority}
                           </Badge>
                         </div>
@@ -565,7 +686,7 @@ export default function ServicePipeline() {
                         </p>
                         {job.due_date && (
                           <p className="text-xs text-muted-foreground">
-                            Due: {format(parseISO(job.due_date), 'MMM d')}
+                            Due: {format(parseISO(job.due_date), "MMM d")}
                           </p>
                         )}
                       </div>
@@ -582,7 +703,10 @@ export default function ServicePipeline() {
                   <CheckCircle className="h-4 w-4 text-green-700 mr-2" />
                   <span className="font-medium text-green-900">Completed</span>
                 </div>
-                <Badge variant="secondary" className="bg-green-200 text-green-900">
+                <Badge
+                  variant="secondary"
+                  className="bg-green-200 text-green-900"
+                >
                   {jobsByStatus.completed.length}
                 </Badge>
               </div>
@@ -596,8 +720,15 @@ export default function ServicePipeline() {
                     >
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
-                          <h4 className="font-medium text-sm line-clamp-2">{job.title}</h4>
-                          <Badge className={getPriorityColor(job.priority || 'medium')} variant="secondary">
+                          <h4 className="font-medium text-sm line-clamp-2">
+                            {job.title}
+                          </h4>
+                          <Badge
+                            className={getPriorityColor(
+                              job.priority || "medium",
+                            )}
+                            variant="secondary"
+                          >
                             {job.priority}
                           </Badge>
                         </div>
@@ -606,7 +737,7 @@ export default function ServicePipeline() {
                         </p>
                         {job.due_date && (
                           <p className="text-xs text-muted-foreground">
-                            Completed: {format(parseISO(job.due_date), 'MMM d')}
+                            Completed: {format(parseISO(job.due_date), "MMM d")}
                           </p>
                         )}
                       </div>

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Plus, FileText, Download, Trash2, Eye, Filter, FolderTree, List } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { DocumentsTable } from "@/components/documents/DocumentsTable";
 import { DocumentUploadDialog } from "@/components/documents/DocumentUploadDialog";
 import { DocumentTreeView, type TreeFolder } from "@/components/documents/DocumentTreeView";
@@ -93,33 +94,29 @@ export default function Contracts() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <FileText className="h-7 w-7 text-primary" />
-            {t('contracts.title')}
-          </h1>
-          <p className="text-muted-foreground">
-            {t('contracts.subtitle')}
-          </p>
-        </div>
-        <div className="flex gap-2 self-start sm:self-auto">
-          <Button
-            onClick={() => refetch()}
-            variant="outline"
-            disabled={isFetching}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            {t('contracts.refresh')}
-          </Button>
-          {canManage && (
-            <Button onClick={() => setUploadDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('contracts.uploadContract')}
+      <PageHeader
+        icon={FileText}
+        title={t('contracts.title')}
+        subtitle={t('contracts.subtitle')}
+        action={
+          <div className="flex gap-2 self-start sm:self-auto">
+            <Button
+              onClick={() => refetch()}
+              variant="outline"
+              disabled={isFetching}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('contracts.refresh')}
             </Button>
-          )}
-        </div>
-      </div>
+            {canManage && (
+              <Button onClick={() => setUploadDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('contracts.uploadContract')}
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {/* Filter Bar */}
       <Card className="border-0 shadow-sm">

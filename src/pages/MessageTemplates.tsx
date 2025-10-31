@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Plus, MessageSquare, Mail, Copy } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { DocumentsTable } from "@/components/documents/DocumentsTable";
 import { DocumentUploadDialog } from "@/components/documents/DocumentUploadDialog";
 import { useDocuments } from "@/hooks/useDocuments";
@@ -31,33 +32,29 @@ export default function MessageTemplates() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <MessageSquare className="h-7 w-7 text-primary" />
-            {t('messageTemplates.title')}
-          </h1>
-          <p className="text-muted-foreground">
-            {t('messageTemplates.subtitle')}
-          </p>
-        </div>
-        <div className="flex gap-2 self-start sm:self-auto">
-          <Button
-            onClick={() => refetch()}
-            variant="outline"
-            disabled={isFetching}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            {t('common.refresh')}
-          </Button>
-          {canManage && (
-            <Button onClick={() => setUploadDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('messageTemplates.uploadTemplate')}
+      <PageHeader
+        icon={Mail}
+        title={t('messageTemplates.title')}
+        subtitle={t('messageTemplates.subtitle')}
+        action={
+          <div className="flex gap-2 self-start sm:self-auto">
+            <Button
+              onClick={() => refetch()}
+              variant="outline"
+              disabled={isFetching}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
             </Button>
-          )}
-        </div>
-      </div>
+            {canManage && (
+              <Button onClick={() => setUploadDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('messageTemplates.uploadTemplate')}
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {/* Info Alert */}
       <Alert className="border-blue-200 bg-blue-50">

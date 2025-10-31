@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -34,6 +35,7 @@ import {
   LogIn,
   LogOut,
   ClipboardList,
+  ListChecks,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -137,21 +139,20 @@ export default function ChecklistTemplates() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t('checklistTemplates.title')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('checklistTemplates.subtitle')}
-          </p>
-        </div>
-        <Button
-          onClick={handleCreate}
-          className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {t('checklistTemplates.newTemplate')}
-        </Button>
-      </div>
+      <PageHeader
+        icon={ListChecks}
+        title={t('checklistTemplates.title')}
+        subtitle={t('checklistTemplates.subtitle')}
+        action={
+          <Button
+            onClick={handleCreate}
+            className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t('checklistTemplates.newTemplate')}
+          </Button>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

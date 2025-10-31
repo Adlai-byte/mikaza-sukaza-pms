@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { UserPlus, Users, Building2, CreditCard, RefreshCw } from "lucide-react";
 import { useUsersOptimized } from "@/hooks/useUsersOptimized";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
@@ -169,24 +170,23 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground">
-            Manage users, roles, and permissions
-          </p>
-        </div>
-        <div className="flex gap-2 self-start sm:self-auto">
-          <Button onClick={() => refetch()} variant="outline" disabled={isFetching}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button onClick={() => setIsFormOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add User
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="User Management"
+        subtitle="Manage users, roles, and permissions"
+        icon={Users}
+        actions={
+          <>
+            <Button onClick={() => refetch()} variant="outline" disabled={isFetching}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button onClick={() => setIsFormOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add User
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats Cards - Matching Dashboard Design */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

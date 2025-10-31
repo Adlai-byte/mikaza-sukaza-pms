@@ -1,7 +1,9 @@
+// Jobs Management Module - Property work orders and maintenance tracking
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Plus,
   Clock,
@@ -267,31 +269,30 @@ export default function Jobs() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">{t('jobs.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('jobs.subtitle')}
-          </p>
-        </div>
-        <div className="flex space-x-3">
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={isLoading || isFetching}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-            {t('common.refresh')}
-          </Button>
-          <Button
-            className="bg-gradient-primary hover:bg-gradient-secondary"
-            onClick={handleCreateJob}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {t('jobs.newJob')}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={t('jobs.title')}
+        subtitle={t('jobs.subtitle')}
+        icon={BriefcaseIcon}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isLoading || isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
+            <Button
+              className="bg-gradient-primary hover:bg-gradient-secondary"
+              onClick={handleCreateJob}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('jobs.newJob')}
+            </Button>
+          </>
+        }
+      />
 
       {/* Jobs Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

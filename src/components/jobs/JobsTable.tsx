@@ -1,3 +1,4 @@
+// Jobs Table Component - Display jobs in tabular format with pagination
 import React, { useState } from 'react';
 import {
   Table,

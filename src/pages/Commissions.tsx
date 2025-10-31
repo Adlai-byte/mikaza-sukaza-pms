@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from '@/components/ui/page-header';
 import {
   useCommissions,
   useDeleteCommission,
@@ -199,22 +200,17 @@ export default function Commissions() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <DollarSign className="h-8 w-8" />
-            {t('commissions.title')}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {t('commissions.subtitle')}
-          </p>
-        </div>
-        <Button size="lg" disabled>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('commissions.addCommission')}
-        </Button>
-      </div>
+      <PageHeader
+        title={t('commissions.title')}
+        subtitle={t('commissions.subtitle')}
+        icon={DollarSign}
+        actions={
+          <Button size="lg" disabled>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('commissions.addCommission')}
+          </Button>
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

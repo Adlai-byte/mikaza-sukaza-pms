@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Search, Download, Filter, Calendar, User, Activity } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { format } from "date-fns";
 import { ActivityLog } from "@/lib/schemas";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -240,15 +241,11 @@ export default function ActivityLogs() {
   return (
     <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Activity className="h-8 w-8" />
-            Activity Logs
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            System-wide activity tracking and audit trail
-          </p>
-        </div>
+        <PageHeader
+          icon={Activity}
+          title="Activity Logs"
+          subtitle="System-wide activity tracking and audit trail"
+        />
 
         {/* Filters Card */}
         <Card>

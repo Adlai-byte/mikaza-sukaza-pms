@@ -19,6 +19,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -141,31 +142,27 @@ export default function Invoices() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <FileText className="h-8 w-8" />
-            {t('invoices.title')}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {t('invoices.subtitle')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => navigate('/bill-templates')}
-            size="lg"
-            variant="outline"
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            {t('invoices.manageTemplates')}
-          </Button>
-          <Button onClick={() => navigate('/invoices/new')} size="lg">
-            <Plus className="h-4 w-4 mr-2" />
-            {t('invoices.newInvoice')}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={t('invoices.title')}
+        subtitle={t('invoices.subtitle')}
+        icon={FileText}
+        actions={
+          <>
+            <Button
+              onClick={() => navigate('/bill-templates')}
+              size="lg"
+              variant="outline"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              {t('invoices.manageTemplates')}
+            </Button>
+            <Button onClick={() => navigate('/invoices/new')} size="lg">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('invoices.newInvoice')}
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

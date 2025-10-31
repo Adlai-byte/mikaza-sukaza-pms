@@ -61,6 +61,7 @@ import { format, differenceInDays, parseISO } from 'date-fns';
 import { useBookings } from '@/hooks/useBookings';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { InvoiceGenerationDialog } from '@/components/InvoiceGenerationDialog';
+import { BookingPaymentSummary } from '@/components/BookingPaymentSummary';
 
 interface BookingsTableProps {
   bookings: Booking[];
@@ -463,7 +464,33 @@ export function BookingsTable({
                         </div>
                       </TableCell>
                       <TableCell>
-                        {getInvoiceStatusBadge(booking)}
+                        <div className="flex flex-col gap-2">
+                          {getInvoiceStatusBadge(booking)}
+                          {/* Show prominent "Generate Invoice" button if booking is confirmed and no invoice exists */}
+                          {booking.booking_status === 'confirmed' && !(booking as any).invoice_id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs border-green-200 bg-green-50 hover:bg-green-100 text-green-700"
+                              onClick={() => setInvoiceDialogBooking(booking)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Generate Invoice
+                            </Button>
+                          )}
+                          {/* Show "View Invoice" button if invoice exists */}
+                          {(booking as any).invoice_id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700"
+                              onClick={() => navigate(`/invoices/${(booking as any).invoice_id}`)}
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              View Invoice
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -655,9 +682,41 @@ export function BookingsTable({
                     </div>
 
                     {/* Invoice Status */}
-                    <div className="flex items-center gap-2 py-2 border-t">
-                      <span className="text-sm text-muted-foreground">Invoice:</span>
-                      {getInvoiceStatusBadge(booking)}
+                    <div className="flex flex-col gap-2 py-2 border-t">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Invoice:</span>
+                        {getInvoiceStatusBadge(booking)}
+                      </div>
+
+                      {/* Payment Summary - Show if invoice exists */}
+                      {(booking as any).invoice_id && (
+                        <BookingPaymentSummary booking={booking} />
+                      )}
+
+                      {/* Show prominent "Generate Invoice" button if booking is confirmed and no invoice exists */}
+                      {booking.booking_status === 'confirmed' && !(booking as any).invoice_id && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full border-green-200 bg-green-50 hover:bg-green-100 text-green-700"
+                          onClick={() => setInvoiceDialogBooking(booking)}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Generate Invoice
+                        </Button>
+                      )}
+                      {/* Show "View Invoice" button if invoice exists */}
+                      {(booking as any).invoice_id && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700"
+                          onClick={() => navigate(`/invoices/${(booking as any).invoice_id}`)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Invoice
+                        </Button>
+                      )}
                     </div>
 
                     {/* Quick Actions */}
@@ -770,28 +829,95 @@ export function BookingsTable({
         booking={invoiceDialogBooking}
       />
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog - Enhanced */}
       <AlertDialog open={!!bookingToDelete} onOpenChange={() => setBookingToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-destructive" />
-              Cancel Booking?
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <div className="text-lg">Cancel Booking?</div>
+                <div className="text-sm font-normal text-muted-foreground">This action cannot be undone</div>
+              </div>
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to cancel the booking for{' '}
-              <strong>{bookingToDelete?.guest_name}</strong>? This action will mark the booking as
-              cancelled and free up the dates.
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-4">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <User className="h-4 w-4 text-red-700 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-red-900">Guest</div>
+                      <div className="text-sm text-red-700">{bookingToDelete?.guest_name}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <CalendarDays className="h-4 w-4 text-red-700 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-red-900">Dates</div>
+                      <div className="text-sm text-red-700">
+                        {bookingToDelete && formatDate(bookingToDelete.check_in_date)} → {bookingToDelete && formatDate(bookingToDelete.check_out_date)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {bookingToDelete?.total_amount && (
+                    <div className="flex items-start gap-2">
+                      <DollarSign className="h-4 w-4 text-red-700 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <div className="text-sm font-medium text-red-900">Amount</div>
+                        <div className="text-sm text-red-700">{formatCurrency(bookingToDelete.total_amount)}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {(bookingToDelete as any)?.invoice_id && (
+                    <div className="flex items-start gap-2">
+                      <FileText className="h-4 w-4 text-red-700 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <div className="text-sm font-medium text-red-900">Linked Invoice</div>
+                        <div className="text-sm text-red-700">Invoice exists and will remain (handle separately)</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-sm text-foreground">
+                  <strong>What will happen:</strong>
+                  <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
+                    <li>Booking status will be set to "cancelled"</li>
+                    <li>Dates will be freed up for new bookings</li>
+                    {(bookingToDelete as any)?.invoice_id && (
+                      <li>Linked invoice will NOT be deleted</li>
+                    )}
+                    <li>Guest will need to be notified manually</li>
+                  </ul>
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel disabled={isDeleting} className="flex-1">
+              Keep Booking
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 flex-1"
             >
-              {isDeleting ? 'Cancelling...' : 'Yes, Cancel Booking'}
+              {isDeleting ? (
+                <>
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Cancelling...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Cancel Booking
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
