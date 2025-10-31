@@ -272,13 +272,7 @@ export function useUsersOptimized() {
         throw new Error("You don't have permission to delete users");
       }
 
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('user_id', userId);
-
-      if (error) throw error;
-
+      // Log activity BEFORE deletion (so the user still exists for the foreign key reference)
       await logActivity(
         'USER_DELETED',
         {
@@ -288,6 +282,14 @@ export function useUsersOptimized() {
         },
         userId
       );
+
+      // Now delete the user
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) throw error;
 
       return userId;
     },
@@ -358,10 +360,10 @@ export function useUsersOptimized() {
     users,
     loading,
     isFetching,
-    createUser: createUserMutation.mutate,
+    createUser: createUserMutation.mutateAsync,
     updateUser: (userId: string, userData: Partial<UserInsert>) =>
-      updateUserMutation.mutate({ userId, userData }),
-    deleteUser: deleteUserMutation.mutate,
+      updateUserMutation.mutateAsync({ userId, userData }),
+    deleteUser: deleteUserMutation.mutateAsync,
     refetch,
     useUserBankAccounts,
     useUserCreditCards,
