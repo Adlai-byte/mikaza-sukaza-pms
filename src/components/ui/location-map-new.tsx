@@ -6,14 +6,19 @@ import { Loader2, MapPin } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix Leaflet's default icon path issues with proper configuration
+// Fix Leaflet's default icon path issues - use CDN for reliability
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 
-// Create a custom icon with explicit paths
+// Use unpkg CDN for Leaflet marker icons (more reliable than local files)
+const iconUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png';
+const iconRetinaUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png';
+const shadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
+
+// Create a custom icon with CDN paths
 const customIcon = new L.Icon({
-  iconUrl: '/marker-icon.png',
-  iconRetinaUrl: '/marker-icon-2x.png',
-  shadowUrl: '/marker-shadow.png',
+  iconUrl,
+  iconRetinaUrl,
+  shadowUrl,
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -22,9 +27,9 @@ const customIcon = new L.Icon({
 
 // Also set as default
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: '/marker-icon-2x.png',
-  iconUrl: '/marker-icon.png',
-  shadowUrl: '/marker-shadow.png',
+  iconRetinaUrl,
+  iconUrl,
+  shadowUrl,
 });
 
 interface LocationData {
