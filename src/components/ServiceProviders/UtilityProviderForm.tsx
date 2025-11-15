@@ -28,8 +28,9 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Loader2 } from "lucide-react";
+import { Loader2, MapPin } from "lucide-react";
 import { useState, useEffect } from "react";
+import { LocationMap } from "@/components/ui/location-map-new";
 
 interface UtilityProviderFormProps {
   open: boolean;
@@ -39,9 +40,9 @@ interface UtilityProviderFormProps {
 }
 
 const UTILITY_TYPES = [
-  "Electric", "Internet", "Gas", "Water", "Cable", "Trash",
-  "Sewer", "Phone", "Security", "HOA", "Other"
-];
+  "Electric", "Internet", "Gas", "Water", "Cable",
+  "Security", "Parking", "Maintenance", "Management", "Other"
+] as const;
 
 export function UtilityProviderForm({
   open,
@@ -50,10 +51,11 @@ export function UtilityProviderForm({
   onSubmit
 }: UtilityProviderFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<ProviderInsert>({
-    resolver: zodResolver(providerSchema),
+    resolver: zodResolver(providerSchema.omit({ provider_id: true, created_at: true, updated_at: true, rating: true, total_reviews: true })),
     defaultValues: {
       provider_name: "",
       category: "utility" as const,
@@ -67,15 +69,10 @@ export function UtilityProviderForm({
       service_area: [],
       is_active: true,
       notes: "",
-      contact_person: "",
-      phone_secondary: "",
       address_street: "",
       address_city: "",
       address_state: "",
       address_zip: "",
-      license_number: "",
-      insurance_expiry: "",
-      is_preferred: false,
     },
   });
 
@@ -95,15 +92,10 @@ export function UtilityProviderForm({
         service_area: provider?.service_area || [],
         is_active: provider?.is_active ?? true,
         notes: provider?.notes || "",
-        contact_person: provider?.contact_person || "",
-        phone_secondary: provider?.phone_secondary || "",
         address_street: provider?.address_street || "",
         address_city: provider?.address_city || "",
         address_state: provider?.address_state || "",
         address_zip: provider?.address_zip || "",
-        license_number: provider?.license_number || "",
-        insurance_expiry: provider?.insurance_expiry || "",
-        is_preferred: provider?.is_preferred ?? false,
       };
 
       form.reset(formData);
@@ -129,6 +121,20 @@ export function UtilityProviderForm({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleLocationSelect = (
+    lat: number,
+    lng: number,
+    address?: string,
+    city?: string,
+    state?: string,
+    postal_code?: string
+  ) => {
+    if (address) form.setValue("address_street", address);
+    if (city) form.setValue("address_city", city);
+    if (state) form.setValue("address_state", state);
+    if (postal_code) form.setValue("address_zip", postal_code);
   };
 
   return (
@@ -287,9 +293,21 @@ export function UtilityProviderForm({
               </div>
             </div>
 
-            {/* Address (Optional for utilities) */}
+            {/* Office Address (Optional) */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Address (Optional)</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Office Address (Optional)</h3>
+                <Button
+                  type="button"
+                  onClick={() => setIsMapOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-300 hover:from-purple-100 hover:to-purple-200 text-purple-700 hover:text-purple-800"
+                >
+                  <MapPin className="mr-2 h-4 w-4" />
+                  Select on Map
+                </Button>
+              </div>
 
               <FormField
                 control={form.control}
@@ -413,6 +431,14 @@ export function UtilityProviderForm({
           </form>
         </Form>
       </DialogContent>
+
+      {/* Location Map Dialog */}
+      <LocationMap
+        isOpen={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        onLocationSelect={handleLocationSelect}
+        initialAddress={form.getValues("address_street")}
+      />
     </Dialog>
   );
 }

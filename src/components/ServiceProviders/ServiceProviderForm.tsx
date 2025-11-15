@@ -28,8 +28,9 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Loader2 } from "lucide-react";
+import { Loader2, MapPin } from "lucide-react";
 import { useState, useEffect } from "react";
+import { LocationMap } from "@/components/ui/location-map-new";
 
 interface ServiceProviderFormProps {
   open: boolean;
@@ -51,6 +52,7 @@ export function ServiceProviderForm({
   onSubmit
 }: ServiceProviderFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<ProviderInsert>({
@@ -130,6 +132,20 @@ export function ServiceProviderForm({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleLocationSelect = (
+    lat: number,
+    lng: number,
+    address?: string,
+    city?: string,
+    state?: string,
+    postal_code?: string
+  ) => {
+    if (address) form.setValue("address_street", address);
+    if (city) form.setValue("address_city", city);
+    if (state) form.setValue("address_state", state);
+    if (postal_code) form.setValue("address_zip", postal_code);
   };
 
   return (
@@ -266,7 +282,19 @@ export function ServiceProviderForm({
 
             {/* Address */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Address</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Address</h3>
+                <Button
+                  type="button"
+                  onClick={() => setIsMapOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-300 hover:from-purple-100 hover:to-purple-200 text-purple-700 hover:text-purple-800"
+                >
+                  <MapPin className="mr-2 h-4 w-4" />
+                  Select on Map
+                </Button>
+              </div>
 
               <FormField
                 control={form.control}
@@ -481,6 +509,14 @@ export function ServiceProviderForm({
           </form>
         </Form>
       </DialogContent>
+
+      {/* Location Map Dialog */}
+      <LocationMap
+        isOpen={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        onLocationSelect={handleLocationSelect}
+        initialAddress={form.getValues("address_street")}
+      />
     </Dialog>
   );
 }

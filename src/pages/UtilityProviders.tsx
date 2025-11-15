@@ -9,6 +9,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { UtilityProvider, UtilityProviderInsert } from "@/lib/schemas";
 import { CasaSpinner } from "@/components/ui/casa-loader";
+import { UtilityProviderForm } from "@/components/ServiceProviders/UtilityProviderForm";
+import { UtilityProviderTable } from "@/components/ServiceProviders/UtilityProviderTable";
 
 export default function UtilityProviders() {
   const { providers, loading, isFetching, createProvider, updateProvider, deleteProvider, refetch } = useUtilityProviders();
@@ -194,15 +196,24 @@ export default function UtilityProviders() {
           <CardTitle>Utility Providers</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* TODO: Create UtilityProviderTable component */}
-          <div className="text-center py-8 text-muted-foreground">
-            Utility Provider Table component will be created next
-          </div>
+          <UtilityProviderTable
+            providers={providers}
+            onEditProvider={canEdit ? handleEditProvider : undefined}
+            onDeleteProvider={canDelete ? handleDeleteProvider : undefined}
+            onViewDetails={handleViewDetails}
+            isLoading={loading}
+            isFetching={isFetching}
+          />
         </CardContent>
       </Card>
 
       {/* Provider Form Modal */}
-      {/* TODO: Create UtilityProviderForm component */}
+      <UtilityProviderForm
+        open={isFormOpen}
+        onOpenChange={handleFormClose}
+        provider={editingProvider}
+        onSubmit={editingProvider ? handleUpdateProvider : handleCreateProvider}
+      />
 
       {/* Provider Details Dialog */}
       {/* TODO: Create UtilityProviderDetailsDialog component */}

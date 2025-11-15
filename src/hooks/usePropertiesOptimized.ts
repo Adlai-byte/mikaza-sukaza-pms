@@ -799,10 +799,10 @@ export function usePropertiesOptimized() {
     error: propertiesError,
     amenities,
     rules,
-    createProperty: createPropertyMutation.mutate,
+    createProperty: createPropertyMutation.mutateAsync,
     updateProperty: (propertyId: string, propertyData: any) =>
-      updatePropertyMutation.mutate({ propertyId, propertyData }),
-    deleteProperty: deletePropertyMutation.mutate,
+      updatePropertyMutation.mutateAsync({ propertyId, propertyData }),
+    deleteProperty: deletePropertyMutation.mutateAsync,
     refetch,
     // Mutation states for UI feedback
     isCreating: createPropertyMutation.isPending,

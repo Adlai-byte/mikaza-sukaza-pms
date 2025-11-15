@@ -408,7 +408,7 @@ export default function BillTemplates() {
         icon={FileText}
         title="Bill Templates"
         subtitle="Create and manage reusable invoice templates for faster billing"
-        action={
+        actions={
           <Button onClick={handleCreateNew} size="lg">
             <Plus className="h-4 w-4 mr-2" />
             New Template
