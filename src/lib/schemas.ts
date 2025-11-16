@@ -1912,3 +1912,24 @@ export type VehicleFilters = {
   search?: string;
 };
 
+// Vehicle Document Schema
+export const vehicleDocumentSchema = z.object({
+  vehicle_id: z.string().uuid(),
+  document_type: z.enum(['registration', 'insurance', 'inspection', 'other']),
+  document_name: z.string().min(1, "Document name is required"),
+  document_url: z.string().url("Must be a valid URL"),
+  file_size: z.number().optional(),
+  mime_type: z.string().optional(),
+  expiry_date: z.string().optional(), // Format: YYYY-MM-DD
+  notes: z.string().optional(),
+});
+
+export type VehicleDocumentInsert = z.infer<typeof vehicleDocumentSchema>;
+
+export type VehicleDocument = VehicleDocumentInsert & {
+  document_id: string;
+  uploaded_by?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+

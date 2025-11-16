@@ -55,6 +55,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ListTabSkeleton, TabLoadingSpinner } from './PropertyEditSkeleton';
 import { VehiclePhotoGallery } from './VehiclePhotoGallery';
+import { VehicleDocumentManager } from './VehicleDocumentManager';
 
 interface Vehicle {
   vehicle_id: string;
@@ -673,6 +674,17 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
                     />
                   </div>
                 </div>
+
+                {/* Documents Section - Only show for editing existing vehicles */}
+                {editingVehicle && (
+                  <div className="space-y-3 border-t pt-4">
+                    <Label className="text-base font-semibold flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Vehicle Documents
+                    </Label>
+                    <VehicleDocumentManager vehicleId={editingVehicle.vehicle_id} />
+                  </div>
+                )}
               </div>
 
               <DialogFooter>
@@ -957,6 +969,15 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
                     <p className="text-sm whitespace-pre-wrap">{viewingVehicle.insurance_info}</p>
                   </div>
                 )}
+              </div>
+
+              {/* Documents Section */}
+              <div className="space-y-3 border-t pt-4">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Vehicle Documents
+                </h3>
+                <VehicleDocumentManager vehicleId={viewingVehicle.vehicle_id} readOnly />
               </div>
             </div>
 
