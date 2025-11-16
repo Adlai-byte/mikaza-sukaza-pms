@@ -62,40 +62,50 @@ export function PropertyImageDialog({ open, onOpenChange, property }: PropertyIm
       let uploadedCount = 0;
 
       for (const file of fileArray) {
-        const reader = new FileReader();
+        // Step 1: Upload to Supabase Storage
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${property.property_id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-        await new Promise((resolve, reject) => {
-          reader.onloadend = async () => {
-            try {
-              const result = reader.result as string;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('property-images')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-              const { error } = await supabase
-                .from('property_images')
-                .insert([{
-                  property_id: property.property_id,
-                  image_url: result,
-                  image_title: file.name,
-                  is_primary: images.length === 0 && uploadedCount === 0
-                }]);
+        if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          throw uploadError;
+        }
 
-              if (error) throw error;
+        // Step 2: Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('property-images')
+          .getPublicUrl(fileName);
 
-              await logActivity(
-                'PROPERTY_IMAGE_ADDED',
-                { propertyId: property.property_id, imageTitle: file.name },
-                undefined,
-                'Admin'
-              );
+        // Step 3: Save URL to database
+        const { error: dbError } = await supabase
+          .from('property_images')
+          .insert([{
+            property_id: property.property_id,
+            image_url: publicUrl,
+            image_title: file.name,
+            is_primary: images.length === 0 && uploadedCount === 0
+          }]);
 
-              uploadedCount++;
-              resolve(true);
-            } catch (error) {
-              reject(error);
-            }
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+        if (dbError) {
+          console.error('Database insert error:', dbError);
+          throw dbError;
+        }
+
+        await logActivity(
+          'PROPERTY_IMAGE_ADDED',
+          { propertyId: property.property_id, imageTitle: file.name },
+          undefined,
+          'Admin'
+        );
+
+        uploadedCount++;
       }
 
       toast({

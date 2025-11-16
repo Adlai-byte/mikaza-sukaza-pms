@@ -19,9 +19,9 @@ export const propertyKeys = {
   rules: () => ['rules'],
 } as const;
 
-// Fetch properties for LIST VIEW - lightweight query with only essential data
+// Fetch properties for LIST VIEW - optimized query (includes primary image only)
 const fetchPropertiesList = async (): Promise<Property[]> => {
-  console.log('🔍 Fetching properties list (optimized query)...');
+  console.log('🔍 Fetching properties list...');
   const { data, error } = await supabase
     .from('properties')
     .select(`
@@ -45,6 +45,12 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
       location:property_location(
         city,
         address
+      ),
+      images:property_images!property_images_property_id_fkey(
+        image_id,
+        image_url,
+        image_title,
+        is_primary
       )
     `)
     .order('created_at', { ascending: false });

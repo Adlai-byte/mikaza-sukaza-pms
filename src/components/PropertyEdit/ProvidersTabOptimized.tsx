@@ -143,7 +143,9 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
   const [showUtilityAssignDialog, setShowUtilityAssignDialog] = useState(false);
   const [showUtilityEditDialog, setShowUtilityEditDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showServiceEditDialog, setShowServiceEditDialog] = useState(false);
   const [editingUtilityAssignment, setEditingUtilityAssignment] = useState<any | null>(null);
+  const [editingServiceAssignment, setEditingServiceAssignment] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [serviceSearchQuery, setServiceSearchQuery] = useState('');
 
@@ -254,6 +256,28 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
       observations: assignment.observations || '',
     });
     setShowUtilityEditDialog(true);
+  };
+
+  const handleEditServiceAssignment = (assignment: any) => {
+    setEditingServiceAssignment(assignment);
+    setAssignmentNotes(assignment.assignment_notes || '');
+    setIsPreferredForProperty(assignment.is_preferred_for_property || false);
+    setShowServiceEditDialog(true);
+  };
+
+  const handleUpdateServiceAssignment = () => {
+    if (!editingServiceAssignment) return;
+
+    updateAssignment({
+      assignmentId: editingServiceAssignment.id,
+      isPreferredForProperty: isPreferredForProperty,
+      assignmentNotes: assignmentNotes,
+    });
+
+    setShowServiceEditDialog(false);
+    setEditingServiceAssignment(null);
+    setAssignmentNotes('');
+    setIsPreferredForProperty(false);
   };
 
   const getProviderIcon = (type: string) => {
@@ -692,6 +716,54 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
             </Dialog>
           </div>
 
+          {/* Edit Service Assignment Dialog */}
+          <Dialog open={showServiceEditDialog} onOpenChange={setShowServiceEditDialog}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Edit Service Assignment</DialogTitle>
+                <DialogDescription>
+                  Update assignment details for {editingServiceAssignment?.provider?.provider_name}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4 py-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-preferred"
+                    checked={isPreferredForProperty}
+                    onCheckedChange={(checked) => setIsPreferredForProperty(checked as boolean)}
+                  />
+                  <Label htmlFor="edit-preferred" className="cursor-pointer">
+                    Mark as preferred for this property
+                  </Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Notes</Label>
+                  <Textarea
+                    value={assignmentNotes}
+                    onChange={(e) => setAssignmentNotes(e.target.value)}
+                    placeholder="Add notes about this assignment..."
+                    rows={4}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowServiceEditDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateServiceAssignment}>
+                  Update Assignment
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {assignedProviders.length === 0 ? (
             <div className="text-center py-12 border rounded-lg">
               <Wrench className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -785,30 +857,39 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm" disabled={isUnassigning}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Unassign Contractor</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Remove {assignment.provider.provider_name} from this property?
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => unassignProvider(assignment.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Unassign
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <div className="flex items-center space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditServiceAssignment(assignment)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" disabled={isUnassigning}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Unassign Contractor</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Remove {assignment.provider.provider_name} from this property?
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => unassignProvider(assignment.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Unassign
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
