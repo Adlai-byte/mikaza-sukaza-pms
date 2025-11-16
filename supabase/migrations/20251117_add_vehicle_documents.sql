@@ -53,23 +53,15 @@ USING (true);
 CREATE POLICY "Admins can manage all vehicle documents"
 ON public.vehicle_documents FOR ALL
 TO authenticated
-USING (
-  (SELECT user_type FROM public.users WHERE user_id = auth.uid()::text) = 'admin'
-)
-WITH CHECK (
-  (SELECT user_type FROM public.users WHERE user_id = auth.uid()::text) = 'admin'
-);
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
 
 -- Allow OPS to upload and update vehicle documents
 CREATE POLICY "OPS can manage vehicle documents"
 ON public.vehicle_documents FOR ALL
 TO authenticated
-USING (
-  (SELECT user_type FROM public.users WHERE user_id = auth.uid()::text) IN ('admin', 'ops')
-)
-WITH CHECK (
-  (SELECT user_type FROM public.users WHERE user_id = auth.uid()::text) IN ('admin', 'ops')
-);
+USING (public.is_admin_or_ops())
+WITH CHECK (public.is_admin_or_ops());
 
 -- Allow users to upload documents
 CREATE POLICY "Users can upload vehicle documents"
@@ -81,7 +73,7 @@ WITH CHECK (true);
 CREATE POLICY "Users can delete their own vehicle documents"
 ON public.vehicle_documents FOR DELETE
 TO authenticated
-USING (uploaded_by::text = auth.uid()::text);
+USING (uploaded_by = auth.uid());
 
 -- Create trigger for updated_at
 CREATE OR REPLACE FUNCTION update_vehicle_documents_updated_at()
