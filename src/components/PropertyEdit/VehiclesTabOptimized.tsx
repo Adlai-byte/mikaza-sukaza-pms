@@ -46,11 +46,13 @@ import {
   Search,
   Key,
   Palette,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ListTabSkeleton, TabLoadingSpinner } from './PropertyEditSkeleton';
+import { VehiclePhotoGallery } from './VehiclePhotoGallery';
 
 interface Vehicle {
   vehicle_id: string;
@@ -63,7 +65,18 @@ interface Vehicle {
   vin?: string;
   owner_name?: string;
   registration_info?: string;
+
+  // Legacy insurance
   insurance_info?: string;
+
+  // NEW: Structured insurance fields
+  insurance_company?: string;
+  insurance_policy_number?: string;
+  insurance_expiry_date?: string;
+  insurance_coverage_amount?: number;
+  insurance_contact_phone?: string;
+  insurance_document_url?: string;
+
   created_at?: string;
 }
 
@@ -105,6 +118,14 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
     owner_name: '',
     registration_info: '',
     insurance_info: '',
+
+    // NEW: Insurance fields
+    insurance_company: '',
+    insurance_policy_number: '',
+    insurance_expiry_date: '',
+    insurance_coverage_amount: undefined as number | undefined,
+    insurance_contact_phone: '',
+    insurance_document_url: '',
   };
 
   const [formData, setFormData] = useState(emptyVehicle);
@@ -260,6 +281,14 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
       owner_name: vehicle.owner_name || '',
       registration_info: vehicle.registration_info || '',
       insurance_info: vehicle.insurance_info || '',
+
+      // NEW: Map insurance fields
+      insurance_company: vehicle.insurance_company || '',
+      insurance_policy_number: vehicle.insurance_policy_number || '',
+      insurance_expiry_date: vehicle.insurance_expiry_date || '',
+      insurance_coverage_amount: vehicle.insurance_coverage_amount,
+      insurance_contact_phone: vehicle.insurance_contact_phone || '',
+      insurance_document_url: vehicle.insurance_document_url || '',
     });
     setShowAddVehicleForm(true);
   };
@@ -412,15 +441,90 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="insurance_info">Insurance Information</Label>
-                  <Textarea
-                    id="insurance_info"
-                    value={formData.insurance_info}
-                    onChange={(e) => setFormData({ ...formData, insurance_info: e.target.value })}
-                    placeholder="Insurance company, policy number, expiry, etc."
-                    rows={3}
-                  />
+                {/* Photos Section */}
+                {editingVehicle && (
+                  <div className="space-y-3 border-t pt-4">
+                    <Label className="text-base font-semibold flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4" />
+                      Vehicle Photos
+                    </Label>
+                    <VehiclePhotoGallery vehicleId={editingVehicle.vehicle_id} />
+                  </div>
+                )}
+
+                {/* Insurance Information Section */}
+                <div className="space-y-3 border-t pt-4">
+                  <Label className="text-base font-semibold flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Insurance Information
+                  </Label>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="insurance_company">Insurance Company</Label>
+                      <Input
+                        id="insurance_company"
+                        value={formData.insurance_company}
+                        onChange={(e) => setFormData({ ...formData, insurance_company: e.target.value })}
+                        placeholder="e.g., State Farm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="insurance_policy_number">Policy Number</Label>
+                      <Input
+                        id="insurance_policy_number"
+                        value={formData.insurance_policy_number}
+                        onChange={(e) => setFormData({ ...formData, insurance_policy_number: e.target.value })}
+                        placeholder="Policy #"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="insurance_expiry_date">Expiry Date</Label>
+                      <Input
+                        id="insurance_expiry_date"
+                        type="date"
+                        value={formData.insurance_expiry_date}
+                        onChange={(e) => setFormData({ ...formData, insurance_expiry_date: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="insurance_coverage_amount">Coverage Amount ($)</Label>
+                      <Input
+                        id="insurance_coverage_amount"
+                        type="number"
+                        value={formData.insurance_coverage_amount || ''}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          insurance_coverage_amount: e.target.value ? parseFloat(e.target.value) : undefined
+                        })}
+                        placeholder="e.g., 100000"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="insurance_contact_phone">Insurance Contact Phone</Label>
+                    <Input
+                      id="insurance_contact_phone"
+                      value={formData.insurance_contact_phone}
+                      onChange={(e) => setFormData({ ...formData, insurance_contact_phone: e.target.value })}
+                      placeholder="e.g., (555) 123-4567"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="insurance_info">Additional Notes</Label>
+                    <Textarea
+                      id="insurance_info"
+                      value={formData.insurance_info}
+                      onChange={(e) => setFormData({ ...formData, insurance_info: e.target.value })}
+                      placeholder="Any additional insurance information..."
+                      rows={2}
+                    />
+                  </div>
                 </div>
               </div>
 
