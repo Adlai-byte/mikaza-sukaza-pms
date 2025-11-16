@@ -25,7 +25,17 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
   const { data, error } = await supabase
     .from('properties')
     .select(`
-      *,
+      property_id,
+      owner_id,
+      property_name,
+      property_type,
+      is_active,
+      is_booking,
+      capacity,
+      num_bedrooms,
+      num_bathrooms,
+      created_at,
+      updated_at,
       owner:users!properties_owner_id_fkey(
         user_id,
         first_name,
@@ -35,11 +45,6 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
       location:property_location(
         city,
         address
-      ),
-      images:property_images(
-        image_id,
-        image_url,
-        is_primary
       )
     `)
     .order('created_at', { ascending: false });
@@ -50,7 +55,6 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
   }
 
   console.log('✅ Fetched properties list:', data?.length || 0, 'properties');
-  console.log('📊 First property sample:', data?.[0]);
   return (data || []) as Property[];
 };
 
@@ -195,7 +199,7 @@ export function usePropertiesOptimized() {
 
   // Properties query - OPTIMIZED CACHING
   // Properties are semi-static data, they don't change frequently
-  // Cache for 2 minutes, keep in memory for 10 minutes
+  // Cache for 3 minutes, keep in memory for 15 minutes
   const {
     data: properties = [],
     isLoading: loading,
@@ -205,10 +209,10 @@ export function usePropertiesOptimized() {
   } = useQuery({
     queryKey: propertyKeys.lists(),
     queryFn: fetchPropertiesList,
-    staleTime: 1 * 60 * 1000, // 1 minute - data considered fresh
-    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache
-    refetchOnMount: 'always', // Always refetch on mount to ensure fresh data
-    refetchOnWindowFocus: false, // Don't refetch on window focus (reduces load)
+    staleTime: 3 * 60 * 1000, // 3 minutes - data considered fresh (increased from 1 min)
+    gcTime: 15 * 60 * 1000, // 15 minutes - keep in cache (increased from 10 min)
+    refetchOnMount: false, // Don't refetch if data is fresh (changed from 'always')
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
   // Amenities query - OPTIMIZED CACHING
