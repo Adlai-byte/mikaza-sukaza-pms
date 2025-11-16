@@ -81,7 +81,7 @@ WITH CHECK (true);
 CREATE POLICY "Users can delete their own vehicle documents"
 ON public.vehicle_documents FOR DELETE
 TO authenticated
-USING (uploaded_by = auth.uid());
+USING (uploaded_by::text = auth.uid()::text);
 
 -- Create trigger for updated_at
 CREATE OR REPLACE FUNCTION update_vehicle_documents_updated_at()
