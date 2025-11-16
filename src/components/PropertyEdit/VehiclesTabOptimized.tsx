@@ -48,6 +48,7 @@ import {
   Palette,
   Image as ImageIcon,
   X,
+  Eye,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -107,6 +108,7 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
   const queryClient = useQueryClient();
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [viewingVehicle, setViewingVehicle] = useState<Vehicle | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
 
@@ -138,12 +140,15 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
     isLoading,
     isFetching,
     error,
+    refetch,
   } = useQuery({
     queryKey: vehiclesKeys.all(propertyId),
     queryFn: () => fetchVehicles(propertyId),
     enabled: !!propertyId,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 1000, // Reduced to 30 seconds for faster updates
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: true, // Always refetch on component mount
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   // Filter vehicles based on search
@@ -217,8 +222,12 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
 
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: vehiclesKeys.all(propertyId) });
+    onSuccess: async (data) => {
+      // Force immediate refetch with active queries
+      await queryClient.invalidateQueries({
+        queryKey: vehiclesKeys.all(propertyId),
+        refetchType: 'active'
+      });
 
       const photoMessage = selectedPhotos.length > 0
         ? ` with ${(data as any).uploadedPhotoCount || 0} photo(s)`
@@ -252,8 +261,12 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: vehiclesKeys.all(propertyId) });
+    onSuccess: async () => {
+      // Force immediate refetch with active queries
+      await queryClient.invalidateQueries({
+        queryKey: vehiclesKeys.all(propertyId),
+        refetchType: 'active'
+      });
       toast({
         title: 'Success',
         description: 'Vehicle updated successfully',
@@ -280,8 +293,12 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
       if (error) throw error;
       return vehicleId;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: vehiclesKeys.all(propertyId) });
+    onSuccess: async () => {
+      // Force immediate refetch with active queries
+      await queryClient.invalidateQueries({
+        queryKey: vehiclesKeys.all(propertyId),
+        refetchType: 'active'
+      });
       toast({
         title: 'Success',
         description: 'Vehicle removed successfully',
@@ -318,13 +335,21 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Clean the data: convert empty strings to null for date/number fields
+    const cleanedData = {
+      ...formData,
+      insurance_expiry_date: formData.insurance_expiry_date || null,
+      insurance_coverage_amount: formData.insurance_coverage_amount || null,
+      year: formData.year || null,
+    };
+
     if (editingVehicle) {
       updateVehicleMutation.mutate({
         vehicleId: editingVehicle.vehicle_id,
-        updates: formData,
+        updates: cleanedData,
       });
     } else {
-      addVehicleMutation.mutate(formData);
+      addVehicleMutation.mutate(cleanedData);
     }
   };
 
@@ -398,7 +423,13 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
             Manage vehicles registered to this property
           </p>
         </div>
-        <Dialog open={showAddVehicleForm} onOpenChange={setShowAddVehicleForm}>
+        <Dialog open={showAddVehicleForm} onOpenChange={(open) => {
+          if (!open) {
+            handleCloseForm();
+          } else {
+            setShowAddVehicleForm(true);
+          }
+        }}>
           <DialogTrigger asChild>
             <Button
               className="bg-primary hover:bg-primary/90 shadow-lg"
@@ -755,6 +786,14 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => setViewingVehicle(vehicle)}
+                        title="View Vehicle"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleEdit(vehicle)}
                         disabled={updateVehicleMutation.isPending}
                         title="Edit Vehicle"
@@ -797,6 +836,144 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {/* View Vehicle Dialog */}
+      {viewingVehicle && (
+        <Dialog open={!!viewingVehicle} onOpenChange={() => setViewingVehicle(null)}>
+          <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Vehicle Details</DialogTitle>
+              <DialogDescription>
+                View complete information for {getVehicleDisplayName(viewingVehicle)}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              {/* Basic Information */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Car className="h-4 w-4" />
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Make</p>
+                    <p className="font-medium">{viewingVehicle.make || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Model</p>
+                    <p className="font-medium">{viewingVehicle.model || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Year</p>
+                    <p className="font-medium">{viewingVehicle.year || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Color</p>
+                    <p className="font-medium">{viewingVehicle.color || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">License Plate</p>
+                    <p className="font-medium font-mono">{viewingVehicle.license_plate || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">VIN</p>
+                    <p className="font-medium font-mono text-xs">{viewingVehicle.vin || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Owner Information */}
+              {viewingVehicle.owner_name && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Owner Information
+                  </h3>
+                  <p className="text-sm">{viewingVehicle.owner_name}</p>
+                </div>
+              )}
+
+              {/* Registration Information */}
+              {viewingVehicle.registration_info && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Registration Information
+                  </h3>
+                  <p className="text-sm whitespace-pre-wrap">{viewingVehicle.registration_info}</p>
+                </div>
+              )}
+
+              {/* Photos */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Vehicle Photos
+                </h3>
+                <VehiclePhotoGallery vehicleId={viewingVehicle.vehicle_id} />
+              </div>
+
+              {/* Insurance Information */}
+              <div className="space-y-3 border-t pt-4">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Insurance Information
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Company</p>
+                    <p className="font-medium">{viewingVehicle.insurance_company || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Policy Number</p>
+                    <p className="font-medium font-mono">{viewingVehicle.insurance_policy_number || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Expiry Date</p>
+                    <p className="font-medium">
+                      {viewingVehicle.insurance_expiry_date
+                        ? new Date(viewingVehicle.insurance_expiry_date).toLocaleDateString()
+                        : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Coverage Amount</p>
+                    <p className="font-medium">
+                      {viewingVehicle.insurance_coverage_amount
+                        ? `$${viewingVehicle.insurance_coverage_amount.toLocaleString()}`
+                        : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Contact Phone</p>
+                    <p className="font-medium">{viewingVehicle.insurance_contact_phone || '-'}</p>
+                  </div>
+                </div>
+                {viewingVehicle.insurance_info && (
+                  <div className="pt-2">
+                    <p className="text-muted-foreground text-sm">Additional Notes</p>
+                    <p className="text-sm whitespace-pre-wrap">{viewingVehicle.insurance_info}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setViewingVehicle(null)}>
+                Close
+              </Button>
+              <Button onClick={() => {
+                setViewingVehicle(null);
+                handleEdit(viewingVehicle);
+              }}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Vehicle
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
