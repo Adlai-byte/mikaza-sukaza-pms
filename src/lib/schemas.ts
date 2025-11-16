@@ -1848,3 +1848,67 @@ export const HIGHLIGHT_ICONS = {
 
 export type HighlightIconName = keyof typeof HIGHLIGHT_ICONS;
 
+// ============================================================================
+// VEHICLE SCHEMAS
+// ============================================================================
+
+// Vehicle Photo Schema
+export const vehiclePhotoSchema = z.object({
+  vehicle_id: z.string().uuid(),
+  photo_url: z.string().url("Must be a valid URL"),
+  photo_title: z.string().optional(),
+  is_primary: z.boolean().default(false),
+  display_order: z.number().default(0),
+});
+
+export type VehiclePhotoInsert = z.infer<typeof vehiclePhotoSchema>;
+
+export type VehiclePhoto = VehiclePhotoInsert & {
+  photo_id: string;
+  uploaded_by?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// Property Vehicle Schema
+export const propertyVehicleSchema = z.object({
+  property_id: z.string().uuid(),
+  make: z.string().optional(),
+  model: z.string().optional(),
+  year: z.number().int().min(1900).max(new Date().getFullYear() + 1).optional(),
+  color: z.string().optional(),
+  license_plate: z.string().optional(),
+  vin: z.string().max(17).optional(),
+  owner_name: z.string().optional(),
+  registration_info: z.string().optional(),
+
+  // Legacy insurance field (for backward compatibility)
+  insurance_info: z.string().optional(),
+
+  // Structured insurance fields
+  insurance_company: z.string().optional(),
+  insurance_policy_number: z.string().optional(),
+  insurance_expiry_date: z.string().optional(), // Format: YYYY-MM-DD
+  insurance_coverage_amount: z.number().optional(),
+  insurance_contact_phone: z.string().optional(),
+  insurance_document_url: z.string().url().optional(),
+});
+
+export type PropertyVehicleInsert = z.infer<typeof propertyVehicleSchema>;
+
+export type PropertyVehicle = PropertyVehicleInsert & {
+  vehicle_id: string;
+  created_at: string;
+  updated_at: string;
+  photos?: VehiclePhoto[];
+};
+
+// Vehicle filters
+export type VehicleFilters = {
+  property_id?: string;
+  make?: string;
+  model?: string;
+  year?: number;
+  search?: string;
+};
+
