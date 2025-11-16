@@ -370,8 +370,8 @@ export function useDocumentUpload() {
   };
 
   return {
-    uploadFile: uploadFileMutation.mutate,
-    uploadVersion: uploadVersionMutation.mutate,
+    uploadFile: uploadFileMutation.mutateAsync,
+    uploadVersion: uploadVersionMutation.mutateAsync,
     uploadProgress,
     isUploading: uploadFileMutation.isPending || uploadVersionMutation.isPending,
     resetProgress,
