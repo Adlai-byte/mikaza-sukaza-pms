@@ -54,7 +54,7 @@ export default function Dashboard() {
         .from('property_bookings')
         .select(`
           *,
-          property:properties(property_name, property_type)
+          properties!property_bookings_property_id_fkey(property_name, property_type)
         `)
         .gte('check_in_date', today)
         .lte('check_in_date', weekFromNow)
@@ -345,7 +345,7 @@ export default function Dashboard() {
                         {booking.guest_name}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {booking.property?.property_name}
+                        {booking.properties?.property_name}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {format(parseISO(booking.check_in_date), 'MMM dd')} - {format(parseISO(booking.check_out_date), 'MMM dd')}

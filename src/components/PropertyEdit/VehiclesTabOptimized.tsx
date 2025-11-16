@@ -47,6 +47,7 @@ import {
   Key,
   Palette,
   Image as ImageIcon,
+  X,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -107,6 +108,7 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
 
   const emptyVehicle = {
     make: '',
@@ -154,6 +156,7 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
   // Add vehicle mutation
   const addVehicleMutation = useMutation({
     mutationFn: async (vehicleData: typeof emptyVehicle) => {
+      // Step 1: Create the vehicle
       const { data, error } = await supabase
         .from('property_vehicles')
         .insert([{ ...vehicleData, property_id: propertyId }])
@@ -161,13 +164,69 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
         .single();
 
       if (error) throw error;
+
+      // Step 2: Upload photos if any were selected
+      if (selectedPhotos.length > 0) {
+        const vehicleId = data.vehicle_id;
+        let uploadedCount = 0;
+
+        for (let i = 0; i < selectedPhotos.length; i++) {
+          const file = selectedPhotos[i];
+
+          try {
+            // Upload to storage
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${vehicleId}/${Date.now()}_${i}.${fileExt}`;
+            const filePath = `vehicles/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+              .from('property-images')
+              .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false,
+              });
+
+            if (uploadError) throw uploadError;
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+              .from('property-images')
+              .getPublicUrl(filePath);
+
+            // Create database record
+            const { error: dbError } = await supabase
+              .from('vehicle_photos')
+              .insert([{
+                vehicle_id: vehicleId,
+                photo_url: publicUrl,
+                is_primary: i === 0, // First photo is primary
+                display_order: i,
+              }]);
+
+            if (dbError) throw dbError;
+            uploadedCount++;
+          } catch (photoError) {
+            console.error(`Failed to upload photo ${i + 1}:`, photoError);
+            // Continue uploading other photos even if one fails
+          }
+        }
+
+        // Add info about uploaded photos to response
+        return { ...data, uploadedPhotoCount: uploadedCount };
+      }
+
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: vehiclesKeys.all(propertyId) });
+
+      const photoMessage = selectedPhotos.length > 0
+        ? ` with ${(data as any).uploadedPhotoCount || 0} photo(s)`
+        : '';
+
       toast({
         title: 'Success',
-        description: 'Vehicle added successfully',
+        description: `Vehicle added successfully${photoMessage}`,
       });
       handleCloseForm();
     },
@@ -297,6 +356,18 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
     setShowAddVehicleForm(false);
     setEditingVehicle(null);
     setFormData(emptyVehicle);
+    setSelectedPhotos([]); // Clear selected photos
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setSelectedPhotos(Array.from(files));
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setSelectedPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const getVehicleDisplayName = (vehicle: Vehicle) => {
@@ -442,13 +513,58 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
                 </div>
 
                 {/* Photos Section */}
-                {editingVehicle && (
+                {editingVehicle ? (
                   <div className="space-y-3 border-t pt-4">
                     <Label className="text-base font-semibold flex items-center gap-2">
                       <ImageIcon className="h-4 w-4" />
                       Vehicle Photos
                     </Label>
                     <VehiclePhotoGallery vehicleId={editingVehicle.vehicle_id} />
+                  </div>
+                ) : (
+                  <div className="space-y-3 border-t pt-4">
+                    <Label className="text-base font-semibold flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4" />
+                      Vehicle Photos (Optional)
+                    </Label>
+                    <div className="space-y-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handlePhotoSelect}
+                        className="cursor-pointer"
+                      />
+                      {selectedPhotos.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">
+                            {selectedPhotos.length} photo(s) selected
+                          </p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {selectedPhotos.map((file, index) => (
+                              <div key={index} className="relative border rounded-lg p-2">
+                                <div className="flex items-center gap-2">
+                                  <ImageIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-xs truncate flex-1">{file.name}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemovePhoto(index)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                {index === 0 && (
+                                  <Badge variant="secondary" className="mt-1 text-xs">Primary</Badge>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
