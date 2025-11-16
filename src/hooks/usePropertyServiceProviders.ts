@@ -288,9 +288,9 @@ export function usePropertyServiceProviders(propertyId: string) {
     isLoadingAvailable,
 
     // Mutations
-    assignProvider: assignProviderMutation.mutate,
-    updateAssignment: updateAssignmentMutation.mutate,
-    unassignProvider: unassignProviderMutation.mutate,
+    assignProvider: assignProviderMutation.mutateAsync,
+    updateAssignment: updateAssignmentMutation.mutateAsync,
+    unassignProvider: unassignProviderMutation.mutateAsync,
 
     // Mutation states
     isAssigning: assignProviderMutation.isPending,

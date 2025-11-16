@@ -464,10 +464,10 @@ export function useBookings() {
     loading,
     isFetching,
     error: bookingsError,
-    createBooking: createBookingMutation.mutate,
+    createBooking: createBookingMutation.mutateAsync,
     updateBooking: (bookingId: string, bookingData: Partial<BookingInsert>) =>
-      updateBookingMutation.mutate({ bookingId, bookingData }),
-    deleteBooking: deleteBookingMutation.mutate,
+      updateBookingMutation.mutateAsync({ bookingId, bookingData }),
+    deleteBooking: deleteBookingMutation.mutateAsync,
     refetch,
     // Mutation states for UI feedback
     isCreating: createBookingMutation.isPending,

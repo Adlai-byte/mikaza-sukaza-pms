@@ -300,10 +300,10 @@ export function useServiceProviders() {
     loading,
     isFetching,
     error: providersError,
-    createProvider: createProviderMutation.mutate,
+    createProvider: createProviderMutation.mutateAsync,
     updateProvider: (providerId: string, providerData: Partial<ServiceProviderInsert>) =>
-      updateProviderMutation.mutate({ providerId, providerData }),
-    deleteProvider: deleteProviderMutation.mutate,
+      updateProviderMutation.mutateAsync({ providerId, providerData }),
+    deleteProvider: deleteProviderMutation.mutateAsync,
     refetch,
     // Mutation states for UI feedback
     isCreating: createProviderMutation.isPending,
