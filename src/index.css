@@ -154,4 +154,18 @@
   textarea:focus-visible {
     @apply outline-none ring-2 ring-primary ring-offset-0 border-primary;
   }
+
+  /* Hide Lovable/GPT Engineer badge */
+  [href*="lovable.dev"],
+  [href*="gpt-engineer"],
+  [data-lovable],
+  [class*="lovable"],
+  [class*="gpt-engineer"],
+  iframe[src*="lovable"],
+  iframe[src*="gpt-engineer"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
 }
