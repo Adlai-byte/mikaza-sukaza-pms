@@ -39,7 +39,7 @@ import { isPast, isToday, parseISO } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Todos() {
-  const { t } = useTranslation(['todos', 'common']);
+  const { t } = useTranslation('todos');
   const { user } = useAuth();
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
@@ -232,9 +232,9 @@ export default function Todos() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">{t('todos:activeTasks')}</p>
+                  <p className="text-sm font-medium text-blue-700">{t('activeTasks')}</p>
                   <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
-                  <p className="text-xs text-blue-600 mt-1">{t('todos:pendingProgress')}</p>
+                  <p className="text-xs text-blue-600 mt-1">{t('pendingProgress')}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
                   <CheckSquare className="h-6 w-6 text-white" />
@@ -247,9 +247,9 @@ export default function Todos() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-700">{t('todos:overdueCount')}</p>
+                  <p className="text-sm font-medium text-red-700">{t('overdueCount')}</p>
                   <h3 className="text-3xl font-bold text-red-900 mt-1">{stats.overdue}</h3>
-                  <p className="text-xs text-red-600 mt-1">{t('todos:requiresAttention')}</p>
+                  <p className="text-xs text-red-600 mt-1">{t('requiresAttention')}</p>
                 </div>
                 <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
                   <AlertTriangle className="h-6 w-6 text-white" />
@@ -262,9 +262,9 @@ export default function Todos() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-yellow-700">{t('todos:pendingTasks')}</p>
+                  <p className="text-sm font-medium text-yellow-700">{t('pendingTasks')}</p>
                   <h3 className="text-3xl font-bold text-yellow-900 mt-1">{stats.pending}</h3>
-                  <p className="text-xs text-yellow-600 mt-1">{t('todos:waitingToStart')}</p>
+                  <p className="text-xs text-yellow-600 mt-1">{t('waitingToStart')}</p>
                 </div>
                 <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
                   <Clock className="h-6 w-6 text-white" />
@@ -277,9 +277,9 @@ export default function Todos() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-700">{t('todos:inProgressTasks')}</p>
+                  <p className="text-sm font-medium text-purple-700">{t('inProgressTasks')}</p>
                   <h3 className="text-3xl font-bold text-purple-900 mt-1">{stats.inProgress}</h3>
-                  <p className="text-xs text-purple-600 mt-1">{t('todos:currentlyActive')}</p>
+                  <p className="text-xs text-purple-600 mt-1">{t('currentlyActive')}</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                   <Clock className="h-6 w-6 text-white" />
@@ -294,19 +294,19 @@ export default function Todos() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              {t('todos:filtersAndSearch')}
+              {t('filtersAndSearch')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Search */}
               <div className="space-y-2 lg:col-span-2">
-                <Label htmlFor="search">{t('todos:searchTasks')}</Label>
+                <Label htmlFor="search">{t('searchTasks')}</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder={t('todos:searchPlaceholder')}
+                    placeholder={t('searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -316,10 +316,10 @@ export default function Todos() {
 
               {/* Property Filter */}
               <div className="space-y-2">
-                <Label htmlFor="property">{t('todos:property')}</Label>
+                <Label htmlFor="property">{t('property')}</Label>
                 <Select value={propertyFilter || undefined} onValueChange={(value) => setPropertyFilter(value || '')}>
                   <SelectTrigger id="property">
-                    <SelectValue placeholder={t('todos:allProperties')} />
+                    <SelectValue placeholder={t('allProperties')} />
                   </SelectTrigger>
                   <SelectContent>
                     {properties.map(property => (
@@ -336,16 +336,16 @@ export default function Todos() {
                 <Label htmlFor="category">{t('common:category')}</Label>
                 <Select value={categoryFilter[0] || undefined} onValueChange={(value) => setCategoryFilter(value ? [value] : [])}>
                   <SelectTrigger id="category">
-                    <SelectValue placeholder={t('todos:allCategories')} />
+                    <SelectValue placeholder={t('allCategories')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cleaning">{t('todos:categories.cleaning')}</SelectItem>
-                    <SelectItem value="maintenance">{t('todos:categories.maintenance')}</SelectItem>
-                    <SelectItem value="check_in_prep">{t('todos:categories.checkInPrep')}</SelectItem>
-                    <SelectItem value="check_out_prep">{t('todos:categories.checkOutPrep')}</SelectItem>
-                    <SelectItem value="inspection">{t('todos:categories.inspection')}</SelectItem>
-                    <SelectItem value="repair">{t('todos:categories.repair')}</SelectItem>
-                    <SelectItem value="other">{t('todos:categories.other')}</SelectItem>
+                    <SelectItem value="cleaning">{t('categories.cleaning')}</SelectItem>
+                    <SelectItem value="maintenance">{t('categories.maintenance')}</SelectItem>
+                    <SelectItem value="check_in_prep">{t('categories.checkInPrep')}</SelectItem>
+                    <SelectItem value="check_out_prep">{t('categories.checkOutPrep')}</SelectItem>
+                    <SelectItem value="inspection">{t('categories.inspection')}</SelectItem>
+                    <SelectItem value="repair">{t('categories.repair')}</SelectItem>
+                    <SelectItem value="other">{t('categories.other')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -359,7 +359,7 @@ export default function Todos() {
                 className="cursor-pointer"
                 onClick={() => toggleStatusFilter('pending')}
               >
-                {t('todos:pending')}
+                {t('pending')}
               </Badge>
               <Badge
                 variant={statusFilter.includes('in_progress') ? 'default' : 'outline'}
@@ -373,7 +373,7 @@ export default function Todos() {
                 className="cursor-pointer"
               onClick={() => toggleStatusFilter('completed')}
               >
-                {t('todos:completed')}
+                {t('completed')}
               </Badge>
 
               {/* Priority Filters */}
@@ -389,7 +389,7 @@ export default function Todos() {
                 className="cursor-pointer bg-orange-500 hover:bg-orange-600"
                 onClick={() => togglePriorityFilter('high')}
               >
-                {t('todos:highPriority')}
+                {t('highPriority')}
               </Badge>
 
               {/* Overdue Toggle */}
@@ -399,7 +399,7 @@ export default function Todos() {
                 onClick={() => setShowOverdue(!showOverdue)}
               >
                 <AlertTriangle className="h-3 w-3 mr-1" />
-                {t('todos:overdueOnly')}
+                {t('overdueOnly')}
               </Badge>
 
               {/* Clear Filters */}
@@ -411,13 +411,13 @@ export default function Todos() {
                   className="h-7"
                 >
                   <XCircle className="mr-1 h-3 w-3" />
-                  {t('todos:clearAll')}
+                  {t('clearAll')}
                 </Button>
               )}
 
               {/* Results Count */}
               <Badge variant="secondary" className="ml-auto">
-                {tasks.length} {tasks.length !== 1 ? t('todos:results') : t('todos:result')}
+                {tasks.length} {tasks.length !== 1 ? t('results') : t('result')}
               </Badge>
             </div>
           </CardContent>
@@ -428,11 +428,11 @@ export default function Todos() {
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="list" className="flex items-center gap-2">
               <List className="h-4 w-4" />
-              {t('todos:listView')}
+              {t('listView')}
             </TabsTrigger>
             <TabsTrigger value="kanban" className="flex items-center gap-2">
               <LayoutGrid className="h-4 w-4" />
-              {t('todos:boardView')}
+              {t('boardView')}
             </TabsTrigger>
           </TabsList>
 
@@ -443,7 +443,7 @@ export default function Todos() {
               onEdit={handleEditTask}
               onDelete={handleDeleteTask}
               onStatusChange={handleStatusChange}
-              emptyMessage={t('todos:noTasksFound')}
+              emptyMessage={t('noTasksFound')}
               isDeleting={deleteTask.isPending}
             />
           </TabsContent>
