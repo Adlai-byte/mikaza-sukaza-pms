@@ -26,9 +26,9 @@ i18n
   // Initialize i18next
   .init({
     resources: {
-      en,
-      pt,
-      es,
+      en: { translation: en },
+      pt: { translation: pt },
+      es: { translation: es },
     },
 
     // Default language
@@ -59,9 +59,8 @@ i18n
       useSuspense: false, // Don't use Suspense for SSR compatibility
     },
 
-    // Namespace options - support multiple namespaces
-    defaultNS: 'common',
-    ns: ['common', 'todos', 'dashboard', 'properties', 'jobs', 'bookings', 'calendar', 'invoices', 'expenses', 'checkInOut', 'users', 'profile', 'notifications', 'validation', 'language', 'providers', 'checklistTemplates', 'issues', 'messageTemplates', 'bookingDialog', 'taskDialog', 'propertyForm', 'issueDialog', 'jobDialog', 'commissions', 'financialDashboard', 'commissionsAnalytics', 'myCommissions', 'employeeDocuments', 'serviceDocuments', 'documents', 'accessAuthorizations', 'vendorCOIs', 'dialogs', 'contracts', 'media', 'highlights'],
+    // Namespace options (we use default 'translation')
+    defaultNS: 'translation',
 
     // Debug mode (disable in production)
     debug: false,
