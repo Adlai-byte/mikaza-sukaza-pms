@@ -2,9 +2,45 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2, MapPin, WifiOff, AlertCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+// Debounce utility function
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null;
+  return function executedFunction(...args: Parameters<T>) {
+    const later = () => {
+      timeout = null;
+      func(...args);
+    };
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Retry utility with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      const delay = baseDelay * Math.pow(2, i);
+      console.log(`⏳ Retry ${i + 1}/${maxRetries} after ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
 
 // Fix Leaflet's default icon path issues - use CDN for reliability
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -59,16 +95,47 @@ export function LocationMap({
   initialLng,
   initialAddress = ''
 }: LocationMapProps) {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState(initialAddress);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(
     initialLat && initialLng ? { lat: initialLat, lng: initialLng } : null
   );
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [tilesLoading, setTilesLoading] = useState(true);
+  const [tileError, setTileError] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const circleMarkerRef = useRef<L.CircleMarker | null>(null);
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast({
+        title: '🌐 Connection Restored',
+        description: 'You are back online. The map should load now.',
+      });
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast({
+        title: '📡 No Internet Connection',
+        description: 'Map tiles may not load without an internet connection.',
+        variant: 'destructive',
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [toast]);
 
   // Initialize map when dialog opens
   useEffect(() => {
@@ -116,6 +183,9 @@ export function LocationMap({
         console.log('✅ Map instance created');
 
         // Add OpenStreetMap tiles
+        setTilesLoading(true);
+        setTileError(false);
+
         const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
           maxZoom: 19,
@@ -126,18 +196,34 @@ export function LocationMap({
 
         tileLayer.on('load', () => {
           console.log('✅ Tiles loaded successfully');
+          setTilesLoading(false);
+          setTileError(false);
         });
 
         tileLayer.on('tileerror', (error) => {
           console.error('❌ Tile loading error:', error);
+          setTileError(true);
+          setTilesLoading(false);
+
+          // Show user-friendly error toast
+          toast({
+            title: '⚠️ Map Tiles Failed to Load',
+            description: 'The map may appear blank. Check your internet connection or try refreshing. You can still search for locations.',
+            variant: 'destructive',
+          });
         });
 
-        // Add click handler to place marker
+        // Create debounced update function to prevent rate limiting
+        const debouncedUpdate = debounce((lat: number, lng: number) => {
+          updateMarker(lat, lng);
+          setSelectedLocation({ lat, lng });
+        }, 500);
+
+        // Add click handler to place marker with debouncing
         map.on('click', (e: L.LeafletMouseEvent) => {
           const { lat, lng } = e.latlng;
           console.log('🖱️ Map clicked at:', lat, lng);
-          updateMarker(lat, lng);
-          setSelectedLocation({ lat, lng });
+          debouncedUpdate(lat, lng);
         });
 
         leafletMapRef.current = map;
@@ -179,22 +265,31 @@ export function LocationMap({
     };
   }, [isOpen, initialLat, initialLng]);
 
-  // Reverse geocode coordinates to get address details
+  // Reverse geocode coordinates to get address details with retry logic
   const reverseGeocode = async (lat: number, lng: number): Promise<LocationData> => {
     try {
       setIsReverseGeocoding(true);
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-        {
-          headers: {
-            'User-Agent': 'PropertyManagementSystem/1.0'
+
+      const data = await retryWithBackoff(async () => {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+          {
+            headers: {
+              'User-Agent': 'PropertyManagementSystem/1.0'
+            }
           }
+        );
+
+        if (!response.ok) {
+          if (response.status === 429) {
+            throw new Error('Rate limit exceeded - will retry');
+          }
+          throw new Error('Reverse geocoding failed');
         }
-      );
 
-      if (!response.ok) throw new Error('Reverse geocoding failed');
+        return await response.json();
+      });
 
-      const data = await response.json();
       console.log('🌍 Reverse geocoding result:', data);
 
       const addressComponents = data.address || {};
@@ -218,6 +313,14 @@ export function LocationMap({
       return locationData;
     } catch (error) {
       console.error('❌ Reverse geocoding error:', error);
+
+      // Show user-friendly error
+      toast({
+        title: '⚠️ Address Lookup Failed',
+        description: 'Could not retrieve address details for this location. The coordinates will still be saved.',
+        variant: 'destructive',
+      });
+
       // Return basic location data if reverse geocoding fails
       return { lat, lng };
     } finally {
@@ -294,18 +397,26 @@ export function LocationMap({
 
     setIsSearching(true);
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`,
-        {
-          headers: {
-            'User-Agent': 'PropertyManagementSystem/1.0'
+      const data = await retryWithBackoff(async () => {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`,
+          {
+            headers: {
+              'User-Agent': 'PropertyManagementSystem/1.0'
+            }
           }
+        );
+
+        if (!response.ok) {
+          if (response.status === 429) {
+            throw new Error('Rate limit exceeded - will retry');
+          }
+          throw new Error('Search failed');
         }
-      );
 
-      if (!response.ok) throw new Error('Search failed');
+        return await response.json();
+      });
 
-      const data = await response.json();
       if (data && data[0]) {
         const { lat, lon, display_name } = data[0];
         const latitude = parseFloat(lat);
@@ -314,9 +425,19 @@ export function LocationMap({
         // Use the search result's display name but still fetch detailed address components
         await updateMarker(latitude, longitude, false);
         console.log('🔍 Search result:', latitude, longitude);
+      } else {
+        toast({
+          title: '🔍 No Results Found',
+          description: `Could not find "${searchQuery}". Try being more specific or use a different search term.`,
+        });
       }
     } catch (error) {
       console.error('Search error:', error);
+      toast({
+        title: '❌ Search Failed',
+        description: 'Could not complete the search. Please check your internet connection and try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsSearching(false);
     }
@@ -352,6 +473,38 @@ export function LocationMap({
         </DialogHeader>
 
         <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+          {/* Offline Warning Banner */}
+          {!isOnline && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 flex-shrink-0">
+              <WifiOff className="h-5 w-5 text-red-600" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-red-800">No Internet Connection</p>
+                <p className="text-xs text-red-600">Map tiles and address lookup require an internet connection.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Tiles Loading/Error Banner */}
+          {tilesLoading && isOnline && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2 flex-shrink-0">
+              <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-blue-800">Loading Map Tiles...</p>
+                <p className="text-xs text-blue-600">The map is loading. This may take a few seconds.</p>
+              </div>
+            </div>
+          )}
+
+          {tileError && !tilesLoading && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2 flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-800">Map Tiles Failed to Load</p>
+                <p className="text-xs text-amber-600">The map may appear blank, but you can still search for locations.</p>
+              </div>
+            </div>
+          )}
+
           {/* Search bar */}
           <div className="flex gap-2 flex-shrink-0">
             <Input
@@ -360,8 +513,9 @@ export function LocationMap({
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="Search for an address..."
               className="flex-1"
+              disabled={!isOnline}
             />
-            <Button onClick={handleSearch} disabled={isSearching}>
+            <Button type="button" onClick={handleSearch} disabled={isSearching || !isOnline}>
               {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
             </Button>
           </div>
@@ -434,12 +588,13 @@ export function LocationMap({
 
           {/* Action buttons - Fixed at bottom */}
           <div className="flex justify-end gap-2 pt-2 border-t flex-shrink-0">
-            <Button variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button
+              type="button"
               onClick={handleSave}
-              disabled={!selectedLocation}
+              disabled={!selectedLocation || !isOnline}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <MapPin className="mr-2 h-4 w-4" />
