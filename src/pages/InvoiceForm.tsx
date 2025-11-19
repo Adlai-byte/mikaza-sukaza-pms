@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Download, Calendar, Send, User, DollarSign, MessageSquare, StickyNote, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Download, Calendar, Send, User, DollarSign, MessageSquare, StickyNote, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,11 +23,13 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useCreateInvoice, useUpdateInvoice, useInvoice } from '@/hooks/useInvoices';
+import { useCreateInvoice, useUpdateInvoice, useInvoice, invoiceKeys } from '@/hooks/useInvoices';
 import { useBookingDetail } from '@/hooks/useBookings';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useUsers } from '@/hooks/useUsers';
 import { useInvoiceTips, useCreateInvoiceTip, useDeleteInvoiceTip } from '@/hooks/useInvoiceTips';
+import { useQueryClient } from '@tanstack/react-query';
+import { useActivityLogs } from '@/hooks/useActivityLogs';
 import { InvoiceInsert, InvoiceLineItemInsert, BillTemplateWithItems } from '@/lib/schemas';
 import BillTemplateSelector from '@/components/BillTemplateSelector';
 import { SendInvoiceEmailDialog } from '@/components/SendInvoiceEmailDialog';
@@ -57,6 +59,8 @@ export default function InvoiceForm() {
   const isFromBooking = !!bookingId;
   const { toast } = useToast();
 
+  const queryClient = useQueryClient();
+  const { logActivity } = useActivityLogs();
   const { properties } = usePropertiesOptimized();
   const { users } = useUsers();
   const createInvoice = useCreateInvoice();
@@ -71,6 +75,7 @@ export default function InvoiceForm() {
   const [nextLineNumber, setNextLineNumber] = useState(1);
   const [linkedBookingId, setLinkedBookingId] = useState<string | undefined>(bookingId);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Tip form state
   const [tipRecipient, setTipRecipient] = useState('');
@@ -107,7 +112,7 @@ export default function InvoiceForm() {
         fullInvoice: invoice,
       });
 
-      form.reset({
+      const formData = {
         property_id: invoice.property_id,
         guest_name: invoice.guest_name,
         guest_email: invoice.guest_email || '',
@@ -119,7 +124,18 @@ export default function InvoiceForm() {
         notes: invoice.notes || '',
         terms: invoice.terms || '',
         payment_method: invoice.payment_method || '',
-      });
+      };
+
+      console.log('📋 [InvoiceForm] Resetting form with data:', formData);
+      form.reset(formData);
+
+      // Verify form values after reset
+      setTimeout(() => {
+        console.log('✅ [InvoiceForm] Form values after reset:', {
+          property_id: form.getValues('property_id'),
+          guest_name: form.getValues('guest_name'),
+        });
+      }, 100);
 
       if (invoice.line_items && Array.isArray(invoice.line_items)) {
         const items = invoice.line_items.map((item: any) => ({
@@ -445,11 +461,30 @@ export default function InvoiceForm() {
       booking_id: linkedBookingId || undefined, // Link to booking if created from booking
     };
 
+    console.log('💾 [InvoiceForm] Preparing to save invoice data:', {
+      property_id: data.property_id,
+      guest_name: data.guest_name,
+      status: data.status,
+      invoiceData,
+    });
+
     if (isEditing) {
+      setIsSaving(true);
       try {
-        // Step 1: Update invoice
-        console.log('📝 Updating invoice:', invoiceId);
-        await updateInvoice.mutateAsync({ invoiceId: invoiceId!, updates: invoiceData });
+        // Step 1: Update invoice (direct DB call to avoid premature cache invalidation)
+        console.log('📝 Updating invoice:', invoiceId, 'with data:', invoiceData);
+        const { data: updatedInvoice, error: updateError } = await supabase
+          .from('invoices')
+          .update(invoiceData)
+          .eq('invoice_id', invoiceId!)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('❌ Error updating invoice:', updateError);
+          throw updateError;
+        }
+        console.log('✅ Invoice updated successfully:', updatedInvoice);
 
         // Step 2: Delete existing line items
         console.log('🗑️ Deleting old line items');
@@ -458,20 +493,47 @@ export default function InvoiceForm() {
           .delete()
           .eq('invoice_id', invoiceId!);
 
-        if (deleteError) throw deleteError;
+        if (deleteError) {
+          console.error('❌ Error deleting line items:', deleteError);
+          throw deleteError;
+        }
+        console.log('✅ Old line items deleted successfully');
 
         // Step 3: Insert new line items
-        console.log('✨ Inserting new line items:', lineItems.length);
-        const lineItemsWithInvoiceId = lineItems.map((item) => ({
-          ...item,
-          invoice_id: invoiceId!,
-        }));
+        console.log('✨ Inserting new line items:', lineItems.length, lineItems);
+        const lineItemsWithInvoiceId = lineItems.map((item) => {
+          // Remove generated fields that cannot be inserted
+          const { subtotal, total_amount, line_item_id, created_at, updated_at, ...itemData } = item as any;
+          return {
+            ...itemData,
+            invoice_id: invoiceId!,
+          };
+        });
 
-        const { error: insertError } = await supabase
+        console.log('📦 Line items with invoice_id:', lineItemsWithInvoiceId);
+
+        const { data: insertedData, error: insertError } = await supabase
           .from('invoice_line_items')
-          .insert(lineItemsWithInvoiceId);
+          .insert(lineItemsWithInvoiceId)
+          .select();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('❌ Error inserting line items:', insertError);
+          throw insertError;
+        }
+        console.log('✅ Line items inserted successfully:', insertedData?.length);
+
+        // IMPORTANT: Invalidate cache AFTER all operations complete
+        console.log('🔄 Invalidating invoice cache');
+        await queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(invoiceId!) });
+        await queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+
+        // Log activity
+        logActivity('invoice_updated', {
+          invoice_id: invoiceId,
+          invoice_number: invoice?.invoice_number,
+          line_items_count: lineItems.length,
+        });
 
         toast({
           title: t('common.success'),
@@ -486,6 +548,8 @@ export default function InvoiceForm() {
           description: error.message || t('invoices.invoiceUpdateError'),
           variant: 'destructive',
         });
+      } finally {
+        setIsSaving(false);
       }
     } else {
       createInvoice.mutate(
@@ -575,8 +639,12 @@ export default function InvoiceForm() {
               )}
             </>
           )}
-          <Button onClick={handleSubmit} size="lg" disabled={createInvoice.isPending || updateInvoice.isPending}>
-            <Save className="h-4 w-4 mr-2" />
+          <Button onClick={handleSubmit} size="lg" disabled={isSaving || createInvoice.isPending}>
+            {isSaving || createInvoice.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
             {isEditing ? t('invoices.updateInvoice') : t('invoices.createInvoice')}
           </Button>
         </div>
@@ -1062,8 +1130,12 @@ export default function InvoiceForm() {
           <Button type="button" variant="outline" onClick={() => navigate('/invoices')}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={createInvoice.isPending || updateInvoice.isPending}>
-            <Save className="h-4 w-4 mr-2" />
+          <Button type="submit" disabled={isSaving || createInvoice.isPending}>
+            {isSaving || createInvoice.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
             {isEditing ? t('invoices.updateInvoice') : t('invoices.createInvoice')}
           </Button>
         </div>
