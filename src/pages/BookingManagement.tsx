@@ -210,15 +210,15 @@ export default function BookingManagement() {
           icon={CalendarDays}
           actions={
             <>
-              <Button variant="outline" onClick={() => refetch()} disabled={loading}>
+              <Button type="button" variant="outline" onClick={() => refetch()} disabled={loading}>
                 <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 {t('common.refresh')}
               </Button>
-              <Button variant="outline" onClick={handleExportBookings}>
+              <Button type="button" variant="outline" onClick={handleExportBookings}>
                 <Download className="mr-2 h-4 w-4" />
                 {t('common.export')}
               </Button>
-              <Button onClick={handleCreateBooking} className="bg-primary hover:bg-primary/90">
+              <Button type="button" onClick={handleCreateBooking} className="bg-primary hover:bg-primary/90">
                 <Plus className="mr-2 h-4 w-4" />
                 {t('bookings.newBooking')}
               </Button>
@@ -419,10 +419,10 @@ export default function BookingManagement() {
                     {t('bookings.bookingCalendar')} - {format(currentMonth, 'MMMM yyyy')}
                   </CardTitle>
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
+                    <Button type="button" variant="outline" size="sm" onClick={goToPreviousMonth}>
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={goToNextMonth}>
+                    <Button type="button" variant="outline" size="sm" onClick={goToNextMonth}>
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>

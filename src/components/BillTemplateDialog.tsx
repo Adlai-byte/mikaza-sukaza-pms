@@ -418,11 +418,11 @@ export default function BillTemplateDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isPending}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
             <X className="h-4 w-4 mr-2" />
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isPending}>
+          <Button type="button" onClick={handleSubmit} disabled={isPending}>
             <Save className="h-4 w-4 mr-2" />
             {isPending
               ? 'Saving...'
