@@ -347,57 +347,6 @@ export default function BillTemplates() {
   };
 
   // =============================================
-  // TEMPLATE CARD COMPONENT
-  // =============================================
-
-  const TemplateCard = ({ template }: { template: BillTemplateWithItems }) => {
-    return (
-      <Card
-        className={cn(
-          'border-0 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]',
-          template.is_active
-            ? 'bg-white'
-            : 'bg-gray-50 opacity-75'
-        )}
-      >
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <CardTitle className="text-base truncate">{template.template_name}</CardTitle>
-                {template.is_active ? (
-                  <Badge variant="default" className="bg-green-600 text-xs shrink-0">
-                    Active
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-xs shrink-0">Inactive</Badge>
-                )}
-              </div>
-              {template.description ? (
-                <CardDescription className="line-clamp-2 text-sm">
-                  {template.description}
-                </CardDescription>
-              ) : (
-                <CardDescription className="text-sm italic">
-                  No description provided
-                </CardDescription>
-              )}
-            </div>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setViewingTemplate(template)}
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              View
-            </Button>
-          </div>
-        </CardHeader>
-      </Card>
-    );
-  };
-
-  // =============================================
   // MAIN RENDER
   // =============================================
 
@@ -569,10 +518,115 @@ export default function BillTemplates() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {paginatedTemplates.map((template) => (
-                  <TemplateCard key={template.template_id} template={template} />
-                ))}
+              {/* Templates Table */}
+              <div className="rounded-md border mb-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Template Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-center">Type</TableHead>
+                      <TableHead className="text-center">Items</TableHead>
+                      <TableHead className="text-right">Total Amount</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-center">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedTemplates.map((template) => (
+                      <TableRow key={template.template_id} className="hover:bg-gray-50">
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            {template.template_name}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-md">
+                          <div className="truncate text-muted-foreground text-sm">
+                            {template.description || <span className="italic">No description</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {template.is_global ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              <Globe className="h-3 w-3 mr-1" />
+                              Global
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              <Home className="h-3 w-3 mr-1" />
+                              Property
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="secondary">{template.items?.length || 0}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          ${template.total_amount.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {template.is_active ? (
+                            <Badge variant="default" className="bg-green-600">
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Inactive</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setViewingTemplate(template)}
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(template)}
+                              title="Edit Template"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDuplicate(template)}
+                              title="Duplicate Template"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleActive(template.template_id!, template.is_active)}
+                              title={template.is_active ? "Deactivate" : "Activate"}
+                            >
+                              {template.is_active ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(template.template_id!, template.template_name)}
+                              title="Delete Template"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
 
               {/* Pagination */}
