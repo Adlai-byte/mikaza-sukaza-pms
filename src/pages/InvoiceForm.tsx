@@ -523,10 +523,10 @@ export default function InvoiceForm() {
         }
         console.log('✅ Line items inserted successfully:', insertedData?.length);
 
-        // IMPORTANT: Invalidate cache AFTER all operations complete
-        console.log('🔄 Invalidating invoice cache');
-        await queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(invoiceId!) });
-        await queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+        // IMPORTANT: Refetch (not just invalidate) to ensure fresh data before navigation
+        console.log('🔄 Refetching invoice cache to ensure fresh data');
+        await queryClient.refetchQueries({ queryKey: invoiceKeys.detail(invoiceId!) });
+        await queryClient.refetchQueries({ queryKey: invoiceKeys.lists() });
 
         // Log activity
         logActivity('invoice_updated', {
@@ -540,6 +540,7 @@ export default function InvoiceForm() {
           description: t('invoices.invoiceUpdatedSuccess'),
         });
 
+        // Navigate after cache is refreshed
         navigate('/invoices');
       } catch (error: any) {
         console.error('❌ Error updating invoice:', error);
@@ -821,9 +822,9 @@ export default function InvoiceForm() {
                       <TableHead className="w-12">#</TableHead>
                       <TableHead className="min-w-[200px]">{t('invoices.description')}</TableHead>
                       <TableHead className="w-32">{t('invoices.type')}</TableHead>
-                      <TableHead className="w-44">{t('invoices.qty')}</TableHead>
-                      <TableHead className="w-56">{t('invoices.unitPrice')}</TableHead>
-                      <TableHead className="w-32">{t('invoices.taxPercent')}</TableHead>
+                      <TableHead className="min-w-[120px]">{t('invoices.qty')}</TableHead>
+                      <TableHead className="min-w-[140px]">{t('invoices.unitPrice')}</TableHead>
+                      <TableHead className="min-w-[100px]">{t('invoices.taxPercent')}</TableHead>
                       <TableHead className="w-32">{t('common.tax')}</TableHead>
                       <TableHead className="w-32">{t('common.total')}</TableHead>
                       <TableHead className="w-16"></TableHead>
