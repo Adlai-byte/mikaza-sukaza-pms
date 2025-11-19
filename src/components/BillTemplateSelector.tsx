@@ -123,6 +123,7 @@ export default function BillTemplateSelector({
             <div className="flex gap-2 mt-4">
               {!showAllTemplates && (
                 <Button
+                  type="button"
                   variant="default"
                   size="sm"
                   onClick={() => setShowAllTemplates(true)}
@@ -132,6 +133,7 @@ export default function BillTemplateSelector({
                 </Button>
               )}
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => navigate("/bill-templates")}
@@ -165,6 +167,7 @@ export default function BillTemplateSelector({
             {/* View Mode Toggle */}
             <div className="flex border rounded-md">
               <Button
+                type="button"
                 variant={viewMode === "table" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("table")}
@@ -173,6 +176,7 @@ export default function BillTemplateSelector({
                 <List className="h-4 w-4" />
               </Button>
               <Button
+                type="button"
                 variant={viewMode === "cards" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("cards")}
@@ -183,6 +187,7 @@ export default function BillTemplateSelector({
             </div>
 
             <Button
+              type="button"
               variant={showAllTemplates ? "default" : "outline"}
               size="sm"
               onClick={() => {
@@ -195,6 +200,7 @@ export default function BillTemplateSelector({
             </Button>
             {selectedTemplateIds.size > 0 && (
               <Button
+                type="button"
                 onClick={handleAddSelected}
                 size="lg"
                 className="bg-blue-600 hover:bg-blue-700"
@@ -270,6 +276,7 @@ export default function BillTemplateSelector({
                       </TableCell>
                       <TableCell className="text-center">
                         <Button
+                          type="button"
                           size="sm"
                           variant={isSelected ? "default" : "outline"}
                           onClick={(e) => {
@@ -432,6 +439,7 @@ export default function BillTemplateSelector({
         {viewMode === "cards" && selectedTemplateIds.size > 0 && (
           <div className="mt-6 flex items-center justify-center">
             <Button
+              type="button"
               onClick={handleAddSelected}
               size="lg"
               className="bg-blue-600 hover:bg-blue-700"
