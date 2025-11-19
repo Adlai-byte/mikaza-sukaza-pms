@@ -1158,6 +1158,62 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
                     <p className="text-sm whitespace-pre-wrap">{viewingVehicle.insurance_info}</p>
                   </div>
                 )}
+
+                {/* Insurance Document Photo */}
+                {viewingVehicle.insurance_document_url && (
+                  <div className="pt-3 border-t">
+                    <p className="text-muted-foreground text-sm mb-2">Insurance Document</p>
+                    <a
+                      href={viewingVehicle.insurance_document_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-colors overflow-hidden group"
+                    >
+                      {viewingVehicle.insurance_document_url.toLowerCase().endsWith('.pdf') ? (
+                        // PDF Preview
+                        <div className="flex items-center gap-3 p-4 bg-gray-50 group-hover:bg-blue-50 transition-colors">
+                          <FileText className="h-10 w-10 text-red-600" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">Insurance Policy Document</p>
+                            <p className="text-xs text-gray-500">Click to view PDF</p>
+                          </div>
+                          <Eye className="h-5 w-5 text-gray-400 group-hover:text-blue-600" />
+                        </div>
+                      ) : (
+                        // Image Preview
+                        <div className="relative">
+                          <img
+                            src={viewingVehicle.insurance_document_url}
+                            alt="Insurance Document"
+                            className="w-full h-48 object-cover"
+                            onError={(e) => {
+                              // Fallback if image fails to load
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement!.innerHTML = `
+                                <div class="flex items-center justify-center h-48 bg-gray-100">
+                                  <div class="text-center">
+                                    <svg class="h-12 w-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p class="text-sm text-gray-500 mt-2">Image not available</p>
+                                  </div>
+                                </div>
+                              `;
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-2 shadow-lg">
+                              <Eye className="h-6 w-6 text-blue-600" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </a>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Click to view full size in new tab
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Documents Section */}
