@@ -24,13 +24,13 @@ import {
   XCircle,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface JobDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   job: any;
   onEdit: (job: any) => void;
-  onCreateTask: (job: any) => void;
   onStatusChange: (jobId: string, status: string) => void;
 }
 
@@ -39,9 +39,11 @@ export function JobDetailsDialog({
   onOpenChange,
   job,
   onEdit,
-  onCreateTask,
   onStatusChange,
 }: JobDetailsDialogProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.user_type === 'admin';
+
   if (!job) return null;
 
   const formatDate = (dateString: string | null | undefined) => {
@@ -227,6 +229,40 @@ export function JobDetailsDialog({
             </>
           )}
 
+          {/* Linked Tasks History */}
+          {job.linked_tasks && job.linked_tasks.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <CheckSquare className="h-4 w-4" />
+                  Task History ({job.linked_tasks.length})
+                </h4>
+                <div className="space-y-2">
+                  {job.linked_tasks.map((task: any) => (
+                    <div
+                      key={task.task_id}
+                      className="flex items-center justify-between p-3 border rounded-md bg-muted/30"
+                    >
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{task.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Assigned to: {task.assigned_user?.first_name} {task.assigned_user?.last_name}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={task.status === 'completed' ? 'default' : 'secondary'}
+                        className={task.status === 'completed' ? 'bg-green-600 text-white' : ''}
+                      >
+                        {task.status?.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Action Buttons */}
           <div className="space-y-3">
             <h4 className="text-sm font-semibold">Actions</h4>
@@ -292,32 +328,21 @@ export function JobDetailsDialog({
                 </Button>
               )}
 
-              {/* Other Actions */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onEdit(job);
-                  onOpenChange(false);
-                }}
-                className="w-full"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Job
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onCreateTask(job);
-                  onOpenChange(false);
-                }}
-                className="w-full"
-              >
-                <CheckSquare className="h-4 w-4 mr-2" />
-                Create Task
-              </Button>
+              {/* Other Actions - Only for Admin users */}
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onEdit(job);
+                    onOpenChange(false);
+                  }}
+                  className="w-full"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Job
+                </Button>
+              )}
             </div>
           </div>
         </div>

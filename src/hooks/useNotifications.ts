@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AppNotification, NotificationPreferences } from '@/lib/schemas';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActivityLogs } from '@/hooks/useActivityLogs';
 
 // Query keys
 export const notificationKeys = {
@@ -16,19 +17,28 @@ export const notificationKeys = {
 
 // Fetch notifications for current user
 const fetchNotifications = async (userId: string, limit: number = 50): Promise<AppNotification[]> => {
+  console.log('🔔 [Notifications] Fetching notifications for userId:', userId);
+
   const { data, error } = await supabase
     .from('notifications')
     .select(`
       *,
       action_user:users!notifications_action_by_fkey(user_id, first_name, last_name, email, photo_url),
       task:tasks(task_id, title, status, priority),
-      issue:issues(issue_id, title, status, priority)
+      issue:issues(issue_id, title, status, priority),
+      job:jobs(job_id, title, status, priority)
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) {
+    console.error('❌ [Notifications] Fetch error:', error);
+    throw error;
+  }
+
+  console.log('✅ [Notifications] Fetched:', data?.length || 0, 'notifications');
+  console.log('📊 [Notifications] Sample data:', data?.[0]);
   return (data || []) as AppNotification[];
 };
 
@@ -67,7 +77,15 @@ const markAllAsRead = async (userId: string): Promise<void> => {
 };
 
 // Delete notification
-const deleteNotification = async (notificationId: string, userId: string): Promise<void> => {
+const deleteNotification = async (notificationId: string, userId: string): Promise<{ notificationId: string; notification: any }> => {
+  // Fetch notification details before deleting for logging
+  const { data: notification } = await supabase
+    .from('notifications')
+    .select('notification_id, type, title, message')
+    .eq('notification_id', notificationId)
+    .eq('user_id', userId)
+    .single();
+
   const { error } = await supabase
     .from('notifications')
     .delete()
@@ -75,6 +93,7 @@ const deleteNotification = async (notificationId: string, userId: string): Promi
     .eq('user_id', userId);
 
   if (error) throw error;
+  return { notificationId, notification };
 };
 
 // Delete all read notifications
@@ -143,11 +162,26 @@ export function useNotifications(limit: number = 50) {
   const queryClient = useQueryClient();
   const userId = profile?.user_id || user?.id || '';
 
+  console.log('🔔 [useNotifications] Hook initialized:', {
+    userId,
+    hasProfile: !!profile,
+    hasUser: !!user,
+    profileUserId: profile?.user_id,
+    userAuthId: user?.id,
+  });
+
   const { data: notifications = [], isLoading, error, refetch } = useQuery({
     queryKey: notificationKeys.lists(),
     queryFn: () => fetchNotifications(userId, limit),
     enabled: !!userId,
     staleTime: 30 * 1000, // 30 seconds
+  });
+
+  console.log('🔔 [useNotifications] Query result:', {
+    notificationCount: notifications.length,
+    isLoading,
+    hasError: !!error,
+    error: error?.message,
   });
 
   // Real-time subscription for new notifications
@@ -219,16 +253,51 @@ export function useMarkAsRead() {
 
   return useMutation({
     mutationFn: (notificationId: string) => markAsRead(notificationId, userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: notificationKeys.count() });
+    onMutate: async (notificationId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: notificationKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: notificationKeys.count() });
+
+      // Snapshot the previous values
+      const previousNotifications = queryClient.getQueryData(notificationKeys.lists());
+      const previousCount = queryClient.getQueryData(notificationKeys.count());
+
+      // Optimistically update the notifications list
+      queryClient.setQueryData(notificationKeys.lists(), (old: AppNotification[] | undefined) => {
+        if (!old) return old;
+        return old.map(notification =>
+          notification.notification_id === notificationId
+            ? { ...notification, is_read: true, read_at: new Date().toISOString() }
+            : notification
+        );
+      });
+
+      // Optimistically update the unread count
+      queryClient.setQueryData(notificationKeys.count(), (old: number | undefined) => {
+        return Math.max(0, (old || 0) - 1);
+      });
+
+      // Return context with previous values for rollback
+      return { previousNotifications, previousCount };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, notificationId, context) => {
+      // Rollback on error
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(notificationKeys.lists(), context.previousNotifications);
+      }
+      if (context?.previousCount !== undefined) {
+        queryClient.setQueryData(notificationKeys.count(), context.previousCount);
+      }
       toast({
         title: 'Error',
         description: error.message || 'Failed to mark notification as read',
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      // Always refetch after mutation completes
+      queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.count() });
     },
   });
 }
@@ -241,20 +310,55 @@ export function useMarkAllAsRead() {
 
   return useMutation({
     mutationFn: () => markAllAsRead(userId),
+    onMutate: async () => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: notificationKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: notificationKeys.count() });
+
+      // Snapshot the previous values
+      const previousNotifications = queryClient.getQueryData(notificationKeys.lists());
+      const previousCount = queryClient.getQueryData(notificationKeys.count());
+
+      // Optimistically update the notifications list
+      queryClient.setQueryData(notificationKeys.lists(), (old: AppNotification[] | undefined) => {
+        if (!old) return old;
+        return old.map(notification => ({
+          ...notification,
+          is_read: true,
+          read_at: new Date().toISOString()
+        }));
+      });
+
+      // Optimistically update the unread count to 0
+      queryClient.setQueryData(notificationKeys.count(), 0);
+
+      // Return context with previous values for rollback
+      return { previousNotifications, previousCount };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: notificationKeys.count() });
       toast({
         title: 'Success',
         description: 'All notifications marked as read',
       });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context) => {
+      // Rollback on error
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(notificationKeys.lists(), context.previousNotifications);
+      }
+      if (context?.previousCount !== undefined) {
+        queryClient.setQueryData(notificationKeys.count(), context.previousCount);
+      }
       toast({
         title: 'Error',
         description: error.message || 'Failed to mark all as read',
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      // Always refetch after mutation completes
+      queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.count() });
     },
   });
 }
@@ -264,19 +368,67 @@ export function useDeleteNotification() {
   const queryClient = useQueryClient();
   const { user, profile } = useAuth();
   const userId = profile?.user_id || user?.id || '';
+  const { logActivity } = useActivityLogs();
 
   return useMutation({
     mutationFn: (notificationId: string) => deleteNotification(notificationId, userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: notificationKeys.count() });
+    onMutate: async (notificationId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: notificationKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: notificationKeys.count() });
+
+      // Snapshot the previous values
+      const previousNotifications = queryClient.getQueryData(notificationKeys.lists());
+      const previousCount = queryClient.getQueryData(notificationKeys.count());
+
+      // Get the notification being deleted to check if it was unread
+      const deletedNotification = (previousNotifications as AppNotification[] | undefined)?.find(
+        n => n.notification_id === notificationId
+      );
+
+      // Optimistically update the notifications list
+      queryClient.setQueryData(notificationKeys.lists(), (old: AppNotification[] | undefined) => {
+        if (!old) return old;
+        return old.filter(notification => notification.notification_id !== notificationId);
+      });
+
+      // Optimistically update the unread count if notification was unread
+      if (deletedNotification && !deletedNotification.is_read) {
+        queryClient.setQueryData(notificationKeys.count(), (old: number | undefined) => {
+          return Math.max(0, (old || 0) - 1);
+        });
+      }
+
+      // Return context with previous values for rollback
+      return { previousNotifications, previousCount };
     },
-    onError: (error: Error) => {
+    onSuccess: ({ notificationId, notification }) => {
+      // Log the delete action
+      logActivity('notification_deleted', {
+        notification_id: notificationId,
+        type: notification?.type,
+        title: notification?.title || 'Unknown Notification',
+        message: notification?.message,
+      });
+    },
+    onError: (error: Error, notificationId, context) => {
+      // Rollback on error
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(notificationKeys.lists(), context.previousNotifications);
+      }
+      if (context?.previousCount !== undefined) {
+        queryClient.setQueryData(notificationKeys.count(), context.previousCount);
+      }
       toast({
         title: 'Error',
         description: error.message || 'Failed to delete notification',
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      // Always refetch after mutation completes
+      queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.count() });
     },
   });
 }
@@ -289,20 +441,54 @@ export function useDeleteAllRead() {
 
   return useMutation({
     mutationFn: () => deleteAllRead(userId),
+    onMutate: async () => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: notificationKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: notificationKeys.count() });
+
+      // Snapshot the previous values
+      const previousNotifications = queryClient.getQueryData(notificationKeys.lists());
+      const previousCount = queryClient.getQueryData(notificationKeys.count());
+
+      // Optimistically update the notifications list - remove all read notifications
+      queryClient.setQueryData(notificationKeys.lists(), (old: AppNotification[] | undefined) => {
+        if (!old) return old;
+        console.log('🗑️ [DeleteAllRead] Before filter:', old.length, 'notifications');
+        const filtered = old.filter(notification => !notification.is_read);
+        console.log('🗑️ [DeleteAllRead] After filter:', filtered.length, 'notifications remaining');
+        return filtered;
+      });
+
+      // Count doesn't change since we're only deleting read notifications
+      // (unread count should remain the same)
+
+      // Return context with previous values for rollback
+      return { previousNotifications, previousCount };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: notificationKeys.count() });
       toast({
         title: 'Success',
         description: 'All read notifications deleted',
       });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context) => {
+      // Rollback on error
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(notificationKeys.lists(), context.previousNotifications);
+      }
+      if (context?.previousCount !== undefined) {
+        queryClient.setQueryData(notificationKeys.count(), context.previousCount);
+      }
       toast({
         title: 'Error',
         description: error.message || 'Failed to delete notifications',
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      // Always refetch after mutation completes
+      queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.count() });
     },
   });
 }

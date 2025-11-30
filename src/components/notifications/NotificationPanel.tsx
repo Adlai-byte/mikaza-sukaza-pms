@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCheck,
@@ -10,11 +10,25 @@ import {
   Clock,
   MessageSquare,
   UserPlus,
+  CalendarDays,
+  CalendarCheck,
+  CalendarX,
+  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   useNotifications,
   useMarkAsRead,
@@ -37,6 +51,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
   const deleteNotification = useDeleteNotification();
   const deleteAllRead = useDeleteAllRead();
   const navigate = useNavigate();
+  const [showClearDialog, setShowClearDialog] = useState(false);
 
   const handleNotificationClick = (notification: AppNotification) => {
     // Mark as read
@@ -56,9 +71,8 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
   };
 
   const handleDeleteAllRead = () => {
-    if (confirm('Delete all read notifications?')) {
-      deleteAllRead.mutate();
-    }
+    deleteAllRead.mutate();
+    setShowClearDialog(false);
   };
 
   const handleDelete = (e: React.MouseEvent, notificationId: string) => {
@@ -84,6 +98,20 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
       case 'issue_comment':
       case 'mention':
         return <MessageSquare className="h-4 w-4 text-indigo-600" />;
+      // Booking notifications
+      case 'booking_created':
+      case 'booking_updated':
+      case 'booking_status_changed':
+        return <CalendarDays className="h-4 w-4 text-purple-600" />;
+      case 'booking_confirmed':
+        return <CalendarCheck className="h-4 w-4 text-green-600" />;
+      case 'booking_cancelled':
+        return <CalendarX className="h-4 w-4 text-red-600" />;
+      case 'booking_check_in_reminder':
+      case 'booking_check_out_reminder':
+        return <AlertTriangle className="h-4 w-4 text-amber-600" />;
+      case 'booking_payment_received':
+        return <DollarSign className="h-4 w-4 text-green-600" />;
       default:
         return <Bell className="h-4 w-4 text-gray-600" />;
     }
@@ -152,7 +180,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleDeleteAllRead}
+            onClick={() => setShowClearDialog(true)}
             disabled={deleteAllRead.isPending || !notifications.some(n => n.is_read)}
             className="h-8 text-xs text-destructive hover:text-destructive"
           >
@@ -256,6 +284,32 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
           </Button>
         </div>
       )}
+
+      {/* Clear Read Confirmation Dialog */}
+      <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Delete All Read Notifications?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all read notifications. This action cannot be undone.
+              Unread notifications will remain in your inbox.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAllRead}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete All Read
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

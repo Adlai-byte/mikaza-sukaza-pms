@@ -1,0 +1,117 @@
+-- =====================================================
+-- DOCUMENT STORAGE BUCKETS - SETUP INSTRUCTIONS
+-- =====================================================
+--
+-- ⚠️  IMPORTANT: THIS MIGRATION IS INFORMATIONAL ONLY
+-- ⚠️  Storage buckets and policies MUST be created via Supabase Dashboard
+--
+-- DO NOT RUN THIS FILE AS A MIGRATION
+-- Instead, follow the manual setup steps in DOCUMENTS_MODULE_SETUP.md
+--
+-- =====================================================
+-- MANUAL SETUP REQUIRED:
+-- =====================================================
+--
+-- STEP 1: Create Storage Buckets in Supabase Dashboard
+-- ------------------------------------------------------
+-- Go to: https://supabase.com/dashboard → Storage → New bucket
+--
+-- 1. Bucket: property-documents
+--    - Name: property-documents
+--    - Public: false
+--    - File size limit: 52428800 (50MB)
+--    - Allowed MIME types:
+--      application/pdf
+--      image/jpeg, image/jpg, image/png, image/webp, image/gif
+--      application/msword
+--      application/vnd.openxmlformats-officedocument.wordprocessingml.document
+--      application/vnd.ms-excel
+--      application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+--      text/plain, text/csv
+--
+-- 2. Bucket: employee-documents
+--    - Name: employee-documents
+--    - Public: false
+--    - File size limit: 20971520 (20MB)
+--    - Allowed MIME types:
+--      application/pdf
+--      image/jpeg, image/jpg, image/png, image/webp
+--
+-- 3. Bucket: message-templates
+--    - Name: message-templates
+--    - Public: false
+--    - File size limit: 10485760 (10MB)
+--    - Allowed MIME types:
+--      application/pdf
+--      text/plain, text/html
+--      application/msword
+--      application/vnd.openxmlformats-officedocument.wordprocessingml.document
+--
+-- =====================================================
+-- STEP 2: Create Storage Policies in Dashboard
+-- ------------------------------------------------------
+-- After creating buckets, go to each bucket → Policies tab
+-- Then manually create policies using the templates below
+-- =====================================================
+--
+-- NOTE: The storage.objects policies below are REFERENCE ONLY
+-- They must be created via the Supabase Dashboard UI, not SQL
+--
+-- =====================================================
+
+-- =====================================================
+-- REFERENCE: STORAGE POLICIES
+-- These are examples only - create via Dashboard UI
+-- =====================================================
+--
+-- POLICY TEMPLATES FOR PROPERTY-DOCUMENTS BUCKET:
+--
+-- 1. Name: "Admins have full access to property documents"
+--    Operation: ALL
+--    Policy: bucket_id = 'property-documents' AND (auth.jwt()->>'user_type' = 'admin')
+--
+-- 2. Name: "OPS can view property documents"
+--    Operation: SELECT
+--    Policy: bucket_id = 'property-documents' AND (auth.jwt()->>'user_type' IN ('admin', 'ops'))
+--
+-- 3. Name: "OPS can upload to service/messages folders"
+--    Operation: INSERT
+--    Policy: bucket_id = 'property-documents' AND (auth.jwt()->>'user_type' IN ('admin', 'ops'))
+--
+-- 4. Name: "Users can view their own uploads"
+--    Operation: SELECT
+--    Policy: bucket_id = 'property-documents' AND owner = auth.uid()
+--
+-- 5. Name: "Users can delete their own uploads"
+--    Operation: DELETE
+--    Policy: bucket_id = 'property-documents' AND owner = auth.uid()
+--
+-- =====================================================
+--
+-- POLICY TEMPLATES FOR EMPLOYEE-DOCUMENTS BUCKET:
+--
+-- 1. Name: "Admins have full access"
+--    Operation: ALL
+--    Policy: bucket_id = 'employee-documents' AND (auth.jwt()->>'user_type' = 'admin')
+--
+-- 2. Name: "Users can view their own employee docs"
+--    Operation: SELECT
+--    Policy: bucket_id = 'employee-documents' AND (storage.foldername(name))[1] = auth.uid()::text
+--
+-- =====================================================
+--
+-- POLICY TEMPLATES FOR MESSAGE-TEMPLATES BUCKET:
+--
+-- 1. Name: "Admins and OPS can manage templates"
+--    Operation: ALL
+--    Policy: bucket_id = 'message-templates' AND (auth.jwt()->>'user_type' IN ('admin', 'ops'))
+--
+-- 2. Name: "All users can view templates"
+--    Operation: SELECT
+--    Policy: bucket_id = 'message-templates' AND auth.role() = 'authenticated'
+--
+-- =====================================================
+-- END OF REFERENCE FILE
+-- This file contains no executable SQL - it's for reference only
+-- Follow DOCUMENTS_MODULE_SETUP.md for complete setup instructions
+-- =====================================================

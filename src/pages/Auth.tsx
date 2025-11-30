@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useUsersOptimized } from "@/hooks/useUsersOptimized";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,9 +20,10 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [showUserList, setShowUserList] = useState(false);
-  const { signIn, signUp, user, sessionLogin } = useAuth();
-  const { users, loading: usersLoading } = useUsersOptimized();
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const { signIn, signUp, signOut, user, profile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -57,9 +57,29 @@ export default function Auth() {
       const validatedData = loginSchema.parse(loginForm);
       setLoading(true);
 
+      console.log('🔐 [AUTH] Login attempt:', {
+        email: validatedData.email,
+        timestamp: new Date().toISOString(),
+        rememberMe: rememberMe
+      });
+
       const { error, data } = await signIn(validatedData.email, validatedData.password);
 
+      console.log('📊 [AUTH] Login response:', {
+        success: !error,
+        hasUser: !!data?.user,
+        email: validatedData.email,
+        timestamp: new Date().toISOString()
+      });
+
       if (error) {
+        console.error('❌ [AUTH] Login failed:', {
+          email: validatedData.email,
+          error: error.message,
+          errorCode: error.code,
+          timestamp: new Date().toISOString()
+        });
+
         if (error.message.includes("Invalid login credentials")) {
           toast({
             title: "Login Failed",
@@ -84,6 +104,12 @@ export default function Auth() {
 
       // Check if email is verified (Supabase returns user even if not verified)
       if (data?.user && !data.user.email_confirmed_at) {
+        console.warn('⚠️ [AUTH] Email not verified:', {
+          email: validatedData.email,
+          userId: data.user.id,
+          timestamp: new Date().toISOString()
+        });
+
         await signOut();
         toast({
           title: "Email Not Verified",
@@ -95,12 +121,23 @@ export default function Auth() {
 
       // Save credentials if remember me is checked
       if (rememberMe) {
+        console.log('💾 [AUTH] Saving credentials for remember me:', {
+          email: validatedData.email,
+          timestamp: new Date().toISOString()
+        });
         localStorage.setItem('rememberedEmail', validatedData.email);
         localStorage.setItem('rememberMe', 'true');
       } else {
+        console.log('🗑️ [AUTH] Clearing remembered credentials');
         localStorage.removeItem('rememberedEmail');
         localStorage.removeItem('rememberMe');
       }
+
+      console.log('✅ [AUTH] Login successful:', {
+        email: validatedData.email,
+        userId: data?.user?.id,
+        timestamp: new Date().toISOString()
+      });
 
       toast({
         title: "Welcome back!",
@@ -130,6 +167,7 @@ export default function Auth() {
 
   const handleResendVerification = async () => {
     if (!loginForm.email) {
+      console.warn('⚠️ [AUTH] Resend verification attempted without email');
       toast({
         title: "Email Required",
         description: "Please enter your email address to resend the verification link.",
@@ -142,12 +180,22 @@ export default function Auth() {
       const validatedEmail = loginSchema.pick({ email: true }).parse({ email: loginForm.email });
       setIsResendingEmail(true);
 
+      console.log('📧 [AUTH] Resending verification email:', {
+        email: validatedEmail.email,
+        timestamp: new Date().toISOString()
+      });
+
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: validatedEmail.email,
       });
 
       if (error) {
+        console.error('❌ [AUTH] Resend verification failed:', {
+          email: validatedEmail.email,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
         toast({
           title: "Resend Failed",
           description: error.message,
@@ -156,19 +204,25 @@ export default function Auth() {
         return;
       }
 
+      console.log('✅ [AUTH] Verification email resent successfully:', {
+        email: validatedEmail.email,
+        timestamp: new Date().toISOString()
+      });
+
       toast({
         title: "Verification Email Sent",
         description: "Please check your inbox for the verification link. If you don't see it, check your spam folder.",
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error('❌ [AUTH] Validation error on resend:', error.errors);
         toast({
           title: "Invalid Email",
           description: "Please enter a valid email address.",
           variant: "destructive",
         });
       } else {
-        console.error('Resend verification error:', error);
+        console.error('❌ [AUTH] Resend verification error:', error);
         toast({
           title: "Error",
           description: "Failed to resend verification email. Please try again.",
@@ -177,6 +231,79 @@ export default function Auth() {
       }
     } finally {
       setIsResendingEmail(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!resetEmail) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address to reset your password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const validatedEmail = loginSchema.pick({ email: true }).parse({ email: resetEmail });
+      setIsResettingPassword(true);
+
+      console.log('🔐 [AUTH] Password reset requested:', {
+        email: validatedEmail.email,
+        timestamp: new Date().toISOString()
+      });
+
+      const { error } = await supabase.auth.resetPasswordForEmail(validatedEmail.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        console.error('❌ [AUTH] Password reset failed:', {
+          email: validatedEmail.email,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+        toast({
+          title: "Reset Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('✅ [AUTH] Password reset email sent:', {
+        email: validatedEmail.email,
+        timestamp: new Date().toISOString()
+      });
+
+      toast({
+        title: "Reset Email Sent",
+        description: "Please check your inbox for the password reset link. If you don't see it, check your spam folder.",
+      });
+
+      // Switch back to login mode after successful request
+      setIsForgotPassword(false);
+      setResetEmail("");
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('❌ [AUTH] Validation error on password reset:', error.errors);
+        toast({
+          title: "Invalid Email",
+          description: "Please enter a valid email address.",
+          variant: "destructive",
+        });
+      } else {
+        console.error('❌ [AUTH] Password reset error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send password reset email. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -211,7 +338,7 @@ export default function Auth() {
             <div className="w-16 h-16 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl flex items-center justify-center mr-4 shadow-lg">
               <User className="text-white w-8 h-8" />
             </div>
-            <h1 className="text-4xl font-light text-white tracking-wide">mikazasukaza</h1>
+            <h1 className="text-4xl font-light text-white tracking-wide">Casa & Concierge</h1>
           </div>
           <p className="text-white/80 text-sm font-light">Property Management System</p>
         </div>
@@ -219,11 +346,61 @@ export default function Auth() {
         {/* Enhanced Login Form */}
         <Card className="bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl">
           <CardHeader className="text-center pb-6 pt-8">
-            <h2 className="text-2xl font-light text-white mb-2">Welcome Back</h2>
-            <p className="text-white/70 text-sm">Sign in to access your dashboard</p>
+            <h2 className="text-2xl font-light text-white mb-2">
+              {isForgotPassword ? "Reset Password" : "Welcome Back"}
+            </h2>
+            <p className="text-white/70 text-sm">
+              {isForgotPassword
+                ? "Enter your email to receive a password reset link"
+                : "Sign in to access your dashboard"}
+            </p>
           </CardHeader>
           <CardContent className="space-y-6 pb-8">
-            <form onSubmit={handleLogin} className="space-y-6">
+            {isForgotPassword ? (
+              <form onSubmit={handleForgotPassword} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email" className="text-white/90 font-light text-sm">
+                    Email Address
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      id="reset-email"
+                      name="reset-email"
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      className="bg-white/95 border-0 text-gray-900 placeholder:text-gray-400 h-12 pl-10 focus:bg-white transition-all"
+                      placeholder="Enter your email"
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-gradient-to-r from-accent to-accent-hover hover:from-accent-hover hover:to-accent text-accent-foreground font-medium text-base border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                  disabled={isResettingPassword}
+                >
+                  {isResettingPassword ? "Sending..." : "Send Reset Link"}
+                </Button>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    className="text-white/70 hover:text-white text-sm underline font-light"
+                    onClick={() => {
+                      setIsForgotPassword(false);
+                      setResetEmail("");
+                    }}
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white/90 font-light text-sm">
                   Email Address
@@ -296,6 +473,7 @@ export default function Auth() {
                 <button
                   type="button"
                   className="text-white/70 hover:text-white text-sm underline font-light"
+                  onClick={() => setIsForgotPassword(true)}
                 >
                   Forgot password?
                 </button>
@@ -326,94 +504,8 @@ export default function Auth() {
                   {isResendingEmail ? "Sending..." : "Resend Verification Email"}
                 </Button>
               </div>
-
-              {/* Available Users List */}
-              {showUserList && (
-                <Card className="mb-4 bg-white/10 border-white/30">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-white">Available Users</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 max-h-60 overflow-y-auto">
-                    {usersLoading ? (
-                      <p className="text-white/70 text-sm">Loading users...</p>
-                    ) : users.length === 0 ? (
-                      <p className="text-white/70 text-sm">No users found. Create users in User Management first.</p>
-                    ) : (
-                      users.filter(u => u.is_active).map((user) => (
-                        <div key={user.user_id} className="flex items-center justify-between p-2 border border-white/20 rounded-lg bg-white/5">
-                          <div className="flex-1">
-                            <p className="font-medium text-white">{user.first_name} {user.last_name}</p>
-                            <p className="text-sm text-white/70">{user.email}</p>
-                            <p className="text-xs text-white/60 capitalize">{user.user_type}</p>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSessionLogin(user)}
-                            disabled={loading}
-                            className="bg-accent hover:bg-accent-hover text-accent-foreground"
-                          >
-                            Login as User
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              <Button 
-                type="submit" 
-                className="w-full h-12 bg-gradient-to-r from-accent to-accent-hover hover:from-accent-hover hover:to-accent text-accent-foreground font-medium text-base border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]" 
-                disabled={loading}
-              >
-                {loading ? "Signing In..." : "Sign In"}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="w-full h-12 mt-3"
-                disabled={loading}
-                onClick={async () => {
-                  try {
-                    const validatedData = loginSchema.parse(loginForm);
-                    setLoading(true);
-                    const { error } = await signUp(validatedData.email, validatedData.password);
-                    if (error) {
-                      if (error.message?.includes("already registered")) {
-                        toast({
-                          title: "Account exists",
-                          description: "You already have an account. Please sign in.",
-                          variant: "default",
-                        });
-                      } else {
-                        toast({
-                          title: "Sign up failed",
-                          description: error.message,
-                          variant: "destructive",
-                        });
-                      }
-                      return;
-                    }
-                    toast({
-                      title: "Check your email",
-                      description: "We sent you a confirmation link to complete your signup.",
-                    });
-                  } catch (err) {
-                    if (err instanceof z.ZodError) {
-                      toast({
-                        title: "Validation Error",
-                        description: err.errors[0].message,
-                        variant: "destructive",
-                      });
-                    }
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                {loading ? "Processing..." : "Create account"}
-              </Button>
             </form>
+            )}
 
             <div className="text-center">
               <p className="text-white/50 text-xs font-light">

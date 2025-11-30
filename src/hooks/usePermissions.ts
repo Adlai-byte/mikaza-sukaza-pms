@@ -99,9 +99,28 @@ export function usePermissions(): UsePermissionsReturn {
   // Memoize all permission checking functions
   const hasPermission = useMemo(
     () => (permission: Permission) => {
-      return permissionChecker?.hasPermission(permission) ?? false;
+      const result = permissionChecker?.hasPermission(permission) ?? false;
+
+      console.log('🔐 [PERMISSION] Permission check:', {
+        permission,
+        result: result ? 'GRANTED' : 'DENIED',
+        user: profile?.email,
+        role: profile?.user_type,
+        userId: profile?.user_id,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!result) {
+        console.warn('⚠️ [PERMISSION] Access denied:', {
+          permission,
+          user: profile?.email,
+          role: profile?.user_type
+        });
+      }
+
+      return result;
     },
-    [permissionChecker]
+    [permissionChecker, profile]
   );
 
   const hasAllPermissions = useMemo(
@@ -120,16 +139,60 @@ export function usePermissions(): UsePermissionsReturn {
 
   const canAccessResource = useMemo(
     () => (resourceOwnerId: string, permission: Permission) => {
-      return permissionChecker?.canAccessResource(resourceOwnerId, permission) ?? false;
+      const result = permissionChecker?.canAccessResource(resourceOwnerId, permission) ?? false;
+
+      console.log('🔓 [PERMISSION] Resource access check:', {
+        permission,
+        resourceOwnerId,
+        currentUserId: profile?.user_id,
+        result: result ? 'GRANTED' : 'DENIED',
+        user: profile?.email,
+        role: profile?.user_type,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!result) {
+        console.warn('⚠️ [PERMISSION] Resource access denied:', {
+          permission,
+          resourceOwnerId,
+          currentUserId: profile?.user_id,
+          user: profile?.email,
+          role: profile?.user_type
+        });
+      }
+
+      return result;
     },
-    [permissionChecker]
+    [permissionChecker, profile]
   );
 
   const canModifyResource = useMemo(
     () => (resourceOwnerId: string, permission: Permission) => {
-      return permissionChecker?.canModifyResource(resourceOwnerId, permission) ?? false;
+      const result = permissionChecker?.canModifyResource(resourceOwnerId, permission) ?? false;
+
+      console.log('✏️ [PERMISSION] Resource modification check:', {
+        permission,
+        resourceOwnerId,
+        currentUserId: profile?.user_id,
+        result: result ? 'GRANTED' : 'DENIED',
+        user: profile?.email,
+        role: profile?.user_type,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!result) {
+        console.warn('⚠️ [PERMISSION] Resource modification denied:', {
+          permission,
+          resourceOwnerId,
+          currentUserId: profile?.user_id,
+          user: profile?.email,
+          role: profile?.user_type
+        });
+      }
+
+      return result;
     },
-    [permissionChecker]
+    [permissionChecker, profile]
   );
 
   const getPermissions = useMemo(

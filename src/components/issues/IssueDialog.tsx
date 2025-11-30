@@ -39,6 +39,8 @@ import { Issue, IssueInsert } from '@/lib/schemas';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { formatUserDisplay } from '@/lib/user-display';
+import { useTranslation } from 'react-i18next';
 
 interface IssueDialogProps {
   open: boolean;
@@ -55,6 +57,7 @@ export function IssueDialog({
   isSubmitting = false,
   issue,
 }: IssueDialogProps) {
+  const { t } = useTranslation();
   const isEditing = !!issue;
   const { properties } = usePropertiesOptimized();
 
@@ -64,7 +67,7 @@ export function IssueDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('users')
-        .select('user_id, first_name, last_name, email')
+        .select('user_id, first_name, last_name, email, user_type')
         .eq('is_active', true)
         .order('first_name', { ascending: true });
 
@@ -115,19 +118,19 @@ export function IssueDialog({
     const newErrors: Record<string, string> = {};
 
     if (!formData.property_id) {
-      newErrors.property_id = 'Property is required';
+      newErrors.property_id = t('issueDialog.validation.propertyRequired');
     }
 
     if (!formData.title.trim()) {
-      newErrors.title = 'Issue title is required';
+      newErrors.title = t('issueDialog.validation.titleRequired');
     }
 
     if (formData.estimated_cost !== null && formData.estimated_cost < 0) {
-      newErrors.estimated_cost = 'Cost cannot be negative';
+      newErrors.estimated_cost = t('issueDialog.validation.costNegative');
     }
 
     if (formData.actual_cost !== null && formData.actual_cost < 0) {
-      newErrors.actual_cost = 'Cost cannot be negative';
+      newErrors.actual_cost = t('issueDialog.validation.costNegative');
     }
 
     setErrors(newErrors);
@@ -192,12 +195,12 @@ export function IssueDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <AlertTriangle className="h-6 w-6 text-primary" />
-            {isEditing ? 'Edit Issue' : 'Report New Issue'}
+            {isEditing ? t('issueDialog.editIssue') : t('issueDialog.reportNewIssue')}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? 'Update issue details and add photos'
-              : 'Report a property issue with photos for documentation'}
+              ? t('issueDialog.editDescription')
+              : t('issueDialog.reportDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -206,7 +209,7 @@ export function IssueDialog({
           <div className="space-y-2">
             <Label htmlFor="property_id" className="required flex items-center gap-2">
               <Building className="h-4 w-4" />
-              Property *
+              {t('issueDialog.propertyRequired')}
             </Label>
             <Select
               value={formData.property_id}
@@ -214,7 +217,7 @@ export function IssueDialog({
               disabled={isEditing}
             >
               <SelectTrigger className={errors.property_id ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Select a property..." />
+                <SelectValue placeholder={t('issueDialog.selectProperty')} />
               </SelectTrigger>
               <SelectContent>
                 {properties.map((property) => (
@@ -242,13 +245,13 @@ export function IssueDialog({
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title" className="required">
-              Issue Title *
+              {t('issueDialog.issueTitleRequired')}
             </Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => handleChange('title', e.target.value)}
-              placeholder="Brief description of the issue..."
+              placeholder={t('issueDialog.issueTitlePlaceholder')}
               className={errors.title ? 'border-red-500' : ''}
             />
             {errors.title && (
@@ -261,12 +264,12 @@ export function IssueDialog({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Detailed Description</Label>
+            <Label htmlFor="description">{t('issueDialog.detailedDescription')}</Label>
             <Textarea
               id="description"
               value={formData.description || ''}
               onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="Provide detailed information about the issue..."
+              placeholder={t('issueDialog.detailedDescriptionPlaceholder')}
               className="min-h-[100px]"
             />
           </div>
@@ -276,7 +279,7 @@ export function IssueDialog({
             <div className="space-y-2">
               <Label htmlFor="category" className="flex items-center gap-2">
                 <Tag className="h-4 w-4" />
-                Category
+                {t('issueDialog.category')}
               </Label>
               <Select
                 value={formData.category}
@@ -286,15 +289,15 @@ export function IssueDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="damage">Damage</SelectItem>
-                  <SelectItem value="repair_needed">Repair Needed</SelectItem>
-                  <SelectItem value="cleaning">Cleaning</SelectItem>
-                  <SelectItem value="plumbing">Plumbing</SelectItem>
-                  <SelectItem value="electrical">Electrical</SelectItem>
-                  <SelectItem value="appliance">Appliance</SelectItem>
-                  <SelectItem value="hvac">HVAC</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="maintenance">{t('issueDialog.categories.maintenance')}</SelectItem>
+                  <SelectItem value="damage">{t('issueDialog.categories.damage')}</SelectItem>
+                  <SelectItem value="repair_needed">{t('issueDialog.categories.repairNeeded')}</SelectItem>
+                  <SelectItem value="cleaning">{t('issueDialog.categories.cleaning')}</SelectItem>
+                  <SelectItem value="plumbing">{t('issueDialog.categories.plumbing')}</SelectItem>
+                  <SelectItem value="electrical">{t('issueDialog.categories.electrical')}</SelectItem>
+                  <SelectItem value="appliance">{t('issueDialog.categories.appliance')}</SelectItem>
+                  <SelectItem value="hvac">{t('issueDialog.categories.hvac')}</SelectItem>
+                  <SelectItem value="other">{t('issueDialog.categories.other')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -302,7 +305,7 @@ export function IssueDialog({
             <div className="space-y-2">
               <Label htmlFor="priority" className="flex items-center gap-2">
                 <Flag className="h-4 w-4" />
-                Priority
+                {t('issueDialog.priority')}
               </Label>
               <Select
                 value={formData.priority}
@@ -312,21 +315,21 @@ export function IssueDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="low">{t('issueDialog.priorities.low')}</SelectItem>
+                  <SelectItem value="medium">{t('issueDialog.priorities.medium')}</SelectItem>
+                  <SelectItem value="high">{t('issueDialog.priorities.high')}</SelectItem>
+                  <SelectItem value="urgent">{t('issueDialog.priorities.urgent')}</SelectItem>
                 </SelectContent>
               </Select>
               <Badge className={getPriorityColor(formData.priority)}>
-                {formData.priority}
+                {t(`issueDialog.priorities.${formData.priority}`)}
               </Badge>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="status" className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
-                Status
+                {t('issueDialog.status')}
               </Label>
               <Select
                 value={formData.status}
@@ -336,15 +339,15 @@ export function IssueDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                  <SelectItem value="on_hold">On Hold</SelectItem>
+                  <SelectItem value="open">{t('issueDialog.statuses.open')}</SelectItem>
+                  <SelectItem value="in_progress">{t('issueDialog.statuses.inProgress')}</SelectItem>
+                  <SelectItem value="resolved">{t('issueDialog.statuses.resolved')}</SelectItem>
+                  <SelectItem value="closed">{t('issueDialog.statuses.closed')}</SelectItem>
+                  <SelectItem value="on_hold">{t('issueDialog.statuses.onHold')}</SelectItem>
                 </SelectContent>
               </Select>
               <Badge className={getStatusColor(formData.status)}>
-                {formData.status.replace('_', ' ')}
+                {t(`issueDialog.statuses.${formData.status === 'in_progress' ? 'inProgress' : formData.status === 'on_hold' ? 'onHold' : formData.status}`)}
               </Badge>
             </div>
           </div>
@@ -354,33 +357,33 @@ export function IssueDialog({
             <div className="space-y-2">
               <Label htmlFor="location" className="flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                Location (Optional)
+                {t('issueDialog.locationOptional')}
               </Label>
               <Input
                 id="location"
                 value={formData.location || ''}
                 onChange={(e) => handleChange('location', e.target.value)}
-                placeholder="e.g., Kitchen, Bathroom, Living Room..."
+                placeholder={t('issueDialog.locationPlaceholder')}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="assigned_to" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                Assign To (Optional)
+                {t('issueDialog.assignToOptional')}
               </Label>
               <Select
                 value={formData.assigned_to || 'none'}
                 onValueChange={(value) => handleChange('assigned_to', value === 'none' ? null : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a user..." />
+                  <SelectValue placeholder={t('issueDialog.selectUser')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
+                  <SelectItem value="none">{t('issueDialog.unassigned')}</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.user_id} value={user.user_id}>
-                      {user.first_name} {user.last_name}
+                      {formatUserDisplay(user)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -389,7 +392,7 @@ export function IssueDialog({
                 <Card className="bg-green-50 border-green-200">
                   <CardContent className="p-2">
                     <p className="text-sm text-green-800">
-                      {selectedUser.first_name} {selectedUser.last_name}
+                      {formatUserDisplay(selectedUser)}
                     </p>
                   </CardContent>
                 </Card>
@@ -402,7 +405,7 @@ export function IssueDialog({
             <div className="space-y-2">
               <Label htmlFor="estimated_cost" className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                Estimated Cost ($)
+                {t('issueDialog.estimatedCost')}
               </Label>
               <Input
                 id="estimated_cost"
@@ -411,7 +414,7 @@ export function IssueDialog({
                 min="0"
                 value={formData.estimated_cost || ''}
                 onChange={(e) => handleChange('estimated_cost', e.target.value ? parseFloat(e.target.value) : null)}
-                placeholder="0.00"
+                placeholder={t('issueDialog.costPlaceholder')}
                 className={errors.estimated_cost ? 'border-red-500' : ''}
               />
               {errors.estimated_cost && (
@@ -422,7 +425,7 @@ export function IssueDialog({
             <div className="space-y-2">
               <Label htmlFor="actual_cost" className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                Actual Cost ($)
+                {t('issueDialog.actualCost')}
               </Label>
               <Input
                 id="actual_cost"
@@ -431,7 +434,7 @@ export function IssueDialog({
                 min="0"
                 value={formData.actual_cost || ''}
                 onChange={(e) => handleChange('actual_cost', e.target.value ? parseFloat(e.target.value) : null)}
-                placeholder="0.00"
+                placeholder={t('issueDialog.costPlaceholder')}
                 className={errors.actual_cost ? 'border-red-500' : ''}
               />
               {errors.actual_cost && (
@@ -443,12 +446,12 @@ export function IssueDialog({
           {/* Resolution Notes */}
           {(formData.status === 'resolved' || formData.status === 'closed') && (
             <div className="space-y-2">
-              <Label htmlFor="resolution_notes">Resolution Notes</Label>
+              <Label htmlFor="resolution_notes">{t('issueDialog.resolutionNotes')}</Label>
               <Textarea
                 id="resolution_notes"
                 value={formData.resolution_notes || ''}
                 onChange={(e) => handleChange('resolution_notes', e.target.value)}
-                placeholder="Describe how the issue was resolved..."
+                placeholder={t('issueDialog.resolutionNotesPlaceholder')}
                 className="min-h-[100px]"
               />
             </div>
@@ -459,7 +462,7 @@ export function IssueDialog({
             <div className="space-y-4">
               <Label className="flex items-center gap-2">
                 <ImageIcon className="h-4 w-4" />
-                Photos (Optional)
+                {t('issueDialog.photosOptional')}
               </Label>
               <div className="border-2 border-dashed rounded-lg p-6 text-center">
                 <input
@@ -473,10 +476,10 @@ export function IssueDialog({
                 <label htmlFor="photo-upload" className="cursor-pointer">
                   <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    Click to upload photos or drag and drop
+                    {t('issueDialog.uploadPhotos')}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    PNG, JPG up to 10MB each
+                    {t('issueDialog.fileFormat')}
                   </p>
                 </label>
               </div>
@@ -516,7 +519,7 @@ export function IssueDialog({
               disabled={isSubmitting}
             >
               <X className="mr-2 h-4 w-4" />
-              Cancel
+              {t('issueDialog.cancel')}
             </Button>
             <Button
               type="submit"
@@ -526,11 +529,11 @@ export function IssueDialog({
               <Save className="mr-2 h-4 w-4" />
               {isSubmitting
                 ? isEditing
-                  ? 'Updating...'
-                  : 'Creating...'
+                  ? t('issueDialog.updating')
+                  : t('issueDialog.creating')
                 : isEditing
-                  ? 'Update Issue'
-                  : 'Create Issue'}
+                  ? t('issueDialog.updateIssue')
+                  : t('issueDialog.createIssue')}
             </Button>
           </DialogFooter>
         </form>

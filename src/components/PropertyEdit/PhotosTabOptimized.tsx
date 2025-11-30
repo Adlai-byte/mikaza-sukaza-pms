@@ -114,19 +114,61 @@ export function PhotosTabOptimized({ propertyId }: PhotosTabProps) {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Create a mock photo for now (in real app, you'd upload to storage)
-      const photoUrl = URL.createObjectURL(file);
+      try {
+        // Generate unique filename
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(7);
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${propertyId}/${timestamp}-${randomStr}.${fileExt}`;
 
-      const photoData = {
-        image_url: photoUrl,
-        image_title: file.name.split('.')[0],
-        is_primary: photos.length === 0, // First photo is primary
-        property_id: propertyId,
-      };
+        console.log('📤 [PhotosTabOptimized] Uploading file:', fileName);
 
-      console.log('📤 [PhotosTabOptimized] Creating photo:', photoData);
+        // Upload to Supabase Storage
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('property-images')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-      createPhoto(photoData);
+        if (uploadError) {
+          console.error('❌ [PhotosTabOptimized] Upload failed:', uploadError);
+          toast({
+            title: 'Upload Failed',
+            description: uploadError.message || `Failed to upload ${file.name}`,
+            variant: 'destructive',
+          });
+          continue;
+        }
+
+        console.log('✅ [PhotosTabOptimized] Upload successful:', uploadData);
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('property-images')
+          .getPublicUrl(fileName);
+
+        console.log('🔗 [PhotosTabOptimized] Public URL:', publicUrl);
+
+        const photoData = {
+          image_url: publicUrl,
+          image_title: file.name.split('.')[0],
+          is_primary: photos.length === 0 && i === 0, // First photo is primary
+          property_id: propertyId,
+        };
+
+        console.log('📤 [PhotosTabOptimized] Creating photo record:', photoData);
+
+        createPhoto(photoData);
+      } catch (error) {
+        console.error('❌ [PhotosTabOptimized] Error uploading file:', error);
+        toast({
+          title: 'Upload Error',
+          description: `Failed to upload ${file.name}`,
+          variant: 'destructive',
+        });
+      }
     }
 
     // Reset the input

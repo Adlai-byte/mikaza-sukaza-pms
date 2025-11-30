@@ -109,9 +109,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         if (session?.user) {
           // Fetch profile data when user logs in
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
+          fetchProfile(session.user.id);
 
           // Warm cache with critical data after login
           if (event === 'SIGNED_IN' && cacheWarmer) {
@@ -139,8 +137,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setProfile(null);
           setLoading(false);
         }
-
-        setLoading(false);
       }
     );
 
@@ -161,14 +157,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log('🔑 [AuthContext] Sign in started:', {
+      email,
+      timestamp: new Date().toISOString()
+    });
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
+    if (error) {
+      console.error('❌ [AuthContext] Sign in failed:', {
+        email,
+        error: error.message,
+        errorCode: error.code,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.log('✅ [AuthContext] Sign in successful:', {
+        email,
+        userId: data?.user?.id,
+        emailVerified: !!data?.user?.email_confirmed_at,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     // Track last login timestamp
     if (data?.user && !error) {
       const now = new Date().toISOString();
+
+      console.log('⏰ [AuthContext] Updating last_login_at:', {
+        userId: data.user.id,
+        email,
+        timestamp: now
+      });
 
       // Update both users and profiles tables
       await Promise.all([
@@ -181,7 +204,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           .update({ last_login_at: now })
           .eq('id', data.user.id)
       ]).catch(err => {
-        console.warn('⚠️ Failed to update last_login_at:', err);
+        console.warn('⚠️ [AuthContext] Failed to update last_login_at:', err);
       });
     }
 
@@ -190,6 +213,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
     const redirectUrl = `${window.location.origin}/`;
+
+    console.log('📝 [AuthContext] Sign up started:', {
+      email,
+      firstName,
+      lastName,
+      timestamp: new Date().toISOString()
+    });
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -202,59 +232,74 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       }
     });
+
+    if (error) {
+      console.error('❌ [AuthContext] Sign up failed:', {
+        email,
+        error: error.message,
+        errorCode: error.code,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.log('✅ [AuthContext] Sign up successful:', {
+        email,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     return { error };
   };
 
-  const sessionLogin = async (userFromDB: any) => {
-    if (!AUTH_ENABLED) {
-      // Store user in localStorage for session-based login
-      localStorage.setItem('tempSessionUser', JSON.stringify(userFromDB));
+  const signOut = async () => {
+    try {
+      console.log('🚪 [AuthContext] Signing out user:', {
+        email: user?.email,
+        userId: user?.id,
+        timestamp: new Date().toISOString()
+      });
 
-      const sessionProfile: Profile = {
-        id: userFromDB.user_id,
-        user_id: userFromDB.user_id,
-        email: userFromDB.email,
-        first_name: userFromDB.first_name,
-        last_name: userFromDB.last_name,
-        user_type: userFromDB.user_type,
-        is_active: userFromDB.is_active,
-        photo_url: userFromDB.photo_url,
-        created_at: userFromDB.created_at,
-        updated_at: userFromDB.updated_at,
-      };
-      setProfile(sessionProfile);
+      // Clear local state immediately
+      setProfile(null);
+      setUser(null);
+      setSession(null);
 
-      // Warm cache with critical data after login
-      if (cacheWarmer) {
-        cacheWarmer.warmCriticalData({
-          properties: async () => {
-            const { data } = await supabase
-              .from('properties')
-              .select('*')
-              .order('created_at', { ascending: false });
-            return data;
-          },
-          amenities: async () => {
-            const { data } = await supabase.from('amenities').select('*');
-            return data;
-          },
-          rules: async () => {
-            const { data } = await supabase.from('rules').select('*');
-            return data;
-          },
-        }).catch(error => {
-          console.warn('⚠️ Cache warming failed:', error);
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error('❌ [AuthContext] Supabase signOut error:', {
+          error: error.message,
+          errorCode: error.code,
+          timestamp: new Date().toISOString()
         });
+        throw error;
       }
+
+      console.log('✅ [AuthContext] Successfully signed out:', {
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ [AuthContext] Error during sign out:', error);
+      // Clear state anyway even if supabase signout fails
+      setProfile(null);
+      setUser(null);
+      setSession(null);
+      throw error;
     }
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
-
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return;
+    if (!user) {
+      console.warn('⚠️ [AuthContext] Update profile attempted without user');
+      return;
+    }
+
+    console.log('🔄 [AuthContext] Updating profile:', {
+      userId: user.id,
+      email: user.email,
+      updates: Object.keys(updates),
+      timestamp: new Date().toISOString()
+    });
 
     const { error } = await supabase
       .from('profiles')
@@ -262,8 +307,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       .eq('id', user.id);
 
     if (error) {
+      console.error('❌ [AuthContext] Profile update failed:', {
+        userId: user.id,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
+
+    console.log('✅ [AuthContext] Profile updated successfully:', {
+      userId: user.id,
+      timestamp: new Date().toISOString()
+    });
 
     // Refresh profile data
     await fetchProfile(user.id);

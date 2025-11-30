@@ -46,11 +46,16 @@ import {
   Search,
   Key,
   Palette,
+  Image as ImageIcon,
+  X,
+  Eye,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ListTabSkeleton, TabLoadingSpinner } from './PropertyEditSkeleton';
+import { VehiclePhotoGallery } from './VehiclePhotoGallery';
+import { VehicleDocumentManager } from './VehicleDocumentManager';
 
 interface Vehicle {
   vehicle_id: string;
@@ -63,7 +68,18 @@ interface Vehicle {
   vin?: string;
   owner_name?: string;
   registration_info?: string;
+
+  // Legacy insurance
   insurance_info?: string;
+
+  // NEW: Structured insurance fields
+  insurance_company?: string;
+  insurance_policy_number?: string;
+  insurance_expiry_date?: string;
+  insurance_coverage_amount?: number;
+  insurance_contact_phone?: string;
+  insurance_document_url?: string;
+
   created_at?: string;
 }
 
@@ -93,7 +109,10 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
   const queryClient = useQueryClient();
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [viewingVehicle, setViewingVehicle] = useState<Vehicle | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
+  const [insurancePhoto, setInsurancePhoto] = useState<File | null>(null);
 
   const emptyVehicle = {
     make: '',
@@ -105,6 +124,14 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
     owner_name: '',
     registration_info: '',
     insurance_info: '',
+
+    // NEW: Insurance fields
+    insurance_company: '',
+    insurance_policy_number: '',
+    insurance_expiry_date: '',
+    insurance_coverage_amount: undefined as number | undefined,
+    insurance_contact_phone: '',
+    insurance_document_url: '',
   };
 
   const [formData, setFormData] = useState(emptyVehicle);
@@ -115,12 +142,15 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
     isLoading,
     isFetching,
     error,
+    refetch,
   } = useQuery({
     queryKey: vehiclesKeys.all(propertyId),
     queryFn: () => fetchVehicles(propertyId),
     enabled: !!propertyId,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 1000, // Reduced to 30 seconds for faster updates
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: true, // Always refetch on component mount
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   // Filter vehicles based on search
@@ -133,6 +163,7 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
   // Add vehicle mutation
   const addVehicleMutation = useMutation({
     mutationFn: async (vehicleData: typeof emptyVehicle) => {
+      // Step 1: Create the vehicle
       const { data, error } = await supabase
         .from('property_vehicles')
         .insert([{ ...vehicleData, property_id: propertyId }])
@@ -140,13 +171,114 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
         .single();
 
       if (error) throw error;
+
+      // Step 2: Upload photos if any were selected
+      if (selectedPhotos.length > 0) {
+        const vehicleId = data.vehicle_id;
+        let uploadedCount = 0;
+
+        for (let i = 0; i < selectedPhotos.length; i++) {
+          const file = selectedPhotos[i];
+
+          try {
+            // Upload to storage
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${vehicleId}/${Date.now()}_${i}.${fileExt}`;
+            const filePath = `vehicles/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+              .from('property-images')
+              .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false,
+              });
+
+            if (uploadError) throw uploadError;
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+              .from('property-images')
+              .getPublicUrl(filePath);
+
+            // Create database record
+            const { error: dbError } = await supabase
+              .from('vehicle_photos')
+              .insert([{
+                vehicle_id: vehicleId,
+                photo_url: publicUrl,
+                is_primary: i === 0, // First photo is primary
+                display_order: i,
+              }]);
+
+            if (dbError) throw dbError;
+            uploadedCount++;
+          } catch (photoError) {
+            console.error(`Failed to upload photo ${i + 1}:`, photoError);
+            // Continue uploading other photos even if one fails
+          }
+        }
+
+        // Add info about uploaded photos to response
+        return { ...data, uploadedPhotoCount: uploadedCount };
+      }
+
+      // Step 3: Upload insurance photo if selected
+      if (insurancePhoto) {
+        const vehicleId = data.vehicle_id;
+        try {
+          const fileExt = insurancePhoto.name.split('.').pop();
+          const fileName = `${vehicleId}/insurance_${Date.now()}.${fileExt}`;
+          const filePath = `vehicles/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('property-images')
+            .upload(filePath, insurancePhoto, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          if (uploadError) throw uploadError;
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('property-images')
+            .getPublicUrl(filePath);
+
+          // Update vehicle with insurance document URL
+          const { error: updateError } = await supabase
+            .from('property_vehicles')
+            .update({ insurance_document_url: publicUrl })
+            .eq('vehicle_id', vehicleId);
+
+          if (updateError) throw updateError;
+
+          console.log('✅ Insurance photo uploaded successfully');
+        } catch (error) {
+          console.error('❌ Error uploading insurance photo:', error);
+          toast({
+            title: 'Warning',
+            description: 'Vehicle created but insurance photo upload failed',
+            variant: 'destructive'
+          });
+        }
+      }
+
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: vehiclesKeys.all(propertyId) });
+    onSuccess: async (data) => {
+      // Force immediate refetch with active queries
+      await queryClient.invalidateQueries({
+        queryKey: vehiclesKeys.all(propertyId),
+        refetchType: 'active'
+      });
+
+      const photoMessage = selectedPhotos.length > 0
+        ? ` with ${(data as any).uploadedPhotoCount || 0} photo(s)`
+        : '';
+
       toast({
         title: 'Success',
-        description: 'Vehicle added successfully',
+        description: `Vehicle added successfully${photoMessage}`,
       });
       handleCloseForm();
     },
@@ -170,10 +302,55 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
         .single();
 
       if (error) throw error;
+
+      // Upload insurance photo if selected
+      if (insurancePhoto) {
+        try {
+          const fileExt = insurancePhoto.name.split('.').pop();
+          const fileName = `${vehicleId}/insurance_${Date.now()}.${fileExt}`;
+          const filePath = `vehicles/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('property-images')
+            .upload(filePath, insurancePhoto, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          if (uploadError) throw uploadError;
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('property-images')
+            .getPublicUrl(filePath);
+
+          // Update vehicle with insurance document URL
+          const { error: updateError } = await supabase
+            .from('property_vehicles')
+            .update({ insurance_document_url: publicUrl })
+            .eq('vehicle_id', vehicleId);
+
+          if (updateError) throw updateError;
+
+          console.log('✅ Insurance photo uploaded successfully');
+        } catch (error) {
+          console.error('❌ Error uploading insurance photo:', error);
+          toast({
+            title: 'Warning',
+            description: 'Vehicle updated but insurance photo upload failed',
+            variant: 'destructive'
+          });
+        }
+      }
+
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: vehiclesKeys.all(propertyId) });
+    onSuccess: async () => {
+      // Force immediate refetch with active queries
+      await queryClient.invalidateQueries({
+        queryKey: vehiclesKeys.all(propertyId),
+        refetchType: 'active'
+      });
       toast({
         title: 'Success',
         description: 'Vehicle updated successfully',
@@ -200,8 +377,12 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
       if (error) throw error;
       return vehicleId;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: vehiclesKeys.all(propertyId) });
+    onSuccess: async () => {
+      // Force immediate refetch with active queries
+      await queryClient.invalidateQueries({
+        queryKey: vehiclesKeys.all(propertyId),
+        refetchType: 'active'
+      });
       toast({
         title: 'Success',
         description: 'Vehicle removed successfully',
@@ -238,13 +419,21 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Clean the data: convert empty strings to null for date/number fields
+    const cleanedData = {
+      ...formData,
+      insurance_expiry_date: formData.insurance_expiry_date || null,
+      insurance_coverage_amount: formData.insurance_coverage_amount || null,
+      year: formData.year || null,
+    };
+
     if (editingVehicle) {
       updateVehicleMutation.mutate({
         vehicleId: editingVehicle.vehicle_id,
-        updates: formData,
+        updates: cleanedData,
       });
     } else {
-      addVehicleMutation.mutate(formData);
+      addVehicleMutation.mutate(cleanedData);
     }
   };
 
@@ -260,6 +449,14 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
       owner_name: vehicle.owner_name || '',
       registration_info: vehicle.registration_info || '',
       insurance_info: vehicle.insurance_info || '',
+
+      // NEW: Map insurance fields
+      insurance_company: vehicle.insurance_company || '',
+      insurance_policy_number: vehicle.insurance_policy_number || '',
+      insurance_expiry_date: vehicle.insurance_expiry_date || '',
+      insurance_coverage_amount: vehicle.insurance_coverage_amount,
+      insurance_contact_phone: vehicle.insurance_contact_phone || '',
+      insurance_document_url: vehicle.insurance_document_url || '',
     });
     setShowAddVehicleForm(true);
   };
@@ -268,6 +465,30 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
     setShowAddVehicleForm(false);
     setEditingVehicle(null);
     setFormData(emptyVehicle);
+    setSelectedPhotos([]); // Clear selected photos
+    setInsurancePhoto(null); // Clear insurance photo
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setSelectedPhotos(Array.from(files));
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setSelectedPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleInsurancePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setInsurancePhoto(file);
+    }
+  };
+
+  const handleRemoveInsurancePhoto = () => {
+    setInsurancePhoto(null);
   };
 
   const getVehicleDisplayName = (vehicle: Vehicle) => {
@@ -298,7 +519,13 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
             Manage vehicles registered to this property
           </p>
         </div>
-        <Dialog open={showAddVehicleForm} onOpenChange={setShowAddVehicleForm}>
+        <Dialog open={showAddVehicleForm} onOpenChange={(open) => {
+          if (!open) {
+            handleCloseForm();
+          } else {
+            setShowAddVehicleForm(true);
+          }
+        }}>
           <DialogTrigger asChild>
             <Button
               className="bg-primary hover:bg-primary/90 shadow-lg"
@@ -412,16 +639,241 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="insurance_info">Insurance Information</Label>
-                  <Textarea
-                    id="insurance_info"
-                    value={formData.insurance_info}
-                    onChange={(e) => setFormData({ ...formData, insurance_info: e.target.value })}
-                    placeholder="Insurance company, policy number, expiry, etc."
-                    rows={3}
-                  />
+                {/* Photos Section */}
+                {editingVehicle ? (
+                  <div className="space-y-3 border-t pt-4">
+                    <Label className="text-base font-semibold flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4" />
+                      Vehicle Photos
+                    </Label>
+                    <VehiclePhotoGallery vehicleId={editingVehicle.vehicle_id} />
+                  </div>
+                ) : (
+                  <div className="space-y-3 border-t pt-4">
+                    <Label className="text-base font-semibold flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4" />
+                      Vehicle Photos (Optional)
+                    </Label>
+                    <div className="space-y-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handlePhotoSelect}
+                        className="cursor-pointer"
+                      />
+                      {selectedPhotos.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">
+                            {selectedPhotos.length} photo(s) selected
+                          </p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {selectedPhotos.map((file, index) => (
+                              <div key={index} className="relative border rounded-lg p-2">
+                                <div className="flex items-center gap-2">
+                                  <ImageIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-xs truncate flex-1">{file.name}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemovePhoto(index)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                {index === 0 && (
+                                  <Badge variant="secondary" className="mt-1 text-xs">Primary</Badge>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Insurance Information Section */}
+                <div className="space-y-3 border-t pt-4">
+                  <Label className="text-base font-semibold flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Insurance Information
+                  </Label>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="insurance_company">Insurance Company</Label>
+                      <Input
+                        id="insurance_company"
+                        value={formData.insurance_company}
+                        onChange={(e) => setFormData({ ...formData, insurance_company: e.target.value })}
+                        placeholder="e.g., State Farm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="insurance_policy_number">Policy Number</Label>
+                      <Input
+                        id="insurance_policy_number"
+                        value={formData.insurance_policy_number}
+                        onChange={(e) => setFormData({ ...formData, insurance_policy_number: e.target.value })}
+                        placeholder="Policy #"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="insurance_expiry_date">Expiry Date</Label>
+                      <Input
+                        id="insurance_expiry_date"
+                        type="date"
+                        value={formData.insurance_expiry_date}
+                        onChange={(e) => setFormData({ ...formData, insurance_expiry_date: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="insurance_coverage_amount">Coverage Amount ($)</Label>
+                      <Input
+                        id="insurance_coverage_amount"
+                        type="number"
+                        value={formData.insurance_coverage_amount || ''}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          insurance_coverage_amount: e.target.value ? parseFloat(e.target.value) : undefined
+                        })}
+                        placeholder="e.g., 100000"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="insurance_contact_phone">Insurance Contact Phone</Label>
+                    <Input
+                      id="insurance_contact_phone"
+                      value={formData.insurance_contact_phone}
+                      onChange={(e) => setFormData({ ...formData, insurance_contact_phone: e.target.value })}
+                      placeholder="e.g., (555) 123-4567"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="insurance_info">Additional Notes</Label>
+                    <Textarea
+                      id="insurance_info"
+                      value={formData.insurance_info}
+                      onChange={(e) => setFormData({ ...formData, insurance_info: e.target.value })}
+                      placeholder="Any additional insurance information..."
+                      rows={2}
+                    />
+                  </div>
+
+                  {/* Insurance Photo Upload */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4" />
+                      Insurance Document Photo
+                    </Label>
+
+                    {/* Show existing insurance document if editing */}
+                    {editingVehicle && formData.insurance_document_url && !insurancePhoto && (
+                      <div className="relative w-full rounded-lg border-2 border-dashed border-gray-300 p-4 bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <ImageIcon className="h-8 w-8 text-gray-400" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-700">Insurance document attached</p>
+                            <a
+                              href={formData.insurance_document_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:underline"
+                            >
+                              View current document
+                            </a>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const input = document.getElementById('insurance-photo-upload') as HTMLInputElement;
+                              input?.click();
+                            }}
+                          >
+                            Change Photo
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* File input */}
+                    <div className="flex items-center gap-3">
+                      <input
+                        id="insurance-photo-upload"
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleInsurancePhotoSelect}
+                        className="hidden"
+                      />
+
+                      {!insurancePhoto && (!editingVehicle || !formData.insurance_document_url) && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const input = document.getElementById('insurance-photo-upload') as HTMLInputElement;
+                            input?.click();
+                          }}
+                          className="w-full"
+                        >
+                          <ImageIcon className="h-4 w-4 mr-2" />
+                          Upload Insurance Document
+                        </Button>
+                      )}
+
+                      {/* Preview selected file */}
+                      {insurancePhoto && (
+                        <div className="w-full rounded-lg border-2 border-blue-300 bg-blue-50 p-4">
+                          <div className="flex items-center gap-3">
+                            <ImageIcon className="h-8 w-8 text-blue-600" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {insurancePhoto.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {(insurancePhoto.size / 1024).toFixed(2)} KB
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleRemoveInsurancePhoto}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-muted-foreground">
+                      Upload a photo or PDF of the insurance card or policy document
+                    </p>
+                  </div>
                 </div>
+
+                {/* Documents Section - Only show for editing existing vehicles */}
+                {editingVehicle && (
+                  <div className="space-y-3 border-t pt-4">
+                    <Label className="text-base font-semibold flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Vehicle Documents
+                    </Label>
+                    <VehicleDocumentManager vehicleId={editingVehicle.vehicle_id} />
+                  </div>
+                )}
               </div>
 
               <DialogFooter>
@@ -535,6 +987,14 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => setViewingVehicle(vehicle)}
+                        title="View Vehicle"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleEdit(vehicle)}
                         disabled={updateVehicleMutation.isPending}
                         title="Edit Vehicle"
@@ -577,6 +1037,209 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {/* View Vehicle Dialog */}
+      {viewingVehicle && (
+        <Dialog open={!!viewingVehicle} onOpenChange={() => setViewingVehicle(null)}>
+          <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Vehicle Details</DialogTitle>
+              <DialogDescription>
+                View complete information for {getVehicleDisplayName(viewingVehicle)}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              {/* Basic Information */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Car className="h-4 w-4" />
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Make</p>
+                    <p className="font-medium">{viewingVehicle.make || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Model</p>
+                    <p className="font-medium">{viewingVehicle.model || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Year</p>
+                    <p className="font-medium">{viewingVehicle.year || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Color</p>
+                    <p className="font-medium">{viewingVehicle.color || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">License Plate</p>
+                    <p className="font-medium font-mono">{viewingVehicle.license_plate || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">VIN</p>
+                    <p className="font-medium font-mono text-xs">{viewingVehicle.vin || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Owner Information */}
+              {viewingVehicle.owner_name && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Owner Information
+                  </h3>
+                  <p className="text-sm">{viewingVehicle.owner_name}</p>
+                </div>
+              )}
+
+              {/* Registration Information */}
+              {viewingVehicle.registration_info && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Registration Information
+                  </h3>
+                  <p className="text-sm whitespace-pre-wrap">{viewingVehicle.registration_info}</p>
+                </div>
+              )}
+
+              {/* Photos */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Vehicle Photos
+                </h3>
+                <VehiclePhotoGallery vehicleId={viewingVehicle.vehicle_id} />
+              </div>
+
+              {/* Insurance Information */}
+              <div className="space-y-3 border-t pt-4">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Insurance Information
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Company</p>
+                    <p className="font-medium">{viewingVehicle.insurance_company || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Policy Number</p>
+                    <p className="font-medium font-mono">{viewingVehicle.insurance_policy_number || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Expiry Date</p>
+                    <p className="font-medium">
+                      {viewingVehicle.insurance_expiry_date
+                        ? new Date(viewingVehicle.insurance_expiry_date).toLocaleDateString()
+                        : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Coverage Amount</p>
+                    <p className="font-medium">
+                      {viewingVehicle.insurance_coverage_amount
+                        ? `$${viewingVehicle.insurance_coverage_amount.toLocaleString()}`
+                        : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Contact Phone</p>
+                    <p className="font-medium">{viewingVehicle.insurance_contact_phone || '-'}</p>
+                  </div>
+                </div>
+                {viewingVehicle.insurance_info && (
+                  <div className="pt-2">
+                    <p className="text-muted-foreground text-sm">Additional Notes</p>
+                    <p className="text-sm whitespace-pre-wrap">{viewingVehicle.insurance_info}</p>
+                  </div>
+                )}
+
+                {/* Insurance Document Photo */}
+                {viewingVehicle.insurance_document_url && (
+                  <div className="pt-3 border-t">
+                    <p className="text-muted-foreground text-sm mb-2">Insurance Document</p>
+                    <a
+                      href={viewingVehicle.insurance_document_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-colors overflow-hidden group"
+                    >
+                      {viewingVehicle.insurance_document_url.toLowerCase().endsWith('.pdf') ? (
+                        // PDF Preview
+                        <div className="flex items-center gap-3 p-4 bg-gray-50 group-hover:bg-blue-50 transition-colors">
+                          <FileText className="h-10 w-10 text-red-600" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">Insurance Policy Document</p>
+                            <p className="text-xs text-gray-500">Click to view PDF</p>
+                          </div>
+                          <Eye className="h-5 w-5 text-gray-400 group-hover:text-blue-600" />
+                        </div>
+                      ) : (
+                        // Image Preview
+                        <div className="relative">
+                          <img
+                            src={viewingVehicle.insurance_document_url}
+                            alt="Insurance Document"
+                            className="w-full h-48 object-cover"
+                            onError={(e) => {
+                              // Fallback if image fails to load
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement!.innerHTML = `
+                                <div class="flex items-center justify-center h-48 bg-gray-100">
+                                  <div class="text-center">
+                                    <svg class="h-12 w-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p class="text-sm text-gray-500 mt-2">Image not available</p>
+                                  </div>
+                                </div>
+                              `;
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-2 shadow-lg">
+                              <Eye className="h-6 w-6 text-blue-600" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </a>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Click to view full size in new tab
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Documents Section */}
+              <div className="space-y-3 border-t pt-4">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Vehicle Documents
+                </h3>
+                <VehicleDocumentManager vehicleId={viewingVehicle.vehicle_id} readOnly />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setViewingVehicle(null)}>
+                Close
+              </Button>
+              <Button onClick={() => {
+                setViewingVehicle(null);
+                handleEdit(viewingVehicle);
+              }}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Vehicle
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

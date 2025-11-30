@@ -1,29 +1,33 @@
+// Jobs Management Module - Property work orders and maintenance tracking
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Plus,
   Clock,
-  MapPin,
-  User,
-  CheckCircle,
-  Calendar,
   AlertTriangle,
   RefreshCw,
-  DollarSign,
-  Timer,
   BriefcaseIcon,
   Search,
   Filter,
   XCircle,
-  CheckSquare
+  CheckCircle,
+  History,
+  List,
+  LayoutGrid,
 } from "lucide-react";
 import { useJobs, useJobStats, useCreateJob, useUpdateJob, useDeleteJob, JobFilters } from "@/hooks/useJobs";
 import { format, parseISO } from "date-fns";
 import { useState, useMemo } from "react";
 import { JobDialog } from "@/components/jobs/JobDialog";
 import { JobDetailsDialog } from "@/components/jobs/JobDetailsDialog";
+import { JobsTable } from "@/components/jobs/JobsTable";
+import { JobsKanban } from "@/components/jobs/JobsKanban";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -34,14 +38,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateTask } from "@/hooks/useTasks";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 export default function Jobs() {
+  const { t } = useTranslation();
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const { properties } = usePropertiesOptimized();
+  const queryClient = useQueryClient();
+
+  // Permission check - Jobs is admin only
+  if (!hasPermission(PERMISSIONS.JOBS_VIEW)) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <XCircle className="h-6 w-6 text-red-500" />
+              {t('jobs.accessDenied')}
+            </CardTitle>
+            <CardDescription>
+              {t('jobs.noPermission')}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,13 +92,13 @@ export default function Jobs() {
   const createJob = useCreateJob();
   const updateJob = useUpdateJob();
   const deleteJob = useDeleteJob();
-  const createTask = useCreateTask();
   const { toast } = useToast();
 
   const [showJobDialog, setShowJobDialog] = useState(false);
   const [editingJob, setEditingJob] = useState<any>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'active' | 'board' | 'history'>('active');
 
   // Fetch users for filter
   const { data: users = [] } = useQuery({
@@ -88,47 +114,67 @@ export default function Jobs() {
       return data || [];
     },
   });
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "in_progress":
-        return <Badge className="bg-blue-500 text-white">In Progress</Badge>;
-      case "pending":
-        return <Badge className="bg-orange-500 text-white">Pending</Badge>;
-      case "review":
-        return <Badge className="bg-purple-500 text-white">Review</Badge>;
-      case "completed":
-        return <Badge className="bg-green-600 text-white">Completed</Badge>;
-      case "cancelled":
-        return <Badge variant="destructive">Cancelled</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "urgent":
-        return "text-destructive";
-      case "high":
-        return "text-orange-500";
-      case "normal":
-        return "text-blue-500";
-      case "low":
-        return "text-accent";
-      default:
-        return "text-muted-foreground";
-    }
-  };
+  // Fetch history jobs separately (always fetch completed/cancelled regardless of filters)
+  const historyFilters: JobFilters = useMemo(() => ({
+    priority: priorityFilter.length > 0 ? priorityFilter[0] : undefined,
+    job_type: jobTypeFilter || undefined,
+    property_id: propertyFilter || undefined,
+    assigned_to: assignedFilter || undefined,
+    search: searchQuery || undefined,
+  }), [priorityFilter, jobTypeFilter, propertyFilter, assignedFilter, searchQuery]);
 
-  // Format dates
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return "No due date";
-    try {
-      return format(parseISO(dateString), "MMM dd, yyyy h:mm a");
-    } catch (error) {
-      return "Invalid date";
-    }
-  };
+  const { data: allHistoryJobs = [] } = useQuery({
+    queryKey: ['jobs-history', historyFilters],
+    queryFn: async () => {
+      let query = supabase
+        .from('jobs')
+        .select(`
+          *,
+          property:properties(property_id, property_name),
+          assigned_user:users!jobs_assigned_to_fkey(user_id, first_name, last_name, email),
+          created_user:users!jobs_created_by_fkey(user_id, first_name, last_name)
+        `)
+        .in('status', ['completed', 'cancelled'])
+        .order('created_at', { ascending: false });
+
+      // Apply non-status filters
+      if (historyFilters.priority) {
+        query = query.eq('priority', historyFilters.priority);
+      }
+      if (historyFilters.job_type) {
+        query = query.eq('job_type', historyFilters.job_type);
+      }
+      if (historyFilters.assigned_to) {
+        query = query.eq('assigned_to', historyFilters.assigned_to);
+      }
+      if (historyFilters.property_id) {
+        query = query.eq('property_id', historyFilters.property_id);
+      }
+      if (historyFilters.search) {
+        query = query.or(`title.ilike.%${historyFilters.search}%,description.ilike.%${historyFilters.search}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching history jobs:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  });
+
+  // Separate active jobs from history (completed/cancelled)
+  const activeJobs = useMemo(() =>
+    jobs.filter(job => job.status !== 'completed' && job.status !== 'cancelled'),
+    [jobs]
+  );
+
+  const historyJobs = allHistoryJobs;
 
   // Handlers
   const handleCreateJob = () => {
@@ -153,14 +199,14 @@ export default function Jobs() {
         updates: { status },
       });
       toast({
-        title: "Status Updated",
-        description: `Job status changed to ${status.replace('_', ' ')}`,
+        title: t('common.statusUpdated'),
+        description: t('jobs.statusChanged', { status: t(`jobs.status.${status}`) }),
       });
     } catch (error) {
       console.error('Error updating job status:', error);
       toast({
-        title: "Error",
-        description: "Failed to update job status",
+        title: t('common.error'),
+        description: t('jobs.statusChangeFailed'),
         variant: "destructive",
       });
     }
@@ -171,10 +217,7 @@ export default function Jobs() {
       if (editingJob) {
         await updateJob.mutateAsync({
           jobId: editingJob.job_id,
-          updates: {
-            ...jobData,
-            created_by: user?.user_id,
-          },
+          updates: jobData, // Don't modify created_by on update
         });
       } else {
         await createJob.mutateAsync({
@@ -217,86 +260,39 @@ export default function Jobs() {
     assignedFilter ||
     searchQuery;
 
-  // Create Task from Job
-  const handleCreateTaskFromJob = async (job: any) => {
-    try {
-      // Map job type to task category
-      const categoryMap: Record<string, string> = {
-        'cleaning': 'cleaning',
-        'maintenance': 'maintenance',
-        'check_in': 'check_in_prep',
-        'check_out': 'check_out_prep',
-        'inspection': 'inspection',
-        'repair': 'repair',
-        'general': 'other',
-        'emergency': 'repair',
-        'preventive': 'maintenance',
-      };
-
-      // Map priority (job priorities: urgent, high, normal, low -> task priorities: low, medium, high, urgent)
-      const priorityMap: Record<string, string> = {
-        'urgent': 'urgent',
-        'high': 'high',
-        'normal': 'medium',
-        'low': 'low',
-      };
-
-      const taskData = {
-        title: `[JOB] ${job.title}`,
-        description: `Task created from Job ${job.job_id?.slice(0, 8)}:\n\n${job.description || 'No description'}\n\n---\nJob Details:\n- Type: ${job.job_type}\n- Location: ${job.location_notes || 'N/A'}\n- Estimated Hours: ${job.estimated_hours || 'N/A'}\n- Estimated Cost: $${job.estimated_cost || '0'}`,
-        property_id: job.property_id,
-        assigned_to: job.assigned_to || null,
-        status: 'pending' as const,
-        priority: (priorityMap[job.priority] || 'medium') as 'low' | 'medium' | 'high' | 'urgent',
-        category: (categoryMap[job.job_type] || 'other') as any,
-        due_date: job.due_date ? format(parseISO(job.due_date), 'yyyy-MM-dd') : null,
-        due_time: job.due_date ? format(parseISO(job.due_date), 'HH:mm:ss') : null,
-      };
-
-      await createTask.mutateAsync(taskData);
-
-      toast({
-        title: "Task Created",
-        description: `Task "${taskData.title}" created successfully from job`,
-      });
-    } catch (error) {
-      console.error('Error creating task from job:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create task from job",
-        variant: "destructive",
-      });
-    }
+  // Refresh both active and history jobs
+  const handleRefresh = () => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ['jobs-history'] });
   };
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Active Jobs</h1>
-          <p className="text-muted-foreground">
-            Property work orders and maintenance tracking (Admin Only)
-          </p>
-        </div>
-        <div className="flex space-x-3">
-          <Button
-            variant="outline"
-            onClick={() => refetch()}
-            disabled={isLoading || isFetching}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button
-            className="bg-gradient-primary hover:bg-gradient-secondary"
-            onClick={handleCreateJob}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create New Job
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={t('jobs.title')}
+        subtitle={t('jobs.subtitle')}
+        icon={BriefcaseIcon}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isLoading || isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
+            <Button
+              className="bg-gradient-primary hover:bg-gradient-secondary"
+              onClick={handleCreateJob}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('jobs.newJob')}
+            </Button>
+          </>
+        }
+      />
 
       {/* Jobs Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -304,9 +300,9 @@ export default function Jobs() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Jobs</p>
+                <p className="text-sm font-medium text-blue-700">{t('jobs.totalJobs')}</p>
                 <h3 className="text-3xl font-bold text-blue-900 mt-1">{isLoading ? '...' : stats.total}</h3>
-                <p className="text-xs text-blue-600 mt-1">All work orders</p>
+                <p className="text-xs text-blue-600 mt-1">{t('jobs.allWorkOrders')}</p>
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
                 <BriefcaseIcon className="h-6 w-6 text-white" />
@@ -319,9 +315,9 @@ export default function Jobs() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">In Progress</p>
+                <p className="text-sm font-medium text-purple-700">{t('jobs.inProgressJobs')}</p>
                 <h3 className="text-3xl font-bold text-purple-900 mt-1">{isLoading ? '...' : stats.in_progress}</h3>
-                <p className="text-xs text-purple-600 mt-1">Active assignments</p>
+                <p className="text-xs text-purple-600 mt-1">{t('jobs.activeAssignments')}</p>
               </div>
               <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
                 <Clock className="h-6 w-6 text-white" />
@@ -334,9 +330,9 @@ export default function Jobs() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-700">Pending</p>
+                <p className="text-sm font-medium text-orange-700">{t('jobs.pendingJobs')}</p>
                 <h3 className="text-3xl font-bold text-orange-900 mt-1">{isLoading ? '...' : stats.pending}</h3>
-                <p className="text-xs text-orange-600 mt-1">Awaiting action</p>
+                <p className="text-xs text-orange-600 mt-1">{t('jobs.awaitingAction')}</p>
               </div>
               <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
                 <AlertTriangle className="h-6 w-6 text-white" />
@@ -349,10 +345,10 @@ export default function Jobs() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Completed</p>
+                <p className="text-sm font-medium text-green-700">{t('jobs.completedJobs')}</p>
                 <h3 className="text-3xl font-bold text-green-900 mt-1">{isLoading ? '...' : stats.completed}</h3>
                 <p className="text-xs text-green-600 mt-1">
-                  {stats.urgent > 0 ? `${stats.urgent} urgent` : 'All finished'}
+                  {stats.urgent > 0 ? `${stats.urgent} ${t('jobs.priority.urgent')}` : t('jobs.allFinished')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
@@ -368,19 +364,19 @@ export default function Jobs() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Filters & Search
+            {t('jobs.filtersAndSearch')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {/* Search */}
             <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="search">Search Jobs</Label>
+              <Label htmlFor="search">{t('jobs.searchJobs')}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder="Search by title or description..."
+                  placeholder={t('jobs.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -390,13 +386,13 @@ export default function Jobs() {
 
             {/* Property Filter */}
             <div className="space-y-2">
-              <Label htmlFor="property">Property</Label>
+              <Label htmlFor="property">{t('jobs.property')}</Label>
               <Select value={propertyFilter || undefined} onValueChange={(value) => setPropertyFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger id="property">
-                  <SelectValue placeholder="All properties" />
+                  <SelectValue placeholder={t('jobs.allProperties')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Properties</SelectItem>
+                  <SelectItem value="all">{t('jobs.allProperties')}</SelectItem>
                   {properties.map(property => (
                     <SelectItem key={property.property_id} value={property.property_id!}>
                       {property.property_name}
@@ -408,13 +404,13 @@ export default function Jobs() {
 
             {/* Assignee Filter */}
             <div className="space-y-2">
-              <Label htmlFor="assignee">Assigned To</Label>
+              <Label htmlFor="assignee">{t('jobs.assignedTo')}</Label>
               <Select value={assignedFilter || undefined} onValueChange={(value) => setAssignedFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger id="assignee">
-                  <SelectValue placeholder="All users" />
+                  <SelectValue placeholder={t('jobs.allUsers')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Users</SelectItem>
+                  <SelectItem value="all">{t('jobs.allUsers')}</SelectItem>
                   {users.map(u => (
                     <SelectItem key={u.user_id} value={u.user_id}>
                       {u.first_name} {u.last_name}
@@ -426,22 +422,22 @@ export default function Jobs() {
 
             {/* Job Type Filter */}
             <div className="space-y-2">
-              <Label htmlFor="job-type">Job Type</Label>
+              <Label htmlFor="job-type">{t('jobs.jobType')}</Label>
               <Select value={jobTypeFilter || undefined} onValueChange={(value) => setJobTypeFilter(value === 'all' ? '' : value)}>
                 <SelectTrigger id="job-type">
-                  <SelectValue placeholder="All types" />
+                  <SelectValue placeholder={t('jobs.allTypes')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="general">General</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="cleaning">Cleaning</SelectItem>
-                  <SelectItem value="inspection">Inspection</SelectItem>
-                  <SelectItem value="check_in">Check In</SelectItem>
-                  <SelectItem value="check_out">Check Out</SelectItem>
-                  <SelectItem value="repair">Repair</SelectItem>
-                  <SelectItem value="emergency">Emergency</SelectItem>
-                  <SelectItem value="preventive">Preventive</SelectItem>
+                  <SelectItem value="all">{t('jobs.allTypes')}</SelectItem>
+                  <SelectItem value="general">{t('jobs.types.general')}</SelectItem>
+                  <SelectItem value="maintenance">{t('jobs.types.maintenance')}</SelectItem>
+                  <SelectItem value="cleaning">{t('jobs.types.cleaning')}</SelectItem>
+                  <SelectItem value="inspection">{t('jobs.types.inspection')}</SelectItem>
+                  <SelectItem value="check_in">{t('jobs.types.checkIn')}</SelectItem>
+                  <SelectItem value="check_out">{t('jobs.types.checkOut')}</SelectItem>
+                  <SelectItem value="repair">{t('jobs.types.repair')}</SelectItem>
+                  <SelectItem value="emergency">{t('jobs.types.emergency')}</SelectItem>
+                  <SelectItem value="preventive">{t('jobs.types.preventive')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -455,28 +451,28 @@ export default function Jobs() {
               className="cursor-pointer"
               onClick={() => toggleStatusFilter('pending')}
             >
-              Pending
+              {t('jobs.status.pending')}
             </Badge>
             <Badge
               variant={statusFilter.includes('in_progress') ? 'default' : 'outline'}
               className="cursor-pointer"
               onClick={() => toggleStatusFilter('in_progress')}
             >
-              In Progress
+              {t('jobs.status.inProgress')}
             </Badge>
             <Badge
               variant={statusFilter.includes('review') ? 'default' : 'outline'}
               className="cursor-pointer"
               onClick={() => toggleStatusFilter('review')}
             >
-              Review
+              {t('jobs.status.review')}
             </Badge>
             <Badge
               variant={statusFilter.includes('completed') ? 'default' : 'outline'}
               className="cursor-pointer"
               onClick={() => toggleStatusFilter('completed')}
             >
-              Completed
+              {t('jobs.status.completed')}
             </Badge>
 
             {/* Priority Filters */}
@@ -485,14 +481,14 @@ export default function Jobs() {
               className="cursor-pointer"
               onClick={() => togglePriorityFilter('urgent')}
             >
-              Urgent
+              {t('jobs.priority.urgent')}
             </Badge>
             <Badge
               variant={priorityFilter.includes('high') ? 'default' : 'outline'}
               className="cursor-pointer bg-orange-500 hover:bg-orange-600"
               onClick={() => togglePriorityFilter('high')}
             >
-              High Priority
+              {t('jobs.highPriority')}
             </Badge>
 
             {/* Clear Filters */}
@@ -504,125 +500,79 @@ export default function Jobs() {
                 className="h-7"
               >
                 <XCircle className="mr-1 h-3 w-3" />
-                Clear All
+                {t('jobs.clearAll')}
               </Button>
             )}
 
             {/* Results Count */}
             <Badge variant="secondary" className="ml-auto">
-              {jobs.length} result{jobs.length !== 1 ? 's' : ''}
+              {jobs.length} {jobs.length !== 1 ? t('jobs.results') : t('jobs.result')}
             </Badge>
           </div>
         </CardContent>
       </Card>
 
-      {/* Active Jobs List */}
-      <div className="space-y-4">
-        {isLoading ? (
-          <Card>
-            <CardContent className="p-6 flex items-center justify-center">
-              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-              <span className="text-muted-foreground">Loading jobs...</span>
-            </CardContent>
-          </Card>
-        ) : jobs.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <BriefcaseIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="text-lg font-semibold mb-2">No Jobs Found</h3>
-              <p className="text-muted-foreground mb-4">
-                Get started by creating your first work order
-              </p>
-              <Button
-                className="bg-gradient-primary hover:bg-gradient-secondary"
-                onClick={handleCreateJob}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Job
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          jobs.map((job) => (
-            <Card key={job.job_id} className="hover:shadow-card transition-all duration-300">
-              <CardContent className="p-5">
-                {/* Header with Title and Badges */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold mb-2">{job.title}</h3>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {getStatusBadge(job.status)}
-                      <Badge variant="outline" className={getPriorityColor(job.priority)}>
-                        {job.priority.charAt(0).toUpperCase() + job.priority.slice(1)}
-                      </Badge>
-                      {job.job_type && (
-                        <Badge variant="secondary" className="text-xs">
-                          {job.job_type.replace(/_/g, ' ').toUpperCase()}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
+      {/* Main Content - Tabs for Active Jobs, Board View, and History */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'active' | 'board' | 'history')}>
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="active" className="flex items-center gap-2">
+            <List className="h-4 w-4" />
+            {t('jobs.activeJobs')} ({activeJobs.length})
+          </TabsTrigger>
+          <TabsTrigger value="board" className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            {t('jobs.boardView')}
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            {t('jobs.jobHistory')} ({historyJobs.length})
+          </TabsTrigger>
+        </TabsList>
 
-                {/* Essential Info - Single Row */}
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4 flex-wrap">
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-1.5 text-primary" />
-                    <span className="font-medium">
-                      {job.property?.property_name || 'No property'}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <User className="h-4 w-4 mr-1.5" />
-                    <span>
-                      {job.assigned_user
-                        ? `${job.assigned_user.first_name} ${job.assigned_user.last_name}`
-                        : 'Unassigned'}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1.5" />
-                    <span>{formatDate(job.due_date)}</span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">
-                    ID: {job.job_id?.slice(0, 8)}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleViewJob(job)}
-                    >
-                      <BriefcaseIcon className="h-3.5 w-3.5 mr-1.5" />
-                      View Details
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEditJob(job)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCreateTaskFromJob(job)}
-                      disabled={createTask.isPending}
-                    >
-                      <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
-                      Create Task
-                    </Button>
-                  </div>
-                </div>
+        <TabsContent value="active" className="mt-0">
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-12 flex flex-col items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                <span className="text-muted-foreground">{t('jobs.loadingJobs')}</span>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ) : (
+            <JobsTable
+              jobs={activeJobs}
+              onEdit={handleEditJob}
+              onView={handleViewJob}
+              emptyMessage={t('jobs.noActiveJobs')}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="board" className="mt-0">
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-12 flex flex-col items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                <span className="text-muted-foreground">{t('jobs.loadingJobs')}</span>
+              </CardContent>
+            </Card>
+          ) : (
+            <JobsKanban
+              jobs={jobs}
+              onEdit={handleEditJob}
+              onView={handleViewJob}
+              onStatusChange={handleStatusChange}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-0">
+          <JobsTable
+            jobs={historyJobs}
+            onView={handleViewJob}
+            emptyMessage={t('jobs.noCompletedJobs')}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Job Dialog */}
       <JobDialog
@@ -639,7 +589,6 @@ export default function Jobs() {
         onOpenChange={setShowDetailsDialog}
         job={selectedJob}
         onEdit={handleEditJob}
-        onCreateTask={handleCreateTaskFromJob}
         onStatusChange={handleStatusChange}
       />
     </div>

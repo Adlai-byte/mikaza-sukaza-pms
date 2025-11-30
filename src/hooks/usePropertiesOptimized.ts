@@ -19,9 +19,9 @@ export const propertyKeys = {
   rules: () => ['rules'],
 } as const;
 
-// Fetch properties for LIST VIEW - lightweight query with only essential data
+// Fetch properties for LIST VIEW - optimized query (includes primary image only)
 const fetchPropertiesList = async (): Promise<Property[]> => {
-  console.log('🔍 Fetching properties list (optimized query)...');
+  console.log('🔍 Fetching properties list...');
   const { data, error } = await supabase
     .from('properties')
     .select(`
@@ -31,12 +31,9 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
       property_type,
       is_active,
       is_booking,
-      is_pets_allowed,
       capacity,
-      max_capacity,
       num_bedrooms,
       num_bathrooms,
-      size_sqf,
       created_at,
       updated_at,
       owner:users!properties_owner_id_fkey(
@@ -49,9 +46,10 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
         city,
         address
       ),
-      images:property_images(
+      images:property_images!property_images_property_id_fkey(
         image_id,
         image_url,
+        image_title,
         is_primary
       )
     `)
@@ -62,7 +60,7 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
     throw error;
   }
 
-  console.log('✅ Fetched properties list:', data?.length || 0, 'properties (lightweight)');
+  console.log('✅ Fetched properties list:', data?.length || 0, 'properties');
   return (data || []) as Property[];
 };
 
@@ -169,23 +167,33 @@ const fetchPropertyDetail = async (propertyId: string): Promise<Property> => {
 
 // Fetch amenities
 const fetchAmenities = async (): Promise<Amenity[]> => {
+  console.log('🔍 Fetching amenities from database...');
   const { data, error } = await supabase
     .from('amenities')
     .select('*')
     .order('amenity_name');
 
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Error fetching amenities:', error);
+    throw error;
+  }
+  console.log('✅ Fetched amenities:', data?.length || 0, 'items');
   return data || [];
 };
 
 // Fetch rules
 const fetchRules = async (): Promise<Rule[]> => {
+  console.log('🔍 Fetching rules from database...');
   const { data, error } = await supabase
     .from('rules')
     .select('*')
     .order('rule_name');
 
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Error fetching rules:', error);
+    throw error;
+  }
+  console.log('✅ Fetched rules:', data?.length || 0, 'items');
   return data || [];
 };
 
@@ -195,7 +203,9 @@ export function usePropertiesOptimized() {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
 
-  // Properties query with advanced caching - using lightweight list query
+  // Properties query - OPTIMIZED CACHING
+  // Properties are semi-static data, they don't change frequently
+  // Cache for 3 minutes, keep in memory for 15 minutes
   const {
     data: properties = [],
     isLoading: loading,
@@ -204,27 +214,35 @@ export function usePropertiesOptimized() {
     refetch,
   } = useQuery({
     queryKey: propertyKeys.lists(),
-    queryFn: fetchPropertiesList, // Using optimized list query
-    staleTime: CACHE_CONFIG.LIST.staleTime, // 30 minutes
-    gcTime: CACHE_CONFIG.LIST.gcTime, // 2 hours
-    refetchOnMount: false, // Don't refetch on mount (use cache)
+    queryFn: fetchPropertiesList,
+    staleTime: 3 * 60 * 1000, // 3 minutes - data considered fresh (increased from 1 min)
+    gcTime: 15 * 60 * 1000, // 15 minutes - keep in cache (increased from 10 min)
+    refetchOnMount: false, // Don't refetch if data is fresh (changed from 'always')
     refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
-  // Amenities query with static caching (rarely changes)
+  // Amenities query - OPTIMIZED CACHING
+  // Amenities are reference data that rarely change
+  // Cache for 10 minutes, keep in memory for 30 minutes
   const { data: amenities = [] } = useQuery({
     queryKey: propertyKeys.amenities(),
     queryFn: fetchAmenities,
-    staleTime: CACHE_CONFIG.STATIC.staleTime, // 24 hours
-    gcTime: CACHE_CONFIG.STATIC.gcTime, // 48 hours
+    staleTime: 10 * 60 * 1000, // 10 minutes - data considered fresh
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache
+    refetchOnMount: false, // Don't refetch if data is fresh
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
-  // Rules query with static caching (rarely changes)
+  // Rules query - OPTIMIZED CACHING
+  // Rules are reference data that rarely change
+  // Cache for 10 minutes, keep in memory for 30 minutes
   const { data: rules = [] } = useQuery({
     queryKey: propertyKeys.rules(),
     queryFn: fetchRules,
-    staleTime: CACHE_CONFIG.STATIC.staleTime, // 24 hours
-    gcTime: CACHE_CONFIG.STATIC.gcTime, // 48 hours
+    staleTime: 10 * 60 * 1000, // 10 minutes - data considered fresh
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache
+    refetchOnMount: false, // Don't refetch if data is fresh
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
   // Create property mutation with optimistic updates and retry logic
@@ -241,14 +259,25 @@ export function usePropertiesOptimized() {
       rule_ids?: string[];
       images?: { url: string; title?: string; is_primary?: boolean }[];
     }) => {
+      console.log('🏠 [PROPERTY] Create property started:', {
+        property_name: propertyData.property_name,
+        property_type: propertyData.property_type,
+        owner_id: propertyData.owner_id,
+        timestamp: new Date().toISOString()
+      });
+
       // Check permission
       if (!hasPermission(PERMISSIONS.PROPERTIES_CREATE)) {
+        console.error('❌ [PROPERTY] Permission denied for property creation');
         throw new Error("You don't have permission to create properties");
       }
+
+      console.log('✅ [PROPERTY] Permission granted for creation');
 
       // Extract related data
       const { location, communication, access, extras, units, amenity_ids, rule_ids, images, ...mainPropertyData } = propertyData;
 
+      console.log('💾 [PROPERTY] Creating main property record...');
       // Create the main property
       const { data: property, error: propertyError } = await supabase
         .from('properties')
@@ -256,7 +285,18 @@ export function usePropertiesOptimized() {
         .select()
         .single();
 
-      if (propertyError) throw propertyError;
+      if (propertyError) {
+        console.error('❌ [PROPERTY] Property creation failed:', {
+          error: propertyError.message,
+          timestamp: new Date().toISOString()
+        });
+        throw propertyError;
+      }
+
+      console.log('✅ [PROPERTY] Main property created:', {
+        property_id: property.property_id,
+        property_name: property.property_name
+      });
 
       const propertyId = property.property_id;
 
@@ -317,9 +357,23 @@ export function usePropertiesOptimized() {
 
       // Images
       if (images && images.length > 0) {
-        const propertyImages = images.map(image => ({ ...image, property_id: propertyId, image_url: image.url }));
+        console.log('📸 [PROPERTY] Inserting property images:', images);
+        const propertyImages = images.map(image => ({
+          property_id: propertyId,
+          image_url: image.url,
+          image_title: image.title || null,
+          is_primary: image.is_primary || false
+        }));
+        console.log('📸 [PROPERTY] Formatted images for insert:', propertyImages);
         promises.push(
           supabase.from('property_images').insert(propertyImages)
+            .then(({ error }) => {
+              if (error) {
+                console.error('❌ [PROPERTY] Image insert error:', error);
+                throw error;
+              }
+              console.log('✅ [PROPERTY] Images inserted successfully');
+            })
         );
       }
 
@@ -328,7 +382,7 @@ export function usePropertiesOptimized() {
       await logActivity('PROPERTY_CREATED', {
         propertyType: propertyData.property_type,
         ownerId: propertyData.owner_id
-      }, undefined, 'Admin');
+      });
 
       return property;
     },
@@ -347,9 +401,22 @@ export function usePropertiesOptimized() {
       // Return context with rollback function
       return { rollback };
     },
-    onSuccess: (data) => {
-      // Invalidate and refetch to get the real data
-      queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
+    onSuccess: async (data) => {
+      console.log('✅ [PROPERTY] Creation succeeded, updating cache and refetching...');
+
+      // Immediately fetch the latest data for the list
+      const freshListData = await fetchPropertiesList();
+
+      // Update cache immediately with fresh data
+      queryClient.setQueryData(propertyKeys.lists(), freshListData);
+
+      // Then invalidate to ensure full consistency
+      await queryClient.invalidateQueries({
+        queryKey: propertyKeys.lists(),
+        refetchType: 'all'
+      });
+
+      console.log('✅ [PROPERTY] Cache updated with fresh property list');
 
       toast({
         title: "Success",
@@ -569,21 +636,27 @@ export function usePropertiesOptimized() {
 
       // Handle image updates
       if (images !== undefined) {
+        console.log('📸 [PROPERTY] Updating property images');
         // Remove existing images
         await supabase.from('property_images').delete().eq('property_id', propertyId);
 
         // Add new images
         if (images.length > 0) {
           const propertyImages = images.map(image => ({
-            ...image,
             property_id: propertyId,
             image_url: image.url,
-            image_title: image.title
+            image_title: image.title || null,
+            is_primary: image.is_primary || false
           }));
+          console.log('📸 [PROPERTY] Formatted images for update:', propertyImages);
           relatedUpdates.push(
             supabase.from('property_images').insert(propertyImages)
               .then(({ error }) => {
-                if (error) throw new Error(`Failed to update images: ${error.message}`);
+                if (error) {
+                  console.error('❌ [PROPERTY] Image update error:', error);
+                  throw new Error(`Failed to update images: ${error.message}`);
+                }
+                console.log('✅ [PROPERTY] Images updated successfully');
               })
           );
         }
@@ -594,7 +667,7 @@ export function usePropertiesOptimized() {
       await logActivity('PROPERTY_UPDATED', {
         propertyId,
         updatedFields: Object.keys(mainPropertyData)
-      }, undefined, 'Admin');
+      });
 
       return propertyId;
     },
@@ -660,19 +733,45 @@ export function usePropertiesOptimized() {
     retry: 1, // Only retry once for delete operations
     retryDelay: 1000, // 1 second delay before retry
     mutationFn: async (propertyId: string) => {
+      const propertyToDelete = properties.find(p => p.property_id === propertyId);
+
+      console.log('🗑️ [PROPERTY] Delete property started:', {
+        propertyId,
+        property_name: propertyToDelete?.property_name,
+        property_type: propertyToDelete?.property_type,
+        timestamp: new Date().toISOString()
+      });
+
       // Check permission - only Admin can delete properties
       if (!hasPermission(PERMISSIONS.PROPERTIES_DELETE)) {
+        console.error('❌ [PROPERTY] Permission denied for property deletion');
         throw new Error("You don't have permission to delete properties");
       }
 
+      console.log('✅ [PROPERTY] Permission granted for deletion');
+
+      console.log('💀 [PROPERTY] Deleting property from database...');
       const { error } = await supabase
         .from('properties')
         .delete()
         .eq('property_id', propertyId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [PROPERTY] Property deletion failed:', {
+          propertyId,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+        throw error;
+      }
 
-      await logActivity('PROPERTY_DELETED', { propertyId }, undefined, 'Admin');
+      console.log('✅ [PROPERTY] Property deleted successfully:', {
+        propertyId,
+        property_name: propertyToDelete?.property_name,
+        timestamp: new Date().toISOString()
+      });
+
+      await logActivity('PROPERTY_DELETED', { propertyId });
       return propertyId;
     },
     onMutate: async (propertyId) => {
@@ -710,10 +809,10 @@ export function usePropertiesOptimized() {
     error: propertiesError,
     amenities,
     rules,
-    createProperty: createPropertyMutation.mutate,
+    createProperty: createPropertyMutation.mutateAsync,
     updateProperty: (propertyId: string, propertyData: any) =>
-      updatePropertyMutation.mutate({ propertyId, propertyData }),
-    deleteProperty: deletePropertyMutation.mutate,
+      updatePropertyMutation.mutateAsync({ propertyId, propertyData }),
+    deleteProperty: deletePropertyMutation.mutateAsync,
     refetch,
     // Mutation states for UI feedback
     isCreating: createPropertyMutation.isPending,
@@ -736,11 +835,11 @@ export function usePropertyDetail(propertyId: string | undefined) {
     queryKey: propertyKeys.detail(propertyId || ''),
     queryFn: () => fetchPropertyDetail(propertyId!),
     enabled: !!propertyId, // Only fetch when propertyId is provided
-    staleTime: CACHE_CONFIG.DETAIL.staleTime, // 10 minutes (will be invalidated by realtime sync)
-    gcTime: CACHE_CONFIG.DETAIL.gcTime, // 1 hour
+    staleTime: 0, // No caching
+    gcTime: 0, // Don't keep in cache
     retry: 2, // Retry failed requests twice
-    refetchOnMount: false, // Don't refetch on mount (use cache, realtime will update)
-    refetchOnWindowFocus: false, // Don't refetch on window focus (realtime will update)
+    refetchOnMount: true, // Always refetch on mount
+    refetchOnWindowFocus: true, // Always refetch on window focus
   });
 
   return {

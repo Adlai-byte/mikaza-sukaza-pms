@@ -3,22 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import {
   ArrowLeft,
-  Save,
   Home,
-  Building,
   Users,
   Car,
-  Camera,
-  QrCode,
-  DollarSign,
-  CheckSquare,
-  Calendar,
   FileText,
-  Zap
+  Zap,
+  Sparkles
 } from 'lucide-react';
-import { MikasaSpinner } from '@/components/ui/mikasa-loader';
+import { CasaSpinner } from '@/components/ui/casa-loader';
 import { usePropertyDetail } from '@/hooks/usePropertiesOptimized';
 import {
   AlertDialog,
@@ -33,15 +28,12 @@ import {
 
 // Tab Components
 import { GeneralTabOptimized } from '@/components/PropertyEdit/GeneralTabOptimized';
+import { FeaturesTabOptimized } from '@/components/PropertyEdit/FeaturesTabOptimized';
 import { ProvidersTabOptimized } from '@/components/PropertyEdit/ProvidersTabOptimized';
-import { PhotosTabOptimized } from '@/components/PropertyEdit/PhotosTabOptimized';
 import { UnitOwnersTabOptimized } from '@/components/PropertyEdit/UnitOwnersTabOptimized';
 import { VehiclesTabOptimized } from '@/components/PropertyEdit/VehiclesTabOptimized';
-import { QRCodeTab } from '@/components/PropertyEdit/QRCodeTab';
-import { FinancialTabOptimized } from '@/components/PropertyEdit/FinancialTabOptimized';
-import { CheckListsTabOptimized } from '@/components/PropertyEdit/CheckListsTabOptimized';
-import { BookingTabOptimized } from '@/components/PropertyEdit/BookingTabOptimized';
 import { NotesTabOptimized } from '@/components/PropertyEdit/NotesTabOptimized';
+import { HighlightsTab } from '@/components/PropertyEdit/HighlightsTab';
 
 export default function PropertyEdit() {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -52,7 +44,7 @@ export default function PropertyEdit() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Use the optimized detail hook that loads only this property's full data
-  let { property, loading, error } = usePropertyDetail(propertyId);
+  let { property, loading, error, refetch } = usePropertyDetail(propertyId);
 
   // Safety check: Handle raw Supabase response from cache
   if (property && typeof property === 'object' && 'data' in property && 'error' in property && 'status' in property) {
@@ -103,10 +95,22 @@ export default function PropertyEdit() {
     return () => window.removeEventListener('property-edit-unsaved-changes', handleUnsavedChanges as EventListener);
   }, []);
 
+  // Listen for property updates from tabs (to refresh header)
+  React.useEffect(() => {
+    const handlePropertyUpdate = () => {
+      console.log('🔄 [PropertyEdit] Received property update event, refetching...');
+      if (refetch) {
+        refetch();
+      }
+    };
+    window.addEventListener('property-updated', handlePropertyUpdate);
+    return () => window.removeEventListener('property-updated', handlePropertyUpdate);
+  }, [refetch]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-subtle">
-        <MikasaSpinner />
+        <CasaSpinner />
       </div>
     );
   }
@@ -184,30 +188,35 @@ export default function PropertyEdit() {
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto p-6">
         {/* Enhanced Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+        <PageHeader
+          icon={Home}
+          title={`Edit: ${property.property_name}`}
+          subtitle={`Property ID: ${property.property_id}`}
+          action={
             <Button variant="outline" onClick={() => navigate('/properties')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                Edit: {property.property_name}
-              </h1>
-              <p className="text-muted-foreground">Property ID: {property.property_id}</p>
-            </div>
-          </div>
-        </div>
+          }
+        />
 
         {/* Enhanced Tabs Card */}
         <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
           <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={handleTabChange}>
               <div className="bg-gradient-secondary p-1 m-6 rounded-lg overflow-x-auto">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 bg-transparent gap-1 min-w-max">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 bg-transparent gap-1 min-w-max">
                   <TabsTrigger value="general" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
                     <Home className="h-4 w-4" />
                     <span className="hidden sm:inline">General</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="features" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    <span className="hidden sm:inline">Features</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="highlights" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    <span className="hidden sm:inline">Highlights</span>
                   </TabsTrigger>
                   <TabsTrigger value="providers" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
                     <Zap className="h-4 w-4" />
@@ -221,26 +230,6 @@ export default function PropertyEdit() {
                     <Car className="h-4 w-4" />
                     <span className="hidden sm:inline">Vehicles</span>
                   </TabsTrigger>
-                  <TabsTrigger value="photos" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
-                    <Camera className="h-4 w-4" />
-                    <span className="hidden sm:inline">Photos</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="qrcode" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
-                    <QrCode className="h-4 w-4" />
-                    <span className="hidden sm:inline">QRCode</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="financial" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    <span className="hidden sm:inline">Financial</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="checklists" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
-                    <CheckSquare className="h-4 w-4" />
-                    <span className="hidden sm:inline">Checklists</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="booking" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span className="hidden sm:inline">Booking</span>
-                  </TabsTrigger>
                   <TabsTrigger value="notes" className="text-white hover:text-white data-[state=active]:bg-white data-[state=active]:text-primary font-medium flex items-center gap-2">
                     <FileText className="h-4 w-4" />
                     <span className="hidden sm:inline">Notes</span>
@@ -253,6 +242,14 @@ export default function PropertyEdit() {
                   <GeneralTabOptimized property={property} />
                 </TabsContent>
 
+                <TabsContent value="features" className="mt-0">
+                  <FeaturesTabOptimized propertyId={property.property_id} />
+                </TabsContent>
+
+                <TabsContent value="highlights" className="mt-0">
+                  <HighlightsTab propertyId={property.property_id} />
+                </TabsContent>
+
                 <TabsContent value="providers" className="mt-0">
                   <ProvidersTabOptimized propertyId={property.property_id} />
                 </TabsContent>
@@ -263,26 +260,6 @@ export default function PropertyEdit() {
 
                 <TabsContent value="vehicles" className="mt-0">
                   <VehiclesTabOptimized propertyId={property.property_id} />
-                </TabsContent>
-
-                <TabsContent value="photos" className="mt-0">
-                  <PhotosTabOptimized propertyId={property.property_id} />
-                </TabsContent>
-
-                <TabsContent value="qrcode" className="mt-0">
-                  <QRCodeTab propertyId={property.property_id} qrCodes={[]} property={property} />
-                </TabsContent>
-
-                <TabsContent value="financial" className="mt-0">
-                  <FinancialTabOptimized propertyId={property.property_id} />
-                </TabsContent>
-
-                <TabsContent value="checklists" className="mt-0">
-                  <CheckListsTabOptimized propertyId={property.property_id} />
-                </TabsContent>
-
-                <TabsContent value="booking" className="mt-0">
-                  <BookingTabOptimized propertyId={property.property_id} />
                 </TabsContent>
 
                 <TabsContent value="notes" className="mt-0">

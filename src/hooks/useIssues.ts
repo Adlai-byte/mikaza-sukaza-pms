@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Issue, IssueInsert, IssuePhoto, IssuePhotoInsert } from '@/lib/schemas';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { validateFile } from '@/lib/file-validation';
 
 // Query keys
 export const issueKeys = {
@@ -22,6 +23,7 @@ export interface IssueFilters {
   property_id?: string;
   assigned_to?: string;
   reported_by?: string;
+  current_user_id?: string; // Filter for issues assigned to OR reported by this user
   search?: string;
 }
 
@@ -60,6 +62,11 @@ const fetchIssues = async (filters?: IssueFilters): Promise<Issue[]> => {
 
   if (filters?.reported_by) {
     query = query.eq('reported_by', filters.reported_by);
+  }
+
+  // Filter for issues assigned to OR reported by current user
+  if (filters?.current_user_id && !filters?.assigned_to && !filters?.reported_by) {
+    query = query.or(`assigned_to.eq.${filters.current_user_id},reported_by.eq.${filters.current_user_id}`);
   }
 
   if (filters?.search) {
@@ -166,21 +173,46 @@ const uploadPhoto = async ({
   caption?: string;
   userId: string;
 }): Promise<IssuePhoto> => {
+  // Validate file before upload
+  console.log('🔍 Validating issue photo upload...');
+  const validationResult = await validateFile(file, 'ISSUE_PHOTO');
+
+  if (!validationResult.isValid) {
+    console.error('❌ File validation failed:', validationResult.errors);
+    throw new Error(validationResult.errors.join('. '));
+  }
+
+  // Log warnings if any
+  if (validationResult.warnings.length > 0) {
+    console.warn('⚠️ File validation warnings:', validationResult.warnings);
+  }
+
+  console.log('✅ File validation passed');
+
   // Generate unique filename
   const fileExt = file.name.split('.').pop();
   const fileName = `${issueId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+  console.log('📤 Uploading photo to storage:', fileName);
 
   // Upload to storage
   const { data: uploadData, error: uploadError } = await supabase.storage
     .from('issue-photos')
     .upload(fileName, file);
 
-  if (uploadError) throw uploadError;
+  if (uploadError) {
+    console.error('❌ Storage upload error:', uploadError);
+    throw uploadError;
+  }
+
+  console.log('✅ Photo uploaded to storage');
 
   // Get public URL
   const { data: { publicUrl } } = supabase.storage
     .from('issue-photos')
     .getPublicUrl(fileName);
+
+  console.log('💾 Creating photo record in database...');
 
   // Create photo record
   const { data, error } = await supabase
@@ -195,7 +227,12 @@ const uploadPhoto = async ({
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Database insert error:', error);
+    throw error;
+  }
+
+  console.log('✅ Photo record created successfully');
   return data;
 };
 

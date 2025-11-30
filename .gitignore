@@ -70,28 +70,36 @@ Desktop.ini
 ._*
 
 # Documentation & Reports (not needed for deployment)
-IMPROVEMENTS_SUMMARY.md
-LIST_UPDATE_FIX.md
-PROPERTY_CRUD_TEST_PLAN.md
-PROPERTY_EDIT_FIXES_APPLIED.md
-PROPERTY_EDIT_FIXES_FINAL.md
-PROPERTY_EDIT_TEST_PLAN.md
-QA_PROPERTY_EDIT_BUG_REPORT.md
-QUICK_TEST_GUIDE.md
-RBAC_TEST_PLAN.md
-RBAC_IMPLEMENTATION_SUMMARY.md
-SECURITY_RECOMMENDATIONS.md
-SERVICE_WORKER_FIX.md
-PROPERTY_EDIT_TABS_VALIDATION.md
-PHASE2_VALIDATION_SUMMARY.md
-AccomplishmentReport.md
-ACCOMPLISHMENT_REPORT_FINAL.md
-PHASE2_COMPLETE_VALIDATION.md
-QUICK_SMOKE_TEST.md
-FIXES_APPLIED.md
-COMMIT_SUMMARY.md
-VERCEL_FIX.md
-GITIGNORE_UPDATE.md
+# Ignore all .md files in root (except specific allowed files)
+/*.md
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+!LICENSE.md
+
+# Temporary SQL scripts in root (one-time fixes, not migrations)
+/*.sql
+
+# Supabase migration files to ignore
+supabase/migrations/*_debug_*.sql
+supabase/migrations/*_fix_*.sql
+supabase/migrations/*_diagnose_*.sql
+supabase/migrations/*_verify_*.sql
+supabase/migrations/*_rollback_*.sql
+supabase/migrations/*_insert_*.sql
+supabase/migrations/*_mock_*.sql
+supabase/migrations/debug_*.sql
+supabase/migrations/diagnose_*.sql
+supabase/migrations/verify_*.sql
+supabase/migrations/rollback_*.sql
+supabase/migrations/fix_*.sql
+supabase/migrations/DIAGNOSE_*.sql
+supabase/migrations/FIX_*.sql
+supabase/migrations/QUICK_FIX_*.sql
+supabase/migrations/ULTIMATE_*.sql
+supabase/migrations/INSERT_*.sql
+supabase/migrations/view_*.sql
+supabase/migrations/create_test_*.sql
 
 # Claude AI assistant files (development only)
 .claude/

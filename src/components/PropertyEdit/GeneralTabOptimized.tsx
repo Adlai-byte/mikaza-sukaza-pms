@@ -7,6 +7,24 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +49,10 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Edit,
+  Trash2,
+  Save,
+  X,
 } from 'lucide-react';
 import { TabLoadingSpinner } from './PropertyEditSkeleton';
 import { LocationMap } from '@/components/ui/location-map-new';
@@ -144,6 +166,14 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showLocationMap, setShowLocationMap] = useState(false);
+  const [showUnitDialog, setShowUnitDialog] = useState(false);
+  const [editingUnit, setEditingUnit] = useState<any>(null);
+  const [unitToDelete, setUnitToDelete] = useState<any>(null);
+  const [unitFormData, setUnitFormData] = useState({
+    property_name: '',
+    license_number: '',
+    folio: '',
+  });
   const [showPasswords, setShowPasswords] = useState({
     wifi_password: false,
     gate_code: false,
@@ -539,6 +569,10 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
 
       setHasUnsavedChanges(false);
 
+      // Emit event to notify parent (PropertyEdit page) to refresh header
+      window.dispatchEvent(new Event('property-updated'));
+      console.log('🔔 [GeneralTab] Dispatched property-updated event');
+
       // Clear the flag after a tick to allow useEffect to handle future updates
       setTimeout(() => {
         justSavedRef.current = false;
@@ -553,6 +587,130 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       });
     },
   });
+
+  // Create Unit Mutation
+  const createUnitMutation = useMutation({
+    mutationFn: async (unitData: typeof unitFormData) => {
+      const { data, error } = await supabase
+        .from('units')
+        .insert([{ ...unitData, property_id: property.property_id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
+      toast({
+        title: 'Success',
+        description: 'Unit created successfully',
+      });
+      setShowUnitDialog(false);
+      setUnitFormData({ property_name: '', license_number: '', folio: '' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: (error as Error)?.message || 'Failed to create unit',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Update Unit Mutation
+  const updateUnitMutation = useMutation({
+    mutationFn: async ({ unitId, unitData }: { unitId: string; unitData: typeof unitFormData }) => {
+      const { data, error } = await supabase
+        .from('units')
+        .update(unitData)
+        .eq('unit_id', unitId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
+      toast({
+        title: 'Success',
+        description: 'Unit updated successfully',
+      });
+      setShowUnitDialog(false);
+      setEditingUnit(null);
+      setUnitFormData({ property_name: '', license_number: '', folio: '' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: (error as Error)?.message || 'Failed to update unit',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Delete Unit Mutation
+  const deleteUnitMutation = useMutation({
+    mutationFn: async (unitId: string) => {
+      const { error } = await supabase
+        .from('units')
+        .delete()
+        .eq('unit_id', unitId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
+      toast({
+        title: 'Success',
+        description: 'Unit deleted successfully',
+      });
+      setUnitToDelete(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: (error as Error)?.message || 'Failed to delete unit',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Unit Handlers
+  const handleAddUnit = () => {
+    setEditingUnit(null);
+    setUnitFormData({ property_name: '', license_number: '', folio: '' });
+    setShowUnitDialog(true);
+  };
+
+  const handleEditUnit = (unit: any) => {
+    setEditingUnit(unit);
+    setUnitFormData({
+      property_name: unit.property_name || '',
+      license_number: unit.license_number || '',
+      folio: unit.folio || '',
+    });
+    setShowUnitDialog(true);
+  };
+
+  const handleSaveUnit = () => {
+    if (editingUnit) {
+      updateUnitMutation.mutate({ unitId: editingUnit.unit_id, unitData: unitFormData });
+    } else {
+      createUnitMutation.mutate(unitFormData);
+    }
+  };
+
+  const handleDeleteUnit = (unit: any) => {
+    setUnitToDelete(unit);
+  };
+
+  const confirmDeleteUnit = () => {
+    if (unitToDelete) {
+      deleteUnitMutation.mutate(unitToDelete.unit_id);
+    }
+  };
 
   // Keep form synced when property data changes
   useEffect(() => {
@@ -673,25 +831,31 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     postal_code?: string,
     country?: string
   ) => {
-    // Always update coordinates
-    handleInputChange('latitude', lat.toString());
-    handleInputChange('longitude', lng.toString());
+    console.log('📍 handleLocationSelect called with:', { lat, lng, address, city, state, postal_code, country });
 
-    // Auto-fill address fields if they're provided and current fields are empty
-    if (address) {
-      handleInputChange('address', address);
-    }
-    if (city) {
-      handleInputChange('city', city);
-    }
-    if (state) {
-      handleInputChange('state', state);
-    }
-    if (postal_code) {
-      handleInputChange('postal_code', postal_code);
-    }
+    // CRITICAL FIX: Update all fields in a single state update to prevent React batching issues
+    setFormData(prev => ({
+      ...prev,
+      latitude: lat.toString(),
+      longitude: lng.toString(),
+      ...(address && { address }),
+      ...(city && { city }),
+      ...(state && { state }),
+      ...(postal_code && { postal_code })
+    }));
 
-    console.log('📍 Location selected with details:', { lat, lng, address, city, state, postal_code, country });
+    setHasUnsavedChanges(true);
+
+    console.log('📍 Location selected - form data updated with:', {
+      latitude: lat.toString(),
+      longitude: lng.toString(),
+      address,
+      city,
+      state,
+      postal_code
+    });
+
+    setShowLocationMap(false);
   };
 
   const propertyTypes = ['Apartment', 'House', 'Condo', 'Villa', 'Studio', 'Townhouse'];
@@ -1310,6 +1474,90 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
         </CardContent>
       </Card>
 
+      {/* Property Units */}
+      <Card className="border-l-4 border-l-indigo-500">
+        <CardHeader className="bg-gradient-to-r from-indigo-50 to-indigo-100">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-3 text-indigo-900">
+              <Building2 className="h-5 w-5" />
+              Property Units
+            </CardTitle>
+            <Button
+              onClick={handleAddUnit}
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Unit
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {property.units && property.units.length > 0 ? (
+            <div className="space-y-3">
+              {property.units.map((unit: any, index: number) => (
+                <div key={unit.unit_id || index} className="p-4 border rounded-lg bg-gradient-to-r from-gray-50 to-white hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                      <div>
+                        <Label className="text-xs text-gray-500 mb-1">Unit Name</Label>
+                        <p className="font-medium text-gray-900">{unit.property_name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500 mb-1">License Number</Label>
+                        <p className="font-medium text-gray-900">{unit.license_number || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500 mb-1">Folio</Label>
+                        <p className="font-medium text-gray-900">{unit.folio || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button
+                        onClick={() => handleEditUnit(unit)}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteUnit(unit)}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span><strong>{property.units.length}</strong> unit{property.units.length !== 1 ? 's' : ''} configured for this property</span>
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 border-2 border-dashed rounded-lg">
+              <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-500 mb-4">No units configured yet</p>
+              <Button
+                onClick={handleAddUnit}
+                variant="outline"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add First Unit
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+
       {/* Save Section */}
       <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t p-4 rounded-t-lg">
         <div className="flex items-center justify-between">
@@ -1357,6 +1605,104 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
         initialLng={formData.longitude ? parseFloat(String(formData.longitude)) : undefined}
         initialAddress={formData.address}
       />
+
+      {/* Unit Dialog */}
+      <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingUnit ? 'Edit Unit' : 'Add New Unit'}</DialogTitle>
+            <DialogDescription>
+              {editingUnit ? 'Update the unit details below.' : 'Add a new unit to this property.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="unit_property_name">Unit Name</Label>
+              <Input
+                id="unit_property_name"
+                value={unitFormData.property_name}
+                onChange={(e) => setUnitFormData({ ...unitFormData, property_name: e.target.value })}
+                placeholder="e.g., Apartment 101, Unit A"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="unit_license_number">License Number</Label>
+              <Input
+                id="unit_license_number"
+                value={unitFormData.license_number}
+                onChange={(e) => setUnitFormData({ ...unitFormData, license_number: e.target.value })}
+                placeholder="e.g., LIC-12345"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="unit_folio">Folio</Label>
+              <Input
+                id="unit_folio"
+                value={unitFormData.folio}
+                onChange={(e) => setUnitFormData({ ...unitFormData, folio: e.target.value })}
+                placeholder="e.g., FOL-001"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowUnitDialog(false);
+                setEditingUnit(null);
+                setUnitFormData({ property_name: '', license_number: '', folio: '' });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveUnit}
+              disabled={createUnitMutation.isPending || updateUnitMutation.isPending}
+            >
+              {(createUnitMutation.isPending || updateUnitMutation.isPending) ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  {editingUnit ? 'Update Unit' : 'Create Unit'}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!unitToDelete} onOpenChange={(open) => !open && setUnitToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Unit</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{unitToDelete?.property_name || 'this unit'}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteUnit}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteUnitMutation.isPending}
+            >
+              {deleteUnitMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

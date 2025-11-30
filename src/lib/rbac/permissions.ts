@@ -22,6 +22,20 @@ export const PERMISSIONS = {
   USERS_DELETE: 'users.delete',
   USERS_CHANGE_ROLE: 'users.change_role',
 
+  // ========== SERVICE PROVIDERS ==========
+  SERVICE_PROVIDERS_VIEW: 'service_providers.view',
+  SERVICE_PROVIDERS_CREATE: 'service_providers.create',
+  SERVICE_PROVIDERS_EDIT: 'service_providers.edit',
+  SERVICE_PROVIDERS_DELETE: 'service_providers.delete',
+  SERVICE_PROVIDERS_EXPORT: 'service_providers.export',
+
+  // ========== UTILITY PROVIDERS ==========
+  UTILITY_PROVIDERS_VIEW: 'utility_providers.view',
+  UTILITY_PROVIDERS_CREATE: 'utility_providers.create',
+  UTILITY_PROVIDERS_EDIT: 'utility_providers.edit',
+  UTILITY_PROVIDERS_DELETE: 'utility_providers.delete',
+  UTILITY_PROVIDERS_EXPORT: 'utility_providers.export',
+
   // ========== JOBS ==========
   JOBS_VIEW: 'jobs.view',
   JOBS_CREATE: 'jobs.create',
@@ -154,13 +168,22 @@ export const ROLES = {
       // NOT: PROPERTIES_DELETE (admin only)
       // NOT: Any user management permissions (admin only)
 
-      // ========== JOBS - Full access ==========
-      PERMISSIONS.JOBS_VIEW,
-      PERMISSIONS.JOBS_CREATE,
-      PERMISSIONS.JOBS_EDIT,
-      PERMISSIONS.JOBS_DELETE, // Can delete own jobs
-      PERMISSIONS.JOBS_ASSIGN,
-      PERMISSIONS.JOBS_COMPLETE,
+      // ========== SERVICE PROVIDERS - Full CRUD except delete ==========
+      PERMISSIONS.SERVICE_PROVIDERS_VIEW,
+      PERMISSIONS.SERVICE_PROVIDERS_CREATE,
+      PERMISSIONS.SERVICE_PROVIDERS_EDIT,
+      PERMISSIONS.SERVICE_PROVIDERS_EXPORT,
+      // NOT: SERVICE_PROVIDERS_DELETE (admin only)
+
+      // ========== UTILITY PROVIDERS - Full CRUD except delete ==========
+      PERMISSIONS.UTILITY_PROVIDERS_VIEW,
+      PERMISSIONS.UTILITY_PROVIDERS_CREATE,
+      PERMISSIONS.UTILITY_PROVIDERS_EDIT,
+      PERMISSIONS.UTILITY_PROVIDERS_EXPORT,
+      // NOT: UTILITY_PROVIDERS_DELETE (admin only)
+
+      // NOT: JOBS - Admin only
+      // NOT: JOBS_VIEW, JOBS_CREATE, JOBS_EDIT, JOBS_DELETE, JOBS_ASSIGN, JOBS_COMPLETE
 
       // ========== BOOKINGS - Full access ==========
       PERMISSIONS.BOOKINGS_VIEW,
@@ -205,12 +228,26 @@ export const ROLES = {
       PERMISSIONS.DOCUMENTS_MESSAGES_VIEW,
       PERMISSIONS.DOCUMENTS_MESSAGES_MANAGE, // Full access
 
-      // ========== FINANCE - View only ==========
+      // ========== FINANCE - Full access to daily operations ==========
       PERMISSIONS.FINANCE_VIEW,
+      PERMISSIONS.FINANCE_CREATE,
+      PERMISSIONS.FINANCE_EDIT,
+      PERMISSIONS.FINANCE_EXPORT,
+      // NOT: FINANCE_DELETE (admin only)
+
+      // Invoices - Full CRUD except delete
       PERMISSIONS.INVOICES_VIEW,
-      PERMISSIONS.COMMISSIONS_VIEW_OWN, // Own commission only
+      PERMISSIONS.INVOICES_CREATE,
+      PERMISSIONS.INVOICES_EDIT,
+      PERMISSIONS.INVOICES_SEND,
+
+      // Own commissions only
+      PERMISSIONS.COMMISSIONS_VIEW_OWN,
+
+      // Pipeline - View only
       PERMISSIONS.PIPELINE_VIEW,
-      // NOT: Any finance editing/creating/deleting
+      // NOT: PIPELINE_MANAGE (admin only)
+      // NOT: COMMISSIONS_VIEW_ALL, COMMISSIONS_MANAGE (admin only)
 
       // ========== MEDIA - Full access ==========
       PERMISSIONS.MEDIA_VIEW,
@@ -242,10 +279,8 @@ export const ROLES = {
     name: 'Service Provider',
     description: 'External vendor or service provider with limited access',
     permissions: [
-      // Can only view jobs assigned to them
-      PERMISSIONS.JOBS_VIEW,
-      PERMISSIONS.JOBS_EDIT, // Can update job status and notes
-      PERMISSIONS.JOBS_COMPLETE,
+      // NOT: JOBS - Admin only
+      // NOT: JOBS_VIEW, JOBS_EDIT, JOBS_COMPLETE
 
       // Can view bookings related to their jobs
       PERMISSIONS.BOOKINGS_VIEW,
@@ -337,6 +372,8 @@ export function getRoleInfo(role: RoleName) {
 export const PERMISSION_CATEGORIES = {
   PROPERTIES: 'Properties Management',
   USERS: 'User Management',
+  SERVICE_PROVIDERS: 'Service Providers',
+  UTILITY_PROVIDERS: 'Utility Providers',
   JOBS: 'Job Management',
   BOOKINGS: 'Bookings & Calendar',
   TODOS: 'To-Do Lists',

@@ -18,9 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Calendar as CalendarIcon,
@@ -28,29 +26,18 @@ import {
   Mail,
   Phone,
   Users,
-  DollarSign,
-  CreditCard,
-  FileText,
-  AlertCircle,
   Save,
   X,
   Building,
-  Plus,
   Check,
-  Sparkles,
+  FileText,
 } from 'lucide-react';
 import { Booking, BookingInsert } from '@/lib/schemas';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
-
-interface AdditionalOption {
-  id: string;
-  label: string;
-  description: string;
-  price: number;
-  icon: React.ElementType;
-  selected: boolean;
-}
+import { useBillTemplates } from '@/hooks/useBillTemplates';
+import { useBookingConflicts } from '@/hooks/useBookingConflicts';
+import { BookingConflictAlert } from '@/components/BookingConflictAlert';
 
 interface BookingDialogEnhancedProps {
   open: boolean;
@@ -84,85 +71,46 @@ export function BookingDialogEnhanced({
     check_in_date: booking?.check_in_date || defaultCheckIn || '',
     check_out_date: booking?.check_out_date || defaultCheckOut || '',
     number_of_guests: booking?.number_of_guests || 1,
-    total_amount: booking?.total_amount || 0,
-    deposit_amount: booking?.deposit_amount || 0,
+    total_amount: null, // Pricing handled in invoice
+    deposit_amount: null, // Deposits handled in invoice/payment
     payment_method: booking?.payment_method || '',
     booking_status: (booking?.booking_status as any) || 'pending',
     special_requests: booking?.special_requests || '',
+    booking_channel: booking?.booking_channel || undefined,
+    payment_status: booking?.payment_status || 'pending',
+    bill_template_id: booking?.bill_template_id || null,
   });
 
-  const [additionalOptions, setAdditionalOptions] = useState<AdditionalOption[]>([
-    {
-      id: 'extra_cleaning',
-      label: 'Extra Cleaning',
-      description: 'Deep cleaning service before arrival',
-      price: 75,
-      icon: Sparkles,
-      selected: false,
-    },
-    {
-      id: 'airport_pickup',
-      label: 'Airport Pickup',
-      description: 'Private transfer from airport',
-      price: 85,
-      icon: CreditCard,
-      selected: false,
-    },
-    {
-      id: 'late_checkin',
-      label: 'Late Check-in',
-      description: 'Check-in after 10 PM',
-      price: 50,
-      icon: CalendarIcon,
-      selected: false,
-    },
-    {
-      id: 'early_checkout',
-      label: 'Early Check-out',
-      description: 'Check-out before 8 AM',
-      price: 40,
-      icon: CalendarIcon,
-      selected: false,
-    },
-    {
-      id: 'pet_fee',
-      label: 'Pet Friendly',
-      description: 'Bring your furry friend',
-      price: 100,
-      icon: Users,
-      selected: false,
-    },
-    {
-      id: 'parking',
-      label: 'Parking Space',
-      description: 'Reserved parking spot',
-      price: 30,
-      icon: CreditCard,
-      selected: false,
-    },
-    {
-      id: 'breakfast',
-      label: 'Breakfast Included',
-      description: 'Daily breakfast service',
-      price: 25,
-      icon: DollarSign,
-      selected: false,
-    },
-    {
-      id: 'extra_keys',
-      label: 'Extra Keys',
-      description: 'Additional set of keys',
-      price: 15,
-      icon: Plus,
-      selected: false,
-    },
-  ]);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [baseAmount, setBaseAmount] = useState(0);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    booking?.bill_template_id || null
+  );
+  const [softConflictAcknowledged, setSoftConflictAcknowledged] = useState(false);
+
+  // Fetch bill templates for selected property
+  const { data: billTemplates, isLoading: loadingTemplates } = useBillTemplates(
+    formData.property_id || undefined
+  );
+
+  // Check for booking conflicts
+  const { conflictStatus, isChecking: isCheckingConflicts } = useBookingConflicts(
+    formData.property_id,
+    formData.check_in_date,
+    formData.check_out_date,
+    booking?.booking_id // Exclude current booking when editing
+  );
 
   // Reset form when dialog opens with new data
   useEffect(() => {
+    console.log('🎭 BookingDialogEnhanced - open state changed:', {
+      open,
+      isEditing,
+      propertyId,
+      defaultCheckIn,
+      defaultCheckOut,
+      hasBooking: !!booking
+    });
+
     if (open) {
       setFormData({
         property_id: propertyId || booking?.property_id || '',
@@ -172,35 +120,38 @@ export function BookingDialogEnhanced({
         check_in_date: booking?.check_in_date || defaultCheckIn || '',
         check_out_date: booking?.check_out_date || defaultCheckOut || '',
         number_of_guests: booking?.number_of_guests || 1,
-        total_amount: booking?.total_amount || 0,
-        deposit_amount: booking?.deposit_amount || 0,
+        total_amount: null, // Pricing handled in invoice
+        deposit_amount: null, // Deposits handled in invoice/payment
         payment_method: booking?.payment_method || '',
         booking_status: (booking?.booking_status as any) || 'pending',
         special_requests: booking?.special_requests || '',
+        booking_channel: booking?.booking_channel || undefined,
+        payment_status: booking?.payment_status || 'pending',
+        bill_template_id: booking?.bill_template_id || null,
       });
+      setSelectedTemplateId(booking?.bill_template_id || null);
+      setSoftConflictAcknowledged(false);
       setErrors({});
-
-      // Parse special requests if it contains options JSON
-      if (booking?.special_requests) {
-        try {
-          const parsed = JSON.parse(booking.special_requests);
-          if (parsed.options && Array.isArray(parsed.options)) {
-            setAdditionalOptions(prev =>
-              prev.map(opt => ({
-                ...opt,
-                selected: parsed.options.includes(opt.id)
-              }))
-            );
-          }
-        } catch (e) {
-          // Not JSON, just regular text
-        }
-      } else {
-        // Reset options
-        setAdditionalOptions(prev => prev.map(opt => ({ ...opt, selected: false })));
-      }
     }
   }, [open, booking, propertyId, defaultCheckIn, defaultCheckOut]);
+
+  // Reset soft conflict acknowledgment when dates or property change
+  useEffect(() => {
+    setSoftConflictAcknowledged(false);
+  }, [formData.property_id, formData.check_in_date, formData.check_out_date]);
+
+  // Handle bill template selection
+  const handleTemplateSelect = (templateId: string) => {
+    if (templateId === 'none') {
+      setSelectedTemplateId(null);
+      setFormData({ ...formData, bill_template_id: null });
+      return;
+    }
+
+    // Simply store the template ID - pricing will be applied during invoice generation
+    setSelectedTemplateId(templateId);
+    setFormData({ ...formData, bill_template_id: templateId });
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -242,14 +193,6 @@ export function BookingDialogEnhanced({
       newErrors.number_of_guests = 'At least 1 guest required';
     }
 
-    if (formData.total_amount && formData.total_amount < 0) {
-      newErrors.total_amount = 'Amount cannot be negative';
-    }
-
-    if (formData.deposit_amount && formData.deposit_amount < 0) {
-      newErrors.deposit_amount = 'Deposit cannot be negative';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -261,20 +204,33 @@ export function BookingDialogEnhanced({
       return;
     }
 
-    // Encode selected options into special_requests
-    const selectedOptionIds = additionalOptions.filter(opt => opt.selected).map(opt => opt.id);
-    const optionsData = {
-      options: selectedOptionIds,
-      notes: formData.special_requests || ''
-    };
+    // Check for booking conflicts
+    if (conflictStatus.type === 'hard') {
+      // Cannot proceed with hard conflicts
+      return;
+    }
 
-    const submissionData = {
+    if (conflictStatus.type === 'soft' && !softConflictAcknowledged) {
+      // User must acknowledge soft conflicts before proceeding
+      return;
+    }
+
+    onSubmit(formData);
+  };
+
+  // Handler for acknowledging soft conflicts
+  const handleProceedWithConflict = () => {
+    setSoftConflictAcknowledged(true);
+  };
+
+  // Handler for changing dates (clears date fields to let user select new ones)
+  const handleChangeDates = () => {
+    setFormData({
       ...formData,
-      special_requests: JSON.stringify(optionsData),
-      total_amount: calculateTotalAmount(),
-    };
-
-    onSubmit(submissionData);
+      check_in_date: '',
+      check_out_date: '',
+    });
+    setSoftConflictAcknowledged(false);
   };
 
   const handleChange = (field: keyof BookingInsert, value: any) => {
@@ -283,14 +239,6 @@ export function BookingDialogEnhanced({
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-  };
-
-  const handleOptionToggle = (optionId: string) => {
-    setAdditionalOptions(prev =>
-      prev.map(opt =>
-        opt.id === optionId ? { ...opt, selected: !opt.selected } : opt
-      )
-    );
   };
 
   const calculateNights = () => {
@@ -303,20 +251,7 @@ export function BookingDialogEnhanced({
     return 0;
   };
 
-  const calculateOptionsTotal = () => {
-    return additionalOptions
-      .filter(opt => opt.selected)
-      .reduce((sum, opt) => sum + opt.price, 0);
-  };
-
-  const calculateTotalAmount = () => {
-    const optionsTotal = calculateOptionsTotal();
-    return (formData.total_amount || 0) + optionsTotal;
-  };
-
   const nights = calculateNights();
-  const optionsTotal = calculateOptionsTotal();
-  const grandTotal = calculateTotalAmount();
 
   const selectedProperty = properties.find(p => p.property_id === formData.property_id);
 
@@ -331,7 +266,7 @@ export function BookingDialogEnhanced({
           <DialogDescription>
             {isEditing
               ? 'Update the booking details below'
-              : 'Select property, fill in guest details, and choose additional options'}
+              : 'Select property and fill in guest details'}
           </DialogDescription>
         </DialogHeader>
 
@@ -381,6 +316,47 @@ export function BookingDialogEnhanced({
                     </CardContent>
                   </Card>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Bill Template Selector */}
+          {formData.property_id && billTemplates && billTemplates.length > 0 && !isEditing && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Pricing Template
+              </h3>
+
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertDescription className="text-sm text-blue-900">
+                  Select a template (optional) to use when creating the invoice. Pricing details will be applied during invoice generation.
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                <Label htmlFor="bill_template_id">Template (Optional)</Label>
+                <Select
+                  value={selectedTemplateId || 'none'}
+                  onValueChange={handleTemplateSelect}
+                  disabled={loadingTemplates}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose a pricing template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-muted-foreground">No template - Set pricing in invoice</span>
+                    </SelectItem>
+                    {billTemplates
+                      ?.filter(t => t.is_active)
+                      .map((template) => (
+                        <SelectItem key={template.template_id} value={template.template_id!}>
+                          {template.template_name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}
@@ -496,63 +472,23 @@ export function BookingDialogEnhanced({
                 </AlertDescription>
               </Alert>
             )}
-          </div>
 
-          {/* Additional Options */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" />
-              Additional Options
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Enhance your stay with these optional services
-            </p>
+            {/* Booking Conflict Alert */}
+            {(conflictStatus.type === 'hard' || (conflictStatus.type === 'soft' && !softConflictAcknowledged)) && (
+              <BookingConflictAlert
+                conflict={conflictStatus}
+                onChangeDates={handleChangeDates}
+                onProceedAnyway={conflictStatus.type === 'soft' ? handleProceedWithConflict : undefined}
+                onCancel={() => onOpenChange(false)}
+              />
+            )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {additionalOptions.map((option) => {
-                const Icon = option.icon;
-                return (
-                  <div
-                    key={option.id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                      option.selected
-                        ? 'border-primary bg-primary/5 shadow-sm'
-                        : 'border-muted-foreground/20 hover:border-primary/50'
-                    }`}
-                    onClick={() => handleOptionToggle(option.id)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={option.selected}
-                        onCheckedChange={() => handleOptionToggle(option.id)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4 text-primary" />
-                            <span className="font-medium text-sm">{option.label}</span>
-                          </div>
-                          <span className="text-sm font-semibold text-primary">
-                            +${option.price}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {option.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {optionsTotal > 0 && (
+            {/* Soft conflict acknowledged notice */}
+            {conflictStatus.type === 'soft' && softConflictAcknowledged && (
               <Alert className="bg-green-50 border-green-200">
-                <Plus className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
-                  <strong>{additionalOptions.filter(o => o.selected).length}</strong> option{additionalOptions.filter(o => o.selected).length > 1 ? 's' : ''} selected •
-                  Additional: <strong>${optionsTotal.toFixed(2)}</strong>
+                  <strong>Proceeding with booking</strong> - You've acknowledged the potential conflict.
                 </AlertDescription>
               </Alert>
             )}
@@ -561,92 +497,51 @@ export function BookingDialogEnhanced({
           {/* Booking Details */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
-              Pricing & Payment
+              <Users className="h-5 w-5 text-primary" />
+              Booking Details
             </h3>
+
+            <div className="space-y-2">
+              <Label htmlFor="number_of_guests">Number of Guests</Label>
+              <div className="relative">
+                <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="number_of_guests"
+                  type="number"
+                  min="1"
+                  value={formData.number_of_guests || ''}
+                  onChange={(e) => handleChange('number_of_guests', parseInt(e.target.value) || 0)}
+                  className={`pl-10 ${errors.number_of_guests ? 'border-red-500' : ''}`}
+                />
+              </div>
+              {errors.number_of_guests && (
+                <p className="text-sm text-red-500">{errors.number_of_guests}</p>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="number_of_guests">Number of Guests</Label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="number_of_guests"
-                    type="number"
-                    min="1"
-                    value={formData.number_of_guests || ''}
-                    onChange={(e) => handleChange('number_of_guests', parseInt(e.target.value) || 0)}
-                    className={`pl-10 ${errors.number_of_guests ? 'border-red-500' : ''}`}
-                  />
-                </div>
-                {errors.number_of_guests && (
-                  <p className="text-sm text-red-500">{errors.number_of_guests}</p>
-                )}
+                <Label htmlFor="booking_channel">Booking Channel</Label>
+                <Select
+                  value={formData.booking_channel || ''}
+                  onValueChange={(value) => handleChange('booking_channel', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select channel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="direct">📞 Direct Booking</SelectItem>
+                    <SelectItem value="airbnb">🏠 Airbnb</SelectItem>
+                    <SelectItem value="booking">🏨 Booking.com</SelectItem>
+                    <SelectItem value="vrbo">🏖️ VRBO</SelectItem>
+                    <SelectItem value="expedia">✈️ Expedia</SelectItem>
+                    <SelectItem value="homeaway">🏡 HomeAway</SelectItem>
+                    <SelectItem value="tripadvisor">🔍 TripAdvisor</SelectItem>
+                    <SelectItem value="other">📋 Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="total_amount">Base Amount ($)</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="total_amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.total_amount || ''}
-                    onChange={(e) => handleChange('total_amount', parseFloat(e.target.value) || 0)}
-                    className={`pl-10 ${errors.total_amount ? 'border-red-500' : ''}`}
-                  />
-                </div>
-                {errors.total_amount && (
-                  <p className="text-sm text-red-500">{errors.total_amount}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="deposit_amount">Deposit ($)</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="deposit_amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.deposit_amount || ''}
-                    onChange={(e) => handleChange('deposit_amount', parseFloat(e.target.value) || 0)}
-                    className={`pl-10 ${errors.deposit_amount ? 'border-red-500' : ''}`}
-                  />
-                </div>
-                {errors.deposit_amount && (
-                  <p className="text-sm text-red-500">{errors.deposit_amount}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Total Summary */}
-            <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-              <CardContent className="p-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Base Amount:</span>
-                    <span className="font-medium">${(formData.total_amount || 0).toFixed(2)}</span>
-                  </div>
-                  {optionsTotal > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>Additional Options:</span>
-                      <span className="font-medium text-primary">+${optionsTotal.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Grand Total:</span>
-                    <span className="text-primary">${grandTotal.toFixed(2)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="payment_method">Payment Method</Label>
                 <Select
@@ -668,22 +563,45 @@ export function BookingDialogEnhanced({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="booking_status">Status</Label>
+                <Label htmlFor="payment_status">Payment Status</Label>
                 <Select
-                  value={formData.booking_status || 'pending'}
-                  onValueChange={(value) => handleChange('booking_status', value)}
+                  value={formData.payment_status || 'pending'}
+                  onValueChange={(value) => handleChange('payment_status', value)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder="Payment status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">💳 Pending</SelectItem>
+                    <SelectItem value="paid">✅ Paid</SelectItem>
+                    <SelectItem value="partially_paid">⏳ Partially Paid</SelectItem>
+                    <SelectItem value="refunded">↩️ Refunded</SelectItem>
+                    <SelectItem value="cancelled">❌ Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="booking_status">Booking Status</Label>
+              <Select
+                value={formData.booking_status || 'pending'}
+                onValueChange={(value) => handleChange('booking_status', value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inquiry">💬 Inquiry</SelectItem>
+                  <SelectItem value="pending">⏳ Pending</SelectItem>
+                  <SelectItem value="confirmed">✅ Confirmed</SelectItem>
+                  <SelectItem value="checked_in">🔑 Checked In</SelectItem>
+                  <SelectItem value="checked_out">👋 Checked Out</SelectItem>
+                  <SelectItem value="completed">✔️ Completed</SelectItem>
+                  <SelectItem value="blocked">🚫 Blocked (Maintenance)</SelectItem>
+                  <SelectItem value="cancelled">❌ Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -710,7 +628,11 @@ export function BookingDialogEnhanced({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting ||
+                conflictStatus.type === 'hard' ||
+                (conflictStatus.type === 'soft' && !softConflictAcknowledged)
+              }
               className="bg-primary hover:bg-primary/90"
             >
               <Save className="mr-2 h-4 w-4" />

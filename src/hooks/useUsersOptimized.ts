@@ -23,18 +23,16 @@ export const userKeys = {
 
 // Fetch users with optimized query
 const fetchUsers = async (): Promise<User[]> => {
-  console.log('👥 Fetching users with React Query...');
   const { data, error } = await supabase
     .from('users')
     .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('❌ Users fetch error:', error);
+    console.error('Failed to fetch users:', error);
     throw error;
   }
 
-  console.log('✅ Users data:', data?.length || 0, 'users');
   return (data || []) as User[];
 };
 
@@ -66,7 +64,7 @@ export function useUsersOptimized() {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
 
-  // Users query with caching
+  // Users query with intelligent caching
   const {
     data: users = [],
     isLoading: loading,
@@ -76,29 +74,23 @@ export function useUsersOptimized() {
   } = useQuery({
     queryKey: userKeys.lists(),
     queryFn: fetchUsers,
-    staleTime: CACHE_CONFIG.LIST.staleTime, // 30 minutes
+    staleTime: 0, // Disabled caching - always fetch fresh data after RLS fix
     gcTime: CACHE_CONFIG.LIST.gcTime, // 2 hours
-    refetchOnMount: false, // Don't refetch on mount (use cache)
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    retry: 2,
   });
 
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: UserInsert) => {
-      console.log('🔐 Creating user - Permission check...');
-
       // Check permission
       if (!hasPermission(PERMISSIONS.USERS_CREATE)) {
-        console.error('❌ Permission denied for user creation');
         throw new Error("You don't have permission to create users");
       }
 
-      console.log('✅ Permission granted');
-      console.log('🔒 Password validation...');
-
       // Ensure password is provided for new users
       if (!userData.password) {
-        console.error('❌ No password provided');
         throw new Error("Password is required for new users");
       }
 
@@ -108,8 +100,47 @@ export function useUsersOptimized() {
         throw new Error(passwordValidation.errors.join('. '));
       }
 
-      // Create insertion data with required password
-      const insertData = { ...userData, password: userData.password };
+      // Step 1: Create Supabase Auth user first
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            user_type: userData.user_type,
+          }
+        }
+      });
+
+      if (authError) {
+        throw new Error(`Failed to create authentication account: ${authError.message}`);
+      }
+
+      if (!authData.user) {
+        throw new Error('Failed to create authentication account');
+      }
+
+      // Step 2: Create insertion data with Supabase Auth user ID
+      const { confirmPassword, ...insertData } = {
+        ...userData,
+        user_id: authData.user.id,
+        password: userData.password
+      };
+
+      // Clean up optional fields with empty strings
+      const optionalFields = [
+        'date_of_birth', 'company', 'cellphone_primary', 'cellphone_usa',
+        'whatsapp', 'address', 'city', 'state', 'zip', 'photo_url'
+      ];
+
+      optionalFields.forEach(field => {
+        if (insertData[field as keyof typeof insertData] === "" ||
+            insertData[field as keyof typeof insertData] === undefined) {
+          delete insertData[field as keyof typeof insertData];
+        }
+      });
 
       // Step 3: Insert user into users table
       const { data, error } = await supabase
@@ -119,31 +150,20 @@ export function useUsersOptimized() {
         .single();
 
       if (error) {
-        console.error('❌ Database insert error:', error);
-        // If database insert fails, we should clean up the Auth user
-        // But Supabase doesn't allow deleting users from client side
-        // Admin will need to manually clean up in Supabase Dashboard
         throw new Error(`User account created but database entry failed: ${error.message}. Please contact administrator.`);
       }
 
-      console.log('✅ User created in database:', data?.user_id);
-      console.log('📧 Verification email sent to:', userData.email);
-
       toast({
         title: "User Created Successfully",
-        description: `User account created. A verification email has been sent to ${userData.email}. The user must verify their email before logging in.`,
+        description: `User account created. A verification email has been sent to ${userData.email}.`,
       });
 
       return data;
     },
     onMutate: async (userData) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: userKeys.lists() });
-
-      // Snapshot the previous value
       const previousUsers = queryClient.getQueryData(userKeys.lists());
 
-      // Optimistically add the new user
       const tempUser = {
         user_id: `temp-${Date.now()}`,
         ...userData,
@@ -156,11 +176,9 @@ export function useUsersOptimized() {
         return [tempUser, ...oldData];
       });
 
-      // Return rollback function
       return { rollback: () => queryClient.setQueryData(userKeys.lists(), previousUsers) };
     },
     onSuccess: () => {
-      // Invalidate and refetch users
       queryClient.invalidateQueries({ queryKey: userKeys.lists() });
       toast({
         title: "Success",
@@ -168,10 +186,7 @@ export function useUsersOptimized() {
       });
     },
     onError: (error, userData, context) => {
-      // Rollback optimistic update
       context?.rollback?.();
-
-      console.error('Error creating user:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create user",
@@ -183,12 +198,12 @@ export function useUsersOptimized() {
   // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, userData }: { userId: string; userData: Partial<UserInsert> }) => {
-      // Check permission
+      const userBeforeUpdate = users.find(u => u.user_id === userId);
+
       if (!hasPermission(PERMISSIONS.USERS_EDIT)) {
         throw new Error("You don't have permission to edit users");
       }
 
-      // Remove empty password field and empty date fields for updates
       const updateData = { ...userData };
       if (updateData.password === "") {
         delete updateData.password;
@@ -197,7 +212,6 @@ export function useUsersOptimized() {
         delete updateData.date_of_birth;
       }
 
-      // Validate password if it's being changed
       if (updateData.password && updateData.password !== "") {
         const passwordValidation = validatePassword(updateData.password);
         if (!passwordValidation.isValid) {
@@ -219,33 +233,28 @@ export function useUsersOptimized() {
         {
           userId,
           updatedFields: Object.keys(updateData),
-          userEmail: updateData.email || 'Unknown'
+          userEmail: updateData.email || userBeforeUpdate?.email || 'Unknown'
         },
-        userId,
-        'Admin'
+        userId
       );
 
       return data;
     },
     onMutate: async ({ userId, userData }) => {
-      // Optimistically update the user using helper
       const rollback = OptimisticUpdates.updateUser(queryClient, userId, userData);
-
       return { rollback };
     },
-    onSuccess: () => {
-      // Invalidate and refetch users
-      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    onSuccess: async () => {
+      // Invalidate and immediately refetch to ensure fresh data
+      await queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      await refetch();
       toast({
         title: "Success",
         description: "User updated successfully",
       });
     },
     onError: (error, variables, context) => {
-      // Rollback optimistic update
       context?.rollback?.();
-
-      console.error('Error updating user:', error);
       toast({
         title: "Error",
         description: "Failed to update user",
@@ -257,20 +266,13 @@ export function useUsersOptimized() {
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Check permission
+      const userToDelete = users.find(u => u.user_id === userId);
+
       if (!hasPermission(PERMISSIONS.USERS_DELETE)) {
         throw new Error("You don't have permission to delete users");
       }
 
-      const userToDelete = users.find(u => u.user_id === userId);
-
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('user_id', userId);
-
-      if (error) throw error;
-
+      // Log activity BEFORE deletion (so the user still exists for the foreign key reference)
       await logActivity(
         'USER_DELETED',
         {
@@ -278,41 +280,41 @@ export function useUsersOptimized() {
           userEmail: userToDelete?.email || 'Unknown',
           userType: userToDelete?.user_type || 'Unknown'
         },
-        userId,
-        'Admin'
+        userId
       );
+
+      // Now delete the user
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) throw error;
 
       return userId;
     },
     onMutate: async (userId) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: userKeys.lists() });
-
-      // Snapshot the previous value
       const previousUsers = queryClient.getQueryData(userKeys.lists());
 
-      // Optimistically remove from cache
       queryClient.setQueryData(userKeys.lists(), (oldData: any) => {
         if (!oldData || !Array.isArray(oldData)) return oldData;
         return oldData.filter((user: any) => user.user_id !== userId);
       });
 
-      // Return rollback function
       return { rollback: () => queryClient.setQueryData(userKeys.lists(), previousUsers) };
     },
-    onSuccess: () => {
-      // Invalidate and refetch users
-      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    onSuccess: async () => {
+      // Invalidate and immediately refetch to ensure fresh data
+      await queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      await refetch();
       toast({
         title: "Success",
         description: "User deleted successfully",
       });
     },
     onError: (error, userId, context) => {
-      // Rollback optimistic update
       context?.rollback?.();
-
-      console.error('Error deleting user:', error);
       toast({
         title: "Error",
         description: "Failed to delete user",
@@ -327,8 +329,8 @@ export function useUsersOptimized() {
       queryKey: userKeys.bankAccounts(userId),
       queryFn: () => fetchBankAccounts(userId),
       enabled: !!userId,
-      staleTime: CACHE_CONFIG.DETAIL.staleTime, // 10 minutes
-      gcTime: CACHE_CONFIG.DETAIL.gcTime, // 1 hour
+      staleTime: CACHE_CONFIG.DETAIL.staleTime,
+      gcTime: CACHE_CONFIG.DETAIL.gcTime,
     });
   };
 
@@ -338,12 +340,12 @@ export function useUsersOptimized() {
       queryKey: userKeys.creditCards(userId),
       queryFn: () => fetchCreditCards(userId),
       enabled: !!userId,
-      staleTime: CACHE_CONFIG.DETAIL.staleTime, // 10 minutes
-      gcTime: CACHE_CONFIG.DETAIL.gcTime, // 1 hour
+      staleTime: CACHE_CONFIG.DETAIL.staleTime,
+      gcTime: CACHE_CONFIG.DETAIL.gcTime,
     });
   };
 
-  // Handle errors in useEffect to avoid render-time side effects
+  // Handle errors
   useEffect(() => {
     if (usersError) {
       toast({
@@ -358,15 +360,13 @@ export function useUsersOptimized() {
     users,
     loading,
     isFetching,
-    createUser: createUserMutation.mutate,
+    createUser: createUserMutation.mutateAsync,
     updateUser: (userId: string, userData: Partial<UserInsert>) =>
-      updateUserMutation.mutate({ userId, userData }),
-    deleteUser: deleteUserMutation.mutate,
+      updateUserMutation.mutateAsync({ userId, userData }),
+    deleteUser: deleteUserMutation.mutateAsync,
     refetch,
-    // Lazy loading functions for bank accounts and credit cards
     useUserBankAccounts,
     useUserCreditCards,
-    // Mutation states for UI feedback
     isCreating: createUserMutation.isPending,
     isUpdating: updateUserMutation.isPending,
     isDeleting: deleteUserMutation.isPending,

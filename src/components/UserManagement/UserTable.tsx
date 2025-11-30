@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { User } from "@/lib/schemas";
 import {
   Table,
@@ -74,12 +74,60 @@ export function UserTable({
   isLoading = false,
   isFetching = false,
 }: UserTableProps) {
-  console.log('👥 UserTable render - users:', users);
-  console.log('👥 UserTable render - users.length:', users.length);
-  
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Reset to page 1 when filters change - MUST be before early returns
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, typeFilter, statusFilter]);
+
+  // Memoize filtered users to avoid unnecessary recalculations
+  // MUST be called before any early returns
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const matchesSearch = (user.first_name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (user.last_name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (user.email || '').toLowerCase().includes(search.toLowerCase()) ||
+        (user.user_type || '').toLowerCase().includes(search.toLowerCase());
+
+      const matchesType = typeFilter === "all" || user.user_type === typeFilter;
+      const matchesStatus = statusFilter === "all" ||
+        (statusFilter === "active" && user.is_active) ||
+        (statusFilter === "inactive" && !user.is_active);
+
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [users, search, typeFilter, statusFilter]);
+
+  // Memoize pagination calculations
+  // MUST be called before any early returns
+  const { totalPages, startIndex, endIndex, paginatedUsers } = useMemo(() => {
+    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+    return { totalPages, startIndex, endIndex, paginatedUsers };
+  }, [filteredUsers, currentPage, itemsPerPage]);
+
+  const getUserTypeBadge = (userType: string) => {
+    switch (userType) {
+      case 'admin':
+        return { variant: 'default' as const, label: 'Admin' };
+      case 'ops':
+        return { variant: 'secondary' as const, label: 'Ops' };
+      case 'provider':
+        return { variant: 'outline' as const, label: 'Provider' };
+      case 'customer':
+        return { variant: 'outline' as const, label: 'Customer' };
+      default:
+        return { variant: 'secondary' as const, label: userType };
+    }
+  };
 
   const getAccountStatusBadge = (status: string | undefined) => {
     switch (status) {
@@ -94,6 +142,7 @@ export function UserTable({
   };
 
   // Show full loading skeleton on initial load
+  // Early returns MUST come after ALL hooks
   if (isLoading) {
     return <UserTableLoadingState />;
   }
@@ -102,20 +151,6 @@ export function UserTable({
   if (!isLoading && users.length === 0) {
     return <UserLoadingSpinner message="No users found" />;
   }
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = (user.first_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (user.last_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (user.email || '').toLowerCase().includes(search.toLowerCase()) ||
-      (user.user_type || '').toLowerCase().includes(search.toLowerCase());
-
-    const matchesType = typeFilter === "all" || user.user_type === typeFilter;
-    const matchesStatus = statusFilter === "all" ||
-      (statusFilter === "active" && user.is_active) ||
-      (statusFilter === "inactive" && !user.is_active);
-
-    return matchesSearch && matchesType && matchesStatus;
-  });
 
   const exportToCSV = () => {
     const headers = ["Name", "Email", "Type", "Status", "Company", "Phone", "Address", "City", "State", "ZIP", "Country"];
@@ -172,6 +207,8 @@ export function UserTable({
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="ops">Ops</SelectItem>
+              <SelectItem value="provider">Provider</SelectItem>
+              <SelectItem value="customer">Customer</SelectItem>
             </SelectContent>
           </Select>
 
@@ -210,7 +247,7 @@ export function UserTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.map((user) => (
+            {paginatedUsers.map((user) => (
               <TableRow key={user.user_id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center space-x-3">
@@ -225,8 +262,8 @@ export function UserTable({
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  <Badge variant={user.user_type === 'admin' ? 'default' : 'secondary'}>
-                    {user.user_type === 'admin' ? 'Admin' : 'Ops'}
+                  <Badge variant={getUserTypeBadge(user.user_type).variant}>
+                    {getUserTypeBadge(user.user_type).label}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -241,58 +278,94 @@ export function UserTable({
                 </TableCell>
                 <TableCell>{user.company || '-'}</TableCell>
                 <TableCell>
-                  <div className="flex items-center space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewDetails(user)}
-                      title="View Details"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEditUser(user)}
-                      title="Edit User"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewBankAccounts(user)}
-                      title="Bank Accounts"
-                    >
-                      <Building2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewCreditCards(user)}
-                      title="Credit Cards"
-                    >
-                      <CreditCard className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete User</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete {user.first_name} {user.last_name}? 
-                            This action cannot be undone and will also delete all associated bank accounts and credit cards.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => user.user_id && onDeleteUser(user.user_id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  {user.last_login_at
+                    ? new Date(user.last_login_at).toLocaleDateString()
+                    : 'Never'}
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem onClick={() => onViewDetails(user)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem onClick={() => onEditUser(user)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit User
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs text-muted-foreground">Security</DropdownMenuLabel>
+
+                      <DropdownMenuItem onClick={() => onChangePassword(user)}>
+                        <Key className="mr-2 h-4 w-4" />
+                        Change Password
+                      </DropdownMenuItem>
+
+                      {onResetPassword && (
+                        <DropdownMenuItem onClick={() => onResetPassword(user)}>
+                          <Mail className="mr-2 h-4 w-4" />
+                          Send Reset Email
+                        </DropdownMenuItem>
+                      )}
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs text-muted-foreground">Financial</DropdownMenuLabel>
+
+                      <DropdownMenuItem onClick={() => onViewBankAccounts(user)}>
+                        <Building2 className="mr-2 h-4 w-4" />
+                        Bank Accounts
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem onClick={() => onViewCreditCards(user)}>
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        Credit Cards
+                      </DropdownMenuItem>
+
+                      {(onSuspendUser || onArchiveUser || onReactivateUser) && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-xs text-muted-foreground">Account Status</DropdownMenuLabel>
+
+                          {onSuspendUser && user.account_status !== 'suspended' && user.account_status !== 'archived' && (
+                            <DropdownMenuItem onClick={() => onSuspendUser(user)} className="text-orange-600">
+                              <Ban className="mr-2 h-4 w-4" />
+                              Suspend User
+                            </DropdownMenuItem>
+                          )}
+
+                          {onArchiveUser && user.account_status !== 'archived' && (
+                            <DropdownMenuItem onClick={() => onArchiveUser(user)} className="text-gray-600">
+                              <Archive className="mr-2 h-4 w-4" />
+                              Archive User
+                            </DropdownMenuItem>
+                          )}
+
+                          {onReactivateUser && (user.account_status === 'suspended' || user.account_status === 'archived') && (
+                            <DropdownMenuItem onClick={() => onReactivateUser(user)} className="text-green-600">
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Reactivate User
+                            </DropdownMenuItem>
+                          )}
+                        </>
+                      )}
+
+                      <DropdownMenuSeparator />
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem
+                            onSelect={(e) => e.preventDefault()}
+                            className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete User
@@ -328,7 +401,7 @@ export function UserTable({
 
       {/* Mobile Card View */}
       <div className="lg:hidden space-y-4">
-        {filteredUsers.map((user) => (
+        {paginatedUsers.map((user) => (
           <Card key={user.user_id} className="w-full">
             <CardContent className="p-4">
               <div className="flex space-x-4">
@@ -360,8 +433,8 @@ export function UserTable({
                     
                     {/* Status Badges */}
                     <div className="flex flex-col space-y-1 items-end">
-                      <Badge variant={user.user_type === 'admin' ? 'default' : 'secondary'} className="text-xs">
-                        {user.user_type === 'admin' ? 'Admin' : 'Ops'}
+                      <Badge variant={getUserTypeBadge(user.user_type).variant} className="text-xs">
+                        {getUserTypeBadge(user.user_type).label}
                       </Badge>
                       <Badge variant={getAccountStatusBadge(user.account_status).variant} className="text-xs">
                         {getAccountStatusBadge(user.account_status).label}
@@ -398,26 +471,99 @@ export function UserTable({
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="max-w-sm mx-4">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete User</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete {user.first_name} {user.last_name}? 
-                            This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => user.user_id && onDeleteUser(user.user_id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>More Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">Security</DropdownMenuLabel>
+
+                        <DropdownMenuItem onClick={() => onChangePassword(user)}>
+                          <Key className="mr-2 h-4 w-4" />
+                          Change Password
+                        </DropdownMenuItem>
+
+                        {onResetPassword && (
+                          <DropdownMenuItem onClick={() => onResetPassword(user)}>
+                            <Mail className="mr-2 h-4 w-4" />
+                            Send Reset Email
+                          </DropdownMenuItem>
+                        )}
+
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">Financial</DropdownMenuLabel>
+
+                        <DropdownMenuItem onClick={() => onViewBankAccounts(user)}>
+                          <Building2 className="mr-2 h-4 w-4" />
+                          Bank Accounts
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem onClick={() => onViewCreditCards(user)}>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Credit Cards
+                        </DropdownMenuItem>
+
+                        {(onSuspendUser || onArchiveUser || onReactivateUser) && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">Account Status</DropdownMenuLabel>
+
+                            {onSuspendUser && user.account_status !== 'suspended' && user.account_status !== 'archived' && (
+                              <DropdownMenuItem onClick={() => onSuspendUser(user)} className="text-orange-600">
+                                <Ban className="mr-2 h-4 w-4" />
+                                Suspend User
+                              </DropdownMenuItem>
+                            )}
+
+                            {onArchiveUser && user.account_status !== 'archived' && (
+                              <DropdownMenuItem onClick={() => onArchiveUser(user)} className="text-gray-600">
+                                <Archive className="mr-2 h-4 w-4" />
+                                Archive User
+                              </DropdownMenuItem>
+                            )}
+
+                            {onReactivateUser && (user.account_status === 'suspended' || user.account_status === 'archived') && (
+                              <DropdownMenuItem onClick={() => onReactivateUser(user)} className="text-green-600">
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Reactivate User
+                              </DropdownMenuItem>
+                            )}
+                          </>
+                        )}
+
+                        <DropdownMenuSeparator />
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem
+                              onSelect={(e) => e.preventDefault()}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete User
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="max-w-sm mx-4">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete User</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete {user.first_name} {user.last_name}?
+                                This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => user.user_id && onDeleteUser(user.user_id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </div>
@@ -425,6 +571,59 @@ export function UserTable({
           </Card>
         ))}
       </div>
+
+      {/* Pagination Controls */}
+      {filteredUsers.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} users
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 per page</SelectItem>
+                <SelectItem value="25">25 per page</SelectItem>
+                <SelectItem value="50">50 per page</SelectItem>
+                <SelectItem value="100">100 per page</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm px-2">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

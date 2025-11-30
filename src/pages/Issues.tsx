@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageHeader } from '@/components/ui/page-header';
 import {
   Select,
   SelectContent,
@@ -39,8 +41,10 @@ import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatUserDisplay } from '@/lib/user-display';
 
 export default function Issues() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [showIssueDialog, setShowIssueDialog] = useState(false);
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
@@ -55,14 +59,32 @@ export default function Issues() {
   const [assignedFilter, setAssignedFilter] = useState<string>('');
 
   // Build filters object
-  const filters: IssueFilters = useMemo(() => ({
-    status: statusFilter.length > 0 ? statusFilter : undefined,
-    priority: priorityFilter.length > 0 ? priorityFilter : undefined,
-    category: categoryFilter.length > 0 ? categoryFilter : undefined,
-    property_id: propertyFilter || undefined,
-    assigned_to: assignedFilter || undefined,
-    search: searchQuery || undefined,
-  }), [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery]);
+  const filters: IssueFilters = useMemo(() => {
+    const baseFilters: IssueFilters = {
+      status: statusFilter.length > 0 ? statusFilter : undefined,
+      priority: priorityFilter.length > 0 ? priorityFilter : undefined,
+      category: categoryFilter.length > 0 ? categoryFilter : undefined,
+      property_id: propertyFilter || undefined,
+      search: searchQuery || undefined,
+    };
+
+    // If user explicitly selects an assignee filter, use that
+    if (assignedFilter) {
+      baseFilters.assigned_to = assignedFilter;
+    } else if (user?.id) {
+      // Otherwise, automatically filter to show:
+      // 1. Issues assigned to current user (assigned_to)
+      // 2. Issues reported by current user (reported_by)
+      // This is handled by passing current_user_id to the hook
+      baseFilters.current_user_id = user.id;
+      console.log('🔍 [Issues] Filtering issues for user:', {
+        userId: user.id,
+        filters: baseFilters,
+      });
+    }
+
+    return baseFilters;
+  }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery, user?.id]);
 
   const { issues, loading } = useIssues(filters);
   const createIssue = useCreateIssue();
@@ -201,76 +223,78 @@ export default function Issues() {
     searchQuery;
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      <div className="container mx-auto p-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
-              <AlertTriangle className="h-8 w-8 text-primary" />
-              Issues & Photos
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Track property issues, maintenance, and document with photos
-            </p>
-          </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={t('issues.title')}
+        subtitle={t('issues.subtitle')}
+        icon={AlertTriangle}
+        actions={
           <Button onClick={handleCreateIssue} className="bg-primary hover:bg-primary/90">
             <Plus className="mr-2 h-4 w-4" />
-            Report Issue
+            {t('issues.reportIssue')}
           </Button>
-        </div>
+        }
+      />
 
         {/* Statistics Dashboard */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Issues</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                All reported issues
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-700">{t('issues.stats.totalIssues')}</p>
+                  <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
+                  <p className="text-xs text-blue-600 mt-1">{t('issues.stats.totalIssuesDesc')}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Open Issues</CardTitle>
-              <XCircle className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.open}</div>
-              <p className="text-xs text-muted-foreground">
-                Requires attention
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-700">{t('issues.stats.openIssues')}</p>
+                  <h3 className="text-3xl font-bold text-red-900 mt-1">{stats.open}</h3>
+                  <p className="text-xs text-red-600 mt-1">{t('issues.stats.openIssuesDesc')}</p>
+                </div>
+                <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
+                  <XCircle className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.resolved}</div>
-              <p className="text-xs text-muted-foreground">
-                Completed issues
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-700">{t('issues.stats.resolved')}</p>
+                  <h3 className="text-3xl font-bold text-green-900 mt-1">{stats.resolved}</h3>
+                  <p className="text-xs text-green-600 mt-1">{t('issues.stats.resolvedDesc')}</p>
+                </div>
+                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${stats.totalCost.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">
-                Actual costs
-              </p>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-700">{t('issues.stats.totalCost')}</p>
+                  <h3 className="text-3xl font-bold text-purple-900 mt-1">${stats.totalCost.toFixed(2)}</h3>
+                  <p className="text-xs text-purple-600 mt-1">{t('issues.stats.totalCostDesc')}</p>
+                </div>
+                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -280,19 +304,19 @@ export default function Issues() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              Filters & Search
+              {t('issues.filters.title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {/* Search */}
               <div className="space-y-2 lg:col-span-2">
-                <Label htmlFor="search">Search Issues</Label>
+                <Label htmlFor="search">{t('issues.filters.searchIssues')}</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder="Search by title, description, location..."
+                    placeholder={t('issues.filters.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -302,10 +326,10 @@ export default function Issues() {
 
               {/* Property Filter */}
               <div className="space-y-2">
-                <Label htmlFor="property">Property</Label>
+                <Label htmlFor="property">{t('issues.filters.property')}</Label>
                 <Select value={propertyFilter || undefined} onValueChange={(value) => setPropertyFilter(value || '')}>
                   <SelectTrigger id="property">
-                    <SelectValue placeholder="All properties" />
+                    <SelectValue placeholder={t('issues.filters.allProperties')} />
                   </SelectTrigger>
                   <SelectContent>
                     {properties.map(property => (
@@ -319,18 +343,16 @@ export default function Issues() {
 
               {/* Assignee Filter */}
               <div className="space-y-2">
-                <Label htmlFor="assignee">Assigned To</Label>
-                <Select value={assignedFilter || undefined} onValueChange={(value) => setAssignedFilter(value || '')}>
+                <Label htmlFor="assignee">{t('issues.filters.assignedTo')}</Label>
+                <Select value={assignedFilter || "default"} onValueChange={(value) => setAssignedFilter(value === "default" ? '' : value)}>
                   <SelectTrigger id="assignee">
-                    <SelectValue placeholder="All users" />
+                    <SelectValue placeholder={t('issues.filters.myIssues')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {user?.user_id && (
-                      <SelectItem value={user.user_id}>My Issues</SelectItem>
-                    )}
+                    <SelectItem value="default">{t('issues.filters.myIssues')}</SelectItem>
                     {users.map(u => (
                       <SelectItem key={u.user_id} value={u.user_id}>
-                        {u.first_name} {u.last_name}
+                        {formatUserDisplay(u)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -346,21 +368,21 @@ export default function Issues() {
                 className="cursor-pointer"
                 onClick={() => toggleStatusFilter('open')}
               >
-                Open
+                {t('issues.status.open')}
               </Badge>
               <Badge
                 variant={statusFilter.includes('in_progress') ? 'default' : 'outline'}
                 className="cursor-pointer"
                 onClick={() => toggleStatusFilter('in_progress')}
               >
-                In Progress
+                {t('issues.status.inProgress')}
               </Badge>
               <Badge
                 variant={statusFilter.includes('resolved') ? 'default' : 'outline'}
                 className="cursor-pointer"
                 onClick={() => toggleStatusFilter('resolved')}
               >
-                Resolved
+                {t('issues.status.resolved')}
               </Badge>
 
               {/* Priority Filters */}
@@ -369,14 +391,14 @@ export default function Issues() {
                 className="cursor-pointer"
                 onClick={() => togglePriorityFilter('urgent')}
               >
-                Urgent
+                {t('issues.priority.urgent')}
               </Badge>
               <Badge
                 variant={priorityFilter.includes('high') ? 'default' : 'outline'}
                 className="cursor-pointer bg-orange-500 hover:bg-orange-600"
                 onClick={() => togglePriorityFilter('high')}
               >
-                High Priority
+                {t('issues.priority.highPriority')}
               </Badge>
 
               {/* Clear Filters */}
@@ -388,13 +410,13 @@ export default function Issues() {
                   className="h-7"
                 >
                   <XCircle className="mr-1 h-3 w-3" />
-                  Clear All
+                  {t('issues.filters.clearAll')}
                 </Button>
               )}
 
               {/* Results Count */}
               <Badge variant="secondary" className="ml-auto">
-                {issues.length} result{issues.length !== 1 ? 's' : ''}
+                {issues.length} {issues.length !== 1 ? t('issues.resultsPlural') : t('issues.results')}
               </Badge>
             </div>
           </CardContent>
@@ -407,7 +429,7 @@ export default function Issues() {
           onDelete={handleDeleteIssue}
           onStatusChange={handleStatusChange}
           onViewPhotos={handleViewPhotos}
-          emptyMessage="No issues found. Report your first issue to get started."
+          emptyMessage={t('issues.noIssuesFound')}
           isDeleting={deleteIssue.isPending}
         />
 
@@ -430,7 +452,6 @@ export default function Issues() {
           isDeleting={deletePhoto.isPending}
           isUploading={uploadPhoto.isPending}
         />
-      </div>
     </div>
   );
 }

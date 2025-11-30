@@ -15,13 +15,28 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { useProfileImage } from "@/hooks/useProfileImage";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function MainLayout() {
   const { profile, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
 
+  // Use cached profile image
+  const { imageUrl } = useProfileImage();
+
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      console.log('🚪 Signing out...');
+      await signOut();
+      console.log('✅ Sign out successful');
+      // Navigate to auth page after logout
+      navigate('/auth', { replace: true });
+    } catch (error) {
+      console.error('❌ Sign out error:', error);
+      // Force navigation even if there's an error
+      navigate('/auth', { replace: true });
+    }
   };
 
   const getInitials = (firstName?: string | null, lastName?: string | null) => {
@@ -45,13 +60,18 @@ export function MainLayout() {
               </div>
               
               <div className="flex items-center space-x-2 sm:space-x-3">
+                <LanguageSwitcher />
                 <NotificationBell />
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center space-x-2 h-8 sm:h-10 px-2 sm:px-3">
                       <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
-                        <AvatarImage src={profile?.photo_url} alt={profile?.first_name || 'User'} />
+                        <AvatarImage
+                          src={imageUrl || undefined}
+                          alt={profile?.first_name || 'User'}
+                          className="object-cover"
+                        />
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
                           {getInitials(profile?.first_name, profile?.last_name)}
                         </AvatarFallback>

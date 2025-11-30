@@ -1,6 +1,6 @@
 // IndexedDB cache implementation for offline data storage
 export class IndexedDBCache {
-  private dbName = 'mikaza-cache-db';
+  private dbName = 'casa-cache-db';
   private version = 1;
   private db: IDBDatabase | null = null;
 

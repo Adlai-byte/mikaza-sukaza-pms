@@ -39,6 +39,7 @@ import {
   Flag,
   Clock,
   CheckCircle2,
+  Eye,
 } from 'lucide-react';
 import { Task } from '@/lib/schemas';
 import { format, parseISO, isPast, isToday } from 'date-fns';
@@ -48,6 +49,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 interface TasksTableProps {
   tasks: Task[];
+  onView?: (task: Task) => void;
   onEdit?: (task: Task) => void;
   onDelete?: (taskId: string) => void;
   onStatusChange?: (taskId: string, status: string) => void;
@@ -57,6 +59,7 @@ interface TasksTableProps {
 
 export function TasksTable({
   tasks,
+  onView,
   onEdit,
   onDelete,
   onStatusChange,
@@ -323,6 +326,12 @@ export function TasksTable({
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
+                            {onView && (
+                              <DropdownMenuItem onClick={() => onView(task)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                            )}
                             {onEdit && (
                               <DropdownMenuItem onClick={() => onEdit(task)}>
                                 <Edit className="mr-2 h-4 w-4" />

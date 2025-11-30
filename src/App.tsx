@@ -8,17 +8,46 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ProtectedRoute as RBACProtectedRoute } from "@/components/rbac/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "./components/MainLayout";
+import { Analytics } from "@vercel/analytics/react";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
 import PropertyEdit from "./pages/PropertyEdit";
 import Jobs from "./pages/Jobs";
 import UserManagement from "./pages/UserManagement";
+import Providers from "./pages/Providers";
+import ServiceProviders from "./pages/ServiceProviders";
+import UtilityProviders from "./pages/UtilityProviders";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import Calendar from "./pages/Calendar";
 import BookingManagement from "./pages/BookingManagement";
 import Todos from "./pages/Todos";
 import Issues from "./pages/Issues";
+import ActivityLogs from "./pages/ActivityLogs";
+import Invoices from "./pages/Invoices";
+import InvoiceForm from "./pages/InvoiceForm";
+import BookingSelector from "./pages/BookingSelector";
+import Expenses from "./pages/Expenses";
+import OwnerStatement from "./pages/OwnerStatement";
+import BillTemplates from "./pages/BillTemplates";
+import FinancialDashboard from "./pages/FinancialDashboard";
+import ServicePipeline from "./pages/ServicePipeline";
+import Contracts from "./pages/Contracts";
+import EmployeeDocuments from "./pages/EmployeeDocuments";
+import ServiceDocuments from "./pages/ServiceDocuments";
+import MessageTemplates from "./pages/MessageTemplates";
+import Commissions from "./pages/Commissions";
+import CommissionsAnalytics from "./pages/CommissionsAnalytics";
+import MyCommissions from "./pages/MyCommissions";
+import Help from "./pages/Help";
+import VendorCOIs from "./pages/VendorCOIs";
+import AccessAuthorizations from "./pages/AccessAuthorizations";
+import CheckInOut from "./pages/CheckInOut";
+import ChecklistTemplates from "./pages/ChecklistTemplates";
+import Media from "./pages/Media";
+import Highlights from "./pages/Highlights";
+import Notifications from "./pages/Notifications";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
@@ -127,6 +156,7 @@ if (typeof window !== 'undefined') {
 
 const App = () => (
   <ErrorBoundary>
+    <Analytics />
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
@@ -135,6 +165,7 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
 
               <Route path="/" element={
@@ -151,6 +182,34 @@ const App = () => (
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
                       <UserManagement />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Unified Providers - Admin and Ops can access */}
+                <Route
+                  path="/providers"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.SERVICE_PROVIDERS_VIEW}>
+                      <Providers />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Legacy Routes - Keep for backward compatibility, redirect to unified page */}
+                <Route
+                  path="/service-providers"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.SERVICE_PROVIDERS_VIEW}>
+                      <Providers />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/utility-providers"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.UTILITY_PROVIDERS_VIEW}>
+                      <Providers />
                     </RBACProtectedRoute>
                   }
                 />
@@ -216,6 +275,12 @@ const App = () => (
                 {/* Profile - Everyone can access */}
                 <Route path="/profile" element={<Profile />} />
 
+                {/* Help - Everyone can access */}
+                <Route path="/help" element={<Help />} />
+
+                {/* Notifications - Everyone can access */}
+                <Route path="/notifications" element={<Notifications />} />
+
                 {/* Issues & Photos - Both can access */}
                 <Route
                   path="/issues"
@@ -226,15 +291,176 @@ const App = () => (
                   }
                 />
 
-                {/* Documents - Various permissions */}
-                <Route path="/documents/*" element={<div className="p-8 text-center text-muted-foreground">Documents - Coming Soon</div>} />
-
-                {/* Finance - View permissions required */}
+                {/* Activity Logs - Admin Only */}
                 <Route
-                  path="/finance/*"
+                  path="/activity-logs"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.SYSTEM_AUDIT}>
+                      <ActivityLogs />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Contracts - Finance team */}
+                <Route
+                  path="/contracts"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW}>
+                      <Contracts />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Employee Documents - HR/Admin */}
+                <Route
+                  path="/employee-documents"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW}>
+                      <EmployeeDocuments />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Service Documents - Operations */}
+                <Route
+                  path="/service-documents"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.DOCUMENTS_SERVICE_VIEW}>
+                      <ServiceDocuments />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Message Templates - Communications */}
+                <Route
+                  path="/message-templates"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.DOCUMENTS_MESSAGES_VIEW}>
+                      <MessageTemplates />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Vendor COIs - Admin and Ops can access */}
+                <Route
+                  path="/vendor-cois"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.SERVICE_PROVIDERS_VIEW}>
+                      <VendorCOIs />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Access Authorizations - Admin and Ops can access */}
+                <Route
+                  path="/access-authorizations"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.SERVICE_PROVIDERS_VIEW}>
+                      <AccessAuthorizations />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Accounting & Billing - View permissions required */}
+                <Route
+                  path="/invoices"
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
-                      <div className="p-8 text-center text-muted-foreground">Finance - Coming Soon</div>
+                      <Invoices />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices/new"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <BookingSelector />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices/new/from-booking/:bookingId"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <InvoiceForm />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices/new/manual"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <InvoiceForm />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices/:invoiceId"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <InvoiceForm />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/expenses"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <Expenses />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/owner-statement"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <OwnerStatement />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/bill-templates"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <BillTemplates />
+                    </RBACProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/financial-dashboard"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <FinancialDashboard />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Finance - Service Pipeline */}
+                <Route
+                  path="/finance/pipeline"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.PIPELINE_VIEW}>
+                      <ServicePipeline />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Finance - Commissions (Admin view with analytics) */}
+                <Route
+                  path="/finance/commissions"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.COMMISSIONS_VIEW_ALL}>
+                      <CommissionsAnalytics />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Finance - My Commissions (Individual staff view) */}
+                <Route
+                  path="/finance/my-commissions"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.COMMISSIONS_VIEW_OWN}>
+                      <MyCommissions />
                     </RBACProtectedRoute>
                   }
                 />
@@ -244,17 +470,37 @@ const App = () => (
                   path="/media"
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.MEDIA_VIEW}>
-                      <div className="p-8 text-center text-muted-foreground">Media - Coming Soon</div>
+                      <Media />
                     </RBACProtectedRoute>
                   }
                 />
 
-                {/* Highlights - Both can access */}
+                {/* Check-In / Check-Out - Both can access */}
+                <Route
+                  path="/check-in-out"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.PROPERTIES_VIEW}>
+                      <CheckInOut />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Checklist Templates - Both can access */}
+                <Route
+                  path="/checklist-templates"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.PROPERTIES_VIEW}>
+                      <ChecklistTemplates />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Highlights - Finance team can access */}
                 <Route
                   path="/highlights"
                   element={
-                    <RBACProtectedRoute permission={PERMISSIONS.HIGHLIGHTS_VIEW}>
-                      <div className="p-8 text-center text-muted-foreground">Highlights - Coming Soon</div>
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <Highlights />
                     </RBACProtectedRoute>
                   }
                 />
