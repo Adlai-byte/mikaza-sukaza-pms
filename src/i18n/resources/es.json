@@ -46,12 +46,14 @@
     "name": "Nombre",
     "email": "Correo Electrónico",
     "phone": "Teléfono",
-    "address": "Dirección"
+    "address": "Dirección",
+    "statusUpdated": "Estado Actualizado"
   },
   "sidebar": {
     "dashboard": "Panel",
     "bookings": "Reservas",
     "calendar": "Calendario",
+    "guests": "Huéspedes",
     "properties": "Propiedades",
     "activeJobs": "Trabajos Activos",
     "todoList": "Lista de Tareas",
@@ -73,12 +75,11 @@
     "vendorCOIs": "COIs de Proveedores",
     "accessAuth": "Autorizaciones de Acceso",
     "messageTemplates": "Plantillas de Mensajes",
-    "commissions": "Comisiones",
-    "commissionsAnalytics": "Análisis de Comisiones",
-    "myCommissions": "Mis Comisiones",
     "highlights": "Destacados Financieros",
     "propertyFeatures": "Características de la Propiedad",
     "media": "Multimedia",
+    "messages": "Mensajes",
+    "reports": "Informes",
     "help": "Ayuda y Soporte"
   },
   "header": {
@@ -270,6 +271,60 @@
     "photos": "Fotos",
     "uploadPhotos": "Subir Fotos"
   },
+  "propertyBookingsInvoices": {
+    "title": "Reservas y Facturas",
+    "bookingsTab": "Reservas",
+    "invoicesTab": "Facturas",
+    "noBookings": "No se encontraron reservas para esta propiedad",
+    "noInvoices": "No se encontraron facturas para esta propiedad",
+    "newBooking": "Nueva Reserva",
+    "bookingCreated": "Reserva creada exitosamente",
+    "bookingCreatedDesc": "Se ha añadido una nueva reserva a esta propiedad",
+    "generateInvoice": "Generar Factura",
+    "invoiceExists": "Factura Existe",
+    "generating": "Generando...",
+    "invoiceCreated": "Factura creada exitosamente",
+    "invoiceCreatedDesc": "Se ha generado una nueva factura a partir de la reserva",
+    "viewInvoice": "Ver Factura",
+    "editInvoice": "Editar",
+    "recordPayment": "Pago",
+    "downloadPdf": "Descargar",
+    "sendEmail": "Email",
+    "total": "Total",
+    "paid": "Pagado",
+    "balance": "Saldo",
+    "guests": "Huéspedes",
+    "nights": "noches",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "lineItems": {
+      "accommodation": "Alojamiento",
+      "cleaning": "Limpieza",
+      "extras": "Extras",
+      "tax": "Impuesto",
+      "other": "Otro"
+    },
+    "editor": {
+      "title": "Editar Factura",
+      "status": "Estado",
+      "dueDate": "Fecha de Vencimiento",
+      "paymentMethod": "Método de Pago",
+      "notes": "Notas",
+      "save": "Guardar Cambios",
+      "cancel": "Cancelar",
+      "saving": "Guardando..."
+    },
+    "status": {
+      "inquiry": "Consulta",
+      "pending": "Pendiente",
+      "confirmed": "Confirmado",
+      "checked_in": "Check-in Realizado",
+      "checked_out": "Check-out Realizado",
+      "completed": "Completado",
+      "cancelled": "Cancelado",
+      "blocked": "Bloqueado"
+    }
+  },
   "jobs": {
     "title": "Trabajos",
     "subtitle": "Órdenes de trabajo y seguimiento de mantenimiento de propiedades (Solo Admin)",
@@ -317,12 +372,50 @@
     "estimatedCost": "Costo Estimado",
     "actualCost": "Costo Real",
     "jobDescription": "Descripción del Trabajo",
+    "totalJobs": "Total de Trabajos",
+    "allWorkOrders": "Todas las órdenes de trabajo",
+    "inProgressJobs": "En Progreso",
+    "activeAssignments": "Asignaciones activas",
+    "pendingJobs": "Pendientes",
+    "awaitingAction": "Esperando acción",
+    "completedJobs": "Completados",
+    "allFinished": "Todos terminados",
+    "filtersAndSearch": "Filtros y Búsqueda",
+    "searchJobs": "Buscar Trabajos",
+    "searchPlaceholder": "Buscar por título o descripción...",
+    "allProperties": "Todas las propiedades",
+    "allUsers": "Todos los usuarios",
+    "allTypes": "Todos los tipos",
+    "clearAll": "Limpiar Todo",
+    "result": "resultado",
+    "results": "resultados",
+    "boardView": "Vista de Tablero",
+    "jobHistory": "Historial de Trabajos",
+    "noActiveJobs": "No se encontraron trabajos activos. Crea tu primera orden de trabajo para comenzar.",
+    "noCompletedJobs": "Todavía no hay trabajos completados o cancelados.",
+    "loadingJobs": "Cargando trabajos...",
+    "accessDenied": "Acceso Denegado",
+    "noPermission": "No tienes permiso para acceder al módulo de Trabajos.",
+    "highPriority": "Alta Prioridad",
+    "statusChanged": "El estado del trabajo cambió a {{status}}",
+    "statusChangeFailed": "Error al actualizar el estado del trabajo. Por favor, intenta de nuevo.",
     "status": {
       "pending": "Pendiente",
       "inProgress": "En Progreso",
       "review": "Revisión",
       "completed": "Completado",
       "cancelled": "Cancelado"
+    },
+    "types": {
+      "general": "General",
+      "maintenance": "Mantenimiento",
+      "cleaning": "Limpieza",
+      "inspection": "Inspección",
+      "checkIn": "Check In",
+      "checkOut": "Check Out",
+      "repair": "Reparación",
+      "emergency": "Emergencia",
+      "preventive": "Preventivo"
     }
   },
   "todos": {
@@ -436,28 +529,6 @@
     "unitPrice": "Precio Unitario",
     "taxPercent": "Impuesto %",
     "itemDescriptionPlaceholder": "Descripción del artículo",
-    "tipsForStaff": "Propinas para el Personal",
-    "tipsForStaffDesc": "Agregar gratificaciones para miembros del personal que brindaron un servicio excepcional",
-    "staffMember": "Miembro del Personal",
-    "selectStaff": "Seleccionar personal",
-    "tipAmount": "Monto de Propina ($)",
-    "tipAmountPlaceholder": "0,00",
-    "reason": "Motivo",
-    "reasonOptional": "Motivo (Opcional)",
-    "selectOrTypeReason": "Seleccionar o escribir motivo",
-    "orTypeCustomReason": "O escribir motivo personalizado",
-    "notesOptional": "Notas (Opcional)",
-    "additionalNotes": "Notas adicionales",
-    "addTip": "Agregar Propina",
-    "addedTips": "Propinas Agregadas",
-    "tipsWillBeConvertedToCommissions": "Las propinas se convertirán en comisiones cuando se procesen",
-    "saveInvoiceFirst": "Guardar Factura Primero",
-    "saveInvoiceFirstDesc": "Por favor, guarde la factura antes de agregar propinas",
-    "missingInformation": "Información Faltante",
-    "selectStaffAndAmount": "Por favor, seleccione un miembro del personal e ingrese un monto de propina",
-    "invalidTipAmount": "Monto Inválido",
-    "enterValidTipAmount": "Por favor, ingrese un monto de propina válido",
-    "confirmRemoveTip": "¿Está seguro de que desea eliminar esta propina?",
     "lineItemType": {
       "accommodation": "Alojamiento",
       "cleaning": "Limpieza",
@@ -466,24 +537,27 @@
       "commission": "Comisión",
       "other": "Otro"
     },
-    "tipReasons": {
-      "excellentCleaning": "Excelente servicio de limpieza",
-      "outstandingCommunication": "Comunicación excepcional con huéspedes",
-      "quickResponse": "Tiempo de respuesta rápido",
-      "professionalMaintenance": "Trabajo de mantenimiento profesional",
-      "exceptionalHospitality": "Hospitalidad excepcional",
-      "propertyWalkthrough": "Servicio de inspección de propiedad",
-      "guestAmenities": "Configuración de amenidades para huéspedes",
-      "emergencyResponse": "Respuesta a emergencias",
-      "aboveAndBeyond": "Servicio más allá de lo esperado"
-    },
     "loadingInvoice": "Cargando datos de la factura...",
     "invoiceDataNotAvailable": "Datos de factura no disponibles. Por favor, guarde la factura primero.",
     "pdfGenSuccess": "PDF de factura descargado exitosamente",
     "pdfGenError": "Error al generar PDF. Por favor, intente nuevamente.",
     "invoiceUpdatedSuccess": "Factura actualizada exitosamente con todos los elementos de línea",
     "invoiceUpdateError": "Error al actualizar factura",
-    "pleaseAddLineItem": "Por favor, agregue al menos un elemento de línea"
+    "pleaseAddLineItem": "Por favor, agregue al menos un elemento de línea",
+    "addFromTemplate": "Agregar desde Plantilla",
+    "templatesAdded": "Plantillas Agregadas",
+    "addedLineItems": "Agregados {{count}} elementos de línea de",
+    "noLineItems": "No hay elementos de línea agregados todavía",
+    "addLineItemsHint": "Agregue elementos manualmente o use una plantilla de factura",
+    "descriptionPlaceholder": "Ingrese la descripción...",
+    "itemTypes": {
+      "accommodation": "Alojamiento",
+      "cleaning": "Limpieza",
+      "extras": "Extras",
+      "tax": "Impuesto",
+      "commission": "Comisión",
+      "other": "Otro"
+    }
   },
   "expenses": {
     "title": "Gastos",
@@ -1310,87 +1384,6 @@
       "monthly": "Mensual"
     }
   },
-  "commissions": {
-    "title": "Comisiones y Propinas",
-    "subtitle": "Seguimiento de comisiones, propinas y ganancias del personal",
-    "addCommission": "Agregar Comisión",
-    "commissionsCount": "comisiones",
-    "itemsCount": "elementos",
-    "totalCommissions": "Total de Comisiones",
-    "pending": "Pendiente",
-    "approved": "Aprobada",
-    "paidOut": "Pagado",
-    "filters": "Filtros",
-    "staffMember": "Miembro del Personal",
-    "allStaff": "Todo el Personal",
-    "allStaffPlaceholder": "Todo el personal",
-    "property": "Propiedad",
-    "allProperties": "Todas las Propiedades",
-    "allPropertiesPlaceholder": "Todas las propiedades",
-    "status": {
-      "label": "Estado",
-      "all": "Todos los Estados",
-      "allPlaceholder": "Todos los estados",
-      "pending": "Pendiente",
-      "approved": "Aprobada",
-      "paid": "Pagado",
-      "cancelled": "Cancelado",
-      "on_hold": "En Espera"
-    },
-    "sourceType": {
-      "label": "Tipo de Origen",
-      "all": "Todos los Tipos",
-      "allPlaceholder": "Todos los tipos",
-      "booking": "Reserva",
-      "invoice": "Factura",
-      "service": "Servicio",
-      "tip": "Propina",
-      "referral": "Referencia",
-      "bonus": "Bonificación"
-    },
-    "dateFrom": "Fecha Desde",
-    "dateTo": "Fecha Hasta",
-    "commissionRecords": "Registros de Comisión",
-    "loading": "Cargando...",
-    "recordsCount": "registro(s) de comisión",
-    "loadingCommissions": "Cargando comisiones...",
-    "noCommissionsFound": "No se encontraron comisiones",
-    "tableHeaders": {
-      "date": "Fecha",
-      "staffMember": "Miembro del Personal",
-      "source": "Origen",
-      "type": "Tipo",
-      "baseAmount": "Monto Base",
-      "rate": "Tasa",
-      "commission": "Comisión",
-      "status": "Estado",
-      "paymentDate": "Fecha de Pago",
-      "actions": "Acciones"
-    },
-    "approve": "Aprobar",
-    "markPaid": "Marcar como Pagado",
-    "deleteConfirm": "¿Está seguro de que desea eliminar esta comisión?",
-    "paymentDialog": {
-      "title": "Marcar Comisión como Pagada",
-      "description": "Registre los detalles del pago de esta comisión",
-      "paymentMethod": "Método de Pago",
-      "selectPaymentMethod": "Seleccione el método de pago",
-      "paymentMethods": {
-        "bank_transfer": "Transferencia Bancaria",
-        "cash": "Efectivo",
-        "check": "Cheque",
-        "paypal": "PayPal",
-        "other": "Otro"
-      },
-      "paymentReference": "Referencia de Pago",
-      "paymentReferencePlaceholder": "ID de transacción o número de referencia",
-      "paymentDate": "Fecha de Pago",
-      "staff": "Personal:",
-      "commissionAmount": "Monto de Comisión:",
-      "cancel": "Cancelar",
-      "confirmPayment": "Confirmar Pago"
-    }
-  },
   "financialDashboard": {
     "title": "Panel Financiero",
     "subtitle": "Análisis financieros e insights integrales",
@@ -1438,97 +1431,6 @@
         "occupancyDays": "Días de Ocupación",
         "avgPerInvoice": "Promedio/Factura"
       }
-    }
-  },
-  "commissionsAnalytics": {
-    "title": "Análisis de Comisiones",
-    "subtitle": "Insights de rendimiento y gestión de comisiones del personal",
-    "performanceInsight": {
-      "title": "Insight de Rendimiento",
-      "moreCommissionsLabel": "¡Más Comisiones = Mejor Rendimiento!",
-      "topPerformersMessage": "Sus mejores rendimientos están generando mayores ganancias.",
-      "leadingWith": "está liderando con",
-      "from": "de",
-      "commissionsSuffix": "comisión(es).",
-      "keepUpWork": "¡Sigan con el gran trabajo!"
-    },
-    "activeStaff": "Personal Activo",
-    "avgPrefix": "Promedio:",
-    "tabs": {
-      "overview": "Resumen",
-      "performance": "Rendimiento",
-      "commissionData": "Datos de Comisión"
-    },
-    "charts": {
-      "monthlyTrend": "Tendencia Mensual de Comisiones",
-      "monthlyTrendDesc": "Ganancias de comisiones en los últimos 12 meses",
-      "noTrendData": "No hay datos de tendencia disponibles",
-      "totalAmount": "Monto Total ($)",
-      "commissionSources": "Fuentes de Comisión",
-      "commissionSourcesDesc": "Desglose por tipo de fuente de comisión",
-      "noSourceData": "No hay datos de fuente disponibles"
-    },
-    "performanceMetrics": {
-      "avgTimeToPayment": "Tiempo Promedio hasta Pago",
-      "days": "días",
-      "fromApprovalToPayout": "De aprobación a pago",
-      "conversionRate": "Tasa de Conversión",
-      "approvedOrPaid": "Comisiones aprobadas o pagadas",
-      "avgPerStaffMember": "Promedio por Miembro del Personal",
-      "averageEarnings": "Ganancias promedio por persona"
-    },
-    "topPerformers": {
-      "title": "Top 5 Rendimientos",
-      "subtitle": "Miembros del personal con mayores ganancias de comisión",
-      "noPerformerData": "No hay datos de rendimiento disponibles",
-      "totalEarnings": "Ganancias Totales ($)",
-      "allPerformers": "Todos los Rendimientos",
-      "allPerformersDesc": "Ranking completo de rendimiento del personal",
-      "noPerformanceData": "No hay datos de rendimiento disponibles",
-      "tableHeaders": {
-        "rank": "Posición",
-        "staffMember": "Miembro del Personal",
-        "role": "Rol",
-        "commissions": "Comisiones",
-        "totalEarned": "Total Ganado",
-        "avgPerCommission": "Promedio por Comisión"
-      }
-    }
-  },
-  "myCommissions": {
-    "title": "Mis Ganancias",
-    "subtitle": "Realice un seguimiento de sus comisiones y propinas",
-    "summaryCards": {
-      "totalEarnings": "Ganancias Totales",
-      "commissionsLabel": "Comisiones:",
-      "tipsLabel": "Propinas:",
-      "pendingApproval": "Pendiente de Aprobación",
-      "paidOut": "Pagado",
-      "payments": "pagos"
-    },
-    "filterEarnings": "Filtrar Ganancias",
-    "type": "Tipo",
-    "allTypes": "Todos los Tipos",
-    "allTypesPlaceholder": "Todos los tipos",
-    "tipsReceived": {
-      "title": "Propinas Recibidas",
-      "count": "propina(s) de huéspedes",
-      "tableHeaders": {
-        "date": "Fecha",
-        "invoice": "Factura",
-        "amount": "Monto",
-        "reason": "Razón",
-        "guestNotes": "Notas del Huésped",
-        "status": "Estado"
-      }
-    },
-    "commissionHistory": {
-      "title": "Historial de Comisiones",
-      "loadingYourEarnings": "Cargando sus ganancias...",
-      "noCommissionsFound": "No se encontraron comisiones"
-    },
-    "status": {
-      "processed": "Procesado"
     }
   },
   "employeeDocuments": {
@@ -2025,6 +1927,130 @@
       "cancel": "Cancelar",
       "delete": "Eliminar"
     }
+  },
+  "financialEntries": {
+    "title": "Registros Financieros",
+    "subtitle": "Gestionar registros financieros y pagos de la propiedad",
+    "addCredit": "Crédito",
+    "addDebit": "Débito",
+    "addOwnerPayment": "Pago al Propietario",
+    "batchEntry": "Registro por Lote",
+    "monthlyEntries": "Registros Mensuales",
+    "loadEntries": "Cargar",
+    "table": {
+      "date": "Fecha",
+      "description": "Descripción",
+      "credit": "Crédito",
+      "debit": "Débito",
+      "balance": "Saldo",
+      "scheduleBalance": "Saldo Programado",
+      "actions": "Acciones"
+    },
+    "stats": {
+      "totalCredits": "Total de Créditos",
+      "totalDebits": "Total de Débitos",
+      "balance": "Saldo",
+      "scheduledBalance": "Saldo Programado"
+    },
+    "actions": {
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "markAsPaid": "Marcar como Pagado"
+    },
+    "dialog": {
+      "addCredit": "Agregar Registro de Crédito",
+      "addDebit": "Agregar Registro de Débito",
+      "addOwnerPayment": "Agregar Pago al Propietario",
+      "editCredit": "Editar Registro de Crédito",
+      "editDebit": "Editar Registro de Débito",
+      "editOwnerPayment": "Editar Pago al Propietario",
+      "creditDescription": "Agregar ingreso o pago recibido para esta propiedad",
+      "debitDescription": "Agregar gasto o pago realizado para esta propiedad",
+      "ownerPaymentDescription": "Agregar pago al propietario de la propiedad",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Ingrese la descripción...",
+      "amount": "Monto",
+      "date": "Fecha",
+      "category": "Categoría",
+      "isScheduled": "Este es un registro programado/recurrente",
+      "scheduledDay": "Día del Mes",
+      "scheduledMonths": "Meses",
+      "notes": "Notas (Opcional)",
+      "notesPlaceholder": "Notas adicionales..."
+    },
+    "batchDialog": {
+      "title": "Registro por Lote",
+      "description": "Crear múltiples registros a la vez para diferentes meses",
+      "entryDescription": "Descripción",
+      "entryDescriptionPlaceholder": "Ej: Alquiler Mensual, Cuota de Mantenimiento, Factura de Servicios...",
+      "value": "Valor",
+      "entryType": "Tipo de Registro",
+      "markAsScheduled": "Marcar como registros programados",
+      "dayOfMonth": "Día del Mes",
+      "year": "Año",
+      "selectMonths": "Meses",
+      "selectAll": "Seleccionar Todos",
+      "clearAll": "Limpiar",
+      "selectAtLeastOneMonth": "Por favor, seleccione al menos un mes",
+      "willCreate": "Esto creará",
+      "entriesFor": "registros para",
+      "eachWithAmount": "cada uno con monto de",
+      "upload": "Subir",
+      "entries": "Registros"
+    },
+    "categories": {
+      "maintenance": "Mantenimiento",
+      "utilities": "Servicios",
+      "cleaning": "Limpieza",
+      "supplies": "Suministros",
+      "marketing": "Marketing",
+      "insurance": "Seguro",
+      "property_tax": "Impuesto Predial",
+      "hoa_fees": "Cuota de Mantenimiento",
+      "professional_services": "Servicios Profesionales",
+      "repairs": "Reparaciones",
+      "landscaping": "Jardinería",
+      "other": "Otros"
+    },
+    "entryTypes": {
+      "credit": "Crédito",
+      "debit": "Débito",
+      "owner_payment": "Pago al Propietario"
+    },
+    "months": {
+      "january": "Enero",
+      "february": "Febrero",
+      "march": "Marzo",
+      "april": "Abril",
+      "may": "Mayo",
+      "june": "Junio",
+      "july": "Julio",
+      "august": "Agosto",
+      "september": "Septiembre",
+      "october": "Octubre",
+      "november": "Noviembre",
+      "december": "Diciembre",
+      "jan": "Ene",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Abr",
+      "mayShort": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Ago",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dic"
+    },
+    "noEntries": "No se encontraron registros financieros para este período",
+    "loading": "Cargando registros...",
+    "confirmDelete": "¿Está seguro de que desea eliminar este registro?",
+    "markedAsPaid": "Registro marcado como pagado",
+    "entryCreated": "Registro creado exitosamente",
+    "entryUpdated": "Registro actualizado exitosamente",
+    "entryDeleted": "Registro eliminado exitosamente",
+    "batchCreated": "Registros por lote creados exitosamente"
   },
   "highlights": {
     "title": "Aspectos Destacados de la Propiedad",

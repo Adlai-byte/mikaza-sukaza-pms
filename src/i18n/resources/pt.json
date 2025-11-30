@@ -46,12 +46,14 @@
     "name": "Nome",
     "email": "E-mail",
     "phone": "Telefone",
-    "address": "Endereço"
+    "address": "Endereço",
+    "statusUpdated": "Status Atualizado"
   },
   "sidebar": {
     "dashboard": "Painel",
     "bookings": "Reservas",
     "calendar": "Calendário",
+    "guests": "Hóspedes",
     "properties": "Propriedades",
     "activeJobs": "Trabalhos Ativos",
     "todoList": "Lista de Tarefas",
@@ -73,12 +75,11 @@
     "vendorCOIs": "COIs de Fornecedores",
     "accessAuth": "Autorizações de Acesso",
     "messageTemplates": "Modelos de Mensagem",
-    "commissions": "Comissões",
-    "commissionsAnalytics": "Análise de Comissões",
-    "myCommissions": "Minhas Comissões",
     "highlights": "Destaques Financeiros",
     "propertyFeatures": "Características da Propriedade",
     "media": "Mídia",
+    "messages": "Mensagens",
+    "reports": "Relatórios",
     "help": "Ajuda e Suporte"
   },
   "header": {
@@ -270,6 +271,60 @@
     "photos": "Fotos",
     "uploadPhotos": "Enviar Fotos"
   },
+  "propertyBookingsInvoices": {
+    "title": "Reservas e Faturas",
+    "bookingsTab": "Reservas",
+    "invoicesTab": "Faturas",
+    "noBookings": "Nenhuma reserva encontrada para esta propriedade",
+    "noInvoices": "Nenhuma fatura encontrada para esta propriedade",
+    "newBooking": "Nova Reserva",
+    "bookingCreated": "Reserva criada com sucesso",
+    "bookingCreatedDesc": "Uma nova reserva foi adicionada a esta propriedade",
+    "generateInvoice": "Gerar Fatura",
+    "invoiceExists": "Fatura Existe",
+    "generating": "Gerando...",
+    "invoiceCreated": "Fatura criada com sucesso",
+    "invoiceCreatedDesc": "Uma nova fatura foi gerada a partir da reserva",
+    "viewInvoice": "Ver Fatura",
+    "editInvoice": "Editar",
+    "recordPayment": "Pagamento",
+    "downloadPdf": "Baixar",
+    "sendEmail": "Email",
+    "total": "Total",
+    "paid": "Pago",
+    "balance": "Saldo",
+    "guests": "Hóspedes",
+    "nights": "noites",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "lineItems": {
+      "accommodation": "Hospedagem",
+      "cleaning": "Limpeza",
+      "extras": "Extras",
+      "tax": "Imposto",
+      "other": "Outro"
+    },
+    "editor": {
+      "title": "Editar Fatura",
+      "status": "Status",
+      "dueDate": "Data de Vencimento",
+      "paymentMethod": "Método de Pagamento",
+      "notes": "Notas",
+      "save": "Salvar Alterações",
+      "cancel": "Cancelar",
+      "saving": "Salvando..."
+    },
+    "status": {
+      "inquiry": "Consulta",
+      "pending": "Pendente",
+      "confirmed": "Confirmado",
+      "checked_in": "Check-in Feito",
+      "checked_out": "Check-out Feito",
+      "completed": "Concluído",
+      "cancelled": "Cancelado",
+      "blocked": "Bloqueado"
+    }
+  },
   "jobs": {
     "title": "Trabalhos",
     "subtitle": "Ordens de serviço e rastreamento de manutenção de propriedades (Somente Admin)",
@@ -317,12 +372,50 @@
     "estimatedCost": "Custo Estimado",
     "actualCost": "Custo Real",
     "jobDescription": "Descrição do Trabalho",
+    "totalJobs": "Total de Trabalhos",
+    "allWorkOrders": "Todas as ordens de serviço",
+    "inProgressJobs": "Em Andamento",
+    "activeAssignments": "Atribuições ativas",
+    "pendingJobs": "Pendentes",
+    "awaitingAction": "Aguardando ação",
+    "completedJobs": "Concluídos",
+    "allFinished": "Todos finalizados",
+    "filtersAndSearch": "Filtros e Busca",
+    "searchJobs": "Buscar Trabalhos",
+    "searchPlaceholder": "Buscar por título ou descrição...",
+    "allProperties": "Todas as propriedades",
+    "allUsers": "Todos os usuários",
+    "allTypes": "Todos os tipos",
+    "clearAll": "Limpar Tudo",
+    "result": "resultado",
+    "results": "resultados",
+    "boardView": "Vista de Quadro",
+    "jobHistory": "Histórico de Trabalhos",
+    "noActiveJobs": "Nenhum trabalho ativo encontrado. Crie sua primeira ordem de serviço para começar.",
+    "noCompletedJobs": "Ainda não há trabalhos concluídos ou cancelados.",
+    "loadingJobs": "Carregando trabalhos...",
+    "accessDenied": "Acesso Negado",
+    "noPermission": "Você não tem permissão para acessar o módulo de Trabalhos.",
+    "highPriority": "Alta Prioridade",
+    "statusChanged": "O status do trabalho foi alterado para {{status}}",
+    "statusChangeFailed": "Falha ao atualizar o status do trabalho. Por favor, tente novamente.",
     "status": {
       "pending": "Pendente",
       "inProgress": "Em Andamento",
       "review": "Revisão",
       "completed": "Concluído",
       "cancelled": "Cancelado"
+    },
+    "types": {
+      "general": "Geral",
+      "maintenance": "Manutenção",
+      "cleaning": "Limpeza",
+      "inspection": "Inspeção",
+      "checkIn": "Check In",
+      "checkOut": "Check Out",
+      "repair": "Reparo",
+      "emergency": "Emergência",
+      "preventive": "Preventivo"
     }
   },
   "todos": {
@@ -436,28 +529,6 @@
     "unitPrice": "Preço Unitário",
     "taxPercent": "Imposto %",
     "itemDescriptionPlaceholder": "Descrição do item",
-    "tipsForStaff": "Gorjetas para a Equipe",
-    "tipsForStaffDesc": "Adicionar gratificações para membros da equipe que prestaram serviço excepcional",
-    "staffMember": "Membro da Equipe",
-    "selectStaff": "Selecionar equipe",
-    "tipAmount": "Valor da Gorjeta ($)",
-    "tipAmountPlaceholder": "0,00",
-    "reason": "Motivo",
-    "reasonOptional": "Motivo (Opcional)",
-    "selectOrTypeReason": "Selecionar ou digitar motivo",
-    "orTypeCustomReason": "Ou digitar motivo personalizado",
-    "notesOptional": "Observações (Opcional)",
-    "additionalNotes": "Observações adicionais",
-    "addTip": "Adicionar Gorjeta",
-    "addedTips": "Gorjetas Adicionadas",
-    "tipsWillBeConvertedToCommissions": "Gorjetas serão convertidas em comissões quando processadas",
-    "saveInvoiceFirst": "Salvar Fatura Primeiro",
-    "saveInvoiceFirstDesc": "Por favor, salve a fatura antes de adicionar gorjetas",
-    "missingInformation": "Informações Faltando",
-    "selectStaffAndAmount": "Por favor, selecione um membro da equipe e insira um valor de gorjeta",
-    "invalidTipAmount": "Valor Inválido",
-    "enterValidTipAmount": "Por favor, insira um valor de gorjeta válido",
-    "confirmRemoveTip": "Tem certeza que deseja remover esta gorjeta?",
     "lineItemType": {
       "accommodation": "Acomodação",
       "cleaning": "Limpeza",
@@ -466,24 +537,27 @@
       "commission": "Comissão",
       "other": "Outro"
     },
-    "tipReasons": {
-      "excellentCleaning": "Excelente serviço de limpeza",
-      "outstandingCommunication": "Comunicação excepcional com hóspedes",
-      "quickResponse": "Tempo de resposta rápido",
-      "professionalMaintenance": "Trabalho de manutenção profissional",
-      "exceptionalHospitality": "Hospitalidade excepcional",
-      "propertyWalkthrough": "Serviço de vistoria da propriedade",
-      "guestAmenities": "Configuração de comodidades para hóspedes",
-      "emergencyResponse": "Resposta a emergências",
-      "aboveAndBeyond": "Serviço acima e além"
-    },
     "loadingInvoice": "Carregando dados da fatura...",
     "invoiceDataNotAvailable": "Dados da fatura não disponíveis. Por favor, salve a fatura primeiro.",
     "pdfGenSuccess": "PDF da fatura baixado com sucesso",
     "pdfGenError": "Falha ao gerar PDF. Por favor, tente novamente.",
     "invoiceUpdatedSuccess": "Fatura atualizada com sucesso com todos os itens de linha",
     "invoiceUpdateError": "Falha ao atualizar fatura",
-    "pleaseAddLineItem": "Por favor, adicione pelo menos um item de linha"
+    "pleaseAddLineItem": "Por favor, adicione pelo menos um item de linha",
+    "addFromTemplate": "Adicionar de Modelo",
+    "templatesAdded": "Modelos Adicionados",
+    "addedLineItems": "Adicionados {{count}} itens de linha de",
+    "noLineItems": "Nenhum item de linha adicionado ainda",
+    "addLineItemsHint": "Adicione itens manualmente ou use um modelo de fatura",
+    "descriptionPlaceholder": "Digite a descrição...",
+    "itemTypes": {
+      "accommodation": "Hospedagem",
+      "cleaning": "Limpeza",
+      "extras": "Extras",
+      "tax": "Imposto",
+      "commission": "Comissão",
+      "other": "Outro"
+    }
   },
   "expenses": {
     "title": "Despesas",
@@ -1310,87 +1384,6 @@
       "monthly": "Mensal"
     }
   },
-  "commissions": {
-    "title": "Comissões e Gorjetas",
-    "subtitle": "Acompanhe comissões, gorjetas e ganhos da equipe",
-    "addCommission": "Adicionar Comissão",
-    "commissionsCount": "comissões",
-    "itemsCount": "itens",
-    "totalCommissions": "Total de Comissões",
-    "pending": "Pendente",
-    "approved": "Aprovada",
-    "paidOut": "Pago",
-    "filters": "Filtros",
-    "staffMember": "Membro da Equipe",
-    "allStaff": "Toda Equipe",
-    "allStaffPlaceholder": "Toda equipe",
-    "property": "Propriedade",
-    "allProperties": "Todas Propriedades",
-    "allPropertiesPlaceholder": "Todas propriedades",
-    "status": {
-      "label": "Status",
-      "all": "Todos Status",
-      "allPlaceholder": "Todos status",
-      "pending": "Pendente",
-      "approved": "Aprovada",
-      "paid": "Pago",
-      "cancelled": "Cancelado",
-      "on_hold": "Em Espera"
-    },
-    "sourceType": {
-      "label": "Tipo de Origem",
-      "all": "Todos Tipos",
-      "allPlaceholder": "Todos tipos",
-      "booking": "Reserva",
-      "invoice": "Fatura",
-      "service": "Serviço",
-      "tip": "Gorjeta",
-      "referral": "Indicação",
-      "bonus": "Bônus"
-    },
-    "dateFrom": "Data Inicial",
-    "dateTo": "Data Final",
-    "commissionRecords": "Registros de Comissão",
-    "loading": "Carregando...",
-    "recordsCount": "registro(s) de comissão",
-    "loadingCommissions": "Carregando comissões...",
-    "noCommissionsFound": "Nenhuma comissão encontrada",
-    "tableHeaders": {
-      "date": "Data",
-      "staffMember": "Membro da Equipe",
-      "source": "Origem",
-      "type": "Tipo",
-      "baseAmount": "Valor Base",
-      "rate": "Taxa",
-      "commission": "Comissão",
-      "status": "Status",
-      "paymentDate": "Data de Pagamento",
-      "actions": "Ações"
-    },
-    "approve": "Aprovar",
-    "markPaid": "Marcar como Pago",
-    "deleteConfirm": "Tem certeza que deseja excluir esta comissão?",
-    "paymentDialog": {
-      "title": "Marcar Comissão como Paga",
-      "description": "Registre os detalhes do pagamento desta comissão",
-      "paymentMethod": "Método de Pagamento",
-      "selectPaymentMethod": "Selecione o método de pagamento",
-      "paymentMethods": {
-        "bank_transfer": "Transferência Bancária",
-        "cash": "Dinheiro",
-        "check": "Cheque",
-        "paypal": "PayPal",
-        "other": "Outro"
-      },
-      "paymentReference": "Referência de Pagamento",
-      "paymentReferencePlaceholder": "ID da transação ou número de referência",
-      "paymentDate": "Data de Pagamento",
-      "staff": "Equipe:",
-      "commissionAmount": "Valor da Comissão:",
-      "cancel": "Cancelar",
-      "confirmPayment": "Confirmar Pagamento"
-    }
-  },
   "financialDashboard": {
     "title": "Painel Financeiro",
     "subtitle": "Análises financeiras e insights abrangentes",
@@ -1438,97 +1431,6 @@
         "occupancyDays": "Dias de Ocupação",
         "avgPerInvoice": "Média/Fatura"
       }
-    }
-  },
-  "commissionsAnalytics": {
-    "title": "Análise de Comissões",
-    "subtitle": "Insights de desempenho e gestão de comissões da equipe",
-    "performanceInsight": {
-      "title": "Insight de Desempenho",
-      "moreCommissionsLabel": "Mais Comissões = Melhor Desempenho!",
-      "topPerformersMessage": "Seus melhores desempenhos estão gerando ganhos mais altos.",
-      "leadingWith": "está liderando com",
-      "from": "de",
-      "commissionsSuffix": "comissão(ões).",
-      "keepUpWork": "Continue com o ótimo trabalho!"
-    },
-    "activeStaff": "Equipe Ativa",
-    "avgPrefix": "Média:",
-    "tabs": {
-      "overview": "Visão Geral",
-      "performance": "Desempenho",
-      "commissionData": "Dados de Comissão"
-    },
-    "charts": {
-      "monthlyTrend": "Tendência Mensal de Comissões",
-      "monthlyTrendDesc": "Ganhos de comissões nos últimos 12 meses",
-      "noTrendData": "Nenhum dado de tendência disponível",
-      "totalAmount": "Valor Total ($)",
-      "commissionSources": "Origens de Comissão",
-      "commissionSourcesDesc": "Detalhamento por tipo de origem de comissão",
-      "noSourceData": "Nenhum dado de origem disponível"
-    },
-    "performanceMetrics": {
-      "avgTimeToPayment": "Tempo Médio até Pagamento",
-      "days": "dias",
-      "fromApprovalToPayout": "Da aprovação ao pagamento",
-      "conversionRate": "Taxa de Conversão",
-      "approvedOrPaid": "Comissões aprovadas ou pagas",
-      "avgPerStaffMember": "Média por Membro da Equipe",
-      "averageEarnings": "Ganhos médios por pessoa"
-    },
-    "topPerformers": {
-      "title": "Top 5 Desempenhos",
-      "subtitle": "Membros da equipe com maiores ganhos de comissão",
-      "noPerformerData": "Nenhum dado de desempenho disponível",
-      "totalEarnings": "Ganhos Totais ($)",
-      "allPerformers": "Todos os Desempenhos",
-      "allPerformersDesc": "Ranking completo de desempenho da equipe",
-      "noPerformanceData": "Nenhum dado de desempenho disponível",
-      "tableHeaders": {
-        "rank": "Posição",
-        "staffMember": "Membro da Equipe",
-        "role": "Função",
-        "commissions": "Comissões",
-        "totalEarned": "Total Ganho",
-        "avgPerCommission": "Média por Comissão"
-      }
-    }
-  },
-  "myCommissions": {
-    "title": "Meus Ganhos",
-    "subtitle": "Acompanhe suas comissões e gorjetas",
-    "summaryCards": {
-      "totalEarnings": "Ganhos Totais",
-      "commissionsLabel": "Comissões:",
-      "tipsLabel": "Gorjetas:",
-      "pendingApproval": "Aguardando Aprovação",
-      "paidOut": "Pago",
-      "payments": "pagamentos"
-    },
-    "filterEarnings": "Filtrar Ganhos",
-    "type": "Tipo",
-    "allTypes": "Todos os Tipos",
-    "allTypesPlaceholder": "Todos os tipos",
-    "tipsReceived": {
-      "title": "Gorjetas Recebidas",
-      "count": "gorjeta(s) de hóspedes",
-      "tableHeaders": {
-        "date": "Data",
-        "invoice": "Fatura",
-        "amount": "Valor",
-        "reason": "Motivo",
-        "guestNotes": "Notas do Hóspede",
-        "status": "Status"
-      }
-    },
-    "commissionHistory": {
-      "title": "Histórico de Comissões",
-      "loadingYourEarnings": "Carregando seus ganhos...",
-      "noCommissionsFound": "Nenhuma comissão encontrada"
-    },
-    "status": {
-      "processed": "Processado"
     }
   },
   "employeeDocuments": {
@@ -2025,6 +1927,130 @@
       "cancel": "Cancelar",
       "delete": "Excluir"
     }
+  },
+  "financialEntries": {
+    "title": "Lançamentos Financeiros",
+    "subtitle": "Gerenciar lançamentos financeiros e pagamentos da propriedade",
+    "addCredit": "Crédito",
+    "addDebit": "Débito",
+    "addOwnerPayment": "Pagamento ao Proprietário",
+    "batchEntry": "Lançamento em Lote",
+    "monthlyEntries": "Lançamentos Mensais",
+    "loadEntries": "Carregar",
+    "table": {
+      "date": "Data",
+      "description": "Descrição",
+      "credit": "Crédito",
+      "debit": "Débito",
+      "balance": "Saldo",
+      "scheduleBalance": "Saldo Programado",
+      "actions": "Ações"
+    },
+    "stats": {
+      "totalCredits": "Total de Créditos",
+      "totalDebits": "Total de Débitos",
+      "balance": "Saldo",
+      "scheduledBalance": "Saldo Programado"
+    },
+    "actions": {
+      "edit": "Editar",
+      "delete": "Excluir",
+      "markAsPaid": "Marcar como Pago"
+    },
+    "dialog": {
+      "addCredit": "Adicionar Lançamento de Crédito",
+      "addDebit": "Adicionar Lançamento de Débito",
+      "addOwnerPayment": "Adicionar Pagamento ao Proprietário",
+      "editCredit": "Editar Lançamento de Crédito",
+      "editDebit": "Editar Lançamento de Débito",
+      "editOwnerPayment": "Editar Pagamento ao Proprietário",
+      "creditDescription": "Adicionar receita ou pagamento recebido para esta propriedade",
+      "debitDescription": "Adicionar despesa ou pagamento feito para esta propriedade",
+      "ownerPaymentDescription": "Adicionar pagamento ao proprietário da propriedade",
+      "description": "Descrição",
+      "descriptionPlaceholder": "Digite a descrição...",
+      "amount": "Valor",
+      "date": "Data",
+      "category": "Categoria",
+      "isScheduled": "Este é um lançamento programado/recorrente",
+      "scheduledDay": "Dia do Mês",
+      "scheduledMonths": "Meses",
+      "notes": "Notas (Opcional)",
+      "notesPlaceholder": "Notas adicionais..."
+    },
+    "batchDialog": {
+      "title": "Lançamento em Lote",
+      "description": "Criar múltiplos lançamentos de uma vez para diferentes meses",
+      "entryDescription": "Descrição",
+      "entryDescriptionPlaceholder": "Ex: Aluguel Mensal, Taxa de Condomínio, Conta de Luz...",
+      "value": "Valor",
+      "entryType": "Tipo de Lançamento",
+      "markAsScheduled": "Marcar como lançamentos programados",
+      "dayOfMonth": "Dia do Mês",
+      "year": "Ano",
+      "selectMonths": "Meses",
+      "selectAll": "Selecionar Todos",
+      "clearAll": "Limpar",
+      "selectAtLeastOneMonth": "Por favor, selecione pelo menos um mês",
+      "willCreate": "Isso criará",
+      "entriesFor": "lançamentos para",
+      "eachWithAmount": "cada um com valor de",
+      "upload": "Enviar",
+      "entries": "Lançamentos"
+    },
+    "categories": {
+      "maintenance": "Manutenção",
+      "utilities": "Utilidades",
+      "cleaning": "Limpeza",
+      "supplies": "Suprimentos",
+      "marketing": "Marketing",
+      "insurance": "Seguro",
+      "property_tax": "IPTU",
+      "hoa_fees": "Taxa de Condomínio",
+      "professional_services": "Serviços Profissionais",
+      "repairs": "Reparos",
+      "landscaping": "Paisagismo",
+      "other": "Outros"
+    },
+    "entryTypes": {
+      "credit": "Crédito",
+      "debit": "Débito",
+      "owner_payment": "Pagamento ao Proprietário"
+    },
+    "months": {
+      "january": "Janeiro",
+      "february": "Fevereiro",
+      "march": "Março",
+      "april": "Abril",
+      "may": "Maio",
+      "june": "Junho",
+      "july": "Julho",
+      "august": "Agosto",
+      "september": "Setembro",
+      "october": "Outubro",
+      "november": "Novembro",
+      "december": "Dezembro",
+      "jan": "Jan",
+      "feb": "Fev",
+      "mar": "Mar",
+      "apr": "Abr",
+      "mayShort": "Mai",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Ago",
+      "sep": "Set",
+      "oct": "Out",
+      "nov": "Nov",
+      "dec": "Dez"
+    },
+    "noEntries": "Nenhum lançamento financeiro encontrado para este período",
+    "loading": "Carregando lançamentos...",
+    "confirmDelete": "Tem certeza de que deseja excluir este lançamento?",
+    "markedAsPaid": "Lançamento marcado como pago",
+    "entryCreated": "Lançamento criado com sucesso",
+    "entryUpdated": "Lançamento atualizado com sucesso",
+    "entryDeleted": "Lançamento excluído com sucesso",
+    "batchCreated": "Lançamentos em lote criados com sucesso"
   },
   "highlights": {
     "title": "Destaques da Propriedade",

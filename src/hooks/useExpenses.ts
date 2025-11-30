@@ -24,6 +24,9 @@ export interface ExpenseFilters {
   date_to?: string;
   vendor_name?: string;
   is_recurring?: boolean;
+  entry_type?: 'credit' | 'debit' | 'owner_payment';
+  is_scheduled?: boolean;
+  is_paid?: boolean;
 }
 
 // Fetch all expenses with filters
@@ -63,6 +66,18 @@ const fetchExpenses = async (filters?: ExpenseFilters): Promise<Expense[]> => {
 
   if (filters?.is_recurring !== undefined) {
     query = query.eq('is_recurring', filters.is_recurring);
+  }
+
+  if (filters?.entry_type) {
+    query = query.eq('entry_type', filters.entry_type);
+  }
+
+  if (filters?.is_scheduled !== undefined) {
+    query = query.eq('is_scheduled', filters.is_scheduled);
+  }
+
+  if (filters?.is_paid !== undefined) {
+    query = query.eq('is_paid', filters.is_paid);
   }
 
   const { data, error } = await query;
@@ -232,8 +247,17 @@ export function useCreateExpense() {
 
   return useMutation({
     mutationFn: createExpense,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
+    onSuccess: (data) => {
+      // Use 'all' to refresh all queries regardless of active state
+      queryClient.invalidateQueries({ queryKey: expenseKeys.lists(), refetchType: 'all' });
+      // Also invalidate financial summary and property detail
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
+      if (data?.property_id) {
+        queryClient.invalidateQueries({
+          queryKey: ['properties', 'detail', data.property_id],
+          refetchType: 'all'
+        });
+      }
       toast({
         title: 'Success',
         description: 'Expense created successfully',
@@ -256,8 +280,17 @@ export function useUpdateExpense() {
   return useMutation({
     mutationFn: updateExpense,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: expenseKeys.detail(data.expense_id!) });
+      // Use 'all' to refresh all queries regardless of active state
+      queryClient.invalidateQueries({ queryKey: expenseKeys.lists(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: expenseKeys.detail(data.expense_id!), refetchType: 'all' });
+      // Also invalidate financial summary and property detail
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
+      if (data?.property_id) {
+        queryClient.invalidateQueries({
+          queryKey: ['properties', 'detail', data.property_id],
+          refetchType: 'all'
+        });
+      }
       toast({
         title: 'Success',
         description: 'Expense updated successfully',
@@ -291,7 +324,16 @@ export function useDeleteExpense() {
         property_id: expense?.property_id,
       });
 
-      queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
+      // Use 'all' to refresh all queries regardless of active state
+      queryClient.invalidateQueries({ queryKey: expenseKeys.lists(), refetchType: 'all' });
+      // Also invalidate financial summary and property detail
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
+      if (expense?.property_id) {
+        queryClient.invalidateQueries({
+          queryKey: ['properties', 'detail', expense.property_id],
+          refetchType: 'all'
+        });
+      }
       toast({
         title: 'Success',
         description: 'Expense deleted successfully',
@@ -314,8 +356,17 @@ export function useMarkExpenseAsPaid() {
   return useMutation({
     mutationFn: markExpenseAsPaid,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: expenseKeys.detail(data.expense_id!) });
+      // Use 'all' to refresh all queries regardless of active state
+      queryClient.invalidateQueries({ queryKey: expenseKeys.lists(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: expenseKeys.detail(data.expense_id!), refetchType: 'all' });
+      // Also invalidate financial summary
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
+      if (data?.property_id) {
+        queryClient.invalidateQueries({
+          queryKey: ['properties', 'detail', data.property_id],
+          refetchType: 'all'
+        });
+      }
       toast({
         title: 'Success',
         description: 'Expense marked as paid',
@@ -354,6 +405,204 @@ export function useRecurringExpenses(propertyId?: string) {
 
   return {
     recurringExpenses,
+    loading: isLoading,
+    error,
+  };
+}
+
+// Mark financial entry as done (paid)
+const markEntryAsDone = async (expenseId: string): Promise<Expense> => {
+  const { data, error } = await supabase
+    .from('expenses')
+    .update({
+      is_paid: true,
+      paid_at: new Date().toISOString(),
+    })
+    .eq('expense_id', expenseId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Expense;
+};
+
+export function useMarkEntryAsDone() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: markEntryAsDone,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: expenseKeys.byProperty(data.property_id) });
+      toast({
+        title: 'Success',
+        description: 'Entry marked as done',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to mark entry as done',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Fetch financial entries for a property with balance calculation
+const fetchPropertyFinancialEntries = async (
+  propertyId: string,
+  month?: number,
+  year?: number
+): Promise<Expense[]> => {
+  let query = supabase
+    .from('expenses')
+    .select(`
+      *,
+      property:properties(property_id, property_name),
+      vendor:service_providers(provider_id, company_name)
+    `)
+    .eq('property_id', propertyId)
+    .order('expense_date', { ascending: true });
+
+  // Filter by month/year if provided
+  if (month !== undefined && year !== undefined) {
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    // Calculate last day of month without timezone issues
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    query = query.gte('expense_date', startDate).lte('expense_date', endDate);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  // Calculate running balance
+  const entries = (data || []) as Expense[];
+  let runningBalance = 0;
+
+  return entries.map((entry) => {
+    const amount = entry.amount || 0;
+    if (entry.entry_type === 'credit') {
+      runningBalance += amount;
+    } else {
+      // debit or owner_payment
+      runningBalance -= amount;
+    }
+
+    return {
+      ...entry,
+      running_balance: runningBalance,
+    };
+  });
+};
+
+// Calculate schedule balance (including future scheduled entries)
+const calculateScheduleBalance = (entries: Expense[], month: number, year: number): number => {
+  let balance = 0;
+
+  entries.forEach((entry) => {
+    const amount = entry.amount || 0;
+
+    // Include actual entries
+    if (!entry.is_scheduled) {
+      if (entry.entry_type === 'credit') {
+        balance += amount;
+      } else {
+        balance -= amount;
+      }
+    } else {
+      // Include scheduled entries for this month
+      const scheduledMonths = entry.scheduled_months || [];
+      if (scheduledMonths.includes(month)) {
+        if (entry.entry_type === 'credit') {
+          balance += amount;
+        } else {
+          balance -= amount;
+        }
+      }
+    }
+  });
+
+  return balance;
+};
+
+export function usePropertyFinancialEntries(propertyId: string, month?: number, year?: number) {
+  const currentDate = new Date();
+  const selectedMonth = month ?? currentDate.getMonth() + 1;
+  const selectedYear = year ?? currentDate.getFullYear();
+
+  const { data: entries = [], isLoading, error, refetch } = useQuery({
+    queryKey: [...expenseKeys.byProperty(propertyId), 'financial', selectedMonth, selectedYear],
+    queryFn: () => fetchPropertyFinancialEntries(propertyId, selectedMonth, selectedYear),
+    enabled: !!propertyId,
+    staleTime: 30 * 1000,
+  });
+
+  // Calculate schedule balance
+  const scheduleBalance = calculateScheduleBalance(entries, selectedMonth, selectedYear);
+
+  // Add schedule balance to the last entry
+  const entriesWithScheduleBalance = entries.map((entry, index) => ({
+    ...entry,
+    schedule_balance: index === entries.length - 1 ? scheduleBalance : undefined,
+  }));
+
+  return {
+    entries: entriesWithScheduleBalance,
+    loading: isLoading,
+    error,
+    refetch,
+    scheduleBalance,
+  };
+}
+
+// Fetch initial balance (sum of all entries before the selected month/year)
+const fetchPropertyInitialBalance = async (
+  propertyId: string,
+  month: number,
+  year: number
+): Promise<number> => {
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('amount, entry_type')
+    .eq('property_id', propertyId)
+    .lt('expense_date', startDate);
+
+  if (error) throw error;
+
+  // Calculate initial balance from all previous entries
+  let balance = 0;
+  (data || []).forEach((entry: { amount: number | null; entry_type: string | null }) => {
+    const amount = entry.amount || 0;
+    if (entry.entry_type === 'credit') {
+      balance += amount;
+    } else {
+      balance -= amount;
+    }
+  });
+
+  return balance;
+};
+
+export function usePropertyInitialBalance(propertyId: string, month?: number, year?: number) {
+  const currentDate = new Date();
+  const selectedMonth = month ?? currentDate.getMonth() + 1;
+  const selectedYear = year ?? currentDate.getFullYear();
+
+  const { data: initialBalance = 0, isLoading, error } = useQuery({
+    queryKey: [...expenseKeys.byProperty(propertyId), 'initialBalance', selectedMonth, selectedYear],
+    queryFn: () => fetchPropertyInitialBalance(propertyId, selectedMonth, selectedYear),
+    enabled: !!propertyId,
+    staleTime: 60 * 1000, // 1 minute
+  });
+
+  return {
+    initialBalance,
     loading: isLoading,
     error,
   };

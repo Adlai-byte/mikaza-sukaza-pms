@@ -165,8 +165,8 @@ const PropertyTableRow = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/properties/${property.property_id}/edit`)}
-            title="Edit Property"
+            onClick={() => navigate(`/properties/${property.property_id}/view`)}
+            title="View/Edit Property"
           >
             <Edit className="h-4 w-4" />
           </Button>
@@ -213,6 +213,7 @@ export function PropertyTableOptimized({
   isLoading = false,
   isFetching = false,
 }: PropertyTableOptimizedProps) {
+  const navigate = useNavigate();
   console.log('🏠 PropertyTableOptimized render - properties:', properties.length);
 
   const [search, setSearch] = useState("");
@@ -552,8 +553,9 @@ export function PropertyTableOptimized({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onEditProperty(property)}
+                          onClick={() => navigate(`/properties/${property.property_id}/view`)}
                           className="h-8 w-8 p-0"
+                          title="View/Edit Property"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
