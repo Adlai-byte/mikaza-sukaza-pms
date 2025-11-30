@@ -43,39 +43,33 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 
+// Job type for local state
+interface JobType {
+  job_id: string;
+  status: string;
+  [key: string]: unknown;
+}
+
 export default function Jobs() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const { properties } = usePropertiesOptimized();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  // Permission check - Jobs is admin only
-  if (!hasPermission(PERMISSIONS.JOBS_VIEW)) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <XCircle className="h-6 w-6 text-red-500" />
-              {t('jobs.accessDenied')}
-            </CardTitle>
-            <CardDescription>
-              {t('jobs.noPermission')}
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
-  // Filter states
+  // All useState hooks must be called unconditionally at the top
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const [jobTypeFilter, setJobTypeFilter] = useState('');
   const [propertyFilter, setPropertyFilter] = useState('');
   const [assignedFilter, setAssignedFilter] = useState('');
+  const [showJobDialog, setShowJobDialog] = useState(false);
+  const [editingJob, setEditingJob] = useState<JobType | null>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<JobType | null>(null);
+  const [viewMode, setViewMode] = useState<'active' | 'board' | 'history'>('active');
 
   // Build filters object
   const filters: JobFilters = useMemo(() => ({
@@ -87,18 +81,21 @@ export default function Jobs() {
     search: searchQuery || undefined,
   }), [statusFilter, priorityFilter, jobTypeFilter, propertyFilter, assignedFilter, searchQuery]);
 
+  // Fetch history jobs separately (always fetch completed/cancelled regardless of filters)
+  const historyFilters: JobFilters = useMemo(() => ({
+    priority: priorityFilter.length > 0 ? priorityFilter[0] : undefined,
+    job_type: jobTypeFilter || undefined,
+    property_id: propertyFilter || undefined,
+    assigned_to: assignedFilter || undefined,
+    search: searchQuery || undefined,
+  }), [priorityFilter, jobTypeFilter, propertyFilter, assignedFilter, searchQuery]);
+
+  // All custom hooks and useQuery hooks
   const { data: jobs = [], isLoading, isFetching, refetch } = useJobs(filters);
   const stats = useJobStats(filters);
   const createJob = useCreateJob();
   const updateJob = useUpdateJob();
   const deleteJob = useDeleteJob();
-  const { toast } = useToast();
-
-  const [showJobDialog, setShowJobDialog] = useState(false);
-  const [editingJob, setEditingJob] = useState<any>(null);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<'active' | 'board' | 'history'>('active');
 
   // Fetch users for filter
   const { data: users = [] } = useQuery({
@@ -114,15 +111,6 @@ export default function Jobs() {
       return data || [];
     },
   });
-
-  // Fetch history jobs separately (always fetch completed/cancelled regardless of filters)
-  const historyFilters: JobFilters = useMemo(() => ({
-    priority: priorityFilter.length > 0 ? priorityFilter[0] : undefined,
-    job_type: jobTypeFilter || undefined,
-    property_id: propertyFilter || undefined,
-    assigned_to: assignedFilter || undefined,
-    search: searchQuery || undefined,
-  }), [priorityFilter, jobTypeFilter, propertyFilter, assignedFilter, searchQuery]);
 
   const { data: allHistoryJobs = [] } = useQuery({
     queryKey: ['jobs-history', historyFilters],
@@ -170,9 +158,29 @@ export default function Jobs() {
 
   // Separate active jobs from history (completed/cancelled)
   const activeJobs = useMemo(() =>
-    jobs.filter(job => job.status !== 'completed' && job.status !== 'cancelled'),
+    jobs.filter((job: JobType) => job.status !== 'completed' && job.status !== 'cancelled'),
     [jobs]
   );
+
+  // Permission check - Jobs is admin only (after all hooks)
+  const canViewJobs = hasPermission(PERMISSIONS.JOBS_VIEW);
+  if (!canViewJobs) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <XCircle className="h-6 w-6 text-red-500" />
+              {t('jobs.accessDenied')}
+            </CardTitle>
+            <CardDescription>
+              {t('jobs.noPermission')}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   const historyJobs = allHistoryJobs;
 
@@ -182,12 +190,12 @@ export default function Jobs() {
     setShowJobDialog(true);
   };
 
-  const handleEditJob = (job: any) => {
+  const handleEditJob = (job: JobType) => {
     setEditingJob(job);
     setShowJobDialog(true);
   };
 
-  const handleViewJob = (job: any) => {
+  const handleViewJob = (job: JobType) => {
     setSelectedJob(job);
     setShowDetailsDialog(true);
   };
@@ -212,7 +220,7 @@ export default function Jobs() {
     }
   };
 
-  const handleJobSubmit = async (jobData: any) => {
+  const handleJobSubmit = async (jobData: Record<string, unknown>) => {
     try {
       if (editingJob) {
         await updateJob.mutateAsync({

@@ -388,9 +388,16 @@ export default function CheckInOut() {
                     <TableCell>
                       <div>
                         <div className="font-medium">{record.property?.property_name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {record.property?.address}
-                        </div>
+                        {record.booking ? (
+                          <div className="text-xs text-blue-600 flex items-center gap-1">
+                            <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
+                            Booking: {record.booking.guest_name}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-muted-foreground">
+                            {record.property?.address}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>

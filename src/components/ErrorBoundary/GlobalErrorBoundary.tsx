@@ -1,8 +1,9 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertCircle, Home, RefreshCw, Bug, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, Home, RefreshCw, Bug, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { errorTracker } from '@/lib/error-tracking';
 
 interface Props {
   children: ReactNode;
@@ -61,21 +62,12 @@ export class GlobalErrorBoundary extends Component<Props, State> {
   }
 
   logErrorToService = (error: Error, errorInfo: ErrorInfo) => {
-    // TODO: Implement Sentry or other error tracking service
-    // For now, just log to console
-    const errorReport = {
-      message: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      url: window.location.href,
-    };
+    // Use the centralized error tracking service
+    errorTracker.captureReactError(error, errorInfo);
+  };
 
-    if (import.meta.env.PROD) {
-      // In production, you would send this to your error tracking service
-      console.error('Production Error Report:', errorReport);
-    }
+  downloadErrorReport = () => {
+    errorTracker.downloadErrorReport();
   };
 
   handleReset = () => {
@@ -226,15 +218,26 @@ export class GlobalErrorBoundary extends Component<Props, State> {
                         </div>
                       )}
 
-                      <Button
-                        onClick={this.reportBug}
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                      >
-                        <Bug className="mr-2 h-4 w-4" />
-                        Report This Bug
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={this.reportBug}
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                        >
+                          <Bug className="mr-2 h-4 w-4" />
+                          Report Bug
+                        </Button>
+                        <Button
+                          onClick={this.downloadErrorReport}
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Download Log
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -50,7 +50,7 @@ export default function BookingManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'history'>('list');
+  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'history'>('calendar');
   const [currentPage, setCurrentPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
   const itemsPerPage = 10;
@@ -377,38 +377,19 @@ export default function BookingManagement() {
         {/* Main Content - Tabs for List, Calendar, and History View */}
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'calendar' | 'list' | 'history')}>
           <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="list" className="flex items-center gap-2">
-              <List className="h-4 w-4" />
-              {t('bookings.activeBookings')}
-            </TabsTrigger>
             <TabsTrigger value="calendar" className="flex items-center gap-2">
               <LayoutGrid className="h-4 w-4" />
               {t('bookings.calendarView')}
+            </TabsTrigger>
+            <TabsTrigger value="list" className="flex items-center gap-2">
+              <List className="h-4 w-4" />
+              {t('bookings.activeBookings')}
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <History className="h-4 w-4" />
               {t('bookings.bookingHistory')}
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="list" className="mt-0">
-            <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
-              <CardContent className="p-0">
-                <BookingsTable
-                  bookings={paginatedBookings}
-                  onEdit={handleEditBooking}
-                  emptyMessage={t('bookings.noBookingsFound')}
-                />
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                  itemsPerPage={itemsPerPage}
-                  totalItems={filteredBookings.length}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="calendar" className="mt-0">
             <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
@@ -479,6 +460,25 @@ export default function BookingManagement() {
                     />
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="list" className="mt-0">
+            <Card className="shadow-card border-0 bg-card/60 backdrop-blur-sm">
+              <CardContent className="p-0">
+                <BookingsTable
+                  bookings={paginatedBookings}
+                  onEdit={handleEditBooking}
+                  emptyMessage={t('bookings.noBookingsFound')}
+                />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  itemsPerPage={itemsPerPage}
+                  totalItems={filteredBookings.length}
+                />
               </CardContent>
             </Card>
           </TabsContent>

@@ -823,8 +823,6 @@ export function usePropertiesOptimized() {
 
 // Hook for fetching a single property with full details (for edit page)
 export function usePropertyDetail(propertyId: string | undefined) {
-  const queryClient = useQueryClient();
-
   const {
     data: property,
     isLoading,
@@ -835,11 +833,12 @@ export function usePropertyDetail(propertyId: string | undefined) {
     queryKey: propertyKeys.detail(propertyId || ''),
     queryFn: () => fetchPropertyDetail(propertyId!),
     enabled: !!propertyId, // Only fetch when propertyId is provided
-    staleTime: 0, // No caching
-    gcTime: 0, // Don't keep in cache
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes - consider data fresh
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache for quick navigation
     retry: 2, // Retry failed requests twice
-    refetchOnMount: true, // Always refetch on mount
-    refetchOnWindowFocus: true, // Always refetch on window focus
+    refetchOnMount: 'always', // Refetch on mount but use cached data while loading
+    refetchOnWindowFocus: false, // Don't refetch on focus - realtime handles updates
   });
 
   return {

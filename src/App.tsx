@@ -12,8 +12,10 @@ import { Analytics } from "@vercel/analytics/react";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
 import PropertyEdit from "./pages/PropertyEdit";
+import PropertyView from "./pages/PropertyView";
 import Jobs from "./pages/Jobs";
 import UserManagement from "./pages/UserManagement";
+import GuestManagement from "./pages/GuestManagement";
 import Providers from "./pages/Providers";
 import ServiceProviders from "./pages/ServiceProviders";
 import UtilityProviders from "./pages/UtilityProviders";
@@ -37,9 +39,8 @@ import Contracts from "./pages/Contracts";
 import EmployeeDocuments from "./pages/EmployeeDocuments";
 import ServiceDocuments from "./pages/ServiceDocuments";
 import MessageTemplates from "./pages/MessageTemplates";
-import Commissions from "./pages/Commissions";
-import CommissionsAnalytics from "./pages/CommissionsAnalytics";
-import MyCommissions from "./pages/MyCommissions";
+import Messages from "./pages/Messages";
+import Reports from "./pages/Reports";
 import Help from "./pages/Help";
 import VendorCOIs from "./pages/VendorCOIs";
 import AccessAuthorizations from "./pages/AccessAuthorizations";
@@ -50,6 +51,7 @@ import Highlights from "./pages/Highlights";
 import Notifications from "./pages/Notifications";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
+import { SessionTimeoutWarning } from "@/components/SessionTimeoutWarning";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { createOptimizedQueryClient, initializeCacheManagers } from "@/lib/cache-manager-simplified";
 import { initializeOptimizedPrefetcher } from "@/lib/intelligent-prefetcher-optimized";
@@ -61,17 +63,25 @@ import { initializeStatePersistence } from "@/lib/state-persistence";
 // Create optimized query client with simplified caching (no localStorage redundancy)
 const queryClient = createOptimizedQueryClient();
 
+// Extend window for debugging utilities
+declare global {
+  interface Window {
+    __queryClient: typeof queryClient;
+    getCacheStats?: () => void;
+  }
+}
+
 // Make queryClient available globally for debugging
 if (typeof window !== 'undefined') {
-  (window as any).__queryClient = queryClient;
+  window.__queryClient = queryClient;
 }
 
 // Initialize cache managers for intelligent prefetching and background sync
-let backgroundSyncManager: any = null;
-let cacheInvalidationManager: any = null;
-let cacheWarmer: any = null;
-let intelligentPrefetcher: any = null;
-let realtimeSync: any = null;
+let backgroundSyncManager: ReturnType<typeof initializeCacheManagers>['backgroundSyncManager'] | null = null;
+let cacheInvalidationManager: ReturnType<typeof initializeCacheManagers>['cacheInvalidationManager'] | null = null;
+let cacheWarmer: ReturnType<typeof initializeCacheManagers>['cacheWarmer'] | null = null;
+let intelligentPrefetcher: ReturnType<typeof initializeOptimizedPrefetcher> | null = null;
+let realtimeSync: ReturnType<typeof initializeRealtimeSync> | null = null;
 
 // Initialize state persistence for complete offline capability
 const statePersistenceManager = initializeStatePersistence(queryClient);
@@ -93,7 +103,7 @@ if (typeof window !== 'undefined') {
   realtimeSync = initializeRealtimeSync(queryClient);
   realtimeSync.initialize().then(() => {
     console.log('✅ Realtime cache sync active');
-  }).catch((error: any) => {
+  }).catch((error: unknown) => {
     console.warn('⚠️ Realtime sync initialization failed (will continue without auto-invalidation):', error);
   });
 
@@ -142,8 +152,8 @@ if (typeof window !== 'undefined') {
         });
 
         // Also log React Query cache stats
-        if (typeof (window as any).getCacheStats === 'function') {
-          (window as any).getCacheStats();
+        if (typeof window.getCacheStats === 'function') {
+          window.getCacheStats();
         }
       } catch (error) {
         console.warn('⚠️ Performance monitoring error:', error);
@@ -163,6 +173,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <SessionTimeoutWarning />
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -231,6 +242,14 @@ const App = () => (
                     </RBACProtectedRoute>
                   }
                 />
+                <Route
+                  path="/properties/:propertyId/view"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.PROPERTIES_VIEW}>
+                      <PropertyView />
+                    </RBACProtectedRoute>
+                  }
+                />
 
                 {/* Jobs - Both Admin and Ops can access */}
                 <Route
@@ -262,6 +281,16 @@ const App = () => (
                   }
                 />
 
+                {/* Guest Management - Admin and Ops can access */}
+                <Route
+                  path="/guests"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.GUESTS_VIEW}>
+                      <GuestManagement />
+                    </RBACProtectedRoute>
+                  }
+                />
+
                 {/* To-Do List / Tasks - View own or all based on role */}
                 <Route
                   path="/todos"
@@ -280,6 +309,19 @@ const App = () => (
 
                 {/* Notifications - Everyone can access */}
                 <Route path="/notifications" element={<Notifications />} />
+
+                {/* Messages - Everyone can access */}
+                <Route path="/messages" element={<Messages />} />
+
+                {/* Reports - Admin and Ops can access */}
+                <Route
+                  path="/reports"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.REPORTS_VIEW}>
+                      <Reports />
+                    </RBACProtectedRoute>
+                  }
+                />
 
                 {/* Issues & Photos - Both can access */}
                 <Route
@@ -441,26 +483,6 @@ const App = () => (
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.PIPELINE_VIEW}>
                       <ServicePipeline />
-                    </RBACProtectedRoute>
-                  }
-                />
-
-                {/* Finance - Commissions (Admin view with analytics) */}
-                <Route
-                  path="/finance/commissions"
-                  element={
-                    <RBACProtectedRoute permission={PERMISSIONS.COMMISSIONS_VIEW_ALL}>
-                      <CommissionsAnalytics />
-                    </RBACProtectedRoute>
-                  }
-                />
-
-                {/* Finance - My Commissions (Individual staff view) */}
-                <Route
-                  path="/finance/my-commissions"
-                  element={
-                    <RBACProtectedRoute permission={PERMISSIONS.COMMISSIONS_VIEW_OWN}>
-                      <MyCommissions />
                     </RBACProtectedRoute>
                   }
                 />

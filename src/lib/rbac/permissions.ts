@@ -51,6 +51,13 @@ export const PERMISSIONS = {
   BOOKINGS_CANCEL: 'bookings.cancel',
   CALENDAR_EXPORT: 'calendar.export',
 
+  // ========== GUESTS ==========
+  GUESTS_VIEW: 'guests.view',
+  GUESTS_CREATE: 'guests.create',
+  GUESTS_EDIT: 'guests.edit',
+  GUESTS_DELETE: 'guests.delete',
+  GUESTS_EXPORT: 'guests.export',
+
   // ========== TODOS ==========
   TODOS_VIEW_OWN: 'todos.view_own',
   TODOS_VIEW_ALL: 'todos.view_all',
@@ -100,10 +107,6 @@ export const PERMISSIONS = {
   INVOICES_EDIT: 'invoices.edit',
   INVOICES_SEND: 'invoices.send',
 
-  COMMISSIONS_VIEW_ALL: 'commissions.view_all',
-  COMMISSIONS_VIEW_OWN: 'commissions.view_own',
-  COMMISSIONS_MANAGE: 'commissions.manage',
-
   PIPELINE_VIEW: 'pipeline.view',
   PIPELINE_MANAGE: 'pipeline.manage',
 
@@ -119,6 +122,11 @@ export const PERMISSIONS = {
   HIGHLIGHTS_SUGGEST: 'highlights.suggest',
   HIGHLIGHTS_APPROVE: 'highlights.approve',
   HIGHLIGHTS_REMOVE: 'highlights.remove',
+
+  // ========== MESSAGES ==========
+  MESSAGES_VIEW: 'messages.view',
+  MESSAGES_SEND: 'messages.send',
+  MESSAGES_DELETE: 'messages.delete',
 
   // ========== REPORTS ==========
   REPORTS_VIEW: 'reports.view',
@@ -192,6 +200,13 @@ export const ROLES = {
       PERMISSIONS.BOOKINGS_CANCEL, // May need approval workflow
       PERMISSIONS.CALENDAR_EXPORT,
 
+      // ========== GUESTS - Full CRUD except delete ==========
+      PERMISSIONS.GUESTS_VIEW,
+      PERMISSIONS.GUESTS_CREATE,
+      PERMISSIONS.GUESTS_EDIT,
+      PERMISSIONS.GUESTS_EXPORT,
+      // NOT: GUESTS_DELETE (admin only)
+
       // ========== TODOS - Full access for OPS ==========
       PERMISSIONS.TODOS_VIEW_OWN,
       PERMISSIONS.TODOS_VIEW_ALL, // OPS can view all tasks
@@ -241,13 +256,9 @@ export const ROLES = {
       PERMISSIONS.INVOICES_EDIT,
       PERMISSIONS.INVOICES_SEND,
 
-      // Own commissions only
-      PERMISSIONS.COMMISSIONS_VIEW_OWN,
-
       // Pipeline - View only
       PERMISSIONS.PIPELINE_VIEW,
       // NOT: PIPELINE_MANAGE (admin only)
-      // NOT: COMMISSIONS_VIEW_ALL, COMMISSIONS_MANAGE (admin only)
 
       // ========== MEDIA - Full access ==========
       PERMISSIONS.MEDIA_VIEW,
@@ -260,6 +271,11 @@ export const ROLES = {
       PERMISSIONS.HIGHLIGHTS_VIEW,
       PERMISSIONS.HIGHLIGHTS_SUGGEST,
       // NOT: HIGHLIGHTS_APPROVE, HIGHLIGHTS_REMOVE
+
+      // ========== MESSAGES - Full access ==========
+      PERMISSIONS.MESSAGES_VIEW,
+      PERMISSIONS.MESSAGES_SEND,
+      // NOT: MESSAGES_DELETE (admin only)
 
       // ========== REPORTS - View only ==========
       PERMISSIONS.REPORTS_VIEW,
@@ -285,6 +301,9 @@ export const ROLES = {
       // Can view bookings related to their jobs
       PERMISSIONS.BOOKINGS_VIEW,
 
+      // Can view guest information (limited)
+      PERMISSIONS.GUESTS_VIEW,
+
       // Can view their own tasks
       PERMISSIONS.TODOS_VIEW_OWN,
       PERMISSIONS.TODOS_EDIT_OWN,
@@ -299,8 +318,9 @@ export const ROLES = {
       PERMISSIONS.MEDIA_UPLOAD,
       PERMISSIONS.MEDIA_DOWNLOAD,
 
-      // View own commission
-      PERMISSIONS.COMMISSIONS_VIEW_OWN,
+      // Can send/view messages
+      PERMISSIONS.MESSAGES_VIEW,
+      PERMISSIONS.MESSAGES_SEND,
     ],
   },
 
@@ -331,6 +351,10 @@ export const ROLES = {
       // View financial data for their properties
       PERMISSIONS.FINANCE_VIEW,
       PERMISSIONS.INVOICES_VIEW,
+
+      // Can send/view messages
+      PERMISSIONS.MESSAGES_VIEW,
+      PERMISSIONS.MESSAGES_SEND,
     ],
   },
 } as const;
@@ -382,6 +406,7 @@ export const PERMISSION_CATEGORIES = {
   FINANCE: 'Financial Management',
   MEDIA: 'Media Gallery',
   HIGHLIGHTS: 'Highlights',
+  MESSAGES: 'Internal Messages',
   REPORTS: 'Reports',
   SYSTEM: 'System Administration',
 } as const;

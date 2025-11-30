@@ -14,6 +14,7 @@ import {
   Image,
   Menu,
   Users,
+  UserSquare2,
   Wrench,
   Zap,
   Activity,
@@ -28,6 +29,8 @@ import {
   KeyRound,
   MessageSquare,
   LogIn,
+  Mail,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import {
@@ -60,12 +63,14 @@ const mainMenuItems = [
   { titleKey: "sidebar.dashboard", url: "/", icon: LayoutDashboard, permission: null }, // Everyone can access
   { titleKey: "sidebar.bookings", url: "/bookings", icon: CalendarDays, permission: PERMISSIONS.BOOKINGS_VIEW },
   { titleKey: "sidebar.calendar", url: "/calendar", icon: Calendar, permission: PERMISSIONS.BOOKINGS_VIEW },
+  { titleKey: "sidebar.guests", url: "/guests", icon: UserSquare2, permission: PERMISSIONS.GUESTS_VIEW },
   { titleKey: "sidebar.properties", url: "/properties", icon: Building, permission: PERMISSIONS.PROPERTIES_VIEW },
   { titleKey: "sidebar.activeJobs", url: "/jobs", icon: BriefcaseIcon, permission: PERMISSIONS.JOBS_VIEW },
   { titleKey: "sidebar.todoList", url: "/todos", icon: CheckSquare, permission: PERMISSIONS.TODOS_VIEW_OWN },
 
   // Weekly Operations (Medium Frequency)
   { titleKey: "sidebar.issuesPhotos", url: "/issues", icon: AlertTriangle, permission: PERMISSIONS.ISSUES_VIEW },
+  { titleKey: "sidebar.messages", url: "/messages", icon: Mail, permission: PERMISSIONS.MESSAGES_VIEW },
   { titleKey: "sidebar.checkInOut", url: "/check-in-out", icon: LogIn, permission: PERMISSIONS.PROPERTIES_VIEW },
   { titleKey: "sidebar.checklistTemplates", url: "/checklist-templates", icon: CheckSquare, permission: PERMISSIONS.PROPERTIES_VIEW },
   { titleKey: "sidebar.providers", url: "/providers", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
@@ -89,9 +94,9 @@ const documentMenuItems = [
 
 const financeMenuItems = [
   // Daily/Weekly Financial Operations
-  { titleKey: "sidebar.contracts", url: "/contracts", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
   { titleKey: "sidebar.invoices", url: "/invoices", icon: Receipt, permission: PERMISSIONS.FINANCE_VIEW },
   { titleKey: "sidebar.expenses", url: "/expenses", icon: DollarSign, permission: PERMISSIONS.FINANCE_VIEW },
+  { titleKey: "sidebar.contracts", url: "/contracts", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
   { titleKey: "sidebar.billTemplates", url: "/bill-templates", icon: LayoutGrid, permission: PERMISSIONS.FINANCE_VIEW },
 
   // Periodic Reports & Analysis
@@ -99,8 +104,7 @@ const financeMenuItems = [
   { titleKey: "sidebar.financialDashboard", url: "/financial-dashboard", icon: BarChart3, permission: PERMISSIONS.FINANCE_VIEW },
   { titleKey: "sidebar.ownerStatement", url: "/owner-statement", icon: FileBarChart, permission: PERMISSIONS.FINANCE_VIEW },
   { titleKey: "sidebar.serviceDocuments", url: "/finance/pipeline", icon: DollarSign, permission: PERMISSIONS.PIPELINE_VIEW },
-  { titleKey: "sidebar.commissions", url: "/finance/commissions", icon: BarChart3, permission: PERMISSIONS.COMMISSIONS_VIEW_ALL },
-  { titleKey: "sidebar.myCommissions", url: "/finance/my-commissions", icon: DollarSign, permission: PERMISSIONS.COMMISSIONS_VIEW_OWN },
+  { titleKey: "sidebar.reports", url: "/reports", icon: FileSpreadsheet, permission: PERMISSIONS.REPORTS_VIEW },
 ];
 
 const mediaMenuItems = [
@@ -133,29 +137,30 @@ export function AppSidebar() {
   };
 
   // Filter menu items based on permissions
+  // Note: hasPermission is stable and already depends on userRole internally
   const visibleMainMenuItems = useMemo(
     () => mainMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
-    [hasPermission, userRole]
+    [hasPermission]
   );
 
   const visibleDocumentMenuItems = useMemo(
     () => documentMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
-    [hasPermission, userRole]
+    [hasPermission]
   );
 
   const visibleFinanceMenuItems = useMemo(
     () => financeMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
-    [hasPermission, userRole]
+    [hasPermission]
   );
 
   const visibleMediaMenuItems = useMemo(
     () => mediaMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
-    [hasPermission, userRole]
+    [hasPermission]
   );
 
   const visibleSupportMenuItems = useMemo(
     () => supportMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
-    [hasPermission, userRole]
+    [hasPermission]
   );
 
   // Debug logging - after filtering

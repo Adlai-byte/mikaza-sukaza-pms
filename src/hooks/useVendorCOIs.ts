@@ -21,7 +21,8 @@ export function useVendorCOIs(options: UseVendorCOIsOptions = {}) {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['vendor-cois', options],
+    // Serialize options to ensure stable cache key (object references break caching)
+    queryKey: ['vendor-cois', JSON.stringify(options)],
     queryFn: async () => {
       let query = supabase
         .from('vendor_cois')
@@ -79,9 +80,12 @@ export function useVendorCOIs(options: UseVendorCOIsOptions = {}) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendor-cois'] });
-      queryClient.invalidateQueries({ queryKey: ['coi-dashboard-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['expiring-cois'] });
+      // Use refetchType: 'all' to ensure all views refresh
+      queryClient.invalidateQueries({ queryKey: ['vendor-cois'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['coi-dashboard-stats'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['expiring-cois'], refetchType: 'all' });
+      // Also invalidate provider queries since COIs relate to providers
+      queryClient.invalidateQueries({ queryKey: ['providers'], refetchType: 'all' });
       toast({
         title: 'COI Added',
         description: 'Vendor certificate of insurance has been successfully added.',
@@ -117,14 +121,17 @@ export function useVendorCOIs(options: UseVendorCOIsOptions = {}) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendor-cois'] });
-      queryClient.invalidateQueries({ queryKey: ['coi-dashboard-stats'] });
+      // Use refetchType: 'all' to ensure all views refresh
+      queryClient.invalidateQueries({ queryKey: ['vendor-cois'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['coi-dashboard-stats'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['expiring-cois'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['providers'], refetchType: 'all' });
       toast({
         title: 'COI Updated',
         description: 'Vendor certificate of insurance has been updated.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Error updating vendor COI:', error);
       toast({
         title: 'Error',
@@ -145,14 +152,17 @@ export function useVendorCOIs(options: UseVendorCOIsOptions = {}) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendor-cois'] });
-      queryClient.invalidateQueries({ queryKey: ['coi-dashboard-stats'] });
+      // Use refetchType: 'all' to ensure all views refresh
+      queryClient.invalidateQueries({ queryKey: ['vendor-cois'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['coi-dashboard-stats'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['expiring-cois'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['providers'], refetchType: 'all' });
       toast({
         title: 'COI Deleted',
         description: 'Vendor certificate of insurance has been removed.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Error deleting vendor COI:', error);
       toast({
         title: 'Error',
@@ -181,7 +191,9 @@ export function useVendorCOIs(options: UseVendorCOIsOptions = {}) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendor-cois'] });
+      // Use refetchType: 'all' to ensure all views refresh
+      queryClient.invalidateQueries({ queryKey: ['vendor-cois'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['coi-dashboard-stats'], refetchType: 'all' });
       toast({
         title: 'COI Verified',
         description: 'Certificate of insurance has been verified.',

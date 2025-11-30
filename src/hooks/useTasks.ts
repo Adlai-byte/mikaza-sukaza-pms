@@ -244,10 +244,14 @@ const deleteChecklistItem = async (itemId: string): Promise<{ itemId: string; it
 
 // Hooks
 export function useTasks(filters?: TaskFilters) {
-  const { data: tasks = [], isLoading, error, refetch } = useQuery({
+  const { data: tasks = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: taskKeys.list(filters),
     queryFn: () => fetchTasks(filters),
-    staleTime: 30 * 1000, // 30 seconds
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   // Real-time subscription
@@ -264,7 +268,7 @@ export function useTasks(filters?: TaskFilters) {
           table: 'tasks',
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+          queryClient.invalidateQueries({ queryKey: taskKeys.lists(), refetchType: 'all' });
         }
       )
       .subscribe();
@@ -277,38 +281,49 @@ export function useTasks(filters?: TaskFilters) {
   return {
     tasks,
     loading: isLoading,
+    isFetching,
     error,
     refetch,
   };
 }
 
 export function useTask(taskId: string, options?: Omit<UseQueryOptions<Task>, 'queryKey' | 'queryFn'>) {
-  const { data: task, isLoading, error } = useQuery({
+  const { data: task, isLoading, error, isFetching } = useQuery({
     queryKey: taskKeys.detail(taskId),
     queryFn: () => fetchTask(taskId),
     enabled: !!taskId,
-    staleTime: 30 * 1000,
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
     ...options,
   });
 
   return {
     task,
     loading: isLoading,
+    isFetching,
     error,
   };
 }
 
 export function useTaskChecklists(taskId: string) {
-  const { data: checklists = [], isLoading, error } = useQuery({
+  const { data: checklists = [], isLoading, error, isFetching } = useQuery({
     queryKey: taskKeys.checklists(taskId),
     queryFn: () => fetchTaskChecklists(taskId),
     enabled: !!taskId,
-    staleTime: 30 * 1000,
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   return {
     checklists,
     loading: isLoading,
+    isFetching,
     error,
   };
 }
@@ -321,7 +336,17 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: (taskData: TaskInsert) => createTask(taskData, user?.id || ''),
     onSuccess: async (newTask) => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists(), refetchType: 'all' });
+      // Cross-entity: invalidate property detail since tasks relate to properties
+      if (newTask.property_id) {
+        queryClient.invalidateQueries({ queryKey: ['properties', 'detail', newTask.property_id], refetchType: 'all' });
+      }
+      // Cross-entity: invalidate jobs if this task is linked to a job
+      if ((newTask as any).job_id) {
+        queryClient.invalidateQueries({ queryKey: ['jobs', 'detail', (newTask as any).job_id], refetchType: 'all' });
+        queryClient.invalidateQueries({ queryKey: ['jobs', 'list'], refetchType: 'all' });
+      }
+      queryClient.invalidateQueries({ queryKey: ['notifications'], refetchType: 'all' });
 
       // Create notification for assigned user
       if (newTask.assigned_to && newTask.created_by && newTask.assigned_to !== newTask.created_by) {
@@ -479,9 +504,16 @@ export function useUpdateTask() {
 
       return updatedTask;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(variables.taskId) });
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(variables.taskId), refetchType: 'all' });
+      // Cross-entity: jobs list already invalidated in mutationFn when job_id exists
+      queryClient.invalidateQueries({ queryKey: ['jobs', 'list'], refetchType: 'all' });
+      // Cross-entity: invalidate property detail since tasks relate to properties
+      if (data.property_id) {
+        queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
+      }
+      queryClient.invalidateQueries({ queryKey: ['notifications'], refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Task updated successfully',
@@ -516,7 +548,13 @@ export function useDeleteTask() {
         property_id: task?.property_id,
       });
 
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists(), refetchType: 'all' });
+      // Cross-entity: invalidate property detail since tasks relate to properties
+      if (task?.property_id) {
+        queryClient.invalidateQueries({ queryKey: ['properties', 'detail', task.property_id], refetchType: 'all' });
+      }
+      // Cross-entity: invalidate jobs
+      queryClient.invalidateQueries({ queryKey: ['jobs', 'list'], refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Task deleted successfully',
@@ -540,7 +578,9 @@ export function useBulkUpdateTasks() {
     mutationFn: ({ taskIds, updates }: { taskIds: string[]; updates: Partial<TaskInsert> }) =>
       bulkUpdateTasks(taskIds, updates),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists(), refetchType: 'all' });
+      // Cross-entity: invalidate jobs when tasks are bulk updated
+      queryClient.invalidateQueries({ queryKey: ['jobs', 'list'], refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Tasks updated successfully',
@@ -564,8 +604,8 @@ export function useCreateChecklistItem() {
   return useMutation({
     mutationFn: createChecklistItem,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.checklists(data.task_id) });
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(data.task_id) });
+      queryClient.invalidateQueries({ queryKey: taskKeys.checklists(data.task_id), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(data.task_id), refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Checklist item added',
@@ -587,8 +627,8 @@ export function useUpdateChecklistItem() {
   return useMutation({
     mutationFn: updateChecklistItem,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.checklists(data.task_id) });
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(data.task_id) });
+      queryClient.invalidateQueries({ queryKey: taskKeys.checklists(data.task_id), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(data.task_id), refetchType: 'all' });
     },
   });
 }
@@ -600,8 +640,8 @@ export function useToggleChecklistItem() {
     mutationFn: ({ itemId, isCompleted }: { itemId: string; isCompleted: boolean }) =>
       toggleChecklistItem(itemId, isCompleted),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.checklists(data.task_id) });
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(data.task_id) });
+      queryClient.invalidateQueries({ queryKey: taskKeys.checklists(data.task_id), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(data.task_id), refetchType: 'all' });
     },
   });
 }
@@ -623,7 +663,7 @@ export function useDeleteChecklistItem() {
       });
 
       // Invalidate all checklist queries
-      queryClient.invalidateQueries({ queryKey: taskKeys.all });
+      queryClient.invalidateQueries({ queryKey: taskKeys.all, refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Checklist item removed',

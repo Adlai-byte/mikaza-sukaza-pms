@@ -91,9 +91,23 @@ export function useCreatePropertyHighlight() {
       if (error) throw error;
       return data as PropertyHighlight;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['property_highlights'] });
-      queryClient.invalidateQueries({ queryKey: ['property_highlight', data.highlight_id] });
+    onSuccess: async (data) => {
+      // Use 'all' to refresh all queries regardless of active state
+      await queryClient.invalidateQueries({
+        queryKey: ['property_highlights'],
+        refetchType: 'all',
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['property_highlight', data.highlight_id],
+        refetchType: 'all',
+      });
+      // Also invalidate property detail if it has highlights
+      if (data.property_id) {
+        await queryClient.invalidateQueries({
+          queryKey: ['properties', 'detail', data.property_id],
+          refetchType: 'all',
+        });
+      }
 
       logActivity('highlight_created', {
         highlight_id: data.highlight_id,
@@ -147,9 +161,23 @@ export function useUpdatePropertyHighlight() {
       if (error) throw error;
       return data as PropertyHighlight;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['property_highlights'] });
-      queryClient.invalidateQueries({ queryKey: ['property_highlight', data.highlight_id] });
+    onSuccess: async (data) => {
+      // Use 'all' to refresh all queries regardless of active state
+      await queryClient.invalidateQueries({
+        queryKey: ['property_highlights'],
+        refetchType: 'all',
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['property_highlight', data.highlight_id],
+        refetchType: 'all',
+      });
+      // Also invalidate property detail if it has highlights
+      if (data.property_id) {
+        await queryClient.invalidateQueries({
+          queryKey: ['properties', 'detail', data.property_id],
+          refetchType: 'all',
+        });
+      }
 
       logActivity('highlight_updated', {
         highlight_id: data.highlight_id,
@@ -198,9 +226,23 @@ export function useDeletePropertyHighlight() {
       if (error) throw error;
       return { highlightId, highlight };
     },
-    onSuccess: ({ highlightId, highlight }) => {
-      queryClient.invalidateQueries({ queryKey: ['property_highlights'] });
-      queryClient.invalidateQueries({ queryKey: ['property_highlight', highlightId] });
+    onSuccess: async ({ highlightId, highlight }) => {
+      // Use 'all' to refresh all queries regardless of active state
+      await queryClient.invalidateQueries({
+        queryKey: ['property_highlights'],
+        refetchType: 'all',
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['property_highlight', highlightId],
+        refetchType: 'all',
+      });
+      // Also invalidate property detail if highlight had a property
+      if (highlight?.property_id) {
+        await queryClient.invalidateQueries({
+          queryKey: ['properties', 'detail', highlight.property_id],
+          refetchType: 'all',
+        });
+      }
 
       logActivity('highlight_deleted', {
         highlight_id: highlightId,
@@ -254,9 +296,15 @@ export function useToggleHighlightStatus() {
       if (error) throw error;
       return data as PropertyHighlight;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['property_highlights'] });
-      queryClient.invalidateQueries({ queryKey: ['property_highlight', data.highlight_id] });
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['property_highlights'],
+        refetchType: 'active',
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['property_highlight', data.highlight_id],
+        refetchType: 'active',
+      });
 
       logActivity('highlight_status_changed', {
         highlight_id: data.highlight_id,
@@ -307,8 +355,11 @@ export function useReorderHighlights() {
 
       return highlights;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['property_highlights'] });
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['property_highlights'],
+        refetchType: 'active',
+      });
 
       logActivity('highlights_reordered', {
         count: data.length,
@@ -349,8 +400,11 @@ export function useBulkDeleteHighlights() {
       if (error) throw error;
       return highlightIds;
     },
-    onSuccess: (highlightIds) => {
-      queryClient.invalidateQueries({ queryKey: ['property_highlights'] });
+    onSuccess: async (highlightIds) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['property_highlights'],
+        refetchType: 'active',
+      });
 
       logActivity('highlights_bulk_deleted', {
         count: highlightIds.length,

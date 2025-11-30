@@ -99,10 +99,11 @@ export function useProviders(category?: 'service' | 'utility') {
   } = useQuery({
     queryKey: providerKeys.list(category ? { category } : undefined),
     queryFn: () => fetchProviders(category),
-    staleTime: 0, // No caching
-    gcTime: 0,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always', // Refetch but use cache while loading
+    refetchOnWindowFocus: false, // Realtime handles updates
   });
 
   // Create provider mutation
@@ -348,11 +349,12 @@ export function useProviderDetail(providerId: string | undefined) {
     queryKey: providerKeys.detail(providerId || ''),
     queryFn: () => fetchProviderDetail(providerId!),
     enabled: !!providerId,
-    staleTime: 0,
-    gcTime: 0,
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
     retry: 2,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   return {

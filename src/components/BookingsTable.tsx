@@ -466,8 +466,9 @@ export function BookingsTable({
                       <TableCell>
                         <div className="flex flex-col gap-2">
                           {getInvoiceStatusBadge(booking)}
-                          {/* Show prominent "Generate Invoice" button if booking is confirmed and no invoice exists */}
-                          {booking.booking_status === 'confirmed' && !(booking as any).invoice_id && (
+                          {/* Show prominent "Generate Invoice" button for bookings without invoice (except cancelled/blocked) */}
+                          {!(booking as any).invoice_id &&
+                           !['cancelled', 'blocked'].includes(booking.booking_status || '') && (
                             <Button
                               size="sm"
                               variant="outline"

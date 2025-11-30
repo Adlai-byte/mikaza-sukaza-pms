@@ -74,9 +74,10 @@ export function useUsersOptimized() {
   } = useQuery({
     queryKey: userKeys.lists(),
     queryFn: fetchUsers,
-    staleTime: 0, // Disabled caching - always fetch fresh data after RLS fix
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: CACHE_CONFIG.LIST.gcTime, // 2 hours
-    refetchOnMount: true,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: false,
     retry: 2,
   });
@@ -179,7 +180,7 @@ export function useUsersOptimized() {
       return { rollback: () => queryClient.setQueryData(userKeys.lists(), previousUsers) };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: userKeys.lists(), refetchType: 'all' });
       toast({
         title: "Success",
         description: "User created successfully",
@@ -246,8 +247,9 @@ export function useUsersOptimized() {
     },
     onSuccess: async () => {
       // Invalidate and immediately refetch to ensure fresh data
-      await queryClient.invalidateQueries({ queryKey: userKeys.lists() });
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: userKeys.lists(), refetchType: 'all' });
+      // Cross-entity: invalidate activity logs since user data changed
+      await queryClient.invalidateQueries({ queryKey: ['activity_logs'], refetchType: 'all' });
       toast({
         title: "Success",
         description: "User updated successfully",
@@ -306,8 +308,9 @@ export function useUsersOptimized() {
     },
     onSuccess: async () => {
       // Invalidate and immediately refetch to ensure fresh data
-      await queryClient.invalidateQueries({ queryKey: userKeys.lists() });
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: userKeys.lists(), refetchType: 'all' });
+      // Cross-entity: invalidate activity logs since user was deleted
+      await queryClient.invalidateQueries({ queryKey: ['activity_logs'], refetchType: 'all' });
       toast({
         title: "Success",
         description: "User deleted successfully",

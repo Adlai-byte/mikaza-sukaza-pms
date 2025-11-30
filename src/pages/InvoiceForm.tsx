@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Download, Calendar, Send, User, DollarSign, MessageSquare, StickyNote, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Download, Calendar, Send, User, DollarSign, MessageSquare, StickyNote, Sparkles, Loader2, UserPlus, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,12 +27,13 @@ import { useCreateInvoice, useUpdateInvoice, useInvoice, invoiceKeys } from '@/h
 import { useBookingDetail } from '@/hooks/useBookings';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useUsers } from '@/hooks/useUsers';
-import { useInvoiceTips, useCreateInvoiceTip, useDeleteInvoiceTip } from '@/hooks/useInvoiceTips';
+import { useGuests } from '@/hooks/useGuests';
 import { useQueryClient } from '@tanstack/react-query';
 import { useActivityLogs } from '@/hooks/useActivityLogs';
-import { InvoiceInsert, InvoiceLineItemInsert, BillTemplateWithItems } from '@/lib/schemas';
+import { InvoiceInsert, InvoiceLineItemInsert, BillTemplateWithItems, Guest } from '@/lib/schemas';
 import BillTemplateSelector from '@/components/BillTemplateSelector';
 import { SendInvoiceEmailDialog } from '@/components/SendInvoiceEmailDialog';
+import { GuestDialog } from '@/components/GuestDialog';
 import { differenceInDays } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -63,30 +64,24 @@ export default function InvoiceForm() {
   const { logActivity } = useActivityLogs();
   const { properties } = usePropertiesOptimized();
   const { users } = useUsers();
+  const { data: guests, isLoading: loadingGuests } = useGuests();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
   const { invoice, loading } = useInvoice(invoiceId || '');
   const { booking, loading: bookingLoading } = useBookingDetail(bookingId);
-  const { tips: existingTips } = useInvoiceTips(invoiceId ? { invoice_id: invoiceId } : undefined);
-  const createTip = useCreateInvoiceTip();
-  const deleteTip = useDeleteInvoiceTip();
 
   const [lineItems, setLineItems] = useState<InvoiceLineItemInsert[]>([]);
   const [nextLineNumber, setNextLineNumber] = useState(1);
   const [linkedBookingId, setLinkedBookingId] = useState<string | undefined>(bookingId);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Tip form state
-  const [tipRecipient, setTipRecipient] = useState('');
-  const [tipAmount, setTipAmount] = useState('');
-  const [tipReason, setTipReason] = useState('');
-  const [tipNotes, setTipNotes] = useState('');
+  const [showCreateGuestDialog, setShowCreateGuestDialog] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
       property_id: '',
+      guest_id: null,
       guest_name: '',
       guest_email: '',
       guest_phone: '',
@@ -99,6 +94,23 @@ export default function InvoiceForm() {
       payment_method: '',
     },
   });
+
+  // Handle guest selection
+  const handleGuestSelect = (guestId: string) => {
+    if (guestId === 'create-new') {
+      setShowCreateGuestDialog(true);
+      return;
+    }
+
+    const selectedGuest = guests?.find((g: Guest) => g.guest_id === guestId);
+    if (selectedGuest) {
+      form.setValue('guest_id', selectedGuest.guest_id!);
+      form.setValue('guest_name', `${selectedGuest.first_name} ${selectedGuest.last_name}`);
+      form.setValue('guest_email', selectedGuest.email);
+      form.setValue('guest_phone', selectedGuest.phone_primary || '');
+      form.setValue('guest_address', selectedGuest.address || '');
+    }
+  };
 
   // Load invoice data if editing
   useEffect(() => {
@@ -114,6 +126,7 @@ export default function InvoiceForm() {
 
       const formData = {
         property_id: invoice.property_id,
+        guest_id: invoice.guest_id || null,
         guest_name: invoice.guest_name,
         guest_email: invoice.guest_email || '',
         guest_phone: invoice.guest_phone || '',
@@ -171,6 +184,7 @@ export default function InvoiceForm() {
       // Auto-populate form fields
       form.reset({
         property_id: booking.property_id,
+        guest_id: booking.guest_id || null,
         guest_name: booking.guest_name,
         guest_email: booking.guest_email || '',
         guest_phone: booking.guest_phone || '',
@@ -341,60 +355,6 @@ export default function InvoiceForm() {
     }
 
     setLineItems(updated);
-  };
-
-  // Tip handlers
-  const handleAddTip = () => {
-    if (!invoiceId) {
-      toast({
-        title: t('invoices.saveInvoiceFirst'),
-        description: t('invoices.saveInvoiceFirstDesc'),
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (!tipRecipient || !tipAmount) {
-      toast({
-        title: t('invoices.missingInformation'),
-        description: t('invoices.selectStaffAndAmount'),
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const amount = parseFloat(tipAmount);
-    if (isNaN(amount) || amount <= 0) {
-      toast({
-        title: t('invoices.invalidTipAmount'),
-        description: t('invoices.enterValidTipAmount'),
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    createTip.mutate({
-      invoice_id: invoiceId,
-      recipient_user_id: tipRecipient,
-      tip_amount: amount,
-      tip_reason: tipReason || undefined,
-      guest_notes: tipNotes || undefined,
-      status: 'pending',
-    }, {
-      onSuccess: () => {
-        // Reset form
-        setTipRecipient('');
-        setTipAmount('');
-        setTipReason('');
-        setTipNotes('');
-      },
-    });
-  };
-
-  const handleRemoveTip = (tipId: string) => {
-    if (confirm(t('invoices.confirmRemoveTip'))) {
-      deleteTip.mutate(tipId);
-    }
   };
 
   const calculateTotals = () => {
@@ -701,33 +661,79 @@ export default function InvoiceForm() {
 
             <Separator />
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="guest_name">{t('invoices.guestName')} *</Label>
-                <Input
-                  {...form.register('guest_name')}
-                  placeholder={t('invoices.guestNamePlaceholder')}
-                />
+            {/* Guest Selection */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="guest_id">{t('invoices.selectGuest')} *</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCreateGuestDialog(true)}
+                  disabled={loadingGuests}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  {t('invoices.createNewGuest')}
+                </Button>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="guest_email">{t('invoices.guestEmail')}</Label>
-                <Input
-                  {...form.register('guest_email')}
-                  type="email"
-                  placeholder={t('invoices.guestEmailPlaceholder')}
-                />
-              </div>
-            </div>
+              <Select
+                value={form.watch('guest_id') || ''}
+                onValueChange={handleGuestSelect}
+                disabled={loadingGuests}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('invoices.chooseGuest')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {guests?.map((guest: Guest) => (
+                    <SelectItem key={guest.guest_id} value={guest.guest_id!}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {guest.first_name} {guest.last_name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{guest.email}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="guest_phone">{t('invoices.guestPhone')}</Label>
-                <Input
-                  {...form.register('guest_phone')}
-                  placeholder={t('invoices.guestPhonePlaceholder')}
-                />
-              </div>
+              {/* Display selected guest info */}
+              {form.watch('guest_id') && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-3">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-blue-900">{form.watch('guest_name')}</span>
+                      </div>
+                      {form.watch('guest_email') && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-blue-600" />
+                          <a
+                            href={`mailto:${form.watch('guest_email')}`}
+                            className="text-blue-700 hover:underline"
+                          >
+                            {form.watch('guest_email')}
+                          </a>
+                        </div>
+                      )}
+                      {form.watch('guest_phone') && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-blue-600" />
+                          <a
+                            href={`tel:${form.watch('guest_phone')}`}
+                            className="text-blue-700 hover:underline"
+                          >
+                            {form.watch('guest_phone')}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="payment_method">{t('invoices.paymentMethod')}</Label>
@@ -736,15 +742,6 @@ export default function InvoiceForm() {
                   placeholder={t('invoices.paymentMethodPlaceholder')}
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="guest_address">{t('invoices.guestAddress')}</Label>
-              <Textarea
-                {...form.register('guest_address')}
-                placeholder={t('invoices.guestAddressPlaceholder')}
-                rows={2}
-              />
             </div>
 
             <Separator />
@@ -910,222 +907,6 @@ export default function InvoiceForm() {
           </CardContent>
         </Card>
 
-        {/* Tips for Staff */}
-        {isEditing && (
-          <Card className="border-2 border-primary/10 shadow-sm">
-            <CardHeader className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border-b">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">{t('invoices.tipsForStaff')}</CardTitle>
-                  <CardDescription className="mt-1">
-                    {t('invoices.tipsForStaffDesc')}
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-6">
-                {/* Warning when invoice is not saved */}
-                {!invoiceId && (
-                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 text-yellow-900 px-4 py-3 rounded-lg flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-yellow-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-lg">💡</span>
-                    </div>
-                    <p className="text-sm font-medium pt-1">
-                      {t('invoices.saveInvoiceBeforeTips', 'Please save this invoice first before adding tips')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Add Tip Form */}
-                <div className="bg-gradient-to-br from-slate-50 to-blue-50 border-2 border-slate-200 rounded-xl p-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    {/* Staff Member */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-sm font-semibold">
-                        <User className="h-4 w-4 text-blue-600" />
-                        {t('invoices.staffMember')}
-                      </Label>
-                      <Select value={tipRecipient} onValueChange={setTipRecipient}>
-                        <SelectTrigger className="bg-white border-slate-300 hover:border-blue-400 transition-colors">
-                          <SelectValue placeholder={t('invoices.selectStaff')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {users
-                            .filter(u => ['ops', 'admin'].includes(u.user_type || ''))
-                            .map((user) => (
-                              <SelectItem key={user.user_id} value={user.user_id!}>
-                                {formatUserDisplay(user)}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Tip Amount */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-sm font-semibold">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        {t('invoices.tipAmount')}
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        value={tipAmount}
-                        onChange={(e) => setTipAmount(e.target.value)}
-                        className="bg-white border-slate-300 hover:border-green-400 transition-colors"
-                      />
-                    </div>
-
-                    {/* Reason */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-sm font-semibold">
-                        <MessageSquare className="h-4 w-4 text-purple-600" />
-                        {t('invoices.reasonOptional')}
-                      </Label>
-                      <Select
-                        value={tipReason}
-                        onValueChange={setTipReason}
-                      >
-                        <SelectTrigger className="bg-white border-slate-300 hover:border-purple-400 transition-colors">
-                          <SelectValue placeholder={t('invoices.selectOrTypeReason')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Excellent cleaning service">{t('invoices.tipReasons.excellentCleaning')}</SelectItem>
-                          <SelectItem value="Outstanding guest communication">{t('invoices.tipReasons.outstandingCommunication')}</SelectItem>
-                          <SelectItem value="Quick response time">{t('invoices.tipReasons.quickResponse')}</SelectItem>
-                          <SelectItem value="Professional maintenance work">{t('invoices.tipReasons.professionalMaintenance')}</SelectItem>
-                          <SelectItem value="Exceptional hospitality">{t('invoices.tipReasons.exceptionalHospitality')}</SelectItem>
-                          <SelectItem value="Property walkthrough service">{t('invoices.tipReasons.propertyWalkthrough')}</SelectItem>
-                          <SelectItem value="Guest amenities setup">{t('invoices.tipReasons.guestAmenities')}</SelectItem>
-                          <SelectItem value="Emergency response">{t('invoices.tipReasons.emergencyResponse')}</SelectItem>
-                          <SelectItem value="Above and beyond service">{t('invoices.tipReasons.aboveAndBeyond')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        placeholder={t('invoices.orTypeCustomReason')}
-                        value={tipReason}
-                        onChange={(e) => setTipReason(e.target.value)}
-                        className="mt-2 bg-white border-slate-300 hover:border-purple-400 transition-colors"
-                      />
-                    </div>
-
-                    {/* Notes */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-sm font-semibold">
-                        <StickyNote className="h-4 w-4 text-amber-600" />
-                        {t('invoices.notesOptional')}
-                      </Label>
-                      <Input
-                        placeholder={t('invoices.additionalNotes')}
-                        value={tipNotes}
-                        onChange={(e) => setTipNotes(e.target.value)}
-                        className="bg-white border-slate-300 hover:border-amber-400 transition-colors"
-                      />
-                    </div>
-
-                    {/* Add Button */}
-                    <div className="space-y-2 flex items-end">
-                      <Button
-                        type="button"
-                        onClick={handleAddTip}
-                        disabled={!invoiceId || !tipRecipient || !tipAmount}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md"
-                        title={!invoiceId ? 'Save invoice first to add tips' : ''}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t('invoices.addTip')}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Existing Tips List */}
-                {existingTips && existingTips.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-purple-600" />
-                      <Label className="text-base font-semibold">{t('invoices.addedTips')}</Label>
-                    </div>
-                    <div className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gradient-to-r from-slate-50 to-blue-50 border-b-2 border-slate-200">
-                            <TableHead className="font-semibold">{t('invoices.staffMember')}</TableHead>
-                            <TableHead className="font-semibold">{t('invoices.amount')}</TableHead>
-                            <TableHead className="font-semibold">{t('invoices.reason')}</TableHead>
-                            <TableHead className="font-semibold">Status</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {existingTips.map((tip) => (
-                            <TableRow key={tip.tip_id} className="hover:bg-blue-50/50 transition-colors">
-                              <TableCell className="font-medium">
-                                <div className="flex items-center gap-2">
-                                  <User className="h-4 w-4 text-blue-600" />
-                                  {formatUserDisplay(tip.recipient)}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1 font-semibold text-green-700">
-                                  <DollarSign className="h-4 w-4" />
-                                  {tip.tip_amount.toFixed(2)}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {tip.tip_reason || '-'}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={tip.status === 'paid' ? 'default' : 'secondary'}
-                                  className={
-                                    tip.status === 'paid'
-                                      ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                                      : tip.status === 'pending'
-                                      ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                                      : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
-                                  }
-                                >
-                                  {tip.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {tip.status === 'pending' && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleRemoveTip(tip.tip_id)}
-                                    className="hover:bg-red-100 hover:text-red-700"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                    <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <Sparkles className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-blue-900">
-                        {t('invoices.tipsWillBeConvertedToCommissions')}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Actions */}
         <div className="flex items-center justify-between">
           <Button type="button" variant="outline" onClick={() => navigate('/invoices')}>
@@ -1150,6 +931,13 @@ export default function InvoiceForm() {
           onOpenChange={setEmailDialogOpen}
         />
       )}
+
+      {/* Guest Creation Dialog */}
+      <GuestDialog
+        open={showCreateGuestDialog}
+        onClose={() => setShowCreateGuestDialog(false)}
+        guestId={null}
+      />
     </div>
   );
 }

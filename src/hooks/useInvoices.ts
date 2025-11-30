@@ -424,15 +424,20 @@ const createInvoiceFromBooking = async (bookingId: string): Promise<Invoice> => 
 
 // Hooks
 export function useInvoices(filters?: InvoiceFilters) {
-  const { data: invoices = [], isLoading, error, refetch } = useQuery({
+  const { data: invoices = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: invoiceKeys.list(filters),
     queryFn: () => fetchInvoices(filters),
-    staleTime: 30 * 1000, // 30 seconds
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   return {
     invoices,
     loading: isLoading,
+    isFetching,
     error,
     refetch,
   };
@@ -443,7 +448,11 @@ export function useInvoice(invoiceId: string) {
     queryKey: invoiceKeys.detail(invoiceId),
     queryFn: () => fetchInvoice(invoiceId),
     enabled: !!invoiceId && invoiceId.length > 0,
-    staleTime: 30 * 1000,
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
     retry: 2,
   });
 
@@ -476,8 +485,20 @@ export function useCreateInvoice() {
   return useMutation({
     mutationFn: ({ invoice, lineItems }: { invoice: InvoiceInsert; lineItems: InvoiceLineItemInsert[] }) =>
       createInvoice(invoice, lineItems),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+    onSuccess: (data) => {
+      // Invalidate invoice lists with refetchType: 'all'
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists(), refetchType: 'all' });
+
+      // Cross-entity invalidation: property and booking financial data may have changed
+      if (data.property_id) {
+        queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
+      }
+      if (data.booking_id) {
+        queryClient.invalidateQueries({ queryKey: ['bookings', 'detail', data.booking_id], refetchType: 'all' });
+      }
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['financial-entries'], refetchType: 'all' });
+
       toast({
         title: 'Success',
         description: 'Invoice created successfully',
@@ -500,8 +521,15 @@ export function useUpdateInvoice() {
   return useMutation({
     mutationFn: updateInvoice,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(data.invoice_id!) });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(data.invoice_id!), refetchType: 'all' });
+
+      // Cross-entity invalidation: financial data may have changed
+      if (data.property_id) {
+        queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
+      }
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
+
       toast({
         title: 'Success',
         description: 'Invoice updated successfully',
@@ -535,7 +563,15 @@ export function useDeleteInvoice() {
         property_id: invoice?.property_id,
       });
 
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists(), refetchType: 'all' });
+
+      // Cross-entity invalidation: financial data changed
+      if (invoice?.property_id) {
+        queryClient.invalidateQueries({ queryKey: ['properties', 'detail', invoice.property_id], refetchType: 'all' });
+      }
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['financial-entries'], refetchType: 'all' });
+
       toast({
         title: 'Success',
         description: 'Invoice deleted successfully',
@@ -558,8 +594,10 @@ export function useAddLineItem() {
   return useMutation({
     mutationFn: addLineItem,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(data.invoice_id!) });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(data.invoice_id!), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists(), refetchType: 'all' });
+      // Cross-entity: financial data changed
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Line item added successfully',
@@ -582,8 +620,10 @@ export function useUpdateLineItem() {
   return useMutation({
     mutationFn: updateLineItem,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(data.invoice_id!) });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(data.invoice_id!), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists(), refetchType: 'all' });
+      // Cross-entity: financial data changed
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Line item updated successfully',
@@ -616,7 +656,12 @@ export function useDeleteLineItem() {
         invoice_id: lineItem?.invoice_id,
       });
 
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists(), refetchType: 'all' });
+      if (lineItem?.invoice_id) {
+        queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(lineItem.invoice_id), refetchType: 'all' });
+      }
+      // Cross-entity: financial data changed
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Line item deleted successfully',
@@ -639,8 +684,8 @@ export function useMarkInvoiceAsSent() {
   return useMutation({
     mutationFn: markInvoiceAsSent,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(data.invoice_id!) });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(data.invoice_id!), refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Invoice marked as sent',
@@ -663,8 +708,14 @@ export function useMarkInvoiceAsPaid() {
   return useMutation({
     mutationFn: markInvoiceAsPaid,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(data.invoice_id!) });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(data.invoice_id!), refetchType: 'all' });
+      // Cross-entity: payment status affects financial data
+      if (data.property_id) {
+        queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
+      }
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['financial-entries'], refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Invoice marked as paid',
@@ -686,8 +737,17 @@ export function useCreateInvoiceFromBooking() {
 
   return useMutation({
     mutationFn: createInvoiceFromBooking,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists(), refetchType: 'all' });
+      // Cross-entity: booking now has an invoice
+      if (data.booking_id) {
+        queryClient.invalidateQueries({ queryKey: ['bookings', 'detail', data.booking_id], refetchType: 'all' });
+        queryClient.invalidateQueries({ queryKey: ['bookings', 'list'], refetchType: 'all' });
+      }
+      if (data.property_id) {
+        queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
+      }
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Invoice created from booking',
@@ -710,8 +770,8 @@ export function useSendInvoiceEmail() {
   return useMutation({
     mutationFn: sendInvoiceEmail,
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(variables.invoiceId) });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(variables.invoiceId), refetchType: 'all' });
       toast({
         title: 'Email Sent Successfully',
         description: `Invoice email sent to ${variables.recipientEmail}`,

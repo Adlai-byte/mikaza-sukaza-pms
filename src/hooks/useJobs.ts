@@ -117,8 +117,11 @@ export function useJobs(filters: JobFilters = {}) {
 
       return data as JobWithRelations[];
     },
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -161,8 +164,11 @@ export function useJob(jobId: string | undefined) {
       return data as JobWithRelations;
     },
     enabled: !!jobId,
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -293,10 +299,16 @@ export function useCreateJob() {
 
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: jobKeys.lists() });
-      // Also invalidate tasks since we created a task
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: jobKeys.lists(), refetchType: 'all' });
+      // Cross-entity: tasks were created/modified
+      queryClient.invalidateQueries({ queryKey: ['tasks'], refetchType: 'all' });
+      // Cross-entity: property may have new jobs
+      if (data.property_id) {
+        queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
+      }
+      // Cross-entity: notifications were created
+      queryClient.invalidateQueries({ queryKey: ['notifications'], refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Job and task created successfully',
@@ -491,8 +503,16 @@ export function useUpdateJob() {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: jobKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: jobKeys.detail(data.job_id) });
+      queryClient.invalidateQueries({ queryKey: jobKeys.lists(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: jobKeys.detail(data.job_id), refetchType: 'all' });
+      // Cross-entity: tasks may have been updated
+      queryClient.invalidateQueries({ queryKey: ['tasks'], refetchType: 'all' });
+      // Cross-entity: property may have updated job
+      if (data.property_id) {
+        queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
+      }
+      // Cross-entity: notifications were created
+      queryClient.invalidateQueries({ queryKey: ['notifications'], refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Job updated successfully',
@@ -544,7 +564,13 @@ export function useDeleteJob() {
         property_id: job?.property_id,
       });
 
-      queryClient.invalidateQueries({ queryKey: jobKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: jobKeys.lists(), refetchType: 'all' });
+      // Cross-entity: tasks linked to this job are affected
+      queryClient.invalidateQueries({ queryKey: ['tasks'], refetchType: 'all' });
+      // Cross-entity: property may have lost a job
+      if (job?.property_id) {
+        queryClient.invalidateQueries({ queryKey: ['properties', 'detail', job.property_id], refetchType: 'all' });
+      }
       toast({
         title: 'Success',
         description: 'Job deleted successfully',
@@ -580,7 +606,11 @@ export function useJobTasks(jobId: string | undefined) {
       return data as JobTask[];
     },
     enabled: !!jobId,
-    staleTime: 30 * 1000,
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -600,8 +630,8 @@ export function useCreateJobTask() {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: jobKeys.tasks(data.job_id) });
-      queryClient.invalidateQueries({ queryKey: jobKeys.detail(data.job_id) });
+      queryClient.invalidateQueries({ queryKey: jobKeys.tasks(data.job_id), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: jobKeys.detail(data.job_id), refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Task created successfully',
@@ -634,8 +664,8 @@ export function useUpdateJobTask() {
       return { data, jobId };
     },
     onSuccess: ({ data, jobId }) => {
-      queryClient.invalidateQueries({ queryKey: jobKeys.tasks(jobId) });
-      queryClient.invalidateQueries({ queryKey: jobKeys.detail(jobId) });
+      queryClient.invalidateQueries({ queryKey: jobKeys.tasks(jobId), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: jobKeys.detail(jobId), refetchType: 'all' });
     },
     onError: (error: Error) => {
       toast({
@@ -678,8 +708,8 @@ export function useDeleteJobTask() {
         job_id: jobId,
       });
 
-      queryClient.invalidateQueries({ queryKey: jobKeys.tasks(jobId) });
-      queryClient.invalidateQueries({ queryKey: jobKeys.detail(jobId) });
+      queryClient.invalidateQueries({ queryKey: jobKeys.tasks(jobId), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: jobKeys.detail(jobId), refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Task deleted successfully',
@@ -718,7 +748,11 @@ export function useJobComments(jobId: string | undefined) {
       return data;
     },
     enabled: !!jobId,
-    staleTime: 30 * 1000,
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -738,8 +772,8 @@ export function useCreateJobComment() {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: jobKeys.comments(data.job_id) });
-      queryClient.invalidateQueries({ queryKey: jobKeys.detail(data.job_id) });
+      queryClient.invalidateQueries({ queryKey: jobKeys.comments(data.job_id), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: jobKeys.detail(data.job_id), refetchType: 'all' });
     },
     onError: (error: Error) => {
       toast({
@@ -771,7 +805,11 @@ export function useJobAttachments(jobId: string | undefined) {
       return data as JobAttachment[];
     },
     enabled: !!jobId,
-    staleTime: 30 * 1000,
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -791,8 +829,8 @@ export function useUploadJobAttachment() {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: jobKeys.attachments(data.job_id) });
-      queryClient.invalidateQueries({ queryKey: jobKeys.detail(data.job_id) });
+      queryClient.invalidateQueries({ queryKey: jobKeys.attachments(data.job_id), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: jobKeys.detail(data.job_id), refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Attachment uploaded successfully',
@@ -838,8 +876,8 @@ export function useDeleteJobAttachment() {
         job_id: jobId,
       });
 
-      queryClient.invalidateQueries({ queryKey: jobKeys.attachments(jobId) });
-      queryClient.invalidateQueries({ queryKey: jobKeys.detail(jobId) });
+      queryClient.invalidateQueries({ queryKey: jobKeys.attachments(jobId), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: jobKeys.detail(jobId), refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Attachment deleted successfully',

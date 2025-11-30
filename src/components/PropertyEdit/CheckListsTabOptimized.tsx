@@ -142,8 +142,11 @@ export function CheckListsTabOptimized({ propertyId }: CheckListsTabOptimizedPro
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: checklistsKeys.all(propertyId) });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: checklistsKeys.all(propertyId),
+        refetchType: 'active',
+      });
       toast({
         title: 'Success',
         description: 'Checklist item added successfully',
@@ -172,8 +175,11 @@ export function CheckListsTabOptimized({ propertyId }: CheckListsTabOptimizedPro
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: checklistsKeys.all(propertyId) });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: checklistsKeys.all(propertyId),
+        refetchType: 'active',
+      });
       toast({
         title: 'Success',
         description: 'Checklist item updated successfully',
@@ -200,8 +206,11 @@ export function CheckListsTabOptimized({ propertyId }: CheckListsTabOptimizedPro
       if (error) throw error;
       return checklistId;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: checklistsKeys.all(propertyId) });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: checklistsKeys.all(propertyId),
+        refetchType: 'active',
+      });
       toast({
         title: 'Success',
         description: 'Checklist item removed successfully',
@@ -229,8 +238,11 @@ export function CheckListsTabOptimized({ propertyId }: CheckListsTabOptimizedPro
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: checklistsKeys.all(propertyId) });
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({
+        queryKey: checklistsKeys.all(propertyId),
+        refetchType: 'active',
+      });
       toast({
         title: 'Success',
         description: `Item marked as ${data.is_completed ? 'completed' : 'pending'}`,

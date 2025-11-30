@@ -22,14 +22,17 @@ import { useProperties } from '@/hooks/useProperties';
 import { useUsersOptimized } from '@/hooks/useUsersOptimized';
 import { useChecklistTemplates } from '@/hooks/useChecklistTemplates';
 import { useCreateCheckInOutRecord, useUpdateCheckInOutRecord } from '@/hooks/useCheckInOutRecords';
+import { useBookings } from '@/hooks/useBookings';
 import { useAuth } from '@/contexts/AuthContext';
-import { CheckInOutRecord, ChecklistItem, ChecklistResponse, Attachment } from '@/lib/schemas';
+import { CheckInOutRecord, ChecklistItem, ChecklistResponse, Attachment, Booking } from '@/lib/schemas';
 import { formatUserDisplay } from '@/lib/user-display';
-import { Upload, FileText, Image as ImageIcon, X, Save } from 'lucide-react';
+import { Upload, FileText, Image as ImageIcon, X, Save, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 
 const checkInOutFormSchema = z.object({
   property_id: z.string().min(1, 'Property is required'),
+  booking_id: z.string().optional(),
   record_type: z.enum(['check_in', 'check_out']),
   record_date: z.string().min(1, 'Date is required'),
   agent_id: z.string().optional(),
@@ -74,6 +77,18 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
       t.property_id === selectedPropertyId || t.property_id === null
     );
   }, [allTemplates, selectedPropertyId]);
+
+  // Fetch bookings for linking
+  const { data: allBookings = [], isLoading: bookingsLoading } = useBookings();
+
+  // Filter bookings by selected property and show only active/confirmed bookings
+  const propertyBookings = useMemo(() => {
+    if (!selectedPropertyId) return [];
+    return allBookings.filter((b: Booking) =>
+      b.property_id === selectedPropertyId &&
+      ['confirmed', 'checked_in', 'pending'].includes(b.booking_status || '')
+    );
+  }, [allBookings, selectedPropertyId]);
 
   // Debug logging - AFTER all declarations
   useEffect(() => {
@@ -135,6 +150,7 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
   const watchPropertyId = watch('property_id');
   const watchRecordType = watch('record_type');
   const watchTemplateId = watch('template_id');
+  const watchBookingId = watch('booking_id');
 
   useEffect(() => {
     setSelectedPropertyId(watchPropertyId || '');
@@ -144,10 +160,30 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
     setSelectedRecordType(watchRecordType || 'check_in');
   }, [watchRecordType]);
 
+  // Auto-populate fields when a booking is selected
+  useEffect(() => {
+    if (watchBookingId && watchBookingId !== 'none') {
+      const selectedBooking = propertyBookings.find((b: Booking) => b.booking_id === watchBookingId);
+      if (selectedBooking) {
+        // Set resident name from guest name
+        setValue('resident_name', selectedBooking.guest_name || '');
+        setValue('resident_contact', selectedBooking.guest_email || selectedBooking.guest_phone || '');
+
+        // Set date based on record type
+        if (watchRecordType === 'check_in' && selectedBooking.check_in_date) {
+          setValue('record_date', selectedBooking.check_in_date.split('T')[0]);
+        } else if (watchRecordType === 'check_out' && selectedBooking.check_out_date) {
+          setValue('record_date', selectedBooking.check_out_date.split('T')[0]);
+        }
+      }
+    }
+  }, [watchBookingId, propertyBookings, watchRecordType, setValue]);
+
   // Load record data when editing
   useEffect(() => {
     if (record) {
       setValue('property_id', record.property_id);
+      setValue('booking_id', record.booking_id || '');
       setValue('record_type', record.record_type);
       setValue('record_date', record.record_date.split('T')[0]);
       setValue('agent_id', record.agent_id || '');
@@ -223,6 +259,7 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
 
     const recordData = {
       property_id: data.property_id,
+      booking_id: data.booking_id && data.booking_id !== 'none' ? data.booking_id : null,
       record_type: data.record_type,
       record_date: new Date(data.record_date).toISOString(),
       agent_id: data.agent_id || null,
@@ -362,6 +399,54 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
                     ⚠️ {errors.property_id.message}
                   </p>
                 )}
+              </div>
+
+              {/* Booking Selector - Link to existing booking */}
+              <div>
+                <Label htmlFor="booking_id" className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Link to Booking (Optional)
+                </Label>
+                <Select
+                  value={watchBookingId || 'none'}
+                  onValueChange={(value) => setValue('booking_id', value === 'none' ? '' : value)}
+                  disabled={viewMode || bookingsLoading || !selectedPropertyId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      !selectedPropertyId
+                        ? "Select a property first"
+                        : bookingsLoading
+                        ? "Loading bookings..."
+                        : "Select a booking to link"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No booking (manual entry)</SelectItem>
+                    {propertyBookings.length === 0 && selectedPropertyId && !bookingsLoading ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        No active bookings for this property
+                      </div>
+                    ) : (
+                      propertyBookings.map((booking: Booking) => (
+                        <SelectItem key={booking.booking_id} value={booking.booking_id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{booking.guest_name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {booking.check_in_date ? format(new Date(booking.check_in_date), 'MMM dd') : '?'} - {booking.check_out_date ? format(new Date(booking.check_out_date), 'MMM dd, yyyy') : '?'}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {watchBookingId && watchBookingId !== 'none'
+                    ? "Guest info and date auto-filled from booking"
+                    : "Link this record to a booking for better tracking"
+                  }
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

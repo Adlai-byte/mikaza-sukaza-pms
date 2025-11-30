@@ -69,6 +69,18 @@ export const creditCardSchema = z.object({
   security_code: z.string().regex(/^\d{3,4}$/, "Security code must be 3-4 digits"),
 });
 
+// Guest credit card schema - for storing credit cards linked to guests
+export const guestCreditCardSchema = z.object({
+  guest_id: z.string().uuid("Invalid guest ID"),
+  card_type: z.enum(["visa", "mastercard", "amex", "discover"], {
+    required_error: "Please select a card type",
+  }),
+  cardholder_name: z.string().min(1, "Cardholder name is required"),
+  card_number: z.string().regex(/^\d{13,19}$/, "Invalid card number"),
+  due_date: z.string().regex(/^\d{2}\/\d{2}$/, "Date must be in MM/YY format"),
+  security_code: z.string().regex(/^\d{3,4}$/, "Security code must be 3-4 digits"),
+});
+
 // Activity log schema
 export const activityLogSchema = z.object({
   user_id: z.string().uuid().optional(),
@@ -181,8 +193,14 @@ export type BankAccount = z.infer<typeof bankAccountSchema> & {
   updated_at?: string;
 };
 
-export type CreditCard = z.infer<typeof creditCardSchema> & { 
+export type CreditCard = z.infer<typeof creditCardSchema> & {
   credit_card_id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type GuestCreditCard = z.infer<typeof guestCreditCardSchema> & {
+  guest_credit_card_id?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -426,6 +444,71 @@ export type Booking = {
 };
 
 export type BookingInsert = z.infer<typeof bookingSchema>;
+
+// Guest schemas
+export const guestSchema = z.object({
+  guest_id: z.string().uuid().optional(),
+
+  // Basic Information (Required)
+  first_name: z.string().min(1, "First name is required").max(100),
+  last_name: z.string().min(1, "Last name is required").max(100),
+  email: z.string().email("Please enter a valid email address").max(255),
+
+  // Contact Information
+  phone_primary: z.string().max(50).optional(),
+  phone_secondary: z.string().max(50).optional(),
+
+  // Address Information
+  address: z.string().optional(),
+  city: z.string().max(100).optional(),
+  state: z.string().max(50).optional(),
+  postal_code: z.string().max(20).optional(),
+  country: z.string().max(100).default("USA"),
+
+  // Preferences & Notes
+  preferences: z.record(z.any()).optional(), // JSONB field for extensible preferences
+  internal_notes: z.string().optional(),
+
+  // Computed/Cached Statistics (Read-only - managed by database triggers)
+  total_bookings: z.number().int().optional(),
+  total_spent: z.number().optional(),
+  last_booking_date: z.string().optional(), // ISO date string
+
+  // Flags
+  is_verified: z.boolean().default(false),
+  marketing_opt_in: z.boolean().default(true),
+
+  // Metadata
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  created_by: z.string().uuid().optional().nullable(),
+});
+
+// Type for creating a new guest (omit computed and auto-generated fields)
+export type GuestInsert = Omit<
+  z.infer<typeof guestSchema>,
+  'guest_id' | 'total_bookings' | 'total_spent' | 'last_booking_date' | 'created_at' | 'updated_at' | 'created_by'
+>;
+
+// Full guest type with joined relations
+export type Guest = z.infer<typeof guestSchema> & {
+  // Joined relations (when querying with joins)
+  bookings?: Booking[];
+  invoices?: Invoice[];
+};
+
+// Guest search/filter parameters
+export interface GuestFilters {
+  search?: string; // Search by name or email
+  min_bookings?: number;
+  max_bookings?: number;
+  min_spent?: number;
+  max_spent?: number;
+  last_booking_from?: string; // ISO date string
+  last_booking_to?: string; // ISO date string
+  is_verified?: boolean;
+  has_email?: boolean;
+}
 
 // Task schemas
 export const taskSchema = z.object({
@@ -908,6 +991,7 @@ export const invoiceSchema = z.object({
   property_id: z.string().uuid("Property is required"),
 
   // Guest information
+  guest_id: z.string().uuid().optional().nullable(),
   guest_name: z.string().min(1, "Guest name is required"),
   guest_email: z.string().email("Valid email is required").optional().or(z.literal("")),
   guest_phone: z.string().optional(),
@@ -1019,6 +1103,18 @@ export const expenseSchema = z.object({
   is_recurring: z.boolean().default(false),
   recurring_frequency: z.enum(["monthly", "quarterly", "yearly"]).optional(),
 
+  // Financial entry type (for Credit/Debit ledger system)
+  entry_type: z.enum(["credit", "debit", "owner_payment"]).default("debit"),
+
+  // Scheduled entry fields
+  is_scheduled: z.boolean().default(false),
+  scheduled_day: z.number().int().min(1).max(31).optional().nullable(),
+  scheduled_months: z.array(z.number().int().min(1).max(12)).optional().nullable(),
+
+  // Payment tracking for financial entries
+  is_paid: z.boolean().default(false),
+  paid_at: z.string().optional().nullable(),
+
   // Notes
   notes: z.string().optional(),
 
@@ -1064,6 +1160,9 @@ export type Expense = z.infer<typeof expenseSchema> & {
   vendor?: ServiceProvider;
   total_amount?: number; // Computed: amount + tax_amount
   created_user?: User;
+  // For financial entries balance calculation
+  running_balance?: number;
+  schedule_balance?: number;
 };
 
 export type FinancialAuditLog = z.infer<typeof financialAuditLogSchema> & {
@@ -1684,6 +1783,7 @@ export type Attachment = z.infer<typeof attachmentSchema>;
 // Check-in/Out Record Schema
 export const checkInOutRecordSchema = z.object({
   property_id: z.string().uuid("Invalid property ID"),
+  booking_id: z.string().uuid("Invalid booking ID").optional().nullable(),
   record_type: z.enum(['check_in', 'check_out']),
   record_date: z.string().or(z.date()),
   agent_id: z.string().uuid("Invalid agent ID").optional().nullable(),
@@ -1712,6 +1812,13 @@ export type CheckInOutRecord = CheckInOutRecordInsert & {
     property_id: string;
     property_name: string;
   };
+  booking?: {
+    booking_id: string;
+    guest_name: string;
+    check_in_date: string;
+    check_out_date: string;
+    booking_status: string;
+  };
   agent?: {
     user_id: string;
     first_name: string;
@@ -1724,11 +1831,12 @@ export type CheckInOutRecord = CheckInOutRecordInsert & {
 // Check-in/Out filters
 export type CheckInOutFilters = {
   property_id?: string;
+  booking_id?: string;
   record_type?: 'check_in' | 'check_out';
   agent_id?: string;
   status?: 'draft' | 'completed' | 'archived';
-  date_from?: string;
-  date_to?: string;
+  start_date?: string;
+  end_date?: string;
   search?: string;
 };
 

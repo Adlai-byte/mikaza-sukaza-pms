@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,11 +27,26 @@ import {
   MessageSquare,
   Calendar,
   Search,
-  Filter
+  Filter,
+  Paperclip,
+  Image,
+  File,
+  X,
+  Download,
+  Upload,
+  Loader2
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+
+interface NoteAttachment {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+  uploaded_at: string;
+}
 
 interface Note {
   note_id: string;
@@ -40,6 +55,7 @@ interface Note {
   note_content: string;
   note_type: string;
   is_pinned: boolean;
+  attachments: NoteAttachment[];
   created_at: string;
   updated_at: string;
 }
@@ -68,15 +84,19 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const emptyNote = {
     note_title: '',
     note_content: '',
     note_type: 'general',
     is_pinned: false,
+    attachments: [] as NoteAttachment[],
   };
 
   const [formData, setFormData] = useState(emptyNote);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const { data: notes = [], isLoading, isFetching, error } = useQuery({
     queryKey: ['property-notes', propertyId],
@@ -97,8 +117,11 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['property-notes', propertyId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['property-notes', propertyId],
+        refetchType: 'active',
+      });
       toast({
         title: "Success",
         description: "Note created successfully",
@@ -126,8 +149,11 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['property-notes', propertyId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['property-notes', propertyId],
+        refetchType: 'active',
+      });
       toast({
         title: "Success",
         description: "Note updated successfully",
@@ -153,8 +179,11 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return noteId;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['property-notes', propertyId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['property-notes', propertyId],
+        refetchType: 'active',
+      });
       toast({
         title: "Success",
         description: "Note deleted successfully",
@@ -181,8 +210,11 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['property-notes', propertyId] });
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['property-notes', propertyId],
+        refetchType: 'active',
+      });
       toast({
         title: "Success",
         description: `Note ${data.is_pinned ? 'pinned' : 'unpinned'} successfully`,
@@ -197,7 +229,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
     },
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.note_content.trim()) {
       toast({
         title: "Error",
@@ -207,13 +239,40 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       return;
     }
 
-    if (editingNote) {
-      updateNoteMutation.mutate({
-        noteId: editingNote.note_id,
-        updates: formData,
+    try {
+      setIsUploading(true);
+
+      // Upload pending files first
+      let newAttachments: NoteAttachment[] = [];
+      if (pendingFiles.length > 0) {
+        newAttachments = await uploadFiles(pendingFiles);
+      }
+
+      // Combine existing and new attachments
+      const allAttachments = [...formData.attachments, ...newAttachments];
+
+      const noteData = {
+        ...formData,
+        attachments: allAttachments,
+      };
+
+      if (editingNote) {
+        updateNoteMutation.mutate({
+          noteId: editingNote.note_id,
+          updates: noteData,
+        });
+      } else {
+        createNoteMutation.mutate(noteData);
+      }
+    } catch (error) {
+      console.error('Error saving note:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload attachments",
+        variant: "destructive",
       });
-    } else {
-      createNoteMutation.mutate(formData);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -224,14 +283,90 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       note_content: note.note_content,
       note_type: note.note_type,
       is_pinned: note.is_pinned,
+      attachments: note.attachments || [],
     });
+    setPendingFiles([]);
     setShowForm(true);
   };
 
   const resetForm = () => {
     setFormData(emptyNote);
     setEditingNote(null);
+    setPendingFiles([]);
     setShowForm(false);
+  };
+
+  // File upload helpers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files);
+      setPendingFiles(prev => [...prev, ...newFiles]);
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingAttachment = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, i) => i !== index),
+    }));
+  };
+
+  const uploadFiles = async (files: File[]): Promise<NoteAttachment[]> => {
+    const uploadedAttachments: NoteAttachment[] = [];
+
+    for (const file of files) {
+      const timestamp = Date.now();
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const filePath = `notes/${propertyId}/${timestamp}_${sanitizedName}`;
+
+      const { data, error } = await supabase.storage
+        .from('property-documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (error) {
+        console.error('Upload error:', error);
+        throw error;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('property-documents')
+        .getPublicUrl(data.path);
+
+      uploadedAttachments.push({
+        url: urlData.publicUrl,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        uploaded_at: new Date().toISOString(),
+      });
+    }
+
+    return uploadedAttachments;
+  };
+
+  const isImageFile = (type: string) => type.startsWith('image/');
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return Image;
+    return File;
   };
 
   const handleInputChange = (field: keyof typeof formData, value: any) => {
@@ -509,18 +644,133 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
                     Pin this note
                   </Label>
                 </div>
+
+                {/* File Attachments Section */}
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    Attachments
+                  </Label>
+
+                  {/* File Input */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Add Files
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Images, PDFs, Documents (Max 50MB each)
+                    </span>
+                  </div>
+
+                  {/* Existing Attachments */}
+                  {formData.attachments.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">Existing attachments:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {formData.attachments.map((attachment, index) => {
+                          const FileIcon = getFileIcon(attachment.type);
+                          return (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2 bg-gray-100 rounded-md px-2 py-1 text-sm"
+                            >
+                              {isImageFile(attachment.type) ? (
+                                <img
+                                  src={attachment.url}
+                                  alt={attachment.name}
+                                  className="h-6 w-6 object-cover rounded"
+                                />
+                              ) : (
+                                <FileIcon className="h-4 w-4 text-gray-500" />
+                              )}
+                              <span className="truncate max-w-[150px]">{attachment.name}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 w-5 p-0"
+                                onClick={() => removeExistingAttachment(index)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pending Files */}
+                  {pendingFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">Files to upload:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {pendingFiles.map((file, index) => {
+                          const FileIcon = getFileIcon(file.type);
+                          return (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 text-sm"
+                            >
+                              {isImageFile(file.type) ? (
+                                <img
+                                  src={URL.createObjectURL(file)}
+                                  alt={file.name}
+                                  className="h-6 w-6 object-cover rounded"
+                                />
+                              ) : (
+                                <FileIcon className="h-4 w-4 text-blue-500" />
+                              )}
+                              <span className="truncate max-w-[150px]">{file.name}</span>
+                              <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 w-5 p-0"
+                                onClick={() => removePendingFile(index)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <DialogFooter>
-                <Button onClick={resetForm} variant="outline">
+                <Button onClick={resetForm} variant="outline" disabled={isUploading}>
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSave}
                   className="bg-blue-600 hover:bg-blue-700"
-                  disabled={createNoteMutation.isPending || updateNoteMutation.isPending}
+                  disabled={createNoteMutation.isPending || updateNoteMutation.isPending || isUploading}
                 >
-                  {(createNoteMutation.isPending || updateNoteMutation.isPending) ? 'Saving...' : (editingNote ? 'Update Note' : 'Save Note')}
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (createNoteMutation.isPending || updateNoteMutation.isPending) ? 'Saving...' : (editingNote ? 'Update Note' : 'Save Note')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -573,6 +823,41 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
                             <p className="text-sm text-gray-700 mb-3 whitespace-pre-wrap">
                               {note.note_content}
                             </p>
+                            {/* Attachments Display */}
+                            {note.attachments && note.attachments.length > 0 && (
+                              <div className="mb-3">
+                                <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
+                                  <Paperclip className="h-3 w-3" />
+                                  <span>{note.attachments.length} attachment{note.attachments.length > 1 ? 's' : ''}</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {note.attachments.map((attachment, idx) => {
+                                    const FileIcon = getFileIcon(attachment.type);
+                                    return (
+                                      <a
+                                        key={idx}
+                                        href={attachment.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 bg-white border rounded-md px-2 py-1 text-xs hover:bg-gray-50 transition-colors"
+                                      >
+                                        {isImageFile(attachment.type) ? (
+                                          <img
+                                            src={attachment.url}
+                                            alt={attachment.name}
+                                            className="h-8 w-8 object-cover rounded"
+                                          />
+                                        ) : (
+                                          <FileIcon className="h-4 w-4 text-gray-500" />
+                                        )}
+                                        <span className="truncate max-w-[100px]">{attachment.name}</span>
+                                        <Download className="h-3 w-3 text-gray-400" />
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                             <div className="flex items-center gap-4 text-xs text-gray-500">
                               <span>Created: {new Date(note.created_at).toLocaleDateString()}</span>
                               {note.updated_at !== note.created_at && (
@@ -646,6 +931,41 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
                             <p className="text-sm text-gray-700 mb-3 whitespace-pre-wrap">
                               {note.note_content}
                             </p>
+                            {/* Attachments Display */}
+                            {note.attachments && note.attachments.length > 0 && (
+                              <div className="mb-3">
+                                <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
+                                  <Paperclip className="h-3 w-3" />
+                                  <span>{note.attachments.length} attachment{note.attachments.length > 1 ? 's' : ''}</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {note.attachments.map((attachment, idx) => {
+                                    const FileIcon = getFileIcon(attachment.type);
+                                    return (
+                                      <a
+                                        key={idx}
+                                        href={attachment.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 bg-gray-100 border rounded-md px-2 py-1 text-xs hover:bg-gray-200 transition-colors"
+                                      >
+                                        {isImageFile(attachment.type) ? (
+                                          <img
+                                            src={attachment.url}
+                                            alt={attachment.name}
+                                            className="h-8 w-8 object-cover rounded"
+                                          />
+                                        ) : (
+                                          <FileIcon className="h-4 w-4 text-gray-500" />
+                                        )}
+                                        <span className="truncate max-w-[100px]">{attachment.name}</span>
+                                        <Download className="h-3 w-3 text-gray-400" />
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                             <div className="flex items-center gap-4 text-xs text-gray-500">
                               <span>Created: {new Date(note.created_at).toLocaleDateString()}</span>
                               {note.updated_at !== note.created_at && (

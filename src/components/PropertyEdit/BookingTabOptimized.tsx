@@ -285,7 +285,7 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
     }
 
     // Generate iCal format
-    let icalContent = [
+    const icalContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
       'PRODID:-//Casa & Concierge PMS//EN',

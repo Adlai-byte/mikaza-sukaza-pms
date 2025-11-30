@@ -29,9 +29,11 @@ const securityHeaders = {
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
 
   // Content Security Policy - comprehensive protection
+  // Note: 'unsafe-inline' is required for Vite's style injection; consider nonces for stricter CSP in future
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://js.stripe.com",
+    // Removed 'unsafe-eval' - only 'unsafe-inline' kept for Vite compatibility
+    "script-src 'self' 'unsafe-inline' https://*.supabase.co https://js.stripe.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.tile.openstreetmap.org https://unpkg.com",
     "font-src 'self' data: https://fonts.gstatic.com",
@@ -40,6 +42,7 @@ const securityHeaders = {
     "object-src 'none'",
     "child-src 'self' https://js.stripe.com",
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+    "frame-ancestors 'self'", // Prevent embedding in iframes (clickjacking protection)
     "worker-src 'self' blob:",
     "form-action 'self'",
     "base-uri 'self'",

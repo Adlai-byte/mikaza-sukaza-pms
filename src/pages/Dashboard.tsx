@@ -38,13 +38,36 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addDays } from "date-fns";
 import { useTranslation } from "react-i18next";
 
+// Type for bookings with property relation
+type BookingWithProperty = {
+  booking_id: string;
+  booking_status: string | null;
+  check_in_date: string;
+  check_out_date: string;
+  guest_name: string;
+  guest_email: string | null;
+  guest_phone: string | null;
+  property_id: string;
+  total_amount: number | null;
+  deposit_amount: number | null;
+  payment_method: string | null;
+  number_of_guests: number | null;
+  special_requests: string | null;
+  created_at: string;
+  updated_at: string;
+  properties: {
+    property_name: string | null;
+    property_type: string;
+  } | null;
+};
+
 export default function Dashboard() {
   const { t } = useTranslation();
   const { stats, isLoading, refetch } = useDashboardData();
   const navigate = useNavigate();
 
   // Fetch upcoming bookings for the next 7 days
-  const { data: upcomingBookings = [] } = useQuery({
+  const { data: upcomingBookings = [] } = useQuery<BookingWithProperty[]>({
     queryKey: ['upcoming-bookings-dashboard'],
     queryFn: async () => {
       const today = format(new Date(), 'yyyy-MM-dd');
@@ -54,7 +77,7 @@ export default function Dashboard() {
         .from('property_bookings')
         .select(`
           *,
-          properties!property_bookings_property_id_fkey(property_name, property_type)
+          properties(property_name, property_type)
         `)
         .gte('check_in_date', today)
         .lte('check_in_date', weekFromNow)
@@ -63,7 +86,7 @@ export default function Dashboard() {
         .limit(5);
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as BookingWithProperty[];
     },
     staleTime: 60 * 1000,
   });

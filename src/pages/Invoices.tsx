@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   FileText,
-  Plus,
   Search,
   Filter,
   Download,
@@ -13,7 +12,6 @@ import {
   Clock,
   DollarSign,
   Eye,
-  Trash2,
   Calendar,
   CreditCard,
   Settings,
@@ -38,7 +36,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useInvoices, useDeleteInvoice, useMarkInvoiceAsSent, useMarkInvoiceAsPaid } from '@/hooks/useInvoices';
+import { useInvoices, useMarkInvoiceAsSent, useMarkInvoiceAsPaid } from '@/hooks/useInvoices';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { usePaymentSummary } from '@/hooks/useInvoicePayments';
 import { InvoicePaymentDialog } from '@/components/InvoicePaymentDialog';
@@ -71,15 +69,8 @@ export default function Invoices() {
 
   const { invoices, loading } = useInvoices(filters);
   const { properties } = usePropertiesOptimized();
-  const deleteInvoice = useDeleteInvoice();
   const markAsSent = useMarkInvoiceAsSent();
   const markAsPaid = useMarkInvoiceAsPaid();
-
-  const handleDelete = (invoiceId: string) => {
-    if (confirm(t('invoices.confirmDelete'))) {
-      deleteInvoice.mutate(invoiceId);
-    }
-  };
 
   const handleMarkAsSent = (invoiceId: string) => {
     markAsSent.mutate(invoiceId);
@@ -155,10 +146,6 @@ export default function Invoices() {
             >
               <Settings className="h-4 w-4 mr-2" />
               {t('invoices.manageTemplates')}
-            </Button>
-            <Button onClick={() => navigate('/invoices/new')} size="lg">
-              <Plus className="h-4 w-4 mr-2" />
-              {t('invoices.newInvoice')}
             </Button>
           </>
         }
@@ -425,19 +412,11 @@ export default function Invoices() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleMarkAsPaid(invoice.invoice_id!)}
+                              title="Mark as Paid"
                             >
                               <CheckCircle className="h-4 w-4" />
                             </Button>
                           )}
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(invoice.invoice_id!)}
-                            disabled={deleteInvoice.isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

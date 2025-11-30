@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,12 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Calendar } from '@/components/ui/calendar';
+import {
   Calendar as CalendarIcon,
   User,
   Mail,
@@ -31,13 +37,20 @@ import {
   Building,
   Check,
   FileText,
+  ChevronDown,
+  ChevronUp,
+  Eye,
 } from 'lucide-react';
-import { Booking, BookingInsert } from '@/lib/schemas';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { Booking, BookingInsert, Guest } from '@/lib/schemas';
+import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay, addMonths } from 'date-fns';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useBillTemplates } from '@/hooks/useBillTemplates';
 import { useBookingConflicts } from '@/hooks/useBookingConflicts';
+import { useGuests } from '@/hooks/useGuests';
+import { usePropertyBookings } from '@/hooks/useBookings';
 import { BookingConflictAlert } from '@/components/BookingConflictAlert';
+import { GuestDialog } from '@/components/GuestDialog';
+import { UserPlus } from 'lucide-react';
 
 interface BookingDialogEnhancedProps {
   open: boolean;
@@ -62,9 +75,11 @@ export function BookingDialogEnhanced({
 }: BookingDialogEnhancedProps) {
   const isEditing = !!booking;
   const { properties, loading: loadingProperties } = usePropertiesOptimized();
+  const { data: guests, isLoading: loadingGuests } = useGuests();
 
   const [formData, setFormData] = useState<BookingInsert>({
     property_id: propertyId || booking?.property_id || '',
+    guest_id: booking?.guest_id || null,
     guest_name: booking?.guest_name || '',
     guest_email: booking?.guest_email || '',
     guest_phone: booking?.guest_phone || '',
@@ -86,6 +101,53 @@ export function BookingDialogEnhanced({
     booking?.bill_template_id || null
   );
   const [softConflictAcknowledged, setSoftConflictAcknowledged] = useState(false);
+  const [showCreateGuestDialog, setShowCreateGuestDialog] = useState(false);
+  const [showAvailabilityCalendar, setShowAvailabilityCalendar] = useState(false);
+
+  // Fetch property bookings for calendar view
+  const { bookings: propertyBookings, loading: loadingPropertyBookings } = usePropertyBookings(
+    formData.property_id || ''
+  );
+
+  // Calculate booked dates for the calendar
+  const bookedDates = useMemo(() => {
+    if (!propertyBookings || propertyBookings.length === 0) return [];
+
+    const dates: Date[] = [];
+    propertyBookings.forEach((b) => {
+      // Skip cancelled bookings and the current booking being edited
+      if (b.booking_status === 'cancelled') return;
+      if (booking?.booking_id && b.booking_id === booking.booking_id) return;
+
+      if (b.check_in_date && b.check_out_date) {
+        try {
+          const interval = eachDayOfInterval({
+            start: parseISO(b.check_in_date),
+            end: parseISO(b.check_out_date),
+          });
+          dates.push(...interval);
+        } catch (e) {
+          console.error('Error parsing booking dates:', e);
+        }
+      }
+    });
+    return dates;
+  }, [propertyBookings, booking?.booking_id]);
+
+  // Group bookings by status for legend
+  const bookingsByStatus = useMemo(() => {
+    if (!propertyBookings) return { confirmed: 0, pending: 0, checked_in: 0 };
+
+    return propertyBookings.reduce((acc, b) => {
+      if (b.booking_status === 'cancelled') return acc;
+      if (booking?.booking_id && b.booking_id === booking.booking_id) return acc;
+
+      if (b.booking_status === 'confirmed') acc.confirmed++;
+      else if (b.booking_status === 'pending') acc.pending++;
+      else if (b.booking_status === 'checked_in') acc.checked_in++;
+      return acc;
+    }, { confirmed: 0, pending: 0, checked_in: 0 });
+  }, [propertyBookings, booking?.booking_id]);
 
   // Fetch bill templates for selected property
   const { data: billTemplates, isLoading: loadingTemplates } = useBillTemplates(
@@ -114,6 +176,7 @@ export function BookingDialogEnhanced({
     if (open) {
       setFormData({
         property_id: propertyId || booking?.property_id || '',
+        guest_id: booking?.guest_id || null,
         guest_name: booking?.guest_name || '',
         guest_email: booking?.guest_email || '',
         guest_phone: booking?.guest_phone || '',
@@ -133,7 +196,26 @@ export function BookingDialogEnhanced({
       setSoftConflictAcknowledged(false);
       setErrors({});
     }
-  }, [open, booking, propertyId, defaultCheckIn, defaultCheckOut]);
+  }, [open, booking, propertyId, defaultCheckIn, defaultCheckOut, isEditing]);
+
+  // Handle guest selection
+  const handleGuestSelect = (guestId: string) => {
+    if (guestId === 'create-new') {
+      setShowCreateGuestDialog(true);
+      return;
+    }
+
+    const selectedGuest = guests?.find((g: Guest) => g.guest_id === guestId);
+    if (selectedGuest) {
+      setFormData(prev => ({
+        ...prev,
+        guest_id: selectedGuest.guest_id!,
+        guest_name: `${selectedGuest.first_name} ${selectedGuest.last_name}`,
+        guest_email: selectedGuest.email,
+        guest_phone: selectedGuest.phone_primary || '',
+      }));
+    }
+  };
 
   // Reset soft conflict acknowledgment when dates or property change
   useEffect(() => {
@@ -160,8 +242,8 @@ export function BookingDialogEnhanced({
       newErrors.property_id = 'Please select a property';
     }
 
-    if (!formData.guest_name.trim()) {
-      newErrors.guest_name = 'Guest name is required';
+    if (!formData.guest_id && !formData.guest_name.trim()) {
+      newErrors.guest_id = 'Please select a guest';
     }
 
     if (formData.guest_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.guest_email)) {
@@ -361,66 +443,90 @@ export function BookingDialogEnhanced({
             </div>
           )}
 
-          {/* Guest Information */}
+          {/* Guest Selection */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              Guest Information
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Guest Information
+              </h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCreateGuestDialog(true)}
+                disabled={loadingGuests}
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Create New Guest
+              </Button>
+            </div>
 
             <div className="space-y-2">
-              <Label htmlFor="guest_name" className="required">
-                Guest Name *
+              <Label htmlFor="guest_id" className="required">
+                Select Guest *
               </Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="guest_name"
-                  value={formData.guest_name}
-                  onChange={(e) => handleChange('guest_name', e.target.value)}
-                  placeholder="John Doe"
-                  className={`pl-10 ${errors.guest_name ? 'border-red-500' : ''}`}
-                />
-              </div>
-              {errors.guest_name && (
-                <p className="text-sm text-red-500">{errors.guest_name}</p>
+              <Select
+                value={formData.guest_id || ''}
+                onValueChange={handleGuestSelect}
+                disabled={loadingGuests}
+              >
+                <SelectTrigger className={`w-full ${errors.guest_id ? 'border-red-500' : ''}`}>
+                  <SelectValue placeholder="Choose a guest..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {guests?.map((guest: Guest) => (
+                    <SelectItem key={guest.guest_id} value={guest.guest_id!}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {guest.first_name} {guest.last_name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{guest.email}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.guest_id && (
+                <p className="text-sm text-red-500">{errors.guest_id}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="guest_email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="guest_email"
-                    type="email"
-                    value={formData.guest_email || ''}
-                    onChange={(e) => handleChange('guest_email', e.target.value)}
-                    placeholder="john@example.com"
-                    className={`pl-10 ${errors.guest_email ? 'border-red-500' : ''}`}
-                  />
-                </div>
-                {errors.guest_email && (
-                  <p className="text-sm text-red-500">{errors.guest_email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="guest_phone">Phone</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="guest_phone"
-                    type="tel"
-                    value={formData.guest_phone || ''}
-                    onChange={(e) => handleChange('guest_phone', e.target.value)}
-                    placeholder="+1 (555) 123-4567"
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </div>
+            {/* Display selected guest info */}
+            {formData.guest_id && (
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-3">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium text-blue-900">{formData.guest_name}</span>
+                    </div>
+                    {formData.guest_email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-blue-600" />
+                        <a
+                          href={`mailto:${formData.guest_email}`}
+                          className="text-blue-700 hover:underline"
+                        >
+                          {formData.guest_email}
+                        </a>
+                      </div>
+                    )}
+                    {formData.guest_phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-blue-600" />
+                        <a
+                          href={`tel:${formData.guest_phone}`}
+                          className="text-blue-700 hover:underline"
+                        >
+                          {formData.guest_phone}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Booking Dates */}
@@ -429,6 +535,141 @@ export function BookingDialogEnhanced({
               <CalendarIcon className="h-5 w-5 text-primary" />
               Booking Dates
             </h3>
+
+            {/* Property Availability Calendar */}
+            {formData.property_id && (
+              <Collapsible open={showAvailabilityCalendar} onOpenChange={setShowAvailabilityCalendar}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      View Property Availability
+                      {propertyBookings && propertyBookings.length > 0 && (
+                        <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
+                          {propertyBookings.filter(b => b.booking_status !== 'cancelled' && b.booking_id !== booking?.booking_id).length} bookings
+                        </span>
+                      )}
+                    </span>
+                    {showAvailabilityCalendar ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-3">
+                  <Card className="border-dashed">
+                    <CardContent className="p-4">
+                      {loadingPropertyBookings ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                          <span className="ml-2 text-muted-foreground">Loading bookings...</span>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Legend */}
+                          <div className="flex flex-wrap gap-4 mb-4 text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 rounded bg-red-200 border border-red-400"></div>
+                              <span className="text-muted-foreground">Booked dates</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 rounded bg-accent border border-border"></div>
+                              <span className="text-muted-foreground">Today</span>
+                            </div>
+                            {(bookingsByStatus.confirmed > 0 || bookingsByStatus.pending > 0 || bookingsByStatus.checked_in > 0) && (
+                              <div className="ml-auto text-xs text-muted-foreground">
+                                {bookingsByStatus.confirmed > 0 && <span className="mr-2">Confirmed: {bookingsByStatus.confirmed}</span>}
+                                {bookingsByStatus.pending > 0 && <span className="mr-2">Pending: {bookingsByStatus.pending}</span>}
+                                {bookingsByStatus.checked_in > 0 && <span>Checked In: {bookingsByStatus.checked_in}</span>}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Calendar */}
+                          <div className="flex justify-center">
+                            <Calendar
+                              mode="multiple"
+                              selected={bookedDates}
+                              numberOfMonths={2}
+                              defaultMonth={new Date()}
+                              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                              modifiers={{
+                                booked: bookedDates,
+                              }}
+                              modifiersStyles={{
+                                booked: {
+                                  backgroundColor: 'rgb(254 202 202)',
+                                  color: 'rgb(153 27 27)',
+                                  fontWeight: '500',
+                                },
+                              }}
+                              className="rounded-md border"
+                            />
+                          </div>
+
+                          {/* Upcoming Bookings List */}
+                          {propertyBookings && propertyBookings.filter(b =>
+                            b.booking_status !== 'cancelled' &&
+                            b.booking_id !== booking?.booking_id &&
+                            new Date(b.check_out_date) >= new Date()
+                          ).length > 0 && (
+                            <div className="mt-4 space-y-2">
+                              <p className="text-sm font-medium text-muted-foreground">Upcoming Bookings:</p>
+                              <div className="max-h-32 overflow-y-auto space-y-1">
+                                {propertyBookings
+                                  .filter(b =>
+                                    b.booking_status !== 'cancelled' &&
+                                    b.booking_id !== booking?.booking_id &&
+                                    new Date(b.check_out_date) >= new Date()
+                                  )
+                                  .sort((a, b) => new Date(a.check_in_date).getTime() - new Date(b.check_in_date).getTime())
+                                  .slice(0, 5)
+                                  .map((b) => (
+                                    <div
+                                      key={b.booking_id}
+                                      className="flex items-center justify-between text-xs bg-muted/50 rounded px-2 py-1.5"
+                                    >
+                                      <span className="font-medium truncate max-w-[150px]">
+                                        {b.guest_name || 'Guest'}
+                                      </span>
+                                      <span className="text-muted-foreground">
+                                        {format(parseISO(b.check_in_date), 'MMM d')} - {format(parseISO(b.check_out_date), 'MMM d, yyyy')}
+                                      </span>
+                                      <span className={`px-1.5 py-0.5 rounded text-xs ${
+                                        b.booking_status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                                        b.booking_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                        b.booking_status === 'checked_in' ? 'bg-blue-100 text-blue-700' :
+                                        'bg-gray-100 text-gray-700'
+                                      }`}>
+                                        {b.booking_status}
+                                      </span>
+                                    </div>
+                                  ))
+                                }
+                              </div>
+                            </div>
+                          )}
+
+                          {bookedDates.length === 0 && (
+                            <Alert className="mt-4 bg-green-50 border-green-200">
+                              <Check className="h-4 w-4 text-green-600" />
+                              <AlertDescription className="text-green-800">
+                                No existing bookings found. All dates are available!
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -647,6 +888,13 @@ export function BookingDialogEnhanced({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Guest Creation Dialog */}
+      <GuestDialog
+        open={showCreateGuestDialog}
+        onClose={() => setShowCreateGuestDialog(false)}
+        guestId={null}
+      />
     </Dialog>
   );
 }

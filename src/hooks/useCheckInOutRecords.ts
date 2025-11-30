@@ -14,6 +14,7 @@ export function useCheckInOutRecords(filters?: CheckInOutFilters) {
         .select(`
           *,
           property:properties(property_id, property_name),
+          booking:property_bookings(booking_id, guest_name, check_in_date, check_out_date, booking_status),
           agent:users!check_in_out_records_agent_id_fkey(user_id, first_name, last_name, user_type),
           template:checklist_templates(template_id, template_name, template_type),
           creator:users!check_in_out_records_created_by_fkey(user_id, first_name, last_name, user_type)
@@ -22,6 +23,10 @@ export function useCheckInOutRecords(filters?: CheckInOutFilters) {
 
       if (filters?.property_id) {
         query = query.eq('property_id', filters.property_id);
+      }
+
+      if (filters?.booking_id) {
+        query = query.eq('booking_id', filters.booking_id);
       }
 
       if (filters?.record_type) {
@@ -63,6 +68,7 @@ export function useCheckInOutRecord(recordId: string | null) {
         .select(`
           *,
           property:properties(property_id, property_name),
+          booking:property_bookings(booking_id, guest_name, check_in_date, check_out_date, booking_status),
           agent:users!check_in_out_records_agent_id_fkey(user_id, first_name, last_name, user_type),
           template:checklist_templates(template_id, template_name, template_type, checklist_items),
           creator:users!check_in_out_records_created_by_fkey(user_id, first_name, last_name, user_type)

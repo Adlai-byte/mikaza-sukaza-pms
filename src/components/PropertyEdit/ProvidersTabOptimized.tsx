@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
   TableBody,
@@ -34,22 +33,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Plus,
-  Edit,
-  Trash2,
   Phone,
   Globe,
-  CreditCard,
   User,
   Building,
   Zap,
@@ -61,19 +49,11 @@ import {
   Search,
   Star,
   Mail,
-  Link as LinkIcon,
+  Check,
+  Trash2,
 } from 'lucide-react';
 import { usePropertyProviders } from '@/hooks/usePropertyProviders';
-import { ProvidersTabSkeleton, TabLoadingSpinner } from './PropertyEditSkeleton';
-
-interface UtilityAssignmentFormData {
-  providerId: string;
-  accountNumber: string;
-  billingName: string;
-  username: string;
-  password: string;
-  observations: string;
-}
+import { ProvidersTabSkeleton } from './PropertyEditSkeleton';
 
 interface ProvidersTabProps {
   propertyId: string;
@@ -112,65 +92,84 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
   const {
     assignedProviders: assignedUtilities,
     isLoading: isLoadingUtilities,
-    isFetching: isFetchingUtilities,
     availableProviders: availableUtilities,
-    isLoadingAvailable: isLoadingAvailableUtilities,
-    refetchAvailable: refetchAvailableUtilities,
     assignProvider: assignUtilityProvider,
-    updateAssignment: updateUtilityAssignment,
-    unassignProvider: unassignUtilityProvider,
     isAssigning: isAssigningUtility,
-    isUpdatingAssignment: isUpdatingUtility,
+    unassignProvider: unassignUtilityProvider,
     isUnassigning: isUnassigningUtility,
+    refetch: refetchUtilities,
   } = usePropertyProviders(propertyId, 'utility');
 
   // Service providers hook - unified system with category filter
   const {
     assignedProviders,
     isLoading: isLoadingServiceProviders,
-    isFetching: isFetchingServiceProviders,
     availableProviders,
-    isLoadingAvailable,
-    refetchAvailable: refetchAvailableService,
     assignProvider,
-    updateAssignment,
-    unassignProvider,
     isAssigning,
+    unassignProvider,
     isUnassigning,
+    refetch: refetchServices,
   } = usePropertyProviders(propertyId, 'service');
 
   const [activeTab, setActiveTab] = useState('utilities');
   const [showUtilityAssignDialog, setShowUtilityAssignDialog] = useState(false);
-  const [showUtilityEditDialog, setShowUtilityEditDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
-  const [showServiceEditDialog, setShowServiceEditDialog] = useState(false);
-  const [editingUtilityAssignment, setEditingUtilityAssignment] = useState<any | null>(null);
-  const [editingServiceAssignment, setEditingServiceAssignment] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [serviceSearchQuery, setServiceSearchQuery] = useState('');
 
+  // Dialog search states
+  const [utilityDialogSearch, setUtilityDialogSearch] = useState('');
+  const [serviceDialogSearch, setServiceDialogSearch] = useState('');
+
   // Utility assignment form state
-  const [utilityFormData, setUtilityFormData] = useState<UtilityAssignmentFormData>({
-    providerId: '',
-    accountNumber: '',
-    billingName: '',
-    username: '',
-    password: '',
-    observations: '',
-  });
+  const [selectedUtilityProviderId, setSelectedUtilityProviderId] = useState('');
 
   // Service contractor assignment form state
   const [selectedProviderId, setSelectedProviderId] = useState('');
-  const [assignmentNotes, setAssignmentNotes] = useState('');
   const [isPreferredForProperty, setIsPreferredForProperty] = useState(false);
+
+  // Unassign confirmation state
+  const [providerToUnassign, setProviderToUnassign] = useState<{
+    id: string;
+    name: string;
+    type: 'utility' | 'service';
+  } | null>(null);
+
+  // Get already assigned utility provider IDs (must be before early return due to hooks rule)
+  const assignedUtilityIds = new Set(assignedUtilities.map(a => a.provider_id));
+  const unassignedUtilities = availableUtilities.filter(p => !assignedUtilityIds.has(p.provider_id));
+
+  // Get already assigned service provider IDs
+  const assignedProviderIds = new Set(assignedProviders.map(a => a.provider_id));
+  const unassignedProviders = availableProviders.filter(p => !assignedProviderIds.has(p.provider_id));
+
+  // Filtered providers for dialogs (must be before early return due to hooks rule)
+  const filteredDialogUtilities = useMemo(() => {
+    if (!utilityDialogSearch) return unassignedUtilities;
+    const search = utilityDialogSearch.toLowerCase();
+    return unassignedUtilities.filter(p =>
+      p.provider_name.toLowerCase().includes(search) ||
+      p.provider_type.toLowerCase().includes(search)
+    );
+  }, [unassignedUtilities, utilityDialogSearch]);
+
+  const filteredDialogServices = useMemo(() => {
+    if (!serviceDialogSearch) return unassignedProviders;
+    const search = serviceDialogSearch.toLowerCase();
+    return unassignedProviders.filter(p =>
+      p.provider_name.toLowerCase().includes(search) ||
+      p.provider_type.toLowerCase().includes(search)
+    );
+  }, [unassignedProviders, serviceDialogSearch]);
 
   // Show loading skeleton on initial load
   if (isLoadingUtilities && isLoadingServiceProviders) {
     return <ProvidersTabSkeleton />;
   }
 
-  const handleAssignUtility = () => {
-    if (!utilityFormData.providerId) {
+  const handleAssignUtility = async () => {
+    if (!selectedUtilityProviderId) {
       toast({
         title: "Error",
         description: "Please select a utility provider",
@@ -179,51 +178,23 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
       return;
     }
 
-    assignUtilityProvider({
-      providerId: utilityFormData.providerId,
-      accountNumber: utilityFormData.accountNumber,
-      billingName: utilityFormData.billingName,
-      username: utilityFormData.username,
-      password: utilityFormData.password,
-      observations: utilityFormData.observations,
-    });
+    try {
+      await assignUtilityProvider({
+        providerId: selectedUtilityProviderId,
+      });
+
+      // Force refetch both tables to ensure UI updates
+      await Promise.all([refetchUtilities(), refetchServices()]);
+    } catch (error) {
+      console.error('Error assigning utility provider:', error);
+    }
 
     setShowUtilityAssignDialog(false);
-    setUtilityFormData({
-      providerId: '',
-      accountNumber: '',
-      billingName: '',
-      username: '',
-      password: '',
-      observations: '',
-    });
+    setSelectedUtilityProviderId('');
+    setUtilityDialogSearch('');
   };
 
-  const handleUpdateUtilityAssignment = () => {
-    if (!editingUtilityAssignment) return;
-
-    updateUtilityAssignment({
-      assignmentId: editingUtilityAssignment.id,
-      accountNumber: utilityFormData.accountNumber,
-      billingName: utilityFormData.billingName,
-      username: utilityFormData.username,
-      password: utilityFormData.password,
-      observations: utilityFormData.observations,
-    });
-
-    setShowUtilityEditDialog(false);
-    setEditingUtilityAssignment(null);
-    setUtilityFormData({
-      providerId: '',
-      accountNumber: '',
-      billingName: '',
-      username: '',
-      password: '',
-      observations: '',
-    });
-  };
-
-  const handleAssignProvider = () => {
+  const handleAssignProvider = async () => {
     if (!selectedProviderId) {
       toast({
         title: "Error",
@@ -233,51 +204,58 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
       return;
     }
 
-    assignProvider({
-      providerId: selectedProviderId,
-      isPreferredForProperty: isPreferredForProperty,
-      assignmentNotes: assignmentNotes,
-    });
+    try {
+      await assignProvider({
+        providerId: selectedProviderId,
+        isPreferredForProperty: isPreferredForProperty,
+      });
+
+      // Force refetch both tables to ensure UI updates
+      await Promise.all([refetchUtilities(), refetchServices()]);
+    } catch (error) {
+      console.error('Error assigning service provider:', error);
+    }
 
     setShowAssignDialog(false);
     setSelectedProviderId('');
-    setAssignmentNotes('');
     setIsPreferredForProperty(false);
+    setServiceDialogSearch('');
   };
 
-  const handleEditUtilityAssignment = (assignment: any) => {
-    setEditingUtilityAssignment(assignment);
-    setUtilityFormData({
-      providerId: assignment.provider_id,
-      accountNumber: assignment.account_number || '',
-      billingName: assignment.billing_name || '',
-      username: assignment.username || '',
-      password: assignment.password || '',
-      observations: assignment.observations || '',
-    });
-    setShowUtilityEditDialog(true);
+  const handleCloseUtilityDialog = (open: boolean) => {
+    setShowUtilityAssignDialog(open);
+    if (!open) {
+      setSelectedUtilityProviderId('');
+      setUtilityDialogSearch('');
+    }
   };
 
-  const handleEditServiceAssignment = (assignment: any) => {
-    setEditingServiceAssignment(assignment);
-    setAssignmentNotes(assignment.assignment_notes || '');
-    setIsPreferredForProperty(assignment.is_preferred_for_property || false);
-    setShowServiceEditDialog(true);
+  const handleCloseServiceDialog = (open: boolean) => {
+    setShowAssignDialog(open);
+    if (!open) {
+      setSelectedProviderId('');
+      setIsPreferredForProperty(false);
+      setServiceDialogSearch('');
+    }
   };
 
-  const handleUpdateServiceAssignment = () => {
-    if (!editingServiceAssignment) return;
+  const handleConfirmUnassign = async () => {
+    if (!providerToUnassign) return;
 
-    updateAssignment({
-      assignmentId: editingServiceAssignment.id,
-      isPreferredForProperty: isPreferredForProperty,
-      assignmentNotes: assignmentNotes,
-    });
+    try {
+      if (providerToUnassign.type === 'utility') {
+        await unassignUtilityProvider(providerToUnassign.id);
+      } else {
+        await unassignProvider(providerToUnassign.id);
+      }
 
-    setShowServiceEditDialog(false);
-    setEditingServiceAssignment(null);
-    setAssignmentNotes('');
-    setIsPreferredForProperty(false);
+      // Force refetch both tables to ensure UI updates
+      await Promise.all([refetchUtilities(), refetchServices()]);
+    } catch (error) {
+      console.error('Error unassigning provider:', error);
+    }
+
+    setProviderToUnassign(null);
   };
 
   const getProviderIcon = (type: string) => {
@@ -288,19 +266,6 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
   const getProviderColor = (type: string) => {
     return providerTypeColors[type] || 'bg-slate-500';
   };
-
-  const providerTypes = [
-    'Electric', 'Internet', 'Gas', 'Water', 'Cable', 'Security',
-    'Parking', 'Maintenance', 'Management', 'Other'
-  ];
-
-  // Get already assigned utility provider IDs
-  const assignedUtilityIds = new Set(assignedUtilities.map(a => a.provider_id));
-  const unassignedUtilities = availableUtilities.filter(p => !assignedUtilityIds.has(p.provider_id));
-
-  // Get already assigned service provider IDs
-  const assignedProviderIds = new Set(assignedProviders.map(a => a.provider_id));
-  const unassignedProviders = availableProviders.filter(p => !assignedProviderIds.has(p.provider_id));
 
   return (
     <div className="space-y-6">
@@ -325,184 +290,106 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                 Assign utility providers from the global directory to this property
               </p>
             </div>
-            <Dialog open={showUtilityAssignDialog} onOpenChange={setShowUtilityAssignDialog}>
+            <Dialog open={showUtilityAssignDialog} onOpenChange={handleCloseUtilityDialog}>
               <DialogTrigger asChild>
                 <Button disabled={isAssigningUtility}>
                   <Plus className="mr-2 h-4 w-4" />
                   Assign Utility
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                   <DialogTitle>Assign Utility Provider</DialogTitle>
                   <DialogDescription>
-                    Select a utility provider and enter property-specific account details
+                    Select a utility provider to assign to this property
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Utility Provider *</Label>
-                    <Select value={utilityFormData.providerId} onValueChange={(value) => setUtilityFormData({ ...utilityFormData, providerId: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unassignedUtilities.map((provider) => (
-                          <SelectItem key={provider.provider_id} value={provider.provider_id}>
-                            <div className="flex items-center justify-between w-full">
-                              <span>{provider.provider_name}</span>
-                              <Badge variant="outline" className="ml-2">
-                                {provider.provider_type}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Account Number</Label>
-                      <Input
-                        value={utilityFormData.accountNumber}
-                        onChange={(e) => setUtilityFormData({ ...utilityFormData, accountNumber: e.target.value })}
-                        placeholder="Account #"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Billing Name</Label>
-                      <Input
-                        value={utilityFormData.billingName}
-                        onChange={(e) => setUtilityFormData({ ...utilityFormData, billingName: e.target.value })}
-                        placeholder="Name on account"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Username</Label>
-                      <Input
-                        value={utilityFormData.username}
-                        onChange={(e) => setUtilityFormData({ ...utilityFormData, username: e.target.value })}
-                        placeholder="Login username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Password</Label>
-                      <Input
-                        type="password"
-                        value={utilityFormData.password}
-                        onChange={(e) => setUtilityFormData({ ...utilityFormData, password: e.target.value })}
-                        placeholder="Login password"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Notes</Label>
-                    <Textarea
-                      value={utilityFormData.observations}
-                      onChange={(e) => setUtilityFormData({ ...utilityFormData, observations: e.target.value })}
-                      placeholder="Additional notes..."
-                      rows={3}
+                <div className="space-y-4 py-2">
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      placeholder="Search providers..."
+                      value={utilityDialogSearch}
+                      onChange={(e) => setUtilityDialogSearch(e.target.value)}
+                      className="pl-10"
                     />
                   </div>
+
+                  {/* Provider Cards */}
+                  <ScrollArea className="h-[300px] pr-4">
+                    {filteredDialogUtilities.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No providers found</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {filteredDialogUtilities.map((provider) => {
+                          const Icon = getProviderIcon(provider.provider_type);
+                          const colorClass = getProviderColor(provider.provider_type);
+                          const isSelected = selectedUtilityProviderId === provider.provider_id;
+
+                          return (
+                            <div
+                              key={provider.provider_id}
+                              onClick={() => setSelectedUtilityProviderId(provider.provider_id)}
+                              className={`
+                                relative p-3 rounded-lg border-2 cursor-pointer transition-all
+                                ${isSelected
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-transparent bg-gray-50 hover:bg-gray-100 hover:border-gray-200'
+                                }
+                              `}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-lg ${colorClass} text-white`}>
+                                  <Icon className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium truncate">{provider.provider_name}</span>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {provider.provider_type}
+                                    </Badge>
+                                  </div>
+                                  {provider.phone_primary && (
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                      <Phone className="h-3 w-3" />
+                                      {provider.phone_primary}
+                                    </div>
+                                  )}
+                                </div>
+                                {isSelected && (
+                                  <div className="flex-shrink-0 text-primary">
+                                    <Check className="h-5 w-5" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </ScrollArea>
                 </div>
 
                 <DialogFooter>
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowUtilityAssignDialog(false)}
+                    onClick={() => handleCloseUtilityDialog(false)}
                   >
                     Cancel
                   </Button>
-                  <Button onClick={handleAssignUtility} disabled={isAssigningUtility}>
+                  <Button onClick={handleAssignUtility} disabled={isAssigningUtility || !selectedUtilityProviderId}>
                     {isAssigningUtility ? 'Assigning...' : 'Assign Provider'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
-
-          {/* Edit Assignment Dialog */}
-          <Dialog open={showUtilityEditDialog} onOpenChange={setShowUtilityEditDialog}>
-            <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Edit Account Details</DialogTitle>
-                <DialogDescription>
-                  Update property-specific account information for {editingUtilityAssignment?.provider?.provider_name}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Account Number</Label>
-                    <Input
-                      value={utilityFormData.accountNumber}
-                      onChange={(e) => setUtilityFormData({ ...utilityFormData, accountNumber: e.target.value })}
-                      placeholder="Account #"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Billing Name</Label>
-                    <Input
-                      value={utilityFormData.billingName}
-                      onChange={(e) => setUtilityFormData({ ...utilityFormData, billingName: e.target.value })}
-                      placeholder="Name on account"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Username</Label>
-                    <Input
-                      value={utilityFormData.username}
-                      onChange={(e) => setUtilityFormData({ ...utilityFormData, username: e.target.value })}
-                      placeholder="Login username"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Password</Label>
-                    <Input
-                      type="password"
-                      value={utilityFormData.password}
-                      onChange={(e) => setUtilityFormData({ ...utilityFormData, password: e.target.value })}
-                      placeholder="Login password"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Notes</Label>
-                  <Textarea
-                    value={utilityFormData.observations}
-                    onChange={(e) => setUtilityFormData({ ...utilityFormData, observations: e.target.value })}
-                    placeholder="Additional notes..."
-                    rows={3}
-                  />
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowUtilityEditDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleUpdateUtilityAssignment} disabled={isUpdatingUtility}>
-                  {isUpdatingUtility ? 'Updating...' : 'Update Details'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
 
           {assignedUtilities.length === 0 ? (
             <div className="text-center py-12 border rounded-lg">
@@ -537,7 +424,9 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                       <TableHead>Contact</TableHead>
                       <TableHead>Account</TableHead>
                       <TableHead>Billing Name</TableHead>
-                      <TableHead className="w-24">Actions</TableHead>
+                      <TableHead>Username</TableHead>
+                      <TableHead>Notes</TableHead>
+                      <TableHead className="w-[80px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -586,41 +475,25 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                             </TableCell>
                             <TableCell>{assignment.account_number || '-'}</TableCell>
                             <TableCell>{assignment.billing_name || '-'}</TableCell>
+                            <TableCell>{assignment.username || '-'}</TableCell>
+                            <TableCell className="max-w-[200px] truncate" title={assignment.observations || ''}>
+                              {assignment.observations || '-'}
+                            </TableCell>
                             <TableCell>
-                              <div className="flex items-center space-x-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditUtilityAssignment(assignment)}
-                                  disabled={isUpdatingUtility}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="sm" disabled={isUnassigningUtility}>
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Unassign Utility Provider</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Remove {assignment.provider.provider_name} from this property?
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => unassignUtilityProvider(assignment.id)}
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                      >
-                                        Unassign
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => setProviderToUnassign({
+                                  id: assignment.id,
+                                  name: assignment.provider.provider_name,
+                                  type: 'utility',
+                                })}
+                                disabled={isUnassigningUtility}
+                                title="Remove provider"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );
@@ -641,7 +514,7 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                 Assign service providers from the global directory to this property
               </p>
             </div>
-            <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+            <Dialog open={showAssignDialog} onOpenChange={handleCloseServiceDialog}>
               <DialogTrigger asChild>
                 <Button disabled={isAssigning}>
                   <Plus className="mr-2 h-4 w-4" />
@@ -656,29 +529,86 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Service Provider *</Label>
-                    <Select value={selectedProviderId} onValueChange={setSelectedProviderId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unassignedProviders.map((provider) => (
-                          <SelectItem key={provider.provider_id} value={provider.provider_id}>
-                            <div className="flex items-center justify-between w-full">
-                              <span>{provider.provider_name}</span>
-                              <Badge variant="outline" className="ml-2">
-                                {provider.provider_type}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <div className="space-y-4 py-2">
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      placeholder="Search providers..."
+                      value={serviceDialogSearch}
+                      onChange={(e) => setServiceDialogSearch(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  {/* Provider Cards */}
+                  <ScrollArea className="h-[280px] pr-4">
+                    {filteredDialogServices.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Wrench className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No providers found</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {filteredDialogServices.map((provider) => {
+                          const isSelected = selectedProviderId === provider.provider_id;
+
+                          return (
+                            <div
+                              key={provider.provider_id}
+                              onClick={() => setSelectedProviderId(provider.provider_id)}
+                              className={`
+                                relative p-3 rounded-lg border-2 cursor-pointer transition-all
+                                ${isSelected
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-transparent bg-gray-50 hover:bg-gray-100 hover:border-gray-200'
+                                }
+                              `}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-blue-500 text-white">
+                                  <Wrench className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium truncate">{provider.provider_name}</span>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {provider.provider_type}
+                                    </Badge>
+                                    {provider.is_preferred && (
+                                      <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                                    {provider.phone_primary && (
+                                      <div className="flex items-center gap-1">
+                                        <Phone className="h-3 w-3" />
+                                        {provider.phone_primary}
+                                      </div>
+                                    )}
+                                    {provider.rating && (
+                                      <div className="flex items-center gap-1">
+                                        <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                        {provider.rating.toFixed(1)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                {isSelected && (
+                                  <div className="flex-shrink-0 text-primary">
+                                    <Check className="h-5 w-5" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </ScrollArea>
+
+                  {/* Preferred Checkbox */}
+                  <div className="flex items-center space-x-2 pt-2 border-t">
                     <Checkbox
                       id="preferred"
                       checked={isPreferredForProperty}
@@ -688,81 +618,23 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                       Mark as preferred for this property
                     </Label>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label>Notes (Optional)</Label>
-                    <Textarea
-                      value={assignmentNotes}
-                      onChange={(e) => setAssignmentNotes(e.target.value)}
-                      placeholder="Add notes about this assignment..."
-                      rows={3}
-                    />
-                  </div>
                 </div>
 
                 <DialogFooter>
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowAssignDialog(false)}
+                    onClick={() => handleCloseServiceDialog(false)}
                   >
                     Cancel
                   </Button>
-                  <Button onClick={handleAssignProvider} disabled={isAssigning}>
+                  <Button onClick={handleAssignProvider} disabled={isAssigning || !selectedProviderId}>
                     {isAssigning ? 'Assigning...' : 'Assign Provider'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
-
-          {/* Edit Service Assignment Dialog */}
-          <Dialog open={showServiceEditDialog} onOpenChange={setShowServiceEditDialog}>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Edit Service Assignment</DialogTitle>
-                <DialogDescription>
-                  Update assignment details for {editingServiceAssignment?.provider?.provider_name}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="grid gap-4 py-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="edit-preferred"
-                    checked={isPreferredForProperty}
-                    onCheckedChange={(checked) => setIsPreferredForProperty(checked as boolean)}
-                  />
-                  <Label htmlFor="edit-preferred" className="cursor-pointer">
-                    Mark as preferred for this property
-                  </Label>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Notes</Label>
-                  <Textarea
-                    value={assignmentNotes}
-                    onChange={(e) => setAssignmentNotes(e.target.value)}
-                    placeholder="Add notes about this assignment..."
-                    rows={4}
-                  />
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowServiceEditDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleUpdateServiceAssignment}>
-                  Update Assignment
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
 
           {assignedProviders.length === 0 ? (
             <div className="text-center py-12 border rounded-lg">
@@ -797,7 +669,8 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                       <TableHead>Contact</TableHead>
                       <TableHead>Rating</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="w-24">Actions</TableHead>
+                      <TableHead>Notes</TableHead>
+                      <TableHead className="w-[80px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -856,40 +729,24 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                               {assignment.provider.is_active ? 'Active' : 'Inactive'}
                             </Badge>
                           </TableCell>
+                          <TableCell className="max-w-[200px] truncate" title={assignment.assignment_notes || ''}>
+                            {assignment.assignment_notes || '-'}
+                          </TableCell>
                           <TableCell>
-                            <div className="flex items-center space-x-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditServiceAssignment(assignment)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="sm" disabled={isUnassigning}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Unassign Contractor</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Remove {assignment.provider.provider_name} from this property?
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => unassignProvider(assignment.id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      Unassign
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => setProviderToUnassign({
+                                id: assignment.id,
+                                name: assignment.provider.provider_name,
+                                type: 'service',
+                              })}
+                              disabled={isUnassigning}
+                              title="Remove provider"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -900,6 +757,27 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Unassign Confirmation Dialog */}
+      <AlertDialog open={!!providerToUnassign} onOpenChange={(open) => !open && setProviderToUnassign(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Provider</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove <span className="font-semibold">{providerToUnassign?.name}</span> from this property? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmUnassign}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {(isUnassigningUtility || isUnassigning) ? 'Removing...' : 'Remove'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

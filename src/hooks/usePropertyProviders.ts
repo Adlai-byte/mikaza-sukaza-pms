@@ -121,10 +121,11 @@ export function usePropertyProviders(propertyId: string, category?: 'service' | 
       : propertyProviderKeys.all(propertyId),
     queryFn: () => fetchPropertyProviders(propertyId, category),
     enabled: !!propertyId,
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   // Query for available providers
@@ -202,10 +203,28 @@ export function usePropertyProviders(propertyId: string, category?: 'service' | 
         providerType: provider?.provider_type,
       });
 
-      // Refetch all property provider queries
-      await queryClient.invalidateQueries({
-        queryKey: propertyProviderKeys.all(propertyId),
-      });
+      // Invalidate ALL property_providers queries for this property
+      // This triggers automatic refetch while keeping existing data visible
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['property_providers', propertyId, 'utility'],
+          refetchType: 'all',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['property_providers', propertyId, 'service'],
+          refetchType: 'all',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['property_providers', propertyId],
+          exact: true,
+          refetchType: 'all',
+        }),
+        // Cross-entity: invalidate property detail since providers changed
+        queryClient.invalidateQueries({
+          queryKey: ['properties', 'detail', propertyId],
+          refetchType: 'all',
+        }),
+      ]);
 
       toast({
         title: "Success",
@@ -282,6 +301,7 @@ export function usePropertyProviders(propertyId: string, category?: 'service' | 
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: propertyProviderKeys.all(propertyId),
+        refetchType: 'all',
       });
 
       toast({
@@ -321,9 +341,27 @@ export function usePropertyProviders(propertyId: string, category?: 'service' | 
       console.log('✅ [PropertyProviders] Provider unassigned');
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: propertyProviderKeys.all(propertyId),
-      });
+      // Invalidate ALL property_providers queries for this property
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['property_providers', propertyId, 'utility'],
+          refetchType: 'all',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['property_providers', propertyId, 'service'],
+          refetchType: 'all',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['property_providers', propertyId],
+          exact: true,
+          refetchType: 'all',
+        }),
+        // Cross-entity: invalidate property detail since providers changed
+        queryClient.invalidateQueries({
+          queryKey: ['properties', 'detail', propertyId],
+          refetchType: 'all',
+        }),
+      ]);
 
       await logActivity('PROVIDER_UNASSIGNED', { propertyId });
 

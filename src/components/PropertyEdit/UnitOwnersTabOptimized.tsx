@@ -163,8 +163,11 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: unitOwnersKeys.all(propertyId) });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: unitOwnersKeys.all(propertyId),
+        refetchType: 'active',
+      });
       toast({
         title: 'Success',
         description: 'Owner added successfully',
@@ -193,8 +196,11 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: unitOwnersKeys.all(propertyId) });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: unitOwnersKeys.all(propertyId),
+        refetchType: 'active',
+      });
       toast({
         title: 'Success',
         description: 'Owner updated successfully',
@@ -221,8 +227,11 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
       if (error) throw error;
       return ownerId;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: unitOwnersKeys.all(propertyId) });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: unitOwnersKeys.all(propertyId),
+        refetchType: 'active',
+      });
       toast({
         title: 'Success',
         description: 'Owner removed successfully',

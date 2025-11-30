@@ -207,10 +207,19 @@ export function useBookings() {
       return { rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings) };
     },
     onSuccess: async (data) => {
-      // Invalidate and refetch bookings
-      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id) });
-      queryClient.invalidateQueries({ queryKey: ['bookings', 'calendar'] }); // Invalidate all calendar views
+      // Invalidate booking-related caches with refetchType: 'all'
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'calendar'], refetchType: 'all' });
+
+      // Cross-entity invalidation: Property availability changed
+      queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['properties', 'list'], refetchType: 'all' });
+
+      // Cross-entity invalidation: Financial data may have changed
+      queryClient.invalidateQueries({ queryKey: ['invoices'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['financial-entries'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
 
       // Get property name for notification
       const { data: property } = await supabase
@@ -307,11 +316,20 @@ export function useBookings() {
       return { rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings) };
     },
     onSuccess: async (data, variables) => {
-      // Invalidate and refetch bookings
-      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id) });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.detail(data.booking_id!) });
-      queryClient.invalidateQueries({ queryKey: ['bookings', 'calendar'] }); // Invalidate all calendar views
+      // Invalidate booking-related caches with refetchType: 'all'
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.detail(data.booking_id!), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'calendar'], refetchType: 'all' });
+
+      // Cross-entity invalidation: Property availability changed
+      queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['properties', 'list'], refetchType: 'all' });
+
+      // Cross-entity invalidation: Financial data may have changed
+      queryClient.invalidateQueries({ queryKey: ['invoices'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['financial-entries'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
 
       // Get property name for notification
       const { data: property } = await supabase
@@ -419,10 +437,20 @@ export function useBookings() {
       return { rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings) };
     },
     onSuccess: async (data, bookingId) => {
-      // Invalidate and refetch bookings
-      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id) });
-      queryClient.invalidateQueries({ queryKey: ['bookings', 'calendar'] }); // Invalidate all calendar views
+      // Invalidate booking-related caches with refetchType: 'all'
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.detail(bookingId), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'calendar'], refetchType: 'all' });
+
+      // Cross-entity invalidation: Property availability changed
+      queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['properties', 'list'], refetchType: 'all' });
+
+      // Cross-entity invalidation: Financial data may have changed
+      queryClient.invalidateQueries({ queryKey: ['invoices'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['financial-entries'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
 
       // Get property name for notification
       const { data: property } = await supabase

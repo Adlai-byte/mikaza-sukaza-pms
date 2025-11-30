@@ -93,10 +93,11 @@ export function useServiceProviders() {
   } = useQuery({
     queryKey: serviceProviderKeys.lists(),
     queryFn: fetchServiceProviders,
-    staleTime: 0, // No caching
-    gcTime: 0,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    // Enable caching - realtime subscriptions will invalidate when data changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   // Create service provider mutation
@@ -326,11 +327,11 @@ export function useServiceProviderDetail(providerId: string | undefined) {
     queryKey: serviceProviderKeys.detail(providerId || ''),
     queryFn: () => fetchServiceProviderDetail(providerId!),
     enabled: !!providerId,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     retry: 2,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   return {
