@@ -645,21 +645,29 @@ export default function InvoiceForm() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="property_id">{t('invoices.property')} *</Label>
-                <Select
-                  value={form.watch('property_id')}
-                  onValueChange={(value) => form.setValue('property_id', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('invoices.selectProperty')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {properties.map((property) => (
-                      <SelectItem key={property.property_id} value={property.property_id!}>
-                        {property.property_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isEditing ? (
+                  <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
+                    <span className="text-muted-foreground">
+                      {properties.find(p => p.property_id === form.watch('property_id'))?.property_name || t('invoices.noPropertySelected')}
+                    </span>
+                  </div>
+                ) : (
+                  <Select
+                    value={form.watch('property_id')}
+                    onValueChange={(value) => form.setValue('property_id', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('invoices.selectProperty')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {properties.map((property) => (
+                        <SelectItem key={property.property_id} value={property.property_id!}>
+                          {property.property_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -773,10 +781,25 @@ export default function InvoiceForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="payment_method">{t('invoices.paymentMethod')}</Label>
-                <Input
-                  {...form.register('payment_method')}
-                  placeholder={t('invoices.paymentMethodPlaceholder')}
-                />
+                <Select
+                  value={form.watch('payment_method') || ''}
+                  onValueChange={(value) => form.setValue('payment_method', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('invoices.paymentMethodPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">{t('invoices.paymentMethods.cash')}</SelectItem>
+                    <SelectItem value="credit_card">{t('invoices.paymentMethods.creditCard')}</SelectItem>
+                    <SelectItem value="debit_card">{t('invoices.paymentMethods.debitCard')}</SelectItem>
+                    <SelectItem value="bank_transfer">{t('invoices.paymentMethods.bankTransfer')}</SelectItem>
+                    <SelectItem value="check">{t('invoices.paymentMethods.check')}</SelectItem>
+                    <SelectItem value="stripe">{t('invoices.paymentMethods.stripe')}</SelectItem>
+                    <SelectItem value="paypal">{t('invoices.paymentMethods.paypal')}</SelectItem>
+                    <SelectItem value="pix">{t('invoices.paymentMethods.pix')}</SelectItem>
+                    <SelectItem value="other">{t('invoices.paymentMethods.other')}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
