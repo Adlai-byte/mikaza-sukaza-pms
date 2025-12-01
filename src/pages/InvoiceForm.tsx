@@ -500,10 +500,10 @@ export default function InvoiceForm() {
           description: t('invoices.invoiceUpdatedSuccess'),
         });
 
-        // Navigate to the property that owns this invoice
+        // Navigate to the property view page with bookings tab selected
         const propertyId = data.property_id || invoice?.property_id;
         if (propertyId) {
-          navigate(`/properties/${propertyId}/edit`);
+          navigate(`/properties/${propertyId}/view?tab=bookings`);
         } else {
           navigate('/invoices');
         }
