@@ -83,7 +83,7 @@ export function GuestDetailsDialog({ open, onClose, guestId, onEdit }: GuestDeta
             ) : guest ? (
               <>
                 {/* Stats Cards */}
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2">
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
@@ -111,22 +111,6 @@ export function GuestDetailsDialog({ open, onClose, guestId, onEdit }: GuestDeta
                       <p className="text-xs text-muted-foreground mt-1">
                         Lifetime value
                       </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col gap-2">
-                        <Badge variant={guest.is_verified ? 'default' : 'secondary'}>
-                          {guest.is_verified ? 'Verified' : 'Unverified'}
-                        </Badge>
-                        {guest.marketing_opt_in && (
-                          <Badge variant="outline">Marketing Opt-in</Badge>
-                        )}
-                      </div>
                     </CardContent>
                   </Card>
                 </div>

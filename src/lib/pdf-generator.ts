@@ -25,10 +25,11 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
   const margin = 20;
   let yPos = margin;
 
-  // Colors
-  const primaryColor: [number, number, number] = [34, 139, 34]; // Green
+  // Colors - Violet & Lime Green Theme
+  const primaryColor: [number, number, number] = [139, 92, 246]; // Violet (#8b5cf6)
+  const accentColor: [number, number, number] = [132, 204, 22]; // Lime (#84cc16)
   const textColor: [number, number, number] = [60, 60, 60];
-  const lightGray: [number, number, number] = [240, 240, 240];
+  const lightGray: [number, number, number] = [245, 243, 255]; // Light violet
 
   // Helper to format currency
   const formatCurrency = (amount: number) => {
@@ -220,7 +221,7 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
   if (invoice.amount_paid && invoice.amount_paid > 0) {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 128, 0);
+    doc.setTextColor(...accentColor); // Lime green
     doc.text('Amount Paid:', totalsX, totalsStartY + 25);
     doc.text(formatCurrency(invoice.amount_paid), pageWidth - margin, totalsStartY + 25, { align: 'right' });
   }
@@ -345,12 +346,12 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
   const margin = 20;
   let yPos = margin;
 
-  // Colors
-  const primaryColor: [number, number, number] = [34, 139, 34]; // Green
+  // Colors - Violet & Lime Green Theme
+  const primaryColor: [number, number, number] = [139, 92, 246]; // Violet (#8b5cf6)
   const textColor: [number, number, number] = [60, 60, 60];
-  const lightGray: [number, number, number] = [240, 240, 240];
-  const greenColor: [number, number, number] = [0, 128, 0];
-  const redColor: [number, number, number] = [220, 53, 69];
+  const lightGray: [number, number, number] = [245, 243, 255]; // Light violet
+  const greenColor: [number, number, number] = [132, 204, 22]; // Lime (#84cc16)
+  const redColor: [number, number, number] = [139, 92, 246]; // Violet for expenses
 
   // Helper to format currency
   const formatCurrency = (amount: number) => {
@@ -425,44 +426,44 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
 
   yPos += 35;
 
-  // ===== SUMMARY BOXES =====
+  // ===== SUMMARY BOXES - Violet & Lime Green Theme =====
   const boxWidth = (pageWidth - 4 * margin) / 3;
 
-  // Revenue box
-  doc.setFillColor(220, 252, 231); // Light green
+  // Revenue box - Lime green theme
+  doc.setFillColor(236, 252, 203); // Light lime (#ecfccb)
   doc.rect(margin, yPos, boxWidth, 25, 'F');
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(22, 101, 52);
+  doc.setTextColor(63, 98, 18); // Lime-900
   doc.text('Total Revenue', margin + boxWidth / 2, yPos + 8, { align: 'center' });
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...greenColor);
   doc.text(formatCurrency(statement.revenue.total), margin + boxWidth / 2, yPos + 18, { align: 'center' });
 
-  // Expenses box
-  doc.setFillColor(254, 226, 226); // Light red
+  // Expenses box - Violet theme
+  doc.setFillColor(245, 243, 255); // Light violet (#f5f3ff)
   doc.rect(margin + boxWidth + 5, yPos, boxWidth, 25, 'F');
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(153, 27, 27);
+  doc.setTextColor(91, 33, 182); // Violet-800
   doc.text('Total Expenses', margin + boxWidth + 5 + boxWidth / 2, yPos + 8, { align: 'center' });
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...redColor);
+  doc.setTextColor(139, 92, 246); // Violet
   doc.text(formatCurrency(statement.expenses.total), margin + boxWidth + 5 + boxWidth / 2, yPos + 18, { align: 'center' });
 
   // Net Income box
   const isProfit = statement.net_income >= 0;
-  doc.setFillColor(...(isProfit ? [236, 253, 245] : [255, 237, 213])); // Light emerald or orange
+  doc.setFillColor(...(isProfit ? [236, 252, 203] : [254, 226, 226])); // Light lime or light red
   doc.rect(margin + 2 * (boxWidth + 5), yPos, boxWidth, 25, 'F');
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...(isProfit ? [6, 78, 59] : [154, 52, 18]));
+  doc.setTextColor(...(isProfit ? [63, 98, 18] : [153, 27, 27])); // Lime-900 or Red-800
   doc.text('Net Income', margin + 2 * (boxWidth + 5) + boxWidth / 2, yPos + 8, { align: 'center' });
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...(isProfit ? [0, 128, 0] : [234, 88, 12]));
+  doc.setTextColor(...(isProfit ? [132, 204, 22] : [220, 53, 69])); // Lime or Red
   doc.text(
     `${isProfit ? '+' : ''}${formatCurrency(statement.net_income)}`,
     margin + 2 * (boxWidth + 5) + boxWidth / 2,
@@ -510,8 +511,8 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
         textColor: textColor,
       },
       footStyles: {
-        fillColor: [220, 252, 231],
-        textColor: greenColor,
+        fillColor: [236, 252, 203], // Light lime
+        textColor: greenColor, // Lime
         fontSize: 9,
         fontStyle: 'bold',
       },
@@ -570,8 +571,8 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
         textColor: textColor,
       },
       footStyles: {
-        fillColor: [254, 226, 226],
-        textColor: redColor,
+        fillColor: [245, 243, 255], // Light violet
+        textColor: [139, 92, 246], // Violet
         fontSize: 9,
         fontStyle: 'bold',
       },
@@ -730,14 +731,14 @@ export async function generateAccessAuthorizationPDF(authorization: AccessAuthor
   const margin = 20;
   let yPos = margin;
 
-  // Colors
-  const primaryColor: [number, number, number] = [34, 139, 34]; // Green
+  // Colors - Violet & Lime Green Theme
+  const primaryColor: [number, number, number] = [139, 92, 246]; // Violet (#8b5cf6)
   const textColor: [number, number, number] = [60, 60, 60];
-  const lightGray: [number, number, number] = [240, 240, 240];
+  const lightGray: [number, number, number] = [245, 243, 255]; // Light violet
   const statusColors: Record<string, [number, number, number]> = {
-    requested: [251, 191, 36],
-    approved: [34, 197, 94],
-    in_progress: [59, 130, 246],
+    requested: [139, 92, 246], // Violet
+    approved: [132, 204, 22], // Lime
+    in_progress: [124, 58, 237], // Violet-600
     completed: [107, 114, 128],
     cancelled: [239, 68, 68],
     expired: [156, 163, 175],

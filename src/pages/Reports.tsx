@@ -406,29 +406,58 @@ export default function Reports() {
           {/* Properties Report */}
           {reportType === 'properties' && (
             <div className="space-y-6">
+              {/* Stats Cards - Violet & Lime Green Theme */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold">{propertiesReport.total}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.totalProperties', 'Total Properties')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-violet-700">{t('reports.totalProperties', 'Total Properties')}</p>
+                        <div className="text-2xl font-bold text-violet-900">{propertiesReport.total}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
+                        <Home className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-green-600">{propertiesReport.active}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.activeProperties', 'Active')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-lime-700">{t('reports.activeProperties', 'Active')}</p>
+                        <div className="text-2xl font-bold text-lime-900">{propertiesReport.active}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-100 to-violet-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-gray-500">{propertiesReport.inactive}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.inactiveProperties', 'Inactive')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-violet-700">{t('reports.inactiveProperties', 'Inactive')}</p>
+                        <div className="text-2xl font-bold text-violet-900">{propertiesReport.inactive}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-violet-400 rounded-lg flex items-center justify-center">
+                        <AlertCircle className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold">{Object.keys(propertiesReport.byType).length}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.propertyTypes', 'Property Types')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-violet-700">{t('reports.propertyTypes', 'Property Types')}</p>
+                        <div className="text-2xl font-bold text-violet-900">{Object.keys(propertiesReport.byType).length}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
+                        <FileSpreadsheet className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -472,29 +501,58 @@ export default function Reports() {
           {/* Bookings Report */}
           {reportType === 'bookings' && (
             <div className="space-y-6">
+              {/* Stats Cards - Violet & Lime Green Theme */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold">{bookingsReport.total}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.totalBookings', 'Total Bookings')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-violet-700">{t('reports.totalBookings', 'Total Bookings')}</p>
+                        <div className="text-2xl font-bold text-violet-900">{bookingsReport.total}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
+                        <Calendar className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-green-600">{formatCurrency(bookingsReport.totalRevenue)}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.totalRevenue', 'Total Revenue')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-lime-700">{t('reports.totalRevenue', 'Total Revenue')}</p>
+                        <div className="text-2xl font-bold text-lime-900">{formatCurrency(bookingsReport.totalRevenue)}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
+                        <DollarSign className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-100 to-violet-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold">{bookingsReport.avgStay}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.avgStay', 'Avg. Stay (days)')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-violet-700">{t('reports.avgStay', 'Avg. Stay (days)')}</p>
+                        <div className="text-2xl font-bold text-violet-900">{bookingsReport.avgStay}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-violet-400 rounded-lg flex items-center justify-center">
+                        <BarChart3 className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-blue-600">{bookingsReport.confirmed}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.confirmedBookings', 'Confirmed')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-violet-700">{t('reports.confirmedBookings', 'Confirmed')}</p>
+                        <div className="text-2xl font-bold text-violet-900">{bookingsReport.confirmed}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
+                        <Users className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -540,31 +598,65 @@ export default function Reports() {
           {/* Financial Report */}
           {reportType === 'financial' && (
             <div className="space-y-6">
+              {/* Stats Cards - Violet & Lime Green Theme */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-green-600">{formatCurrency(financialReport.totalIncome)}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.totalIncome', 'Total Income')}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-red-600">{formatCurrency(financialReport.totalExpenses)}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.totalExpenses', 'Total Expenses')}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className={cn('text-2xl font-bold', financialReport.netProfit >= 0 ? 'text-green-600' : 'text-red-600')}>
-                      {formatCurrency(financialReport.netProfit)}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-lime-700">{t('reports.totalIncome', 'Total Income')}</p>
+                        <div className="text-2xl font-bold text-lime-900">{formatCurrency(financialReport.totalIncome)}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="h-5 w-5 text-white" />
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">{t('reports.netProfit', 'Net Profit')}</p>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold">{financialReport.invoiceCount}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.invoices', 'Invoices')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-violet-700">{t('reports.totalExpenses', 'Total Expenses')}</p>
+                        <div className="text-2xl font-bold text-violet-900">{formatCurrency(financialReport.totalExpenses)}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
+                        <AlertCircle className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className={cn(
+                  "border-0 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]",
+                  financialReport.netProfit >= 0
+                    ? "bg-gradient-to-br from-lime-100 to-lime-200"
+                    : "bg-gradient-to-br from-red-50 to-red-100"
+                )}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={cn("text-sm font-medium", financialReport.netProfit >= 0 ? "text-lime-700" : "text-red-700")}>{t('reports.netProfit', 'Net Profit')}</p>
+                        <div className={cn('text-2xl font-bold', financialReport.netProfit >= 0 ? 'text-lime-900' : 'text-red-900')}>
+                          {formatCurrency(financialReport.netProfit)}
+                        </div>
+                      </div>
+                      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", financialReport.netProfit >= 0 ? "bg-lime-600" : "bg-red-500")}>
+                        <DollarSign className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-violet-700">{t('reports.invoices', 'Invoices')}</p>
+                        <div className="text-2xl font-bold text-violet-900">{financialReport.invoiceCount}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
+                        <FileText className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -619,29 +711,58 @@ export default function Reports() {
           {/* Occupancy Report */}
           {reportType === 'occupancy' && (
             <div className="space-y-6">
+              {/* Stats Cards - Violet & Lime Green Theme */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-blue-600">{occupancyReport.occupancyRate}%</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.occupancyRate', 'Occupancy Rate')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-violet-700">{t('reports.occupancyRate', 'Occupancy Rate')}</p>
+                        <div className="text-2xl font-bold text-violet-900">{occupancyReport.occupancyRate}%</div>
+                      </div>
+                      <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
+                        <BarChart3 className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-green-600">{formatCurrency(occupancyReport.avgDailyRate)}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.avgDailyRate', 'Avg. Daily Rate')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-lime-700">{t('reports.avgDailyRate', 'Avg. Daily Rate')}</p>
+                        <div className="text-2xl font-bold text-lime-900">{formatCurrency(occupancyReport.avgDailyRate)}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
+                        <DollarSign className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-100 to-violet-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-purple-600">{formatCurrency(occupancyReport.revPAR)}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.revPAR', 'RevPAR')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-violet-700">{t('reports.revPAR', 'RevPAR')}</p>
+                        <div className="text-2xl font-bold text-violet-900">{formatCurrency(occupancyReport.revPAR)}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-violet-600 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold">{occupancyReport.bookedDays}</div>
-                    <p className="text-sm text-muted-foreground">{t('reports.bookedDays', 'Booked Days')}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-violet-700">{t('reports.bookedDays', 'Booked Days')}</p>
+                        <div className="text-2xl font-bold text-violet-900">{occupancyReport.bookedDays}</div>
+                      </div>
+                      <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
+                        <Calendar className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>

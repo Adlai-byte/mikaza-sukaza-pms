@@ -4,8 +4,9 @@ import { Invoice } from './schemas';
 export function generateInvoicePDF(invoice: Invoice): string {
   const doc = new jsPDF();
 
-  // Set up colors
-  const primaryColor: [number, number, number] = [102, 126, 234]; // #667eea
+  // Set up colors - Violet & Lime Green Theme
+  const primaryColor: [number, number, number] = [139, 92, 246]; // Violet (#8b5cf6)
+  const accentColor: [number, number, number] = [132, 204, 22]; // Lime (#84cc16)
   const textDark: [number, number, number] = [17, 24, 39]; // #111827
   const textMuted: [number, number, number] = [107, 114, 128]; // #6b7280
 
@@ -137,14 +138,14 @@ export function generateInvoicePDF(invoice: Invoice): string {
   }
 
   // Total (highlighted)
-  doc.setDrawColor(102, 126, 234);
+  doc.setDrawColor(...primaryColor); // Violet
   doc.setLineWidth(0.5);
   doc.line(140, yPos - 2, 190, yPos - 2);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.text('Total:', 140, yPos + 4);
-  doc.setTextColor(5, 150, 105); // Green color
+  doc.setTextColor(...accentColor); // Lime green
   doc.text(`$${(invoice.total_amount || 0).toFixed(2)}`, 185, yPos + 4, { align: 'right' });
   yPos += 10;
 
