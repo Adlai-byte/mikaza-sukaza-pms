@@ -1,0 +1,619 @@
+Test ID,Module,Feature,Test Scenario,Test Steps,Expected Result,Test Data,Priority,Test Type,Estimated Time (min),Dependencies,Status,Assigned To,Notes
+TC001,Authentication,User Registration,Validate user registration with valid data,"1. Navigate to registration page
+2. Enter valid email
+3. Enter strong password (8+ chars with uppercase, lowercase, number, special char)
+4. Enter all required fields
+5. Submit form","User account created successfully
+Verification email sent
+User redirected to login page","Email: test@example.com
+Password: TestPass123!
+Name: John Doe
+Role: customer",P0,Functional,10,None,Not Started,TBD,Critical for all other tests
+TC002,Authentication,Password Validation,Test password requirements enforcement,"1. Navigate to registration
+2. Try passwords without required criteria
+3. Verify error messages","System rejects weak passwords
+Shows specific validation errors","Weak passwords:
+- test (too short)
+- testtest (no uppercase)
+- TestTest (no number)
+- TestTest1 (no special char)",P0,Functional,15,None,Not Started,TBD,Security requirement
+TC003,Authentication,User Login,Test login with valid credentials,"1. Navigate to login page
+2. Enter valid email and password
+3. Click login button","User successfully logged in
+Redirected to dashboard
+Session created","Use registered user credentials",P0,Functional,5,TC001,Not Started,TBD,
+TC004,Authentication,Role-Based Access,Verify RBAC for different user types,"1. Login as each role type (admin, ops, provider, customer)
+2. Navigate to restricted areas
+3. Verify access permissions","Each role can only access permitted areas
+Unauthorized routes redirect to /unauthorized","Test users for each role",P0,Security,30,TC001,Not Started,TBD,Test all 80+ permissions
+TC005,Authentication,Session Management,Test session persistence and timeout,"1. Login and close browser
+2. Reopen and verify session
+3. Wait for timeout period
+4. Verify session expiration","Session persists across browser restarts
+Session expires after timeout period","Valid user credentials",P1,Functional,20,TC001,Not Started,TBD,
+TC006,Authentication,Account Suspension,Test suspended account access,"1. Admin suspends a user account
+2. Suspended user tries to login
+3. Verify access denied","Suspended user cannot login
+Shows suspension message
+Access completely revoked","Admin and test user accounts",P0,Security,15,TC001,Not Started,TBD,
+TC007,Authentication,Password Reset,Test password reset flow,"1. Click 'Forgot Password'
+2. Enter email
+3. Check email for reset link
+4. Click link and set new password
+5. Login with new password","Reset email sent
+New password works
+Old password invalid","Valid email account",P0,Functional,20,Email setup,Not Started,TBD,
+TC008,Property Management,Create Property,Test property creation with all fields,"1. Navigate to Properties
+2. Click Add Property
+3. Fill all tabs (Details, Location, Communication, Access, Extras, Units, Amenities, Rules, Media)
+4. Save property","Property created successfully
+Appears in property list
+All fields saved correctly","Sample property data for all fields",P0,Functional,30,TC003,Not Started,TBD,Complex multi-tab form
+TC009,Property Management,Edit Property,Test property editing and persistence,"1. Open existing property
+2. Edit various fields
+3. Save changes
+4. Verify persistence","Changes saved successfully
+Table updates immediately
+Changes persist on refresh","Existing property ID",P0,Functional,20,TC008,Not Started,TBD,Tests cache invalidation
+TC010,Property Management,Delete Property,Test property deletion,"1. Select property
+2. Click delete
+3. Confirm deletion
+4. Verify removal","Property removed from list
+Related data handled properly","Property without active bookings",P0,Functional,10,TC008,Not Started,TBD,Test orphaned data handling
+TC011,Property Management,Property Images,Test image gallery management,"1. Upload multiple images
+2. Set primary image
+3. Reorder images
+4. Delete an image
+5. Verify gallery updates","Images uploaded successfully
+Primary image displayed
+Order persists
+Deletion works","Sample property images",P0,Functional,25,TC008,Not Started,TBD,Test lazy loading
+TC012,Property Management,Amenities & Rules,Test amenities and rules persistence,"1. Add multiple amenities
+2. Add multiple rules
+3. Save property
+4. Reopen and verify","Amenities saved correctly
+Rules saved correctly
+Data persists across sessions","List of amenities and rules",P1,Functional,15,TC008,Not Started,TBD,Fixed in recent update
+TC013,Property Management,Property Search,Test search and filter functionality,"1. Apply various filters (type, status, booking status)
+2. Search by property name
+3. Verify results","Filters work correctly
+Search returns matching properties
+Combination filters work","Properties with various statuses",P1,Functional,15,TC008,Not Started,TBD,
+TC014,Property Management,Property Export,Test export to CSV/PDF,"1. Select properties
+2. Export to CSV
+3. Export to PDF
+4. Verify file contents","Files generated successfully
+Data complete and accurate
+Formatting correct","Multiple properties",P2,Functional,10,TC008,Not Started,TBD,
+TC015,Property Management,Property PDF Details,Test property details PDF generation,"1. Open property details
+2. Click Download PDF
+3. Open generated PDF
+4. Verify all sections included","PDF generated successfully
+All property data included
+Images embedded correctly
+Professional formatting","Property with complete data",P0,Functional,15,TC008,Not Started,TBD,Recently implemented
+TC016,Booking Management,Create Booking,Test booking creation with conflict detection,"1. Select property and dates
+2. Enter guest information
+3. Set payment details
+4. Save booking","Booking created successfully
+Appears in calendar
+No conflicts allowed","Guest data, available dates",P0,Functional,20,TC008,Not Started,TBD,
+TC017,Booking Management,Overlapping Prevention,Test booking conflict detection,"1. Try to book already booked dates
+2. Verify conflict alert
+3. Try overlapping dates","System prevents overlapping
+Shows conflict message
+Suggests alternative dates","Existing booking dates",P0,Functional,15,TC016,Not Started,TBD,Critical for double-booking prevention
+TC018,Booking Management,Booking Status Flow,Test booking lifecycle transitions,"1. Create booking as inquiry
+2. Move to pending
+3. Confirm booking
+4. Check-in guest
+5. Check-out guest
+6. Complete booking","Each status transition works
+Appropriate actions available per status
+Status history tracked","Test booking",P0,Functional,30,TC016,Not Started,TBD,Test all 8 statuses
+TC019,Booking Management,Channel Integration,Test all 8 booking channels,"1. Create bookings from each channel
+2. Verify channel-specific fields
+3. Test channel commission calculation","All channels work
+Channel data preserved
+Commissions calculated correctly","Channel test data",P1,Functional,40,TC016,Not Started,TBD,"Channels: Airbnb, Booking.com, VRBO, Direct, Expedia, HomeAway, TripAdvisor, Other"
+TC020,Booking Management,Payment Tracking,Test payment status management,"1. Create booking with payment pending
+2. Record partial payment
+3. Record full payment
+4. Process refund","Payment statuses update correctly
+Balance calculations accurate
+Refund processing works","Payment test amounts",P0,Functional,20,TC016,Not Started,TBD,
+TC021,Booking Management,Booking Cancellation,Test cancellation at various stages,"1. Cancel inquiry
+2. Cancel confirmed booking
+3. Cancel after check-in
+4. Verify cancellation reasons saved","Cancellations processed correctly
+Reasons recorded
+Appropriate refunds calculated","Bookings at different stages",P0,Functional,25,TC016,Not Started,TBD,Test cancellation policy
+TC022,Booking Management,Calendar View,Test interactive calendar functionality,"1. View month/week/day views
+2. Drag and drop bookings
+3. Create booking from calendar
+4. Filter by property","Calendar displays correctly
+Drag-drop works
+All views functional","Multiple bookings and properties",P1,Functional,20,TC016,Not Started,TBD,
+TC023,Invoice Management,Create Invoice from Booking,Test auto-invoice generation,"1. Select completed booking
+2. Generate invoice
+3. Verify data population
+4. Save invoice","Invoice created with booking data
+Line items auto-populated
+Calculations correct","Completed booking",P0,Functional,15,TC018,Not Started,TBD,
+TC024,Invoice Management,Manual Invoice Creation,Test manual invoice with custom items,"1. Create new invoice
+2. Add custom line items
+3. Apply taxes
+4. Apply discounts
+5. Save invoice","Invoice created successfully
+Calculations accurate
+Tax computed correctly","Custom line item data",P0,Functional,20,TC003,Not Started,TBD,
+TC025,Invoice Management,Invoice Status Lifecycle,Test invoice status transitions,"1. Create draft invoice
+2. Send to customer
+3. Record payment
+4. Test overdue status
+5. Cancel invoice","Status transitions work
+Email sent when appropriate
+Overdue calculated correctly","Test invoice",P0,Functional,25,TC024,Not Started,TBD,6 statuses to test
+TC026,Invoice Management,Partial Payments,Test partial payment recording,"1. Create invoice for $1000
+2. Record $300 payment
+3. Record $400 payment
+4. Verify balance
+5. Record final payment","Payments recorded correctly
+Balance updated accurately
+Status changes appropriately","Invoice with known amount",P0,Functional,15,TC024,Not Started,TBD,
+TC027,Invoice Management,Invoice PDF Generation,Test invoice PDF with email delivery,"1. Generate invoice PDF
+2. Verify formatting
+3. Send via email
+4. Verify delivery","PDF generated correctly
+Professional formatting
+Email delivered successfully","Complete invoice",P0,Functional,15,TC024,Not Started,TBD,
+TC028,Expense Tracking,Create Expense,Test expense creation with all categories,"1. Create expense for each of 14 categories
+2. Add receipt attachment
+3. Set payment status
+4. Save expenses","All categories work
+Receipts uploaded
+Data saved correctly","Test expenses for each category",P1,Functional,30,TC003,Not Started,TBD,14 categories to test
+TC029,Expense Tracking,Recurring Expenses,Test recurring expense automation,"1. Create monthly recurring expense
+2. Create quarterly expense
+3. Create yearly expense
+4. Verify auto-creation","Recurring expenses created on schedule
+Notifications sent
+Amounts correct","Recurring expense data",P1,Functional,20,TC028,Not Started,TBD,Test automation
+TC030,Expense Tracking,Expense Reporting,Test expense reports and analytics,"1. Generate expense report by category
+2. Generate by property
+3. Generate by date range
+4. Export to PDF","Reports accurate
+Calculations correct
+PDF formatted properly","Multiple expenses",P2,Functional,20,TC028,Not Started,TBD,
+TC031,User Management,Create User,Test user creation with each role,"1. Create admin user
+2. Create ops user
+3. Create provider user
+4. Create customer user","All user types created
+Permissions assigned correctly
+Auth accounts created","User data for each role",P0,Functional,30,TC003,Not Started,TBD,Supabase Auth integration
+TC032,User Management,Edit User,Test user editing with immediate table update,"1. Edit user details
+2. Change user role
+3. Save changes
+4. Verify table update","Changes saved successfully
+Table updates immediately
+No refresh needed","Existing user",P0,Functional,15,TC031,Not Started,TBD,Fixed in recent update
+TC033,User Management,Delete User,Test user deletion with immediate table update,"1. Select user
+2. Delete user
+3. Verify immediate removal from table","User deleted successfully
+Table updates immediately
+Related data handled","Test user account",P0,Functional,10,TC031,Not Started,TBD,Fixed in recent update
+TC034,User Management,User Suspension,Test user suspension workflow,"1. Suspend user with reason
+2. Verify suspended user cannot login
+3. Check suspension details
+4. Reactivate user","Suspension works correctly
+Access revoked immediately
+Reactivation restores access","Active user account",P0,Security,20,TC031,Not Started,TBD,
+TC035,User Management,User Details View,Test comprehensive user details dialog,"1. Open user details
+2. Verify all sections displayed
+3. Check status badges
+4. Verify timestamps","All user data displayed
+Status badges correct
+Professional layout","User with complete data",P1,Functional,10,TC031,Not Started,TBD,Recently enhanced
+TC036,Task Management,Create Task,Test task creation and assignment,"1. Create task with property
+2. Assign to team member
+3. Set priority and due date
+4. Add checklist items","Task created successfully
+Assignment notification sent
+Checklist functional","Property and assignee data",P1,Functional,15,TC008,Not Started,TBD,
+TC037,Task Management,Task Workflow,Test task status transitions,"1. Create pending task
+2. Start task (in_progress)
+3. Complete task
+4. Verify status history","Status transitions work
+History tracked
+Notifications sent","Test task",P1,Functional,20,TC036,Not Started,TBD,
+TC038,Task Management,Task Checklist,Test checklist functionality,"1. Add checklist items
+2. Check off items
+3. Add comments
+4. Verify progress tracking","Checklist items work
+Progress calculated correctly
+Comments saved","Task with checklist",P2,Functional,15,TC036,Not Started,TBD,
+TC039,Task Management,Task Filtering,Test task filters and search,"1. Filter by status
+2. Filter by priority
+3. Filter by assignee
+4. Search by description","Filters work correctly
+Search returns matches
+Combinations work","Multiple tasks",P2,Functional,15,TC036,Not Started,TBD,
+TC040,Issues Tracking,Create Issue,Test issue creation with photos,"1. Create issue for property
+2. Select category and priority
+3. Add before photos
+4. Assign to staff","Issue created successfully
+Photos uploaded
+Assignment notification sent","Property and photo files",P1,Functional,20,TC008,Not Started,TBD,
+TC041,Issues Tracking,Issue Resolution,Test issue lifecycle and resolution,"1. Update issue to in_progress
+2. Add progress photos
+3. Add actual cost
+4. Resolve issue with notes
+5. Close issue","Status updates work
+Photos saved
+Costs tracked
+Resolution documented","Active issue",P1,Functional,25,TC040,Not Started,TBD,
+TC042,Provider Management,Create Provider,Test service and utility provider creation,"1. Create service provider
+2. Create utility provider
+3. Add contact information
+4. Set as preferred","Both provider types work
+Contact info saved
+Preferred flag works","Provider data",P1,Functional,20,TC003,Not Started,TBD,
+TC043,Provider Management,COI Management,Test COI upload and expiration alerts,"1. Upload COI document
+2. Set expiration date
+3. Verify 30-day alert
+4. Verify 15-day alert
+5. Verify expiration alert","COI uploaded successfully
+Expiration tracked
+Alerts sent on schedule","COI document and dates",P0,Functional,25,TC042,Not Started,TBD,Compliance critical
+TC044,Provider Management,Access Authorization,Test access request workflow,"1. Create access request
+2. Add vehicle info
+3. Generate access code
+4. Approve request
+5. Complete access","Request created
+Code generated
+QR code works
+Completion tracked","Property and provider data",P1,Functional,20,TC042,Not Started,TBD,
+TC045,Document Management,Document Upload,Test document upload to all categories,"1. Upload to each of 6 categories
+2. Verify file type support
+3. Test size limits
+4. Verify storage","All categories work
+File types supported
+Size limits enforced
+Storage successful","Various document types",P1,Functional,30,TC003,Not Started,TBD,6 categories
+TC046,Document Management,Document Versioning,Test document version control,"1. Upload document
+2. Upload new version
+3. View version history
+4. Restore old version","Versioning works
+History maintained
+Restoration successful","Document files",P2,Functional,15,TC045,Not Started,TBD,
+TC047,Document Management,Document Sharing,Test document sharing permissions,"1. Share document with view permission
+2. Share with download permission
+3. Share with edit permission
+4. Verify access control","Sharing works
+Permissions enforced
+Access logged","Document and users",P1,Security,20,TC045,Not Started,TBD,
+TC048,Notifications,In-App Notifications,Test all 22 notification types,"1. Trigger each notification type
+2. Verify in-app delivery
+3. Test read/unread status
+4. Test deletion","All types work
+Delivery successful
+Status updates work","Various trigger events",P1,Functional,45,TC003,Not Started,TBD,22 notification types
+TC049,Notifications,Notification Preferences,Test notification settings,"1. Disable specific notifications
+2. Enable email notifications
+3. Test preference enforcement","Preferences saved
+Disabled notifications not sent
+Email notifications work","User preferences",P2,Functional,20,TC048,Not Started,TBD,
+TC050,Notifications,Real-time Updates,Test real-time notification delivery,"1. Trigger notification from another user
+2. Verify immediate delivery
+3. Test across multiple tabs","Real-time delivery works
+Multi-tab sync works
+WebSocket functional","Multiple user sessions",P1,Functional,15,TC048,Not Started,TBD,Supabase realtime
+TC051,Check-in/Out,Digital Check-in,Test check-in process with photos,"1. Create check-in record
+2. Complete checklist
+3. Add photos
+4. Capture signature
+5. Generate PDF","Check-in recorded
+Checklist saved
+Photos uploaded
+Signature captured
+PDF generated","Booking and checklist",P0,Functional,30,TC016,Not Started,TBD,
+TC052,Check-in/Out,Check-out Process,Test check-out and comparison,"1. Create check-out record
+2. Complete checklist
+3. Add photos
+4. Compare with check-in
+5. Generate report","Check-out recorded
+Comparison accurate
+Damage identified
+Report generated","Existing check-in record",P0,Functional,30,TC051,Not Started,TBD,
+TC053,Check-in/Out,PDF Generation,Test check-in/out PDF creation,"1. Generate PDF with photos
+2. Verify signature display
+3. Check formatting
+4. Test download","PDF generated successfully
+All data included
+Professional format
+Download works","Complete check-in/out data",P0,Functional,15,TC051,Not Started,TBD,Recently implemented
+TC054,Jobs,Create Job,Test job creation and assignment,"1. Create service job
+2. Assign to provider
+3. Set priority and schedule
+4. Add description","Job created successfully
+Provider notified
+Schedule set","Property and provider",P1,Functional,15,TC042,Not Started,TBD,
+TC055,Jobs,Job Completion,Test job lifecycle and completion,"1. Start job
+2. Update progress
+3. Add completion notes
+4. Upload photos
+5. Mark complete","Status updates work
+Photos saved
+Completion recorded
+Rating enabled","Active job",P1,Functional,25,TC054,Not Started,TBD,
+TC056,Jobs,Service Pipeline,Test pipeline visualization and metrics,"1. View service pipeline
+2. Verify funnel calculations
+3. Check conversion rates
+4. Test filtering","Pipeline displays correctly
+Metrics accurate
+Filters work","Multiple jobs at various stages",P2,Functional,15,TC054,Not Started,TBD,
+TC057,Commissions,Commission Calculation,Test commission calculation accuracy,"1. Complete booking with commission
+2. Verify calculation
+3. Check different rates
+4. Test multiple properties","Calculations accurate
+Rates applied correctly
+Property-specific rates work","Bookings with various rates",P0,Functional,20,TC018,Not Started,TBD,Financial accuracy critical
+TC058,Commissions,Commission Payment,Test commission payment workflow,"1. Approve commission
+2. Process payment
+3. Record payment details
+4. Verify status update","Approval works
+Payment recorded
+Status updated
+History maintained","Calculated commissions",P0,Functional,20,TC057,Not Started,TBD,
+TC059,Commissions,Commission Analytics,Test analytics dashboard,"1. View commission dashboard
+2. Check charts accuracy
+3. Filter by period
+4. Export report","Dashboard displays correctly
+Charts accurate
+Filters work
+Export successful","Multiple commissions",P1,Functional,20,TC057,Not Started,TBD,Recently implemented
+TC060,Financial Reports,Revenue Report,Test revenue calculations,"1. Generate revenue report
+2. Verify by property
+3. Check by period
+4. Compare with source data","Calculations accurate
+Property breakdown correct
+Period filters work","Completed bookings and invoices",P0,Functional,25,TC023,Not Started,TBD,
+TC061,Financial Reports,KPI Dashboard,Test KPI calculations,"1. Check occupancy rate
+2. Verify ADR calculation
+3. Check RevPAR
+4. Test trend analysis","KPIs calculated correctly
+Trends accurate
+Real-time updates work","Booking and financial data",P0,Functional,20,TC016,Not Started,TBD,
+TC062,Financial Reports,Owner Statements,Test owner statement generation,"1. Generate monthly statement
+2. Verify income/expense breakdown
+3. Check net calculations
+4. Export to PDF","Statement accurate
+Breakdown correct
+PDF formatted properly","Complete monthly data",P0,Functional,25,TC060,Not Started,TBD,
+TC063,Activity Logs,Audit Trail,Test comprehensive activity logging,"1. Perform various actions
+2. Check activity log
+3. Verify timestamps
+4. Test immutability","All actions logged
+Timestamps accurate
+Logs cannot be modified","Various user actions",P0,Security,30,TC003,Not Started,TBD,Compliance requirement
+TC064,Activity Logs,Log Search,Test activity log search and filtering,"1. Search by user
+2. Filter by action type
+3. Filter by date range
+4. Export results","Search works
+Filters accurate
+Export successful","Historical activity data",P2,Functional,15,TC063,Not Started,TBD,
+TC065,Caching,React Query Cache,Test memory cache behavior,"1. Load data initially
+2. Navigate away and back
+3. Verify cache hit
+4. Test stale-while-revalidate","Cache hits work
+Background revalidation works
+Performance improved","Various data queries",P1,Performance,20,TC003,Not Started,TBD,
+TC066,Caching,Service Worker,Test network caching strategies,"1. Load static assets
+2. Check cache storage
+3. Test offline access
+4. Verify cache expiration","Static assets cached
+API calls cached appropriately
+Offline works","Network throttling",P1,Performance,25,Browser support,Not Started,TBD,
+TC067,Caching,IndexedDB Storage,Test persistent browser storage,"1. Store large dataset
+2. Close and reopen browser
+3. Verify data persistence
+4. Test quota handling","Data persists
+Quota managed
+LRU eviction works","Large dataset",P2,Performance,20,TC066,Not Started,TBD,
+TC068,Caching,Real-time Sync,Test cache invalidation on updates,"1. Update data in one tab
+2. Verify invalidation in other tab
+3. Test WebSocket sync
+4. Verify data freshness","Cache invalidated correctly
+Multi-tab sync works
+Data always fresh","Multiple browser tabs",P1,Functional,20,TC065,Not Started,TBD,
+TC069,Performance,Page Load Times,Test initial page load performance,"1. Clear cache
+2. Load application
+3. Measure time to interactive
+4. Check bundle size","Load time < 3 seconds
+TTI < 5 seconds
+Bundle < 3MB","Performance monitoring tools",P1,Performance,15,None,Not Started,TBD,
+TC070,Performance,Large Dataset Handling,Test performance with large data,"1. Load 1000+ properties
+2. Load 5000+ bookings
+3. Test pagination
+4. Check memory usage","Pagination works
+No memory leaks
+Smooth scrolling","Large test dataset",P1,Performance,30,Data generation,Not Started,TBD,
+TC071,Security,SQL Injection,Test SQL injection prevention,"1. Try SQL injection in search
+2. Test in form inputs
+3. Verify parameterized queries","All attempts blocked
+No database errors
+Proper sanitization","SQL injection payloads",P0,Security,30,TC003,Not Started,TBD,
+TC072,Security,XSS Prevention,Test cross-site scripting prevention,"1. Try XSS in text inputs
+2. Test in rich text fields
+3. Verify output encoding","XSS attempts blocked
+Scripts not executed
+Proper encoding","XSS test payloads",P0,Security,30,TC003,Not Started,TBD,
+TC073,Security,CSRF Protection,Test CSRF token validation,"1. Try request without token
+2. Try with invalid token
+3. Verify token rotation","Requests blocked
+Tokens validated
+Rotation works","CSRF test tools",P0,Security,20,TC003,Not Started,TBD,
+TC074,Security,Rate Limiting,Test API rate limiting,"1. Send rapid requests
+2. Verify rate limit hit
+3. Test limit reset
+4. Check error messages","Rate limits enforced
+Appropriate errors returned
+Reset works","API testing tools",P0,Security,15,API setup,Not Started,TBD,Not yet implemented
+TC075,Security,File Upload Validation,Test file upload security,"1. Try uploading executables
+2. Test oversized files
+3. Try path traversal
+4. Verify MIME validation","Dangerous files blocked
+Size limits enforced
+Path traversal prevented","Various file types",P0,Security,25,TC045,Not Started,TBD,
+TC076,Integration,Supabase Connection,Test database connectivity,"1. Test connection pooling
+2. Verify retry logic
+3. Test connection recovery
+4. Check timeout handling","Connections stable
+Retries work
+Recovery successful","Database monitoring",P0,Integration,20,Infrastructure,Not Started,TBD,
+TC077,Integration,Email Delivery,Test email functionality,"1. Send test emails
+2. Verify delivery
+3. Check formatting
+4. Test attachments","Emails delivered
+Formatting correct
+Attachments work","Email service setup",P0,Integration,20,Email provider,Not Started,TBD,
+TC078,Integration,Storage Integration,Test Supabase storage,"1. Upload files
+2. Generate signed URLs
+3. Test expiration
+4. Verify deletion","Upload works
+URLs valid
+Expiration enforced","Storage bucket setup",P0,Integration,20,TC076,Not Started,TBD,
+TC079,Mobile,Responsive Design,Test mobile responsiveness,"1. Test on phone viewport
+2. Test on tablet
+3. Check touch interactions
+4. Verify layout","Layout responsive
+Touch works
+No overflow
+Usable on mobile","Mobile devices/emulator",P1,UI/UX,30,None,Not Started,TBD,
+TC080,Mobile,Mobile Performance,Test performance on mobile devices,"1. Test on 3G connection
+2. Check memory usage
+3. Test battery impact
+4. Verify offline capability","Acceptable performance
+Low memory usage
+Minimal battery drain","Mobile test devices",P2,Performance,30,TC079,Not Started,TBD,
+TC081,Browser Compatibility,Chrome Testing,Test on Chrome browser,"1. Test all major features
+2. Check console for errors
+3. Verify layout
+4. Test performance","All features work
+No errors
+Layout correct","Chrome browser",P0,Compatibility,60,TC003,Not Started,TBD,
+TC082,Browser Compatibility,Firefox Testing,Test on Firefox browser,"1. Test all major features
+2. Check console for errors
+3. Verify layout
+4. Test performance","All features work
+No errors
+Layout correct","Firefox browser",P1,Compatibility,60,TC003,Not Started,TBD,
+TC083,Browser Compatibility,Safari Testing,Test on Safari browser,"1. Test all major features
+2. Check console for errors
+3. Verify layout
+4. Test performance","All features work
+No errors
+Layout correct","Safari browser",P1,Compatibility,60,TC003,Not Started,TBD,
+TC084,Browser Compatibility,Edge Testing,Test on Edge browser,"1. Test all major features
+2. Check console for errors
+3. Verify layout
+4. Test performance","All features work
+No errors
+Layout correct","Edge browser",P2,Compatibility,60,TC003,Not Started,TBD,
+TC085,Localization,Language Switching,Test language toggle functionality,"1. Switch to Portuguese
+2. Switch to Spanish
+3. Switch back to English
+4. Verify persistence","Languages switch correctly
+All text translated
+Preference saved","All 3 languages configured",P1,Functional,15,None,Not Started,TBD,
+TC086,Localization,Translation Coverage,Test translation completeness,"1. Check all pages in each language
+2. Verify no missing keys
+3. Check date/time formats
+4. Verify currency formats","All text translated
+Formats localized
+No missing translations","Translation files complete",P1,Functional,45,TC085,Not Started,TBD,
+TC087,Accessibility,Keyboard Navigation,Test keyboard-only navigation,"1. Tab through all elements
+2. Test form submission
+3. Check modal interaction
+4. Verify menu navigation","All elements reachable
+Forms submittable
+Modals accessible","Keyboard only",P1,Accessibility,30,None,Not Started,TBD,
+TC088,Accessibility,Screen Reader,Test screen reader compatibility,"1. Test with NVDA/JAWS
+2. Verify announcements
+3. Check form labels
+4. Test error messages","Screen reader works
+Proper announcements
+Labels read correctly","Screen reader software",P2,Accessibility,45,TC087,Not Started,TBD,
+TC089,Accessibility,Color Contrast,Test WCAG color contrast,"1. Check text contrast ratios
+2. Verify button contrast
+3. Test error message colors
+4. Check disabled state contrast","WCAG AA compliance
+Ratios >= 4.5:1
+Readable in all states","Contrast checking tools",P2,Accessibility,20,None,Not Started,TBD,
+TC090,Data Validation,Required Fields,Test required field validation,"1. Try submitting empty forms
+2. Verify error messages
+3. Check field highlighting
+4. Test each form","Required fields enforced
+Clear error messages
+Visual indicators work","All forms in system",P0,Functional,40,TC003,Not Started,TBD,
+TC091,Data Validation,Email Validation,Test email format validation,"1. Try invalid email formats
+2. Test valid formats
+3. Check error messages","Invalid emails rejected
+Valid emails accepted
+Clear error messages","Various email formats",P0,Functional,10,TC001,Not Started,TBD,
+TC092,Data Validation,Date Validation,Test date input validation,"1. Try invalid dates
+2. Test past/future constraints
+3. Check date ranges
+4. Verify formats","Invalid dates rejected
+Constraints enforced
+Ranges validated","Various date inputs",P0,Functional,15,TC016,Not Started,TBD,
+TC093,Data Validation,Number Validation,Test numeric input validation,"1. Test negative numbers
+2. Check decimal places
+3. Verify min/max limits
+4. Test non-numeric input","Validation works
+Limits enforced
+Non-numeric rejected","Various numeric inputs",P0,Functional,15,TC024,Not Started,TBD,
+TC094,Error Handling,Network Errors,Test network error handling,"1. Disconnect network
+2. Try various operations
+3. Verify error messages
+4. Reconnect and retry","Graceful error handling
+Clear user messages
+Recovery works","Network control",P0,Functional,20,None,Not Started,TBD,
+TC095,Error Handling,Server Errors,Test 500 error handling,"1. Trigger server errors
+2. Check error display
+3. Verify logging
+4. Test retry logic","Errors handled gracefully
+User-friendly messages
+Retries work","Error simulation",P0,Functional,20,TC076,Not Started,TBD,
+TC096,Error Handling,Validation Errors,Test validation error display,"1. Trigger various validation errors
+2. Check error placement
+3. Verify error clearing
+4. Test multiple errors","Errors displayed clearly
+Placement correct
+Clear on correction","Invalid data inputs",P0,Functional,20,TC090,Not Started,TBD,
+TC097,Backup & Recovery,Data Backup,Test backup functionality,"1. Trigger manual backup
+2. Verify backup completeness
+3. Check backup storage
+4. Test backup scheduling","Backup successful
+Data complete
+Storage secure
+Schedule works","Admin access",P0,Operational,30,Infrastructure,Not Started,TBD,Not fully implemented
+TC098,Backup & Recovery,Data Recovery,Test recovery procedures,"1. Simulate data loss
+2. Initiate recovery
+3. Verify data integrity
+4. Check completeness","Recovery successful
+Data intact
+No corruption
+Complete restoration","Backup files",P0,Operational,45,TC097,Not Started,TBD,Critical for production
+TC099,Load Testing,Concurrent Users,Test with multiple concurrent users,"1. Simulate 100 users
+2. Perform various operations
+3. Monitor performance
+4. Check for errors","System handles load
+Performance acceptable
+No errors under load","Load testing tools",P1,Performance,60,Infrastructure,Not Started,TBD,
+TC100,Load Testing,Database Load,Test database under load,"1. Generate large dataset
+2. Run complex queries
+3. Test concurrent writes
+4. Monitor performance","Queries perform well
+Writes successful
+No deadlocks","Database monitoring",P1,Performance,45,TC099,Not Started,TBD,

@@ -1,0 +1,18 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:8080",
+      "localStorage": [
+        {
+          "name": "casa-concierge-language",
+          "value": "en"
+        },
+        {
+          "name": "sb-ihzkamfnctfreylyzgid-auth-token",
+          "value": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsImtpZCI6Im55Tkk2K2tocXV1TmtScUEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2loemthbWZuY3RmcmV5bHl6Z2lkLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI3ZWVjNzNkNy0xNGFkLTQzYWQtODkyMC0zZDM5YjUzMzc5NWEiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzY0NTUxOTc0LCJpYXQiOjE3NjQ1NDgzNzQsImVtYWlsIjoidmluemxsb3lkYWxmZXJlekBnbWFpbC5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlfSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc2NDU0ODM3NH1dLCJzZXNzaW9uX2lkIjoiMjdhMzE5ZjUtMjBlOS00ZmVhLWFhOTYtOTg5MGIxOWVkYWQyIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.oSxxitG6ZChSNen7UyTdMsg4_QSSBCd-lFwThXOTcIQ\",\"token_type\":\"bearer\",\"expires_in\":3600,\"expires_at\":1764551974,\"refresh_token\":\"k7levzqpxl3a\",\"user\":{\"id\":\"7eec73d7-14ad-43ad-8920-3d39b533795a\",\"aud\":\"authenticated\",\"role\":\"authenticated\",\"email\":\"vinzlloydalferez@gmail.com\",\"email_confirmed_at\":\"2025-10-15T16:51:26.050535Z\",\"phone\":\"\",\"confirmed_at\":\"2025-10-15T16:51:26.050535Z\",\"recovery_sent_at\":\"2025-11-10T07:45:02.971251Z\",\"last_sign_in_at\":\"2025-12-01T00:19:33.971237336Z\",\"app_metadata\":{\"provider\":\"email\",\"providers\":[\"email\"]},\"user_metadata\":{\"email_verified\":true},\"identities\":[{\"identity_id\":\"b53c263c-b278-455b-a750-586a12b12e1f\",\"id\":\"7eec73d7-14ad-43ad-8920-3d39b533795a\",\"user_id\":\"7eec73d7-14ad-43ad-8920-3d39b533795a\",\"identity_data\":{\"email\":\"vinzlloydalferez@gmail.com\",\"email_verified\":false,\"phone_verified\":false,\"sub\":\"7eec73d7-14ad-43ad-8920-3d39b533795a\"},\"provider\":\"email\",\"last_sign_in_at\":\"2025-10-15T16:51:26.043503Z\",\"created_at\":\"2025-10-15T16:51:26.043595Z\",\"updated_at\":\"2025-10-15T16:51:26.043595Z\",\"email\":\"vinzlloydalferez@gmail.com\"}],\"created_at\":\"2025-10-15T16:51:26.037021Z\",\"updated_at\":\"2025-12-01T00:19:34.008681Z\",\"is_anonymous\":false},\"weak_password\":null}"
+        }
+      ]
+    }
+  ]
+}

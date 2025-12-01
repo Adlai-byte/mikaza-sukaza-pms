@@ -305,8 +305,8 @@ export class PrefetchManager {
         });
       }
 
-      // Prefetch amenities and rules when navigating to property edit
-      if (path.includes('/properties/') && path.includes('/edit')) {
+      // Prefetch amenities and rules when navigating to property view
+      if (path.includes('/properties/') && path.includes('/view')) {
         this.queryClient.prefetchQuery({
           queryKey: ['amenities'],
           staleTime: CACHE_CONFIG.ULTRA_LONG,

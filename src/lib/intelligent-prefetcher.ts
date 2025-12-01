@@ -247,7 +247,7 @@ export class IntelligentPrefetcher {
     const currentPath = window.location.pathname;
 
     // If viewing a property, predict related data
-    if (currentPath.includes('/properties/') && currentPath.includes('/edit')) {
+    if (currentPath.includes('/properties/') && currentPath.includes('/view')) {
       const propertyId = this.extractPropertyId(currentPath);
 
       if (propertyId) {
@@ -258,7 +258,7 @@ export class IntelligentPrefetcher {
             confidence: 0.9,
             priority: 'high',
             estimatedTime: 1000,
-            reason: 'Property edit: Images often viewed',
+            reason: 'Property view: Images often viewed',
           },
           {
             resource: `property-financial-${propertyId}`,

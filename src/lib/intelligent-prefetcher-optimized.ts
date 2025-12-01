@@ -85,17 +85,17 @@ export class OptimizedIntelligentPrefetcher {
       });
     }
 
-    if (currentPath.includes('/properties/') && currentPath.includes('/edit')) {
+    if (currentPath.includes('/properties/') && currentPath.includes('/view')) {
       const propertyId = this.extractPropertyId(currentPath);
 
       if (propertyId) {
-        // On property edit, prefetch images (likely to view photos tab)
+        // On property view, prefetch images (likely to view photos tab)
         predictions.push({
           resource: `property-images-${propertyId}`,
           resourceType: 'image',
           confidence: 0.88,
           priority: 'high',
-          reason: 'Property edit: photos tab frequently accessed',
+          reason: 'Property view: photos tab frequently accessed',
         });
       }
     }

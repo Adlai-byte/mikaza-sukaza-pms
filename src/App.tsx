@@ -11,7 +11,6 @@ import { MainLayout } from "./components/MainLayout";
 import { Analytics } from "@vercel/analytics/react";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
-import PropertyEdit from "./pages/PropertyEdit";
 import PropertyView from "./pages/PropertyView";
 import Jobs from "./pages/Jobs";
 import UserManagement from "./pages/UserManagement";
@@ -231,14 +230,6 @@ const App = () => (
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.PROPERTIES_VIEW}>
                       <Properties />
-                    </RBACProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/properties/:propertyId/edit"
-                  element={
-                    <RBACProtectedRoute permission={PERMISSIONS.PROPERTIES_EDIT}>
-                      <PropertyEdit />
                     </RBACProtectedRoute>
                   }
                 />
