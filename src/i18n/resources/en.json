@@ -604,6 +604,7 @@
     "guestAddress": "Guest Address",
     "guestAddressPlaceholder": "123 Main St, City, State, ZIP",
     "selectGuest": "Select Guest",
+    "noGuestSelected": "No guest selected",
     "createNewGuest": "Create New Guest",
     "paymentMethod": "Payment Method",
     "paymentMethodPlaceholder": "Credit Card, Cash, etc.",

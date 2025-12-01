@@ -687,40 +687,53 @@ export default function InvoiceForm() {
             {/* Guest Selection */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label htmlFor="guest_id">{t('invoices.selectGuest')} *</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCreateGuestDialog(true)}
-                  disabled={loadingGuests}
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  {t('invoices.createNewGuest')}
-                </Button>
+                <Label htmlFor="guest_id">{isEditing ? t('invoices.guest') : t('invoices.selectGuest')} *</Label>
+                {!isEditing && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCreateGuestDialog(true)}
+                    disabled={loadingGuests}
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    {t('invoices.createNewGuest')}
+                  </Button>
+                )}
               </div>
 
-              <Select
-                value={form.watch('guest_id') || ''}
-                onValueChange={handleGuestSelect}
-                disabled={loadingGuests}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('invoices.chooseGuest')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {guests?.map((guest: Guest) => (
-                    <SelectItem key={guest.guest_id} value={guest.guest_id!}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">
-                          {guest.first_name} {guest.last_name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">{guest.email}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isEditing ? (
+                /* Read-only display when editing */
+                <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">
+                    {form.watch('guest_name') || t('invoices.noGuestSelected')}
+                  </span>
+                </div>
+              ) : (
+                <Select
+                  value={form.watch('guest_id') || ''}
+                  onValueChange={handleGuestSelect}
+                  disabled={loadingGuests}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('invoices.chooseGuest')}>
+                      {form.watch('guest_name') || t('invoices.chooseGuest')}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {guests?.map((guest: Guest) => (
+                      <SelectItem key={guest.guest_id} value={guest.guest_id!}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {guest.first_name} {guest.last_name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{guest.email}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
               {/* Display selected guest info */}
               {form.watch('guest_id') && (

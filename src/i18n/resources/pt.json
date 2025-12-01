@@ -501,6 +501,7 @@
     "guestAddress": "Endereço do Hóspede",
     "guestAddressPlaceholder": "Rua Principal 123, Cidade, Estado, CEP",
     "selectGuest": "Selecionar Hóspede",
+    "noGuestSelected": "Nenhum hóspede selecionado",
     "createNewGuest": "Criar Novo Hóspede",
     "paymentMethod": "Método de Pagamento",
     "paymentMethodPlaceholder": "Cartão de Crédito, Dinheiro, etc.",
