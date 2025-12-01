@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Booking, BookingInsert } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { CACHE_CONFIG } from "@/lib/cache-config";
 import { OptimisticUpdates } from "@/lib/cache-manager-simplified";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -354,13 +355,17 @@ export function useBookings() {
               toast({
                 title: "🎉 Booking Confirmed!",
                 description: "Would you like to generate an invoice for this booking?",
-                action: {
-                  label: "Generate Invoice",
-                  onClick: () => {
-                    // Navigate to invoice creation with booking context
-                    window.location.href = `/invoices/new/${data.booking_id}`;
-                  },
-                },
+                action: (
+                  <ToastAction
+                    altText="Generate Invoice"
+                    onClick={() => {
+                      // Navigate to invoice creation with booking context
+                      window.location.href = `/invoices/new/${data.booking_id}`;
+                    }}
+                  >
+                    Generate Invoice
+                  </ToastAction>
+                ),
                 duration: 10000, // Show for 10 seconds
               });
               return; // Skip regular success toast
