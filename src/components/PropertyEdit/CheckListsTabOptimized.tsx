@@ -145,7 +145,7 @@ export function CheckListsTabOptimized({ propertyId }: CheckListsTabOptimizedPro
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: checklistsKeys.all(propertyId),
-        refetchType: 'active',
+        refetchType: 'all',
       });
       toast({
         title: 'Success',
@@ -178,7 +178,7 @@ export function CheckListsTabOptimized({ propertyId }: CheckListsTabOptimizedPro
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: checklistsKeys.all(propertyId),
-        refetchType: 'active',
+        refetchType: 'all',
       });
       toast({
         title: 'Success',
@@ -209,7 +209,7 @@ export function CheckListsTabOptimized({ propertyId }: CheckListsTabOptimizedPro
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: checklistsKeys.all(propertyId),
-        refetchType: 'active',
+        refetchType: 'all',
       });
       toast({
         title: 'Success',
@@ -241,7 +241,7 @@ export function CheckListsTabOptimized({ propertyId }: CheckListsTabOptimizedPro
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({
         queryKey: checklistsKeys.all(propertyId),
-        refetchType: 'active',
+        refetchType: 'all',
       });
       toast({
         title: 'Success',

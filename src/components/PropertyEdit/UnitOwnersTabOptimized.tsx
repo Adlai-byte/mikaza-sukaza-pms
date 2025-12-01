@@ -166,7 +166,7 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: unitOwnersKeys.all(propertyId),
-        refetchType: 'active',
+        refetchType: 'all',
       });
       toast({
         title: 'Success',
@@ -199,7 +199,7 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: unitOwnersKeys.all(propertyId),
-        refetchType: 'active',
+        refetchType: 'all',
       });
       toast({
         title: 'Success',
@@ -230,7 +230,7 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: unitOwnersKeys.all(propertyId),
-        refetchType: 'active',
+        refetchType: 'all',
       });
       toast({
         title: 'Success',

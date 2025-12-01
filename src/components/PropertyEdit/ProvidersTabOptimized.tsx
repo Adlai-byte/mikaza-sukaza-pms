@@ -51,7 +51,9 @@ import {
   Mail,
   Check,
   Trash2,
+  Pencil,
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { usePropertyProviders } from '@/hooks/usePropertyProviders';
 import { ProvidersTabSkeleton } from './PropertyEditSkeleton';
 
@@ -97,6 +99,8 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
     isAssigning: isAssigningUtility,
     unassignProvider: unassignUtilityProvider,
     isUnassigning: isUnassigningUtility,
+    updateAssignment: updateUtilityAssignment,
+    isUpdatingAssignment: isUpdatingUtility,
     refetch: refetchUtilities,
   } = usePropertyProviders(propertyId, 'utility');
 
@@ -109,6 +113,8 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
     isAssigning,
     unassignProvider,
     isUnassigning,
+    updateAssignment: updateServiceAssignment,
+    isUpdatingAssignment: isUpdatingService,
     refetch: refetchServices,
   } = usePropertyProviders(propertyId, 'service');
 
@@ -134,6 +140,25 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
     id: string;
     name: string;
     type: 'utility' | 'service';
+  } | null>(null);
+
+  // Edit provider assignment state
+  const [editingUtilityAssignment, setEditingUtilityAssignment] = useState<{
+    id: string;
+    providerName: string;
+    accountNumber: string;
+    billingName: string;
+    username: string;
+    observations: string;
+  } | null>(null);
+
+  const [editingServiceAssignment, setEditingServiceAssignment] = useState<{
+    id: string;
+    providerName: string;
+    accountNumber: string;
+    billingName: string;
+    username: string;
+    assignmentNotes: string;
   } | null>(null);
 
   // Get already assigned utility provider IDs (must be before early return due to hooks rule)
@@ -256,6 +281,68 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
     }
 
     setProviderToUnassign(null);
+  };
+
+  // Handle utility assignment edit
+  const handleEditUtilityAssignment = (assignment: any) => {
+    setEditingUtilityAssignment({
+      id: assignment.id,
+      providerName: assignment.provider.provider_name,
+      accountNumber: assignment.account_number || '',
+      billingName: assignment.billing_name || '',
+      username: assignment.username || '',
+      observations: assignment.observations || '',
+    });
+  };
+
+  const handleSaveUtilityAssignment = async () => {
+    if (!editingUtilityAssignment) return;
+
+    try {
+      await updateUtilityAssignment({
+        assignmentId: editingUtilityAssignment.id,
+        accountNumber: editingUtilityAssignment.accountNumber,
+        billingName: editingUtilityAssignment.billingName,
+        username: editingUtilityAssignment.username,
+        observations: editingUtilityAssignment.observations,
+      });
+
+      await Promise.all([refetchUtilities(), refetchServices()]);
+      setEditingUtilityAssignment(null);
+    } catch (error) {
+      console.error('Error updating utility assignment:', error);
+    }
+  };
+
+  // Handle service assignment edit
+  const handleEditServiceAssignment = (assignment: any) => {
+    setEditingServiceAssignment({
+      id: assignment.id,
+      providerName: assignment.provider.provider_name,
+      accountNumber: assignment.account_number || '',
+      billingName: assignment.billing_name || '',
+      username: assignment.username || '',
+      assignmentNotes: assignment.assignment_notes || '',
+    });
+  };
+
+  const handleSaveServiceAssignment = async () => {
+    if (!editingServiceAssignment) return;
+
+    try {
+      await updateServiceAssignment({
+        assignmentId: editingServiceAssignment.id,
+        accountNumber: editingServiceAssignment.accountNumber,
+        billingName: editingServiceAssignment.billingName,
+        username: editingServiceAssignment.username,
+        assignmentNotes: editingServiceAssignment.assignmentNotes,
+      });
+
+      await Promise.all([refetchUtilities(), refetchServices()]);
+      setEditingServiceAssignment(null);
+    } catch (error) {
+      console.error('Error updating service assignment:', error);
+    }
   };
 
   const getProviderIcon = (type: string) => {
@@ -480,20 +567,32 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                               {assignment.observations || '-'}
                             </TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => setProviderToUnassign({
-                                  id: assignment.id,
-                                  name: assignment.provider.provider_name,
-                                  type: 'utility',
-                                })}
-                                disabled={isUnassigningUtility}
-                                title="Remove provider"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  onClick={() => handleEditUtilityAssignment(assignment)}
+                                  disabled={isUpdatingUtility}
+                                  title="Edit details"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => setProviderToUnassign({
+                                    id: assignment.id,
+                                    name: assignment.provider.provider_name,
+                                    type: 'utility',
+                                  })}
+                                  disabled={isUnassigningUtility}
+                                  title="Remove provider"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -667,10 +766,13 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                       <TableHead>Company</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Contact</TableHead>
+                      <TableHead>Account</TableHead>
+                      <TableHead>Billing Name</TableHead>
+                      <TableHead>Username</TableHead>
                       <TableHead>Rating</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Notes</TableHead>
-                      <TableHead className="w-[80px]">Actions</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -711,6 +813,9 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                               )}
                             </div>
                           </TableCell>
+                          <TableCell>{assignment.account_number || '-'}</TableCell>
+                          <TableCell>{assignment.billing_name || '-'}</TableCell>
+                          <TableCell>{assignment.username || '-'}</TableCell>
                           <TableCell>
                             {assignment.provider.rating ? (
                               <div className="flex items-center gap-1">
@@ -733,20 +838,32 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                             {assignment.assignment_notes || '-'}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => setProviderToUnassign({
-                                id: assignment.id,
-                                name: assignment.provider.provider_name,
-                                type: 'service',
-                              })}
-                              disabled={isUnassigning}
-                              title="Remove provider"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => handleEditServiceAssignment(assignment)}
+                                disabled={isUpdatingService}
+                                title="Edit details"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => setProviderToUnassign({
+                                  id: assignment.id,
+                                  name: assignment.provider.provider_name,
+                                  type: 'service',
+                                })}
+                                disabled={isUnassigning}
+                                title="Remove provider"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -778,6 +895,142 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Utility Assignment Dialog */}
+      <Dialog open={!!editingUtilityAssignment} onOpenChange={(open) => !open && setEditingUtilityAssignment(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Utility Provider Details</DialogTitle>
+            <DialogDescription>
+              Update account details for {editingUtilityAssignment?.providerName}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="utility-account">Account Number</Label>
+              <Input
+                id="utility-account"
+                value={editingUtilityAssignment?.accountNumber || ''}
+                onChange={(e) => setEditingUtilityAssignment(prev => prev ? { ...prev, accountNumber: e.target.value } : null)}
+                placeholder="Enter account number"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="utility-billing">Billing Name</Label>
+              <Input
+                id="utility-billing"
+                value={editingUtilityAssignment?.billingName || ''}
+                onChange={(e) => setEditingUtilityAssignment(prev => prev ? { ...prev, billingName: e.target.value } : null)}
+                placeholder="Enter billing name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="utility-username">Username</Label>
+              <Input
+                id="utility-username"
+                value={editingUtilityAssignment?.username || ''}
+                onChange={(e) => setEditingUtilityAssignment(prev => prev ? { ...prev, username: e.target.value } : null)}
+                placeholder="Enter username"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="utility-notes">Notes</Label>
+              <Textarea
+                id="utility-notes"
+                value={editingUtilityAssignment?.observations || ''}
+                onChange={(e) => setEditingUtilityAssignment(prev => prev ? { ...prev, observations: e.target.value } : null)}
+                placeholder="Enter notes"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditingUtilityAssignment(null)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveUtilityAssignment} disabled={isUpdatingUtility}>
+              {isUpdatingUtility ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Service Assignment Dialog */}
+      <Dialog open={!!editingServiceAssignment} onOpenChange={(open) => !open && setEditingServiceAssignment(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Service Contractor Details</DialogTitle>
+            <DialogDescription>
+              Update account details for {editingServiceAssignment?.providerName}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="service-account">Account Number</Label>
+              <Input
+                id="service-account"
+                value={editingServiceAssignment?.accountNumber || ''}
+                onChange={(e) => setEditingServiceAssignment(prev => prev ? { ...prev, accountNumber: e.target.value } : null)}
+                placeholder="Enter account number"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="service-billing">Billing Name</Label>
+              <Input
+                id="service-billing"
+                value={editingServiceAssignment?.billingName || ''}
+                onChange={(e) => setEditingServiceAssignment(prev => prev ? { ...prev, billingName: e.target.value } : null)}
+                placeholder="Enter billing name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="service-username">Username</Label>
+              <Input
+                id="service-username"
+                value={editingServiceAssignment?.username || ''}
+                onChange={(e) => setEditingServiceAssignment(prev => prev ? { ...prev, username: e.target.value } : null)}
+                placeholder="Enter username"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="service-notes">Notes</Label>
+              <Textarea
+                id="service-notes"
+                value={editingServiceAssignment?.assignmentNotes || ''}
+                onChange={(e) => setEditingServiceAssignment(prev => prev ? { ...prev, assignmentNotes: e.target.value } : null)}
+                placeholder="Enter notes"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditingServiceAssignment(null)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveServiceAssignment} disabled={isUpdatingService}>
+              {isUpdatingService ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

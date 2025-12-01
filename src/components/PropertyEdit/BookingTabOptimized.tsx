@@ -186,7 +186,7 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: bookingKeys.all(propertyId) });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.all(propertyId), refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Booking rates saved successfully',
@@ -256,7 +256,7 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
       // Close dialog and refresh
       setShowBookingDialog(false);
       setEditingBooking(null);
-      queryClient.invalidateQueries({ queryKey: bookingQueryKeys.property(propertyId) });
+      queryClient.invalidateQueries({ queryKey: bookingQueryKeys.property(propertyId), refetchType: 'all' });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -357,7 +357,7 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
           <CalendarDays className="h-12 w-12 mx-auto mb-2" />
           <p>Failed to load booking settings</p>
         </div>
-        <Button onClick={() => queryClient.invalidateQueries({ queryKey: bookingKeys.all(propertyId) })}>
+        <Button onClick={() => queryClient.invalidateQueries({ queryKey: bookingKeys.all(propertyId), refetchType: 'all' })}>
           Try Again
         </Button>
       </div>

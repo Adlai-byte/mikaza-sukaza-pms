@@ -269,7 +269,7 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
       // Force immediate refetch with active queries
       await queryClient.invalidateQueries({
         queryKey: vehiclesKeys.all(propertyId),
-        refetchType: 'active'
+        refetchType: 'all'
       });
 
       const photoMessage = selectedPhotos.length > 0
@@ -349,7 +349,7 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
       // Force immediate refetch with active queries
       await queryClient.invalidateQueries({
         queryKey: vehiclesKeys.all(propertyId),
-        refetchType: 'active'
+        refetchType: 'all'
       });
       toast({
         title: 'Success',
@@ -381,7 +381,7 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
       // Force immediate refetch with active queries
       await queryClient.invalidateQueries({
         queryKey: vehiclesKeys.all(propertyId),
-        refetchType: 'active'
+        refetchType: 'all'
       });
       toast({
         title: 'Success',

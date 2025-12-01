@@ -120,7 +120,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ['property-notes', propertyId],
-        refetchType: 'active',
+        refetchType: 'all',
       });
       toast({
         title: "Success",
@@ -152,7 +152,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ['property-notes', propertyId],
-        refetchType: 'active',
+        refetchType: 'all',
       });
       toast({
         title: "Success",
@@ -182,7 +182,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ['property-notes', propertyId],
-        refetchType: 'active',
+        refetchType: 'all',
       });
       toast({
         title: "Success",
@@ -213,7 +213,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({
         queryKey: ['property-notes', propertyId],
-        refetchType: 'active',
+        refetchType: 'all',
       });
       toast({
         title: "Success",
