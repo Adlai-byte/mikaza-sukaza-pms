@@ -1,5 +1,5 @@
 // Service Worker for advanced caching strategies
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v2.0.0';
 const STATIC_CACHE = `casa-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `casa-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `casa-images-${CACHE_VERSION}`;
@@ -26,10 +26,16 @@ const STATIC_ASSETS = [
 // Routes and their caching strategies
 const ROUTE_CACHE_STRATEGIES = [
   {
-    pattern: /\.(js|css|woff2?|ttf|eot)$/,
+    pattern: /\.(js|css)$/,
+    strategy: CACHE_STRATEGIES.NETWORK_FIRST,
+    cache: STATIC_CACHE,
+    maxAge: 24 * 60 * 60 * 1000, // 1 day - JS/CSS should always get latest
+  },
+  {
+    pattern: /\.(woff2?|ttf|eot)$/,
     strategy: CACHE_STRATEGIES.CACHE_FIRST,
     cache: STATIC_CACHE,
-    maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+    maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year for fonts
   },
   {
     pattern: /\.(png|jpg|jpeg|gif|svg|webp|ico)$/,
