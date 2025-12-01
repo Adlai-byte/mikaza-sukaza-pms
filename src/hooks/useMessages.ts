@@ -87,148 +87,361 @@ export const messageKeys = {
   unreadCount: () => [...messageKeys.all, 'unreadCount'] as const,
 };
 
+// Helper to fetch user details
+const fetchUserDetails = async (userIds: string[]): Promise<Map<string, any>> => {
+  if (userIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('user_id, first_name, last_name, email, avatar_url')
+    .in('user_id', userIds);
+
+  if (error) throw error;
+
+  const userMap = new Map();
+  (data || []).forEach(user => userMap.set(user.user_id, user));
+  return userMap;
+};
+
+// Helper to fetch property details
+const fetchPropertyDetails = async (propertyIds: string[]): Promise<Map<string, any>> => {
+  const validIds = propertyIds.filter(id => id != null);
+  if (validIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from('properties')
+    .select('property_id, property_name')
+    .in('property_id', validIds);
+
+  if (error) throw error;
+
+  const propertyMap = new Map();
+  (data || []).forEach(prop => propertyMap.set(prop.property_id, prop));
+  return propertyMap;
+};
+
 // Fetch inbox messages (received by current user)
 const fetchInboxMessages = async (userId: string): Promise<Message[]> => {
-  const { data, error } = await supabase
+  // Step 1: Fetch message_recipients for this user
+  const { data: recipientData, error: recipientError } = await supabase
     .from('message_recipients')
-    .select(`
-      *,
-      message:messages!message_id(
-        *,
-        sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
-        property:properties!property_id(property_id, property_name)
-      )
-    `)
+    .select('*')
     .eq('user_id', userId)
     .eq('is_deleted', false)
     .eq('is_archived', false)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (recipientError) throw recipientError;
+  if (!recipientData || recipientData.length === 0) return [];
 
-  // Transform data to flatten message with recipient status
-  return (data || []).map((item: any) => ({
-    ...item.message,
-    is_read: item.is_read,
-    is_starred: item.is_starred,
-    is_archived: item.is_archived,
-  }));
+  // Step 2: Fetch the messages
+  const messageIds = recipientData.map(r => r.message_id);
+  const { data: messagesData, error: messagesError } = await supabase
+    .from('messages')
+    .select('*')
+    .in('message_id', messageIds);
+
+  if (messagesError) throw messagesError;
+
+  // Step 3: Fetch sender details
+  const senderIds = [...new Set((messagesData || []).map(m => m.sender_id))];
+  const userMap = await fetchUserDetails(senderIds);
+
+  // Step 4: Fetch property details
+  const propertyIds = [...new Set((messagesData || []).filter(m => m.property_id).map(m => m.property_id))];
+  const propertyMap = await fetchPropertyDetails(propertyIds);
+
+  // Create message lookup
+  const messageMap = new Map();
+  (messagesData || []).forEach(msg => messageMap.set(msg.message_id, msg));
+
+  // Combine data
+  return recipientData.map((recipient: any) => {
+    const message = messageMap.get(recipient.message_id);
+    if (!message) return null;
+
+    return {
+      ...message,
+      sender: userMap.get(message.sender_id),
+      property: message.property_id ? propertyMap.get(message.property_id) : undefined,
+      is_read: recipient.is_read,
+      is_starred: recipient.is_starred,
+      is_archived: recipient.is_archived,
+    };
+  }).filter(Boolean) as Message[];
 };
 
 // Fetch sent messages
 const fetchSentMessages = async (userId: string): Promise<Message[]> => {
-  const { data, error } = await supabase
+  // Step 1: Fetch messages sent by user
+  const { data: messagesData, error: messagesError } = await supabase
     .from('messages')
-    .select(`
-      *,
-      sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
-      recipients:message_recipients!message_id(
-        *,
-        user:users!user_id(user_id, first_name, last_name, email)
-      ),
-      property:properties!property_id(property_id, property_name)
-    `)
+    .select('*')
     .eq('sender_id', userId)
     .is('parent_id', null)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
-  return (data || []) as Message[];
+  if (messagesError) throw messagesError;
+  if (!messagesData || messagesData.length === 0) return [];
+
+  // Step 2: Fetch sender details (the current user)
+  const userMap = await fetchUserDetails([userId]);
+
+  // Step 3: Fetch property details
+  const propertyIds = [...new Set(messagesData.filter(m => m.property_id).map(m => m.property_id))];
+  const propertyMap = await fetchPropertyDetails(propertyIds);
+
+  // Step 4: Fetch recipients
+  const messageIds = messagesData.map(m => m.message_id);
+  const { data: recipientsData, error: recipientsError } = await supabase
+    .from('message_recipients')
+    .select('*')
+    .in('message_id', messageIds);
+
+  if (recipientsError) throw recipientsError;
+
+  // Fetch recipient user details
+  const recipientUserIds = [...new Set((recipientsData || []).map(r => r.user_id))];
+  const recipientUserMap = await fetchUserDetails(recipientUserIds);
+
+  // Group recipients by message
+  const recipientsByMessage = new Map<string, MessageRecipient[]>();
+  (recipientsData || []).forEach((r: any) => {
+    const list = recipientsByMessage.get(r.message_id) || [];
+    list.push({
+      ...r,
+      user: recipientUserMap.get(r.user_id),
+    });
+    recipientsByMessage.set(r.message_id, list);
+  });
+
+  // Combine data
+  return messagesData.map((message: any) => ({
+    ...message,
+    sender: userMap.get(message.sender_id),
+    property: message.property_id ? propertyMap.get(message.property_id) : undefined,
+    recipients: recipientsByMessage.get(message.message_id) || [],
+  })) as Message[];
 };
 
 // Fetch starred messages
 const fetchStarredMessages = async (userId: string): Promise<Message[]> => {
-  const { data, error } = await supabase
+  // Step 1: Fetch starred message_recipients for this user
+  const { data: recipientData, error: recipientError } = await supabase
     .from('message_recipients')
-    .select(`
-      *,
-      message:messages!message_id(
-        *,
-        sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
-        property:properties!property_id(property_id, property_name)
-      )
-    `)
+    .select('*')
     .eq('user_id', userId)
     .eq('is_starred', true)
     .eq('is_deleted', false)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (recipientError) throw recipientError;
+  if (!recipientData || recipientData.length === 0) return [];
 
-  return (data || []).map((item: any) => ({
-    ...item.message,
-    is_read: item.is_read,
-    is_starred: item.is_starred,
-    is_archived: item.is_archived,
-  }));
+  // Step 2: Fetch the messages
+  const messageIds = recipientData.map(r => r.message_id);
+  const { data: messagesData, error: messagesError } = await supabase
+    .from('messages')
+    .select('*')
+    .in('message_id', messageIds);
+
+  if (messagesError) throw messagesError;
+
+  // Step 3: Fetch sender details
+  const senderIds = [...new Set((messagesData || []).map(m => m.sender_id))];
+  const userMap = await fetchUserDetails(senderIds);
+
+  // Step 4: Fetch property details
+  const propertyIds = [...new Set((messagesData || []).filter(m => m.property_id).map(m => m.property_id))];
+  const propertyMap = await fetchPropertyDetails(propertyIds);
+
+  // Create message lookup
+  const messageMap = new Map();
+  (messagesData || []).forEach(msg => messageMap.set(msg.message_id, msg));
+
+  // Combine data
+  return recipientData.map((recipient: any) => {
+    const message = messageMap.get(recipient.message_id);
+    if (!message) return null;
+
+    return {
+      ...message,
+      sender: userMap.get(message.sender_id),
+      property: message.property_id ? propertyMap.get(message.property_id) : undefined,
+      is_read: recipient.is_read,
+      is_starred: recipient.is_starred,
+      is_archived: recipient.is_archived,
+    };
+  }).filter(Boolean) as Message[];
 };
 
 // Fetch archived messages
 const fetchArchivedMessages = async (userId: string): Promise<Message[]> => {
-  const { data, error } = await supabase
+  // Step 1: Fetch archived message_recipients for this user
+  const { data: recipientData, error: recipientError } = await supabase
     .from('message_recipients')
-    .select(`
-      *,
-      message:messages!message_id(
-        *,
-        sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
-        property:properties!property_id(property_id, property_name)
-      )
-    `)
+    .select('*')
     .eq('user_id', userId)
     .eq('is_archived', true)
     .eq('is_deleted', false)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (recipientError) throw recipientError;
+  if (!recipientData || recipientData.length === 0) return [];
 
-  return (data || []).map((item: any) => ({
-    ...item.message,
-    is_read: item.is_read,
-    is_starred: item.is_starred,
-    is_archived: item.is_archived,
-  }));
+  // Step 2: Fetch the messages
+  const messageIds = recipientData.map(r => r.message_id);
+  const { data: messagesData, error: messagesError } = await supabase
+    .from('messages')
+    .select('*')
+    .in('message_id', messageIds);
+
+  if (messagesError) throw messagesError;
+
+  // Step 3: Fetch sender details
+  const senderIds = [...new Set((messagesData || []).map(m => m.sender_id))];
+  const userMap = await fetchUserDetails(senderIds);
+
+  // Step 4: Fetch property details
+  const propertyIds = [...new Set((messagesData || []).filter(m => m.property_id).map(m => m.property_id))];
+  const propertyMap = await fetchPropertyDetails(propertyIds);
+
+  // Create message lookup
+  const messageMap = new Map();
+  (messagesData || []).forEach(msg => messageMap.set(msg.message_id, msg));
+
+  // Combine data
+  return recipientData.map((recipient: any) => {
+    const message = messageMap.get(recipient.message_id);
+    if (!message) return null;
+
+    return {
+      ...message,
+      sender: userMap.get(message.sender_id),
+      property: message.property_id ? propertyMap.get(message.property_id) : undefined,
+      is_read: recipient.is_read,
+      is_starred: recipient.is_starred,
+      is_archived: recipient.is_archived,
+    };
+  }).filter(Boolean) as Message[];
 };
 
 // Fetch message thread
 const fetchMessageThread = async (threadId: string): Promise<Message[]> => {
-  const { data, error } = await supabase
+  // Step 1: Fetch messages in thread
+  const { data: messagesData, error: messagesError } = await supabase
     .from('messages')
-    .select(`
-      *,
-      sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
-      recipients:message_recipients!message_id(
-        *,
-        user:users!user_id(user_id, first_name, last_name, email)
-      ),
-      attachments:message_attachments!message_id(*)
-    `)
+    .select('*')
     .or(`message_id.eq.${threadId},thread_id.eq.${threadId}`)
     .order('created_at', { ascending: true });
 
-  if (error) throw error;
-  return (data || []) as Message[];
+  if (messagesError) throw messagesError;
+  if (!messagesData || messagesData.length === 0) return [];
+
+  // Step 2: Fetch sender details
+  const senderIds = [...new Set(messagesData.map(m => m.sender_id))];
+  const userMap = await fetchUserDetails(senderIds);
+
+  // Step 3: Fetch recipients
+  const messageIds = messagesData.map(m => m.message_id);
+  const { data: recipientsData, error: recipientsError } = await supabase
+    .from('message_recipients')
+    .select('*')
+    .in('message_id', messageIds);
+
+  if (recipientsError) throw recipientsError;
+
+  // Fetch recipient user details
+  const recipientUserIds = [...new Set((recipientsData || []).map(r => r.user_id))];
+  const recipientUserMap = await fetchUserDetails(recipientUserIds);
+
+  // Group recipients by message
+  const recipientsByMessage = new Map<string, MessageRecipient[]>();
+  (recipientsData || []).forEach((r: any) => {
+    const list = recipientsByMessage.get(r.message_id) || [];
+    list.push({
+      ...r,
+      user: recipientUserMap.get(r.user_id),
+    });
+    recipientsByMessage.set(r.message_id, list);
+  });
+
+  // Step 4: Fetch attachments
+  const { data: attachmentsData, error: attachmentsError } = await supabase
+    .from('message_attachments')
+    .select('*')
+    .in('message_id', messageIds);
+
+  if (attachmentsError) throw attachmentsError;
+
+  // Group attachments by message
+  const attachmentsByMessage = new Map<string, MessageAttachment[]>();
+  (attachmentsData || []).forEach((a: any) => {
+    const list = attachmentsByMessage.get(a.message_id) || [];
+    list.push(a);
+    attachmentsByMessage.set(a.message_id, list);
+  });
+
+  // Combine data
+  return messagesData.map((message: any) => ({
+    ...message,
+    sender: userMap.get(message.sender_id),
+    recipients: recipientsByMessage.get(message.message_id) || [],
+    attachments: attachmentsByMessage.get(message.message_id) || [],
+  })) as Message[];
 };
 
 // Fetch single message
 const fetchMessage = async (messageId: string): Promise<Message> => {
-  const { data, error } = await supabase
+  // Step 1: Fetch the message
+  const { data: message, error: messageError } = await supabase
     .from('messages')
-    .select(`
-      *,
-      sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
-      recipients:message_recipients!message_id(
-        *,
-        user:users!user_id(user_id, first_name, last_name, email)
-      ),
-      attachments:message_attachments!message_id(*),
-      property:properties!property_id(property_id, property_name)
-    `)
+    .select('*')
     .eq('message_id', messageId)
     .single();
 
-  if (error) throw error;
-  return data as Message;
+  if (messageError) throw messageError;
+
+  // Step 2: Fetch sender details
+  const userMap = await fetchUserDetails([message.sender_id]);
+
+  // Step 3: Fetch property details
+  const propertyMap = message.property_id
+    ? await fetchPropertyDetails([message.property_id])
+    : new Map();
+
+  // Step 4: Fetch recipients
+  const { data: recipientsData, error: recipientsError } = await supabase
+    .from('message_recipients')
+    .select('*')
+    .eq('message_id', messageId);
+
+  if (recipientsError) throw recipientsError;
+
+  // Fetch recipient user details
+  const recipientUserIds = (recipientsData || []).map(r => r.user_id);
+  const recipientUserMap = await fetchUserDetails(recipientUserIds);
+
+  const recipients = (recipientsData || []).map((r: any) => ({
+    ...r,
+    user: recipientUserMap.get(r.user_id),
+  }));
+
+  // Step 5: Fetch attachments
+  const { data: attachmentsData, error: attachmentsError } = await supabase
+    .from('message_attachments')
+    .select('*')
+    .eq('message_id', messageId);
+
+  if (attachmentsError) throw attachmentsError;
+
+  return {
+    ...message,
+    sender: userMap.get(message.sender_id),
+    property: message.property_id ? propertyMap.get(message.property_id) : undefined,
+    recipients,
+    attachments: attachmentsData || [],
+  } as Message;
 };
 
 // Get unread count
