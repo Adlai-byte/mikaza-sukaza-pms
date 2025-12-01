@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -26,19 +25,23 @@ import { FileText, Calendar, DollarSign, AlertCircle } from 'lucide-react';
 import { Booking } from '@/lib/schemas';
 import { useCreateInvoiceFromBooking } from '@/hooks/useInvoices';
 import { format, addDays } from 'date-fns';
+import { useQueryClient } from '@tanstack/react-query';
+import { bookingKeys } from '@/hooks/useBookings';
 
 interface InvoiceGenerationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   booking: Booking | null;
+  onSuccess?: () => void;
 }
 
 export function InvoiceGenerationDialog({
   open,
   onOpenChange,
   booking,
+  onSuccess,
 }: InvoiceGenerationDialogProps) {
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const createInvoiceFromBooking = useCreateInvoiceFromBooking();
 
   // Form state
@@ -98,16 +101,20 @@ export function InvoiceGenerationDialog({
     if (!booking.booking_id) return;
 
     try {
-      const result = await createInvoiceFromBooking.mutateAsync(booking.booking_id);
+      await createInvoiceFromBooking.mutateAsync(booking.booking_id);
+
+      // Refresh bookings to show the new invoice status
+      queryClient.invalidateQueries({ queryKey: bookingKeys.all(), refetchType: 'all' });
+      if (booking.property_id) {
+        queryClient.invalidateQueries({ queryKey: bookingKeys.property(booking.property_id), refetchType: 'all' });
+      }
 
       // Close dialog
       onOpenChange(false);
 
-      // Navigate to the newly created invoice
-      if (result?.invoice_id) {
-        navigate(`/invoices/${result.invoice_id}`);
-      } else {
-        navigate('/invoices');
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
       }
     } catch (error) {
       // Error handled by mutation
