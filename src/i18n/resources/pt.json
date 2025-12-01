@@ -500,6 +500,8 @@
     "guestPhonePlaceholder": "+55 11 9 1234-5678",
     "guestAddress": "Endereço do Hóspede",
     "guestAddressPlaceholder": "Rua Principal 123, Cidade, Estado, CEP",
+    "selectGuest": "Selecionar Hóspede",
+    "createNewGuest": "Criar Novo Hóspede",
     "paymentMethod": "Método de Pagamento",
     "paymentMethodPlaceholder": "Cartão de Crédito, Dinheiro, etc.",
     "paymentTerms": "Termos de Pagamento",

@@ -500,6 +500,8 @@
     "guestPhonePlaceholder": "+34 912 345 678",
     "guestAddress": "Dirección del Huésped",
     "guestAddressPlaceholder": "Calle Principal 123, Ciudad, Estado, CP",
+    "selectGuest": "Seleccionar Huésped",
+    "createNewGuest": "Crear Nuevo Huésped",
     "paymentMethod": "Método de Pago",
     "paymentMethodPlaceholder": "Tarjeta de Crédito, Efectivo, etc.",
     "paymentTerms": "Términos de Pago",

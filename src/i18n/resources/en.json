@@ -603,6 +603,8 @@
     "guestPhonePlaceholder": "+1 234 567 8900",
     "guestAddress": "Guest Address",
     "guestAddressPlaceholder": "123 Main St, City, State, ZIP",
+    "selectGuest": "Select Guest",
+    "createNewGuest": "Create New Guest",
     "paymentMethod": "Payment Method",
     "paymentMethodPlaceholder": "Credit Card, Cash, etc.",
     "paymentTerms": "Payment Terms",
