@@ -43,12 +43,20 @@ const fetchBookings = async (): Promise<Booking[]> => {
   return (data || []) as Booking[];
 };
 
-// Fetch bookings for a specific property
+// Fetch bookings for a specific property (with invoice data)
 const fetchPropertyBookings = async (propertyId: string): Promise<Booking[]> => {
   console.log('📅 Fetching bookings for property:', propertyId);
   const { data, error } = await supabase
     .from('property_bookings')
-    .select('*')
+    .select(`
+      *,
+      invoice:invoices!property_bookings_invoice_id_fkey(
+        invoice_id,
+        total_amount,
+        amount_paid,
+        status
+      )
+    `)
     .eq('property_id', propertyId)
     .order('check_in_date', { ascending: false });
 
@@ -57,8 +65,16 @@ const fetchPropertyBookings = async (propertyId: string): Promise<Booking[]> => 
     throw error;
   }
 
-  console.log('✅ Fetched property bookings:', data?.length || 0, 'bookings');
-  return (data || []) as Booking[];
+  // Flatten invoice data into booking for easier access
+  const bookingsWithInvoiceData = (data || []).map((booking: any) => ({
+    ...booking,
+    invoice_total_amount: booking.invoice?.total_amount || null,
+    invoice_amount_paid: booking.invoice?.amount_paid || null,
+    invoice_status: booking.invoice?.status || booking.invoice_status || 'not_generated',
+  }));
+
+  console.log('✅ Fetched property bookings:', bookingsWithInvoiceData?.length || 0, 'bookings');
+  return bookingsWithInvoiceData as Booking[];
 };
 
 // Fetch bookings within a date range

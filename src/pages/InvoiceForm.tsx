@@ -407,7 +407,11 @@ export default function InvoiceForm() {
 
   const handleSubmit = form.handleSubmit(async (data) => {
     if (lineItems.length === 0) {
-      alert(t('invoices.pleaseAddLineItem'));
+      toast({
+        title: t('common.error'),
+        description: t('invoices.pleaseAddLineItem'),
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -527,6 +531,15 @@ export default function InvoiceForm() {
         }
       );
     }
+  }, (errors) => {
+    // Handle form validation errors
+    console.error('📋 Form validation errors:', errors);
+    const firstError = Object.values(errors)[0];
+    toast({
+      title: t('common.error'),
+      description: firstError?.message as string || t('errors.validation'),
+      variant: 'destructive',
+    });
   });
 
   const totals = calculateTotals();
@@ -605,8 +618,13 @@ export default function InvoiceForm() {
               )}
             </>
           )}
-          <Button onClick={handleSubmit} size="lg" disabled={isSaving || createInvoice.isPending}>
-            {isSaving || createInvoice.isPending ? (
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            size="lg"
+            disabled={isEditing ? isSaving : createInvoice.isPending}
+          >
+            {(isEditing ? isSaving : createInvoice.isPending) ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Save className="h-4 w-4 mr-2" />
@@ -917,8 +935,8 @@ export default function InvoiceForm() {
           <Button type="button" variant="outline" onClick={() => navigate('/invoices')}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={isSaving || createInvoice.isPending}>
-            {isSaving || createInvoice.isPending ? (
+          <Button type="submit" disabled={isEditing ? isSaving : createInvoice.isPending}>
+            {(isEditing ? isSaving : createInvoice.isPending) ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Save className="h-4 w-4 mr-2" />

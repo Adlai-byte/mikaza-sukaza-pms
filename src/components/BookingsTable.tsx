@@ -446,8 +446,13 @@ export function BookingsTable({
                         <div className="flex flex-col items-end">
                           <div className="font-semibold flex items-center gap-1">
                             <DollarSign className="h-4 w-4 text-green-600" />
-                            {formatCurrency(booking.total_amount)}
+                            {formatCurrency((booking as any).invoice_total_amount || booking.total_amount)}
                           </div>
+                          {(booking as any).invoice_total_amount && booking.total_amount !== (booking as any).invoice_total_amount && (
+                            <div className="text-xs text-muted-foreground">
+                              Booking: {formatCurrency(booking.total_amount)}
+                            </div>
+                          )}
                           {booking.deposit_amount && booking.deposit_amount > 0 && (
                             <div className="text-sm text-muted-foreground">
                               Deposit: {formatCurrency(booking.deposit_amount)}
@@ -672,8 +677,13 @@ export function BookingsTable({
                       <div>
                         <div className="font-semibold text-lg flex items-center gap-1">
                           <DollarSign className="h-5 w-5 text-green-600" />
-                          {formatCurrency(booking.total_amount)}
+                          {formatCurrency((booking as any).invoice_total_amount || booking.total_amount)}
                         </div>
+                        {(booking as any).invoice_total_amount && booking.total_amount !== (booking as any).invoice_total_amount && (
+                          <div className="text-xs text-muted-foreground">
+                            Booking: {formatCurrency(booking.total_amount)}
+                          </div>
+                        )}
                         {booking.deposit_amount && booking.deposit_amount > 0 && (
                           <div className="text-xs text-muted-foreground">
                             Deposit: {formatCurrency(booking.deposit_amount)}
