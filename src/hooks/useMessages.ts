@@ -93,10 +93,10 @@ const fetchInboxMessages = async (userId: string): Promise<Message[]> => {
     .from('message_recipients')
     .select(`
       *,
-      message:messages(
+      message:messages!message_id(
         *,
-        sender:users(user_id, first_name, last_name, email, avatar_url),
-        property:properties(property_id, property_name)
+        sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
+        property:properties!property_id(property_id, property_name)
       )
     `)
     .eq('user_id', userId)
@@ -121,12 +121,12 @@ const fetchSentMessages = async (userId: string): Promise<Message[]> => {
     .from('messages')
     .select(`
       *,
-      sender:users(user_id, first_name, last_name, email, avatar_url),
-      recipients:message_recipients(
+      sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
+      recipients:message_recipients!message_id(
         *,
-        user:users(user_id, first_name, last_name, email)
+        user:users!user_id(user_id, first_name, last_name, email)
       ),
-      property:properties(property_id, property_name)
+      property:properties!property_id(property_id, property_name)
     `)
     .eq('sender_id', userId)
     .is('parent_id', null)
@@ -142,10 +142,10 @@ const fetchStarredMessages = async (userId: string): Promise<Message[]> => {
     .from('message_recipients')
     .select(`
       *,
-      message:messages(
+      message:messages!message_id(
         *,
-        sender:users(user_id, first_name, last_name, email, avatar_url),
-        property:properties(property_id, property_name)
+        sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
+        property:properties!property_id(property_id, property_name)
       )
     `)
     .eq('user_id', userId)
@@ -169,10 +169,10 @@ const fetchArchivedMessages = async (userId: string): Promise<Message[]> => {
     .from('message_recipients')
     .select(`
       *,
-      message:messages(
+      message:messages!message_id(
         *,
-        sender:users(user_id, first_name, last_name, email, avatar_url),
-        property:properties(property_id, property_name)
+        sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
+        property:properties!property_id(property_id, property_name)
       )
     `)
     .eq('user_id', userId)
@@ -196,12 +196,12 @@ const fetchMessageThread = async (threadId: string): Promise<Message[]> => {
     .from('messages')
     .select(`
       *,
-      sender:users(user_id, first_name, last_name, email, avatar_url),
-      recipients:message_recipients(
+      sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
+      recipients:message_recipients!message_id(
         *,
-        user:users(user_id, first_name, last_name, email)
+        user:users!user_id(user_id, first_name, last_name, email)
       ),
-      attachments:message_attachments(*)
+      attachments:message_attachments!message_id(*)
     `)
     .or(`message_id.eq.${threadId},thread_id.eq.${threadId}`)
     .order('created_at', { ascending: true });
@@ -216,13 +216,13 @@ const fetchMessage = async (messageId: string): Promise<Message> => {
     .from('messages')
     .select(`
       *,
-      sender:users(user_id, first_name, last_name, email, avatar_url),
-      recipients:message_recipients(
+      sender:users!sender_id(user_id, first_name, last_name, email, avatar_url),
+      recipients:message_recipients!message_id(
         *,
-        user:users(user_id, first_name, last_name, email)
+        user:users!user_id(user_id, first_name, last_name, email)
       ),
-      attachments:message_attachments(*),
-      property:properties(property_id, property_name)
+      attachments:message_attachments!message_id(*),
+      property:properties!property_id(property_id, property_name)
     `)
     .eq('message_id', messageId)
     .single();
