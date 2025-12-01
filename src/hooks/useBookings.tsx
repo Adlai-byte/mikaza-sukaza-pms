@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Booking, BookingInsert } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { CACHE_CONFIG } from "@/lib/cache-config";
 import { OptimisticUpdates } from "@/lib/cache-manager-simplified";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -14,6 +13,7 @@ import {
   notifyBookingCancelled,
   notifyBookingStatusChanged,
 } from "@/lib/notifications/booking-notifications";
+import { createInvoiceFromBooking } from "@/hooks/useInvoices";
 
 // Query keys for cache management
 export const bookingKeys = {
@@ -250,10 +250,28 @@ export function useBookings() {
         await notifyBookingCreated(data, property.property_name, currentUserId);
       }
 
-      toast({
-        title: "Success",
-        description: "Booking created successfully",
-      });
+      // Auto-generate invoice for the booking
+      try {
+        console.log('📄 Auto-generating invoice for booking:', data.booking_id);
+        const invoice = await createInvoiceFromBooking(data.booking_id!);
+        console.log('✅ Invoice auto-generated:', invoice.invoice_id);
+
+        // Invalidate invoice caches after creation
+        queryClient.invalidateQueries({ queryKey: ['invoices'], refetchType: 'all' });
+
+        toast({
+          title: "Success",
+          description: "Booking created and invoice generated successfully",
+        });
+      } catch (invoiceError) {
+        console.error('⚠️ Failed to auto-generate invoice:', invoiceError);
+        // Still show success for booking, but warn about invoice
+        toast({
+          title: "Booking Created",
+          description: "Booking created successfully. Invoice generation failed - you can generate it manually.",
+          variant: "default",
+        });
+      }
     },
     onError: (error, bookingData, context) => {
       // Rollback optimistic update
@@ -366,25 +384,29 @@ export function useBookings() {
           if (variables.bookingData.booking_status === 'confirmed') {
             await notifyBookingConfirmed(data, property.property_name, currentUserId);
 
-            // Show special toast with invoice generation option if no invoice exists
+            // Auto-generate invoice if one doesn't exist
             if (!(data as any).invoice_id) {
-              toast({
-                title: "🎉 Booking Confirmed!",
-                description: "Would you like to generate an invoice for this booking?",
-                action: (
-                  <ToastAction
-                    altText="Generate Invoice"
-                    onClick={() => {
-                      // Navigate to invoice creation with booking context
-                      window.location.href = `/invoices/new/${data.booking_id}`;
-                    }}
-                  >
-                    Generate Invoice
-                  </ToastAction>
-                ),
-                duration: 10000, // Show for 10 seconds
-              });
-              return; // Skip regular success toast
+              try {
+                console.log('📄 Auto-generating invoice for confirmed booking:', data.booking_id);
+                const invoice = await createInvoiceFromBooking(data.booking_id!);
+                console.log('✅ Invoice auto-generated:', invoice.invoice_id);
+
+                // Invalidate invoice caches after creation
+                queryClient.invalidateQueries({ queryKey: ['invoices'], refetchType: 'all' });
+
+                toast({
+                  title: "🎉 Booking Confirmed!",
+                  description: "Invoice has been automatically generated.",
+                });
+                return; // Skip regular success toast
+              } catch (invoiceError) {
+                console.error('⚠️ Failed to auto-generate invoice:', invoiceError);
+                toast({
+                  title: "🎉 Booking Confirmed!",
+                  description: "Booking confirmed. Invoice generation failed - you can generate it manually.",
+                });
+                return; // Skip regular success toast
+              }
             }
           } else {
             await notifyBookingStatusChanged(

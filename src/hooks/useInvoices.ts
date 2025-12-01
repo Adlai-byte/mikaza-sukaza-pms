@@ -277,8 +277,8 @@ const markInvoiceAsPaid = async ({ invoiceId, paymentMethod, paidDate }: { invoi
   return data as Invoice;
 };
 
-// Create invoice from booking
-const createInvoiceFromBooking = async (bookingId: string): Promise<Invoice> => {
+// Create invoice from booking (exported for use in booking creation)
+export const createInvoiceFromBooking = async (bookingId: string): Promise<Invoice> => {
   // Fetch booking details
   const { data: booking, error: bookingError } = await supabase
     .from('property_bookings')
