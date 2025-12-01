@@ -500,8 +500,13 @@ export default function InvoiceForm() {
           description: t('invoices.invoiceUpdatedSuccess'),
         });
 
-        // Navigate after cache is refreshed
-        navigate('/invoices');
+        // Navigate to the property that owns this invoice
+        const propertyId = data.property_id || invoice?.property_id;
+        if (propertyId) {
+          navigate(`/properties/${propertyId}/edit`);
+        } else {
+          navigate('/invoices');
+        }
       } catch (error: any) {
         console.error('❌ Error updating invoice:', error);
         toast({
