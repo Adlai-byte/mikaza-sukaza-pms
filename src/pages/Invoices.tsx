@@ -368,7 +368,7 @@ export default function Invoices() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/invoices/${invoice.invoice_id}`)}
+                            onClick={() => navigate(`/properties/${invoice.property_id}/view?tab=bookings`)}
                             title={t('invoices.viewInvoice')}
                           >
                             <Eye className="h-4 w-4" />
