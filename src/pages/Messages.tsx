@@ -66,12 +66,14 @@ import {
   MessageInsert,
 } from '@/hooks/useMessages';
 import { useUsersOptimized } from '@/hooks/useUsersOptimized';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 type View = 'inbox' | 'sent' | 'starred' | 'archived';
 
 export default function Messages() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [currentView, setCurrentView] = useState<View>('inbox');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
@@ -93,8 +95,9 @@ export default function Messages() {
   const archiveMessage = useArchiveMessage();
   const deleteMessage = useDeleteMessage();
 
-  // Users for recipient selection
-  const { users } = useUsersOptimized();
+  // Users for recipient selection - only active internal users, excluding current user
+  const { users: allUsers } = useUsersOptimized();
+  const users = allUsers.filter(u => u.is_active && u.user_id !== user?.id);
 
   // Get current messages based on view
   const getCurrentMessages = (): Message[] => {
