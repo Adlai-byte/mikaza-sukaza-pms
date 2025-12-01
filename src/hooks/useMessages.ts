@@ -95,7 +95,7 @@ const fetchInboxMessages = async (userId: string): Promise<Message[]> => {
       *,
       message:messages(
         *,
-        sender:users!messages_sender_id_fkey(user_id, first_name, last_name, email, avatar_url),
+        sender:users(user_id, first_name, last_name, email, avatar_url),
         property:properties(property_id, property_name)
       )
     `)
@@ -121,7 +121,7 @@ const fetchSentMessages = async (userId: string): Promise<Message[]> => {
     .from('messages')
     .select(`
       *,
-      sender:users!messages_sender_id_fkey(user_id, first_name, last_name, email, avatar_url),
+      sender:users(user_id, first_name, last_name, email, avatar_url),
       recipients:message_recipients(
         *,
         user:users(user_id, first_name, last_name, email)
@@ -144,7 +144,7 @@ const fetchStarredMessages = async (userId: string): Promise<Message[]> => {
       *,
       message:messages(
         *,
-        sender:users!messages_sender_id_fkey(user_id, first_name, last_name, email, avatar_url),
+        sender:users(user_id, first_name, last_name, email, avatar_url),
         property:properties(property_id, property_name)
       )
     `)
@@ -171,7 +171,7 @@ const fetchArchivedMessages = async (userId: string): Promise<Message[]> => {
       *,
       message:messages(
         *,
-        sender:users!messages_sender_id_fkey(user_id, first_name, last_name, email, avatar_url),
+        sender:users(user_id, first_name, last_name, email, avatar_url),
         property:properties(property_id, property_name)
       )
     `)
@@ -196,7 +196,7 @@ const fetchMessageThread = async (threadId: string): Promise<Message[]> => {
     .from('messages')
     .select(`
       *,
-      sender:users!messages_sender_id_fkey(user_id, first_name, last_name, email, avatar_url),
+      sender:users(user_id, first_name, last_name, email, avatar_url),
       recipients:message_recipients(
         *,
         user:users(user_id, first_name, last_name, email)
@@ -216,7 +216,7 @@ const fetchMessage = async (messageId: string): Promise<Message> => {
     .from('messages')
     .select(`
       *,
-      sender:users!messages_sender_id_fkey(user_id, first_name, last_name, email, avatar_url),
+      sender:users(user_id, first_name, last_name, email, avatar_url),
       recipients:message_recipients(
         *,
         user:users(user_id, first_name, last_name, email)
