@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ProtectedRoute as RBACProtectedRoute } from "@/components/rbac/ProtectedRoute";
@@ -16,8 +16,7 @@ import Jobs from "./pages/Jobs";
 import UserManagement from "./pages/UserManagement";
 import GuestManagement from "./pages/GuestManagement";
 import Providers from "./pages/Providers";
-import ServiceProviders from "./pages/ServiceProviders";
-import UtilityProviders from "./pages/UtilityProviders";
+// ServiceProviders and UtilityProviders routes redirect to /vendors
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
@@ -43,6 +42,7 @@ import Reports from "./pages/Reports";
 import Help from "./pages/Help";
 import VendorCOIs from "./pages/VendorCOIs";
 import AccessAuthorizations from "./pages/AccessAuthorizations";
+// ServiceScheduling functionality merged into Providers.tsx
 import CheckInOut from "./pages/CheckInOut";
 import ChecklistTemplates from "./pages/ChecklistTemplates";
 import Media from "./pages/Media";
@@ -196,14 +196,22 @@ const App = () => (
                   }
                 />
 
-                {/* Unified Providers - Admin and Ops can access */}
+                {/* Vendors - Admin and Ops can access */}
                 <Route
-                  path="/providers"
+                  path="/vendors"
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.SERVICE_PROVIDERS_VIEW}>
                       <Providers />
                     </RBACProtectedRoute>
                   }
+                />
+                {/* Legacy redirect for /providers */}
+                <Route path="/providers" element={<Navigate to="/vendors" replace />} />
+
+                {/* Service Scheduling - Redirect to unified Vendors page */}
+                <Route
+                  path="/service-scheduling"
+                  element={<Navigate to="/vendors" replace />}
                 />
 
                 {/* Legacy Routes - Keep for backward compatibility, redirect to unified page */}

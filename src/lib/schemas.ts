@@ -900,6 +900,7 @@ export const providerSchema = z.object({
   // Status
   is_active: z.boolean().default(true),
   is_preferred: z.boolean().default(false),
+  partner_tier: z.enum(['regular', 'partner', 'gold_partner', 'platinum_partner']).default('regular'),
 
   // General notes
   notes: z.string().optional(),
@@ -2039,5 +2040,339 @@ export type VehicleDocument = VehicleDocumentInsert & {
   uploaded_by?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// ==========================================
+// SERVICE SCHEDULING SCHEMAS
+// ==========================================
+
+// Service Types
+export const serviceTypeEnum = z.enum([
+  'cleaning',
+  'deep_cleaning',
+  'maintenance',
+  'pool_service',
+  'lawn_care',
+  'pest_control',
+  'hvac_service',
+  'plumbing',
+  'electrical',
+  'appliance_repair',
+  'inspection',
+  'other'
+]);
+
+export type ServiceType = z.infer<typeof serviceTypeEnum>;
+
+// Recurrence Frequency
+export const recurrenceFrequencyEnum = z.enum([
+  'daily',
+  'weekly',
+  'biweekly',
+  'monthly',
+  'quarterly',
+  'yearly'
+]);
+
+export type RecurrenceFrequency = z.infer<typeof recurrenceFrequencyEnum>;
+
+// Schedule Status
+export const scheduleStatusEnum = z.enum([
+  'scheduled',
+  'confirmed',
+  'in_progress',
+  'completed',
+  'cancelled',
+  'no_show'
+]);
+
+export type ScheduleStatus = z.infer<typeof scheduleStatusEnum>;
+
+// Priority
+export const schedulePriorityEnum = z.enum(['low', 'normal', 'high', 'urgent']);
+export type SchedulePriority = z.infer<typeof schedulePriorityEnum>;
+
+// Partner Payment Status (Gold Partner Status from legacy)
+export const partnerPaymentStatusEnum = z.enum(['pending', 'waiting', 'paid', 'partial', 'overdue']);
+export type PartnerPaymentStatus = z.infer<typeof partnerPaymentStatusEnum>;
+
+// Allocation Status
+export const allocationStatusEnum = z.enum(['unassigned', 'assigned', 'accepted', 'declined', 'reassigned']);
+export type AllocationStatus = z.infer<typeof allocationStatusEnum>;
+
+// Service Category Schema
+export const serviceCategorySchema = z.object({
+  category_name: z.string().min(1, "Category name is required").max(100),
+  category_code: z.string().max(50).optional(),
+  description: z.string().optional().nullable(),
+  is_active: z.boolean().default(true),
+  sort_order: z.number().int().default(0),
+});
+
+export type ServiceCategoryInsert = z.infer<typeof serviceCategorySchema>;
+
+export type ServiceCategory = ServiceCategoryInsert & {
+  category_id: string;
+  created_at: string;
+  updated_at: string;
+  services?: ServiceTypeCatalog[];
+};
+
+// Service Type Catalog Schema (specific services under categories)
+export const serviceTypeCatalogSchema = z.object({
+  category_id: z.string().uuid("Invalid category ID"),
+  service_name: z.string().min(1, "Service name is required").max(100),
+  service_code: z.string().max(50).optional(),
+  description: z.string().optional().nullable(),
+  default_duration_minutes: z.number().int().positive().default(60),
+  default_cost: z.number().positive().optional().nullable(),
+  is_active: z.boolean().default(true),
+  sort_order: z.number().int().default(0),
+});
+
+export type ServiceTypeCatalogInsert = z.infer<typeof serviceTypeCatalogSchema>;
+
+export type ServiceTypeCatalog = ServiceTypeCatalogInsert & {
+  service_type_id: string;
+  created_at: string;
+  updated_at: string;
+  category?: ServiceCategory;
+};
+
+// Service Recurrence Rule Schema
+export const serviceRecurrenceRuleSchema = z.object({
+  frequency: recurrenceFrequencyEnum,
+  interval_value: z.number().int().positive().default(1),
+  days_of_week: z.array(z.number().int().min(0).max(6)).optional().nullable(), // 0=Sunday, 6=Saturday
+  day_of_month: z.number().int().min(1).max(31).optional().nullable(),
+  week_of_month: z.number().int().min(-1).max(4).refine(v => v !== 0, "Week of month cannot be 0").optional().nullable(),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format"),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format").optional().nullable(),
+  max_occurrences: z.number().int().positive().optional().nullable(),
+  is_active: z.boolean().default(true),
+});
+
+export type ServiceRecurrenceRuleInsert = z.infer<typeof serviceRecurrenceRuleSchema>;
+
+export type ServiceRecurrenceRule = ServiceRecurrenceRuleInsert & {
+  rule_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Scheduled Service Schema
+export const scheduledServiceSchema = z.object({
+  property_id: z.string().uuid("Invalid property ID"),
+  unit_id: z.string().uuid("Invalid unit ID").optional().nullable(),
+  service_type: serviceTypeEnum,
+  custom_service_name: z.string().max(255).optional().nullable(),
+  vendor_id: z.string().uuid("Invalid vendor ID").optional().nullable(),
+
+  // Category/Service hierarchy (legacy fields)
+  service_category_id: z.string().uuid().optional().nullable(),
+  catalog_service_type_id: z.string().uuid().optional().nullable(),
+
+  // Scheduling
+  scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format"),
+  scheduled_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Must be HH:MM or HH:MM:SS format").optional().nullable(),
+  end_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Must be HH:MM or HH:MM:SS format").optional().nullable(),
+  duration_minutes: z.number().int().positive().default(60),
+
+  // Recurrence
+  recurrence_rule_id: z.string().uuid().optional().nullable(),
+  parent_schedule_id: z.string().uuid().optional().nullable(),
+  is_recurring_instance: z.boolean().default(false),
+
+  // Status and details
+  status: scheduleStatusEnum.default('scheduled'),
+  priority: schedulePriorityEnum.default('normal'),
+  estimated_cost: z.number().positive().optional().nullable(),
+  actual_cost: z.number().positive().optional().nullable(),
+
+  // Partner/Vendor tracking (legacy "Gold Partner Status")
+  partner_payment_status: partnerPaymentStatusEnum.default('pending'),
+  allocation_status: allocationStatusEnum.default('unassigned'),
+  payment_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  payment_amount: z.number().positive().optional().nullable(),
+
+  // Notes
+  notes: z.string().optional().nullable(),
+  internal_notes: z.string().optional().nullable(),
+  special_instructions: z.string().optional().nullable(),
+
+  // Completion
+  completed_at: z.string().optional().nullable(),
+  completed_by: z.string().uuid().optional().nullable(),
+  completion_notes: z.string().optional().nullable(),
+
+  // Property owner for filtering
+  property_owner_id: z.string().uuid().optional().nullable(),
+});
+
+export type ScheduledServiceInsert = z.infer<typeof scheduledServiceSchema>;
+
+export type ScheduledService = ScheduledServiceInsert & {
+  schedule_id: string;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  assigned_at?: string | null;
+  assigned_by?: string | null;
+  // Relations (populated by queries)
+  property?: {
+    property_id: string;
+    property_name: string;
+    property_code?: string;
+  };
+  unit?: {
+    unit_id: string;
+    unit_name: string;
+  } | null;
+  vendor?: {
+    provider_id: string;
+    business_name: string;
+    contact_email?: string;
+    contact_phone?: string;
+  } | null;
+  recurrence_rule?: ServiceRecurrenceRule | null;
+  created_by_user?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+  assigned_by_user?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+  service_category?: ServiceCategory | null;
+  catalog_service?: ServiceTypeCatalog | null;
+  property_owner?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+};
+
+// Partner Payment Status display config
+export const PARTNER_PAYMENT_STATUS_CONFIG: Record<PartnerPaymentStatus, { label: string; color: string; bgColor: string }> = {
+  pending: { label: 'Pending', color: '#6B7280', bgColor: '#F3F4F6' },
+  waiting: { label: 'Waiting', color: '#F59E0B', bgColor: '#FEF3C7' },
+  paid: { label: 'Paid', color: '#10B981', bgColor: '#D1FAE5' },
+  partial: { label: 'Partial', color: '#8B5CF6', bgColor: '#EDE9FE' },
+  overdue: { label: 'Overdue', color: '#EF4444', bgColor: '#FEE2E2' },
+};
+
+// Allocation Status display config
+export const ALLOCATION_STATUS_CONFIG: Record<AllocationStatus, { label: string; color: string; bgColor: string }> = {
+  unassigned: { label: 'Assign', color: '#6B7280', bgColor: '#F3F4F6' },
+  assigned: { label: 'Assigned', color: '#F59E0B', bgColor: '#FEF3C7' },
+  accepted: { label: 'Accepted', color: '#10B981', bgColor: '#D1FAE5' },
+  declined: { label: 'Declined', color: '#EF4444', bgColor: '#FEE2E2' },
+  reassigned: { label: 'Reassigned', color: '#8B5CF6', bgColor: '#EDE9FE' },
+};
+
+// Partner Tier enum for vendor classification
+export const partnerTierEnum = z.enum(['regular', 'partner', 'gold_partner', 'platinum_partner']);
+export type PartnerTier = z.infer<typeof partnerTierEnum>;
+
+// Partner Tier display config
+export const PARTNER_TIER_CONFIG: Record<PartnerTier, { label: string; color: string; bgColor: string }> = {
+  regular: { label: 'Regular', color: '#6B7280', bgColor: '#F3F4F6' },
+  partner: { label: 'Partner', color: '#2563EB', bgColor: '#DBEAFE' },
+  gold_partner: { label: 'Gold Partner', color: '#D97706', bgColor: '#FEF3C7' },
+  platinum_partner: { label: 'Platinum Partner', color: '#7C3AED', bgColor: '#EDE9FE' },
+};
+
+// Service Notification Settings Schema
+export const serviceNotificationSettingsSchema = z.object({
+  schedule_id: z.string().uuid("Invalid schedule ID"),
+  notify_vendor_before_hours: z.number().int().min(0).default(24),
+  notify_admin_before_hours: z.number().int().min(0).default(48),
+  notify_owner_before_hours: z.number().int().min(0).optional().nullable(),
+  send_reminder: z.boolean().default(true),
+  send_confirmation: z.boolean().default(true),
+  send_completion: z.boolean().default(true),
+});
+
+export type ServiceNotificationSettingsInsert = z.infer<typeof serviceNotificationSettingsSchema>;
+
+export type ServiceNotificationSettings = ServiceNotificationSettingsInsert & {
+  setting_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Service Notification Schema
+export const serviceNotificationSchema = z.object({
+  schedule_id: z.string().uuid("Invalid schedule ID"),
+  notification_type: z.enum(['reminder', 'confirmation', 'completion', 'cancellation', 'reschedule']),
+  recipient_type: z.enum(['vendor', 'admin', 'owner', 'ops']),
+  recipient_id: z.string().uuid().optional().nullable(),
+  recipient_email: z.string().email().optional().nullable(),
+  scheduled_for: z.string().datetime(),
+  sent_at: z.string().datetime().optional().nullable(),
+  status: z.enum(['pending', 'sent', 'failed', 'cancelled']).default('pending'),
+  error_message: z.string().optional().nullable(),
+  retry_count: z.number().int().min(0).default(0),
+});
+
+export type ServiceNotificationInsert = z.infer<typeof serviceNotificationSchema>;
+
+export type ServiceNotification = ServiceNotificationInsert & {
+  notification_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Filters for querying scheduled services
+export type ScheduledServiceFilters = {
+  property_id?: string;
+  unit_id?: string;
+  vendor_id?: string;
+  service_type?: ServiceType;
+  status?: ScheduleStatus | ScheduleStatus[];
+  priority?: SchedulePriority;
+  date_from?: string;
+  date_to?: string;
+  is_recurring?: boolean;
+  search?: string;
+};
+
+// Calendar view types
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  allDay: boolean;
+  resource: ScheduledService;
+  color?: string;
+};
+
+// Service type display names and colors
+export const SERVICE_TYPE_CONFIG: Record<ServiceType, { label: string; color: string; icon: string }> = {
+  cleaning: { label: 'Cleaning', color: '#10B981', icon: 'Sparkles' },
+  deep_cleaning: { label: 'Deep Cleaning', color: '#059669', icon: 'Sparkles' },
+  maintenance: { label: 'Maintenance', color: '#F59E0B', icon: 'Wrench' },
+  pool_service: { label: 'Pool Service', color: '#3B82F6', icon: 'Droplets' },
+  lawn_care: { label: 'Lawn Care', color: '#22C55E', icon: 'Leaf' },
+  pest_control: { label: 'Pest Control', color: '#EF4444', icon: 'Bug' },
+  hvac_service: { label: 'HVAC Service', color: '#8B5CF6', icon: 'Wind' },
+  plumbing: { label: 'Plumbing', color: '#06B6D4', icon: 'Droplet' },
+  electrical: { label: 'Electrical', color: '#FBBF24', icon: 'Zap' },
+  appliance_repair: { label: 'Appliance Repair', color: '#6366F1', icon: 'Settings' },
+  inspection: { label: 'Inspection', color: '#14B8A6', icon: 'ClipboardCheck' },
+  other: { label: 'Other', color: '#6B7280', icon: 'MoreHorizontal' },
+};
+
+// Schedule status display config
+export const SCHEDULE_STATUS_CONFIG: Record<ScheduleStatus, { label: string; color: string; bgColor: string }> = {
+  scheduled: { label: 'Scheduled', color: '#3B82F6', bgColor: '#DBEAFE' },
+  confirmed: { label: 'Confirmed', color: '#10B981', bgColor: '#D1FAE5' },
+  in_progress: { label: 'In Progress', color: '#F59E0B', bgColor: '#FEF3C7' },
+  completed: { label: 'Completed', color: '#059669', bgColor: '#A7F3D0' },
+  cancelled: { label: 'Cancelled', color: '#EF4444', bgColor: '#FEE2E2' },
+  no_show: { label: 'No Show', color: '#6B7280', bgColor: '#E5E7EB' },
 };
 

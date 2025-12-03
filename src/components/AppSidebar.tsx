@@ -73,7 +73,8 @@ const mainMenuItems = [
   { titleKey: "sidebar.messages", url: "/messages", icon: Mail, permission: PERMISSIONS.MESSAGES_VIEW },
   { titleKey: "sidebar.checkInOut", url: "/check-in-out", icon: LogIn, permission: PERMISSIONS.PROPERTIES_VIEW },
   { titleKey: "sidebar.checklistTemplates", url: "/checklist-templates", icon: CheckSquare, permission: PERMISSIONS.PROPERTIES_VIEW },
-  { titleKey: "sidebar.providers", url: "/providers", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+  { titleKey: "sidebar.vendors", url: "/vendors", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+  // Service Scheduling is now merged into Vendors page (tabs: Services, Service Vendors, Utility Providers)
 
   // Admin & System (Low Frequency)
   { titleKey: "sidebar.userManagement", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
@@ -205,17 +206,18 @@ export function AppSidebar() {
       >
         <SidebarContent className="bg-gradient-primary">
         {/* Brand Header */}
-        <div className={`flex items-center p-6 ${isCollapsed ? "justify-center" : ""}`}>
-          <div className={`flex items-center space-x-3 ${isCollapsed ? "justify-center" : ""}`}>
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-primary font-bold text-lg">C&C</span>
+        <div className="flex justify-center items-center p-4 py-6">
+          {isCollapsed ? (
+            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">C&C</span>
             </div>
-            {!isCollapsed && (
-              <div>
-                <h1 className="text-white font-bold text-lg">Casa & Concierge</h1>
-              </div>
-            )}
-          </div>
+          ) : (
+            <img
+              src="/logo-white.png"
+              alt="Casa & Concierge"
+              className="h-16 w-auto object-contain"
+            />
+          )}
         </div>
 
         {/* Main Navigation */}

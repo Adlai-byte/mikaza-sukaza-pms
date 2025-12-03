@@ -11,6 +11,7 @@ import { UtilityProvider, UtilityProviderInsert } from "@/lib/schemas";
 import { CasaSpinner } from "@/components/ui/casa-loader";
 import { UtilityProviderForm } from "@/components/ServiceProviders/UtilityProviderForm";
 import { UtilityProviderTable } from "@/components/ServiceProviders/UtilityProviderTable";
+import { UtilityProviderDetailsDialog } from "@/components/ServiceProviders/UtilityProviderDetailsDialog";
 
 export default function UtilityProviders() {
   const { providers, loading, isFetching, createProvider, updateProvider, deleteProvider, refetch } = useUtilityProviders();
@@ -216,7 +217,11 @@ export default function UtilityProviders() {
       />
 
       {/* Provider Details Dialog */}
-      {/* TODO: Create UtilityProviderDetailsDialog component */}
+      <UtilityProviderDetailsDialog
+        provider={detailsProvider}
+        open={!!detailsProvider}
+        onOpenChange={(open) => !open && setDetailsProvider(null)}
+      />
     </div>
   );
 }

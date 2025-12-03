@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Provider } from "@/lib/schemas";
+import { Provider, PARTNER_TIER_CONFIG, PartnerTier } from "@/lib/schemas";
 import {
   Table,
   TableBody,
@@ -61,13 +61,14 @@ export function ServiceProviderTable({
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [partnerTierFilter, setPartnerTierFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, categoryFilter, statusFilter]);
+  }, [search, categoryFilter, statusFilter, partnerTierFilter]);
 
   const getCategoryBadge = (category: string) => {
     const colors: Record<string, string> = {
@@ -89,6 +90,18 @@ export function ServiceProviderTable({
       'Other': 'bg-neutral-100 text-neutral-800',
     };
     return colors[category] || colors['Other'];
+  };
+
+  const getPartnerTierBadge = (tier: PartnerTier | undefined) => {
+    const tierKey = tier || 'regular';
+    const config = PARTNER_TIER_CONFIG[tierKey];
+    return {
+      label: config.label,
+      style: {
+        backgroundColor: config.bgColor,
+        color: config.color,
+      },
+    };
   };
 
   // Show empty state if loading
@@ -127,8 +140,11 @@ export function ServiceProviderTable({
       (statusFilter === "active" && provider.is_active) ||
       (statusFilter === "inactive" && !provider.is_active) ||
       (statusFilter === "preferred" && provider.is_preferred);
+    const matchesPartnerTier =
+      partnerTierFilter === "all" ||
+      (provider.partner_tier || 'regular') === partnerTierFilter;
 
-    return matchesSearch && matchesCategory && matchesStatus;
+    return matchesSearch && matchesCategory && matchesStatus && matchesPartnerTier;
   });
 
   // Calculate pagination
@@ -140,7 +156,7 @@ export function ServiceProviderTable({
   const exportToCSV = () => {
     const headers = [
       "Provider Name", "Contact Person", "Email", "Phone", "Category",
-      "Rating", "Reviews", "Status", "Preferred", "City", "State"
+      "Partner Tier", "Rating", "Reviews", "Status", "Preferred", "City", "State"
     ];
     const csvContent = [
       headers.join(","),
@@ -150,6 +166,7 @@ export function ServiceProviderTable({
         `"${provider.email || ''}"`,
         `"${provider.phone_primary || ''}"`,
         `"${provider.provider_type}"`,
+        `"${PARTNER_TIER_CONFIG[provider.partner_tier || 'regular'].label}"`,
         `"${provider.rating || 0}"`,
         `"${provider.total_reviews || 0}"`,
         `"${provider.is_active ? 'Active' : 'Inactive'}"`,
@@ -222,6 +239,21 @@ export function ServiceProviderTable({
             </SelectContent>
           </Select>
 
+          <Select value={partnerTierFilter} onValueChange={setPartnerTierFilter}>
+            <SelectTrigger className="w-40">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Partner Tier" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tiers</SelectItem>
+              {(Object.keys(PARTNER_TIER_CONFIG) as PartnerTier[]).map((tier) => (
+                <SelectItem key={tier} value={tier}>
+                  {PARTNER_TIER_CONFIG[tier].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button onClick={exportToCSV} variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export
@@ -237,6 +269,7 @@ export function ServiceProviderTable({
               <TableHead>Provider</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Partner Tier</TableHead>
               <TableHead>Rating</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Location</TableHead>
@@ -280,6 +313,16 @@ export function ServiceProviderTable({
                   <Badge className={getCategoryBadge(provider.provider_type)}>
                     {provider.provider_type}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  {(() => {
+                    const tierBadge = getPartnerTierBadge(provider.partner_tier as PartnerTier);
+                    return (
+                      <Badge style={tierBadge.style}>
+                        {tierBadge.label}
+                      </Badge>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center">
@@ -412,6 +455,14 @@ export function ServiceProviderTable({
                   <Badge className={getCategoryBadge(provider.provider_type)}>
                     {provider.provider_type}
                   </Badge>
+                  {(() => {
+                    const tierBadge = getPartnerTierBadge(provider.partner_tier as PartnerTier);
+                    return (
+                      <Badge style={tierBadge.style}>
+                        {tierBadge.label}
+                      </Badge>
+                    );
+                  })()}
                   <Badge variant={provider.is_active ? 'default' : 'destructive'}>
                     {provider.is_active ? 'Active' : 'Inactive'}
                   </Badge>

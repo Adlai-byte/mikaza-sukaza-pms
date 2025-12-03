@@ -93,7 +93,8 @@
     "issuesPhotos": "Issues & Photos",
     "checkInOut": "Check-In / Check-Out",
     "checklistTemplates": "Checklist Templates",
-    "providers": "Providers",
+    "vendors": "Vendors",
+    "serviceScheduling": "Service Scheduling",
     "userManagement": "User Management",
     "employeeDocs": "Employee Docs",
     "activityLogs": "Activity Logs",
@@ -923,6 +924,29 @@
     "tabs": {
       "serviceProviders": "Service Providers",
       "utilityProviders": "Utility Providers"
+    }
+  },
+  "utilityProviders": {
+    "title": "Utility Providers",
+    "subtitle": "Manage utility companies and service providers",
+    "customerServiceHours": "Customer Service Hours",
+    "emergencyContact": "Emergency Contact",
+    "serviceArea": "Service Area",
+    "addProvider": "Add Provider",
+    "editProvider": "Edit Provider",
+    "deleteProvider": "Delete Provider",
+    "providerDetails": "Provider Details",
+    "types": {
+      "Electric": "Electric",
+      "Internet": "Internet",
+      "Gas": "Gas",
+      "Water": "Water",
+      "Cable": "Cable",
+      "Security": "Security",
+      "Parking": "Parking",
+      "Maintenance": "Maintenance",
+      "Management": "Management",
+      "Other": "Other"
     }
   },
   "checklistTemplates": {

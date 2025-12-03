@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Provider } from "@/lib/schemas";
+import { Provider, PARTNER_TIER_CONFIG, PartnerTier } from "@/lib/schemas";
 import {
   Table,
   TableBody,
@@ -61,13 +61,14 @@ export function UtilityProviderTable({
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [partnerTierFilter, setPartnerTierFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, typeFilter, statusFilter]);
+  }, [search, typeFilter, statusFilter, partnerTierFilter]);
 
   const getTypeBadge = (type: string) => {
     const colors: Record<string, string> = {
@@ -84,6 +85,18 @@ export function UtilityProviderTable({
       'Other': 'bg-neutral-100 text-neutral-800',
     };
     return colors[type] || colors['Other'];
+  };
+
+  const getPartnerTierBadge = (tier: PartnerTier | undefined) => {
+    const tierKey = tier || 'regular';
+    const config = PARTNER_TIER_CONFIG[tierKey];
+    return {
+      label: config.label,
+      style: {
+        backgroundColor: config.bgColor,
+        color: config.color,
+      },
+    };
   };
 
   // Show empty state if loading
@@ -122,8 +135,11 @@ export function UtilityProviderTable({
       statusFilter === "all" ||
       (statusFilter === "active" && provider.is_active) ||
       (statusFilter === "inactive" && !provider.is_active);
+    const matchesPartnerTier =
+      partnerTierFilter === "all" ||
+      (provider.partner_tier || 'regular') === partnerTierFilter;
 
-    return matchesSearch && matchesType && matchesStatus;
+    return matchesSearch && matchesType && matchesStatus && matchesPartnerTier;
   });
 
   // Calculate pagination
@@ -134,7 +150,7 @@ export function UtilityProviderTable({
 
   const exportToCSV = () => {
     const headers = [
-      "Provider Name", "Type", "Email", "Phone", "Website",
+      "Provider Name", "Type", "Partner Tier", "Email", "Phone", "Website",
       "Customer Service Hours", "Emergency Phone", "Status"
     ];
     const csvContent = [
@@ -142,6 +158,7 @@ export function UtilityProviderTable({
       ...filteredProviders.map(provider => [
         `"${provider.provider_name}"`,
         `"${provider.provider_type}"`,
+        `"${PARTNER_TIER_CONFIG[provider.partner_tier || 'regular'].label}"`,
         `"${provider.email || ''}"`,
         `"${provider.phone_primary || ''}"`,
         `"${provider.website || ''}"`,
@@ -212,6 +229,21 @@ export function UtilityProviderTable({
             </SelectContent>
           </Select>
 
+          <Select value={partnerTierFilter} onValueChange={setPartnerTierFilter}>
+            <SelectTrigger className="w-40">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Partner Tier" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tiers</SelectItem>
+              {(Object.keys(PARTNER_TIER_CONFIG) as PartnerTier[]).map((tier) => (
+                <SelectItem key={tier} value={tier}>
+                  {PARTNER_TIER_CONFIG[tier].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button onClick={exportToCSV} variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export
@@ -226,6 +258,7 @@ export function UtilityProviderTable({
             <TableRow>
               <TableHead>Provider</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Partner Tier</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Service Hours</TableHead>
               <TableHead>Status</TableHead>
@@ -255,6 +288,16 @@ export function UtilityProviderTable({
                   <Badge className={getTypeBadge(provider.provider_type)}>
                     {provider.provider_type}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  {(() => {
+                    const tierBadge = getPartnerTierBadge(provider.partner_tier as PartnerTier);
+                    return (
+                      <Badge style={tierBadge.style}>
+                        {tierBadge.label}
+                      </Badge>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col space-y-1">
@@ -362,9 +405,19 @@ export function UtilityProviderTable({
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="font-semibold text-base">{provider.provider_name}</h3>
-                    <Badge className={`${getTypeBadge(provider.provider_type)} mt-1 w-fit`}>
-                      {provider.provider_type}
-                    </Badge>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      <Badge className={getTypeBadge(provider.provider_type)}>
+                        {provider.provider_type}
+                      </Badge>
+                      {(() => {
+                        const tierBadge = getPartnerTierBadge(provider.partner_tier as PartnerTier);
+                        return (
+                          <Badge style={tierBadge.style}>
+                            {tierBadge.label}
+                          </Badge>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
 

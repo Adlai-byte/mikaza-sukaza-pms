@@ -29,6 +29,13 @@ export const PERMISSIONS = {
   SERVICE_PROVIDERS_DELETE: 'service_providers.delete',
   SERVICE_PROVIDERS_EXPORT: 'service_providers.export',
 
+  // ========== SERVICE SCHEDULING ==========
+  SERVICE_SCHEDULING_VIEW: 'service_scheduling.view',
+  SERVICE_SCHEDULING_CREATE: 'service_scheduling.create',
+  SERVICE_SCHEDULING_EDIT: 'service_scheduling.edit',
+  SERVICE_SCHEDULING_DELETE: 'service_scheduling.delete',
+  SERVICE_SCHEDULING_COMPLETE: 'service_scheduling.complete',
+
   // ========== UTILITY PROVIDERS ==========
   UTILITY_PROVIDERS_VIEW: 'utility_providers.view',
   UTILITY_PROVIDERS_CREATE: 'utility_providers.create',
@@ -182,6 +189,13 @@ export const ROLES = {
       PERMISSIONS.SERVICE_PROVIDERS_EDIT,
       PERMISSIONS.SERVICE_PROVIDERS_EXPORT,
       // NOT: SERVICE_PROVIDERS_DELETE (admin only)
+
+      // ========== SERVICE SCHEDULING - Full access ==========
+      PERMISSIONS.SERVICE_SCHEDULING_VIEW,
+      PERMISSIONS.SERVICE_SCHEDULING_CREATE,
+      PERMISSIONS.SERVICE_SCHEDULING_EDIT,
+      PERMISSIONS.SERVICE_SCHEDULING_DELETE,
+      PERMISSIONS.SERVICE_SCHEDULING_COMPLETE,
 
       // ========== UTILITY PROVIDERS - Full CRUD except delete ==========
       PERMISSIONS.UTILITY_PROVIDERS_VIEW,
