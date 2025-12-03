@@ -44,7 +44,7 @@ export function SendInvoiceEmailDialog({ invoice, open, onOpenChange }: SendInvo
     }
   }, [invoice]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!invoice || !recipientEmail) return;
 
     // Verify invoice has an ID (has been saved to database)
@@ -56,7 +56,7 @@ export function SendInvoiceEmailDialog({ invoice, open, onOpenChange }: SendInvo
     console.log('Sending email for invoice:', invoice.invoice_id);
 
     // Generate PDF
-    const pdfBase64 = generateInvoicePDF(invoice);
+    const pdfBase64 = await generateInvoicePDF(invoice);
 
     const ccEmailsList = ccEmails
       .split(',')

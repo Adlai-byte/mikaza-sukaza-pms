@@ -1,42 +1,58 @@
 import jsPDF from 'jspdf';
 import { Invoice } from './schemas';
+import { getLogoForPDF, BRANDING } from './logo-utils';
 
-export function generateInvoicePDF(invoice: Invoice): string {
+export async function generateInvoicePDF(invoice: Invoice): Promise<string> {
   const doc = new jsPDF();
 
-  // Set up colors - Violet & Lime Green Theme
-  const primaryColor: [number, number, number] = [139, 92, 246]; // Violet (#8b5cf6)
-  const accentColor: [number, number, number] = [132, 204, 22]; // Lime (#84cc16)
+  // Set up colors - Black & Professional Theme
+  const primaryColor: [number, number, number] = [0, 0, 0]; // Black
+  const accentColor: [number, number, number] = [0, 0, 0]; // Black for totals
   const textDark: [number, number, number] = [17, 24, 39]; // #111827
   const textMuted: [number, number, number] = [107, 114, 128]; // #6b7280
 
-  // Header with gradient effect (simplified for PDF)
+  // Header with black background
   doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 210, 40, 'F');
+  doc.rect(0, 0, 210, 45, 'F');
 
-  // Company name
+  // Try to add logo
+  try {
+    const logoBase64 = await getLogoForPDF('white'); // White logo for black background
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', 75, 5, 60, 20);
+    } else {
+      // Fallback to text
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text(BRANDING.COMPANY_NAME, 105, 18, { align: 'center' });
+    }
+  } catch {
+    // Fallback to text
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text(BRANDING.COMPANY_NAME, 105, 18, { align: 'center' });
+  }
+
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Casa & Concierge', 105, 20, { align: 'center' });
-
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
-  doc.text('Property Management Services', 105, 28, { align: 'center' });
+  doc.text(BRANDING.TAGLINE, 105, 35, { align: 'center' });
 
   // Invoice title and number
   doc.setTextColor(...textDark);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text('INVOICE', 20, 55);
+  doc.text('INVOICE', 20, 58);
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...textMuted);
-  doc.text(`Invoice #${invoice.invoice_number}`, 20, 63);
+  doc.text(`Invoice #${invoice.invoice_number}`, 20, 66);
 
   // Invoice details box
-  let yPos = 75;
+  let yPos = 78;
 
   // Guest information
   doc.setFontSize(10);
@@ -269,11 +285,9 @@ export function generateInvoicePDF(invoice: Invoice): string {
   return doc.output('datauristring').split(',')[1];
 }
 
-export function downloadInvoicePDF(invoice: Invoice) {
-  const doc = new jsPDF();
-
-  // Generate PDF content (reuse the logic from generateInvoicePDF)
-  const base64 = generateInvoicePDF(invoice);
+export async function downloadInvoicePDF(invoice: Invoice) {
+  // Generate PDF content
+  const base64 = await generateInvoicePDF(invoice);
 
   // Convert base64 to blob and download
   const pdfBlob = base64ToBlob(base64, 'application/pdf');

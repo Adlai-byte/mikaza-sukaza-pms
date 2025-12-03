@@ -47,6 +47,7 @@ import CheckInOut from "./pages/CheckInOut";
 import ChecklistTemplates from "./pages/ChecklistTemplates";
 import Media from "./pages/Media";
 import Highlights from "./pages/Highlights";
+import Commissions from "./pages/Commissions";
 import Notifications from "./pages/Notifications";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
@@ -522,6 +523,16 @@ const App = () => (
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
                       <Highlights />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Commissions - Finance team can access */}
+                <Route
+                  path="/commissions"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.FINANCE_VIEW}>
+                      <Commissions />
                     </RBACProtectedRoute>
                   }
                 />

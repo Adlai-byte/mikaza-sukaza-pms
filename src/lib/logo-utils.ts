@@ -29,8 +29,8 @@ export const BRANDING = {
 // PDF color schemes
 export const PDF_COLORS = {
   // Primary brand colors
-  PRIMARY: [139, 92, 246] as [number, number, number], // Violet
-  ACCENT: [132, 204, 22] as [number, number, number], // Lime green
+  PRIMARY: [0, 0, 0] as [number, number, number], // Black
+  ACCENT: [0, 0, 0] as [number, number, number], // Black
   SECONDARY: [30, 58, 138] as [number, number, number], // Navy blue
 
   // Neutral colors

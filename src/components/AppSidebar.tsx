@@ -31,6 +31,7 @@ import {
   LogIn,
   Mail,
   FileSpreadsheet,
+  Percent,
 } from "lucide-react";
 
 import {
@@ -97,6 +98,7 @@ const financeMenuItems = [
   // Daily/Weekly Financial Operations
   { titleKey: "sidebar.invoices", url: "/invoices", icon: Receipt, permission: PERMISSIONS.FINANCE_VIEW },
   { titleKey: "sidebar.expenses", url: "/expenses", icon: DollarSign, permission: PERMISSIONS.FINANCE_VIEW },
+  { titleKey: "sidebar.commissions", url: "/commissions", icon: Percent, permission: PERMISSIONS.FINANCE_VIEW },
   { titleKey: "sidebar.contracts", url: "/contracts", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
   { titleKey: "sidebar.billTemplates", url: "/bill-templates", icon: LayoutGrid, permission: PERMISSIONS.FINANCE_VIEW },
 
