@@ -297,6 +297,18 @@ export const createInvoiceFromBooking = async (bookingId: string): Promise<Invoi
   let lineItems: InvoiceLineItemInsert[] = [];
   let lineNumber = 1;
 
+  // Always add Commission as the first line item (editable, default $0)
+  lineItems.push({
+    invoice_id: '',
+    line_number: lineNumber++,
+    description: 'Commission',
+    quantity: 1,
+    unit_price: 0,
+    tax_rate: 0,
+    tax_amount: 0,
+    item_type: 'accommodation',
+  });
+
   // If booking has a bill template, use it for line items
   if (booking.bill_template_id) {
     console.log('📋 [useInvoices] Using bill template for invoice:', booking.bill_template_id);
@@ -341,7 +353,8 @@ export const createInvoiceFromBooking = async (bookingId: string): Promise<Invoi
   }
 
   // Fallback: If no template or template failed, use booking fields (existing behavior)
-  if (lineItems.length === 0) {
+  // Check for length === 1 because we always have the commission item
+  if (lineItems.length === 1) {
     console.log('📋 [useInvoices] Using booking fields for line items (no template)');
 
     // Accommodation charges

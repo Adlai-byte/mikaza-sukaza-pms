@@ -73,7 +73,7 @@ export function generateInvoicePDF(invoice: Invoice): string {
 
   yPos += 35;
 
-  // Line items table header
+  // Line items table header (grouped by type)
   doc.setFillColor(240, 240, 240);
   doc.rect(20, yPos, 170, 8, 'F');
 
@@ -81,43 +81,89 @@ export function generateInvoicePDF(invoice: Invoice): string {
   doc.setFontSize(9);
   doc.setTextColor(...textDark);
   doc.text('Description', 22, yPos + 5);
-  doc.text('Qty', 120, yPos + 5, { align: 'right' });
-  doc.text('Price', 145, yPos + 5, { align: 'right' });
   doc.text('Amount', 185, yPos + 5, { align: 'right' });
 
   yPos += 10;
 
-  // Line items
+  // Group line items by type
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
 
+  // Type display names mapping
+  const typeLabels: Record<string, string> = {
+    accommodation: 'Accommodation',
+    cleaning: 'Cleaning Fee',
+    extras: 'Additional Services',
+    tax: 'Taxes',
+    other: 'Other Charges',
+  };
+
+  // Define display order for types
+  const typeOrder = ['accommodation', 'cleaning', 'extras', 'other', 'tax'];
+
   if (invoice.line_items && invoice.line_items.length > 0) {
+    // Group items by type and calculate totals
+    const groupedItems: Record<string, { total: number; taxTotal: number; count: number }> = {};
+
     invoice.line_items.forEach((item) => {
-      const description = item.description || 'Item';
+      const itemType = item.item_type || 'other';
       const qty = item.quantity || 1;
       const price = item.unit_price || 0;
       const amount = qty * price;
+      const taxAmount = item.tax_amount || 0;
 
-      // Wrap description if too long
-      const descLines = doc.splitTextToSize(description, 95);
-      doc.text(descLines, 22, yPos + 4);
-      doc.text(qty.toString(), 120, yPos + 4, { align: 'right' });
-      doc.text(`$${price.toFixed(2)}`, 145, yPos + 4, { align: 'right' });
-      doc.text(`$${amount.toFixed(2)}`, 185, yPos + 4, { align: 'right' });
+      if (!groupedItems[itemType]) {
+        groupedItems[itemType] = { total: 0, taxTotal: 0, count: 0 };
+      }
+      groupedItems[itemType].total += amount;
+      groupedItems[itemType].taxTotal += taxAmount;
+      groupedItems[itemType].count += 1;
+    });
 
-      yPos += descLines.length * 5 + 2;
+    // Display grouped items in defined order
+    typeOrder.forEach((itemType) => {
+      if (groupedItems[itemType] && groupedItems[itemType].total > 0) {
+        const group = groupedItems[itemType];
+        const label = typeLabels[itemType] || itemType;
 
-      // Add tax if present
-      if (item.tax_amount && item.tax_amount > 0) {
-        doc.setTextColor(...textMuted);
-        doc.text(`  Tax (${item.tax_rate || 0}%)`, 22, yPos + 4);
-        doc.text(`$${item.tax_amount.toFixed(2)}`, 185, yPos + 4, { align: 'right' });
-        yPos += 6;
         doc.setTextColor(...textDark);
+        doc.text(label, 22, yPos + 4);
+        doc.text(`$${group.total.toFixed(2)}`, 185, yPos + 4, { align: 'right' });
+        yPos += 7;
+
+        // Add tax if present for this group
+        if (group.taxTotal > 0) {
+          doc.setTextColor(...textMuted);
+          doc.text(`  Tax`, 22, yPos + 4);
+          doc.text(`$${group.taxTotal.toFixed(2)}`, 185, yPos + 4, { align: 'right' });
+          yPos += 6;
+          doc.setTextColor(...textDark);
+        }
+      }
+    });
+
+    // Check for any types not in the predefined order
+    Object.keys(groupedItems).forEach((itemType) => {
+      if (!typeOrder.includes(itemType) && groupedItems[itemType].total > 0) {
+        const group = groupedItems[itemType];
+        const label = typeLabels[itemType] || itemType;
+
+        doc.setTextColor(...textDark);
+        doc.text(label, 22, yPos + 4);
+        doc.text(`$${group.total.toFixed(2)}`, 185, yPos + 4, { align: 'right' });
+        yPos += 7;
+
+        if (group.taxTotal > 0) {
+          doc.setTextColor(...textMuted);
+          doc.text(`  Tax`, 22, yPos + 4);
+          doc.text(`$${group.taxTotal.toFixed(2)}`, 185, yPos + 4, { align: 'right' });
+          yPos += 6;
+          doc.setTextColor(...textDark);
+        }
       }
     });
   } else {
-    doc.text('No line items', 22, yPos + 4);
+    doc.text('No charges', 22, yPos + 4);
     yPos += 10;
   }
 

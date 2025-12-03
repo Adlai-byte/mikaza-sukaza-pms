@@ -45,7 +45,7 @@ import { formatUserDisplay } from '@/lib/user-display';
 import { useTranslation } from 'react-i18next';
 
 const INVOICE_STATUSES = ['draft', 'sent', 'paid', 'overdue', 'cancelled', 'refunded'];
-const LINE_ITEM_TYPES = ['accommodation', 'cleaning', 'extras', 'tax', 'commission', 'other'];
+const LINE_ITEM_TYPES = ['accommodation', 'cleaning', 'extras', 'tax', 'other'];
 
 // Helper function to convert to sentence case
 const toSentenceCase = (str: string) => {
@@ -70,12 +70,25 @@ export default function InvoiceForm() {
   const { invoice, loading } = useInvoice(invoiceId || '');
   const { booking, loading: bookingLoading } = useBookingDetail(bookingId);
 
+  // Default Commission line item for new invoices
+  const defaultCommissionItem: InvoiceLineItemInsert = {
+    invoice_id: '',
+    line_number: 1,
+    description: 'Commission',
+    quantity: 1,
+    unit_price: 0,
+    tax_rate: 0,
+    tax_amount: 0,
+    item_type: 'accommodation',
+  };
+
   const [lineItems, setLineItems] = useState<InvoiceLineItemInsert[]>([]);
   const [nextLineNumber, setNextLineNumber] = useState(1);
   const [linkedBookingId, setLinkedBookingId] = useState<string | undefined>(bookingId);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCreateGuestDialog, setShowCreateGuestDialog] = useState(false);
+  const [initializedCommission, setInitializedCommission] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(invoiceSchema),
@@ -94,6 +107,15 @@ export default function InvoiceForm() {
       payment_method: '',
     },
   });
+
+  // Initialize default Commission line item for new standalone invoices
+  useEffect(() => {
+    if (!isEditing && !isFromBooking && !initializedCommission) {
+      setLineItems([defaultCommissionItem]);
+      setNextLineNumber(2);
+      setInitializedCommission(true);
+    }
+  }, [isEditing, isFromBooking, initializedCommission]);
 
   // Handle guest selection
   const handleGuestSelect = (guestId: string) => {
@@ -200,6 +222,18 @@ export default function InvoiceForm() {
       // Auto-generate line items from booking financial data
       const generatedItems: InvoiceLineItemInsert[] = [];
       let lineNumber = 1;
+
+      // 0. Commission (always first, editable, default values)
+      generatedItems.push({
+        invoice_id: '',
+        line_number: lineNumber++,
+        description: 'Commission',
+        quantity: 1,
+        unit_price: 0,
+        tax_rate: 0,
+        tax_amount: 0,
+        item_type: 'accommodation',
+      });
 
       // 1. Accommodation (base amount)
       if (booking.base_amount && booking.base_amount > 0) {

@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { CheckInOutRecord, ChecklistResponse, Attachment, ChecklistItem } from './schemas';
 import { format } from 'date-fns';
+import { getLogoForPDF, BRANDING, PDF_COLORS } from './logo-utils';
 
 /**
  * PDF generation data interface
@@ -21,8 +22,9 @@ export class CheckInOutPDFGenerator {
   private margin: number = 20;
   private currentY: number = 20;
   private lineHeight: number = 7;
-  private primaryColor: [number, number, number] = [34, 139, 34]; // Green
-  private secondaryColor: [number, number, number] = [128, 128, 128]; // Gray
+  private primaryColor: [number, number, number] = PDF_COLORS.PRIMARY;
+  private secondaryColor: [number, number, number] = PDF_COLORS.MUTED;
+  private logoBase64: string = '';
 
   constructor() {
     this.doc = new jsPDF({
@@ -35,11 +37,26 @@ export class CheckInOutPDFGenerator {
   }
 
   /**
+   * Load logo for PDF embedding
+   */
+  private async loadLogo(): Promise<void> {
+    try {
+      this.logoBase64 = await getLogoForPDF('black'); // Black logo for light PDF backgrounds
+    } catch (error) {
+      console.warn('Failed to load logo for PDF:', error);
+    }
+  }
+
+  /**
    * Main method to generate the complete PDF
    */
   async generatePDF(record: CheckInOutRecord): Promise<Blob> {
     try {
       console.log('Starting PDF generation for record:', record.record_id);
+
+      // Load logo for branding
+      await this.loadLogo();
+      console.log('✓ Logo loaded');
 
       // Header
       this.addHeader(record);
@@ -120,36 +137,51 @@ export class CheckInOutPDFGenerator {
    */
   private addHeader(record: CheckInOutRecord): void {
     try {
-      // Logo/Branding box
-      this.doc.setFillColor(...this.primaryColor);
-      this.doc.rect(this.margin, this.margin, 50, 15, 'F');
+      // Logo - use actual image if available, otherwise fallback to text
+      if (this.logoBase64) {
+        try {
+          // Add logo image (black version for light PDF background)
+          this.doc.addImage(this.logoBase64, 'PNG', this.margin, this.margin, 55, 18);
+        } catch (imgError) {
+          console.warn('Failed to add logo image, using fallback:', imgError);
+          this.addFallbackLogo();
+        }
+      } else {
+        this.addFallbackLogo();
+      }
 
-      this.doc.setTextColor(255, 255, 255);
-      this.doc.setFontSize(16);
-      this.doc.setFont('helvetica', 'bold');
-      this.doc.text('Casa &', this.margin + 5, this.margin + 7);
-      this.doc.text('Concierge', this.margin + 5, this.margin + 13);
-
-      // Document title - centered
+      // Document title - positioned after logo
       this.doc.setTextColor(0, 0, 0);
       this.doc.setFontSize(18);
       this.doc.setFont('helvetica', 'bold');
       const title = record.record_type === 'check_in' ? 'CHECK-IN REPORT' : 'CHECK-OUT REPORT';
-      this.doc.text(title, this.pageWidth / 2, this.margin + 8, { align: 'center' });
+      this.doc.text(title, this.pageWidth - this.margin, this.margin + 8, { align: 'right' });
 
-      // Date and status on next line
+      // Date and status below title
       this.doc.setFontSize(9);
       this.doc.setFont('helvetica', 'normal');
       const dateStr = record.record_date ? format(new Date(record.record_date), 'MMM dd, yyyy') : 'N/A';
       const statusStr = (record.status || 'draft').toUpperCase();
       this.doc.setTextColor(...this.secondaryColor);
-      this.doc.text(`Date: ${dateStr} | Status: ${statusStr}`, this.pageWidth / 2, this.margin + 16, { align: 'center' });
+      this.doc.text(`Date: ${dateStr} | Status: ${statusStr}`, this.pageWidth - this.margin, this.margin + 16, { align: 'right' });
 
       this.currentY = this.margin + 30;
     } catch (error) {
       console.error('Error in addHeader:', error);
       throw error;
     }
+  }
+
+  /**
+   * Add fallback text-based logo when image is not available
+   */
+  private addFallbackLogo(): void {
+    this.doc.setFillColor(...this.primaryColor);
+    this.doc.rect(this.margin, this.margin, 55, 18, 'F');
+    this.doc.setTextColor(255, 255, 255);
+    this.doc.setFontSize(14);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.text(BRANDING.COMPANY_NAME, this.margin + 27.5, this.margin + 11, { align: 'center' });
   }
 
   /**
@@ -650,10 +682,11 @@ export async function generateAndUploadCheckInOutPDF(
     throw new Error(`Failed to upload PDF: ${uploadError.message}`);
   }
 
-  // Generate a signed URL that expires in 10 years (for long-term access)
+  // Generate a signed URL for long-term access (7 days)
+  // Note: For permanent access, consider using public buckets or refreshing URLs periodically
   const { data: signedUrlData, error: signedUrlError } = await supabase.storage
     .from('property-documents')
-    .createSignedUrl(filePath, 315360000); // 10 years in seconds
+    .createSignedUrl(filePath, 604800); // 7 days (STORAGE_URL_EXPIRATION.PDF_RECORD)
 
   if (signedUrlError) {
     console.error('Error creating signed URL:', signedUrlError);

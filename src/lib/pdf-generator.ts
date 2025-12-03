@@ -3,6 +3,47 @@ import autoTable from 'jspdf-autotable';
 import { Invoice, InvoiceLineItem, AccessAuthorization } from './schemas';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
+import { getLogoForPDF, BRANDING, PDF_COLORS } from './logo-utils';
+
+// Helper to add logo to PDF document
+async function addLogoToPDF(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number = 55,
+  height: number = 18
+): Promise<boolean> {
+  try {
+    const logoBase64 = await getLogoForPDF('black'); // Black logo for light PDF backgrounds
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', x, y, width, height);
+      return true;
+    }
+  } catch (error) {
+    console.warn('Failed to add logo to PDF:', error);
+  }
+  return false;
+}
+
+// Fallback text-based logo
+function addFallbackLogo(doc: jsPDF, x: number, y: number, primaryColor: [number, number, number]): void {
+  doc.setFillColor(...primaryColor);
+  doc.rect(x, y, 40, 10, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(BRANDING.SHORT_NAME, x + 5, y + 7);
+
+  doc.setTextColor(...PDF_COLORS.TEXT);
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text(BRANDING.COMPANY_NAME, x + 45, y + 7);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...PDF_COLORS.TEXT_LIGHT);
+  doc.text(BRANDING.TAGLINE, x + 45, y + 12);
+}
 
 interface InvoiceWithDetails extends Invoice {
   property?: {
@@ -16,7 +57,7 @@ interface InvoiceWithDetails extends Invoice {
  * Generate and download a PDF invoice
  * @param invoice - Invoice data with property and line items
  */
-export function generateInvoicePDF(invoice: InvoiceWithDetails) {
+export async function generateInvoicePDF(invoice: InvoiceWithDetails) {
   const doc = new jsPDF();
 
   // Page dimensions
@@ -26,10 +67,10 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
   let yPos = margin;
 
   // Colors - Violet & Lime Green Theme
-  const primaryColor: [number, number, number] = [139, 92, 246]; // Violet (#8b5cf6)
-  const accentColor: [number, number, number] = [132, 204, 22]; // Lime (#84cc16)
-  const textColor: [number, number, number] = [60, 60, 60];
-  const lightGray: [number, number, number] = [245, 243, 255]; // Light violet
+  const primaryColor: [number, number, number] = PDF_COLORS.PRIMARY;
+  const accentColor: [number, number, number] = PDF_COLORS.ACCENT;
+  const textColor: [number, number, number] = PDF_COLORS.TEXT;
+  const lightGray: [number, number, number] = PDF_COLORS.BACKGROUND_LIGHT;
 
   // Helper to format currency
   const formatCurrency = (amount: number) => {
@@ -49,24 +90,11 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
   };
 
   // ===== HEADER =====
-  // Company logo/name
-  doc.setFillColor(...primaryColor);
-  doc.rect(margin, yPos, 40, 10, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('C&C', margin + 5, yPos + 7);
-
-  doc.setTextColor(...textColor);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Casa & Concierge', margin + 45, yPos + 7);
-
-  // Company tagline
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(120, 120, 120);
-  doc.text('Property Management Services', margin + 45, yPos + 12);
+  // Try to add logo image, fallback to text
+  const logoAdded = await addLogoToPDF(doc, margin, yPos, 55, 18);
+  if (!logoAdded) {
+    addFallbackLogo(doc, margin, yPos, primaryColor);
+  }
 
   yPos += 25;
 
@@ -143,26 +171,71 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
 
   yPos += 50;
 
-  // ===== LINE ITEMS TABLE =====
+  // ===== LINE ITEMS TABLE (Grouped by Type) =====
   const lineItems = invoice.line_items || [];
 
-  const tableData = lineItems.map((item) => {
-    const subtotal = (item.quantity || 0) * (item.unit_price || 0);
-    const total = subtotal + (item.tax_amount || 0);
+  // Type display names mapping
+  const typeLabels: Record<string, string> = {
+    accommodation: 'Accommodation',
+    cleaning: 'Cleaning Fee',
+    extras: 'Additional Services',
+    tax: 'Taxes',
+    other: 'Other Charges',
+  };
 
-    return [
-      item.line_number?.toString() || '',
-      item.description || '',
-      item.quantity?.toString() || '0',
-      formatCurrency(item.unit_price || 0),
-      formatCurrency(item.tax_amount || 0),
-      formatCurrency(total),
-    ];
+  // Define display order for types
+  const typeOrder = ['accommodation', 'cleaning', 'extras', 'other', 'tax'];
+
+  // Group items by type and calculate totals
+  const groupedItems: Record<string, { total: number; taxTotal: number }> = {};
+
+  lineItems.forEach((item) => {
+    const itemType = item.item_type || 'other';
+    const qty = item.quantity || 1;
+    const price = item.unit_price || 0;
+    const amount = qty * price;
+    const taxAmount = item.tax_amount || 0;
+
+    if (!groupedItems[itemType]) {
+      groupedItems[itemType] = { total: 0, taxTotal: 0 };
+    }
+    groupedItems[itemType].total += amount;
+    groupedItems[itemType].taxTotal += taxAmount;
+  });
+
+  // Build table data from grouped items
+  const tableData: string[][] = [];
+
+  // Add items in defined order
+  typeOrder.forEach((itemType) => {
+    if (groupedItems[itemType] && groupedItems[itemType].total > 0) {
+      const group = groupedItems[itemType];
+      const label = typeLabels[itemType] || itemType;
+      tableData.push([label, formatCurrency(group.total)]);
+
+      // Add tax row if present
+      if (group.taxTotal > 0) {
+        tableData.push(['  Tax', formatCurrency(group.taxTotal)]);
+      }
+    }
+  });
+
+  // Add any types not in predefined order
+  Object.keys(groupedItems).forEach((itemType) => {
+    if (!typeOrder.includes(itemType) && groupedItems[itemType].total > 0) {
+      const group = groupedItems[itemType];
+      const label = typeLabels[itemType] || itemType;
+      tableData.push([label, formatCurrency(group.total)]);
+
+      if (group.taxTotal > 0) {
+        tableData.push(['  Tax', formatCurrency(group.taxTotal)]);
+      }
+    }
   });
 
   autoTable(doc, {
     startY: yPos,
-    head: [['#', 'Description', 'Qty', 'Unit Price', 'Tax', 'Total']],
+    head: [['Description', 'Amount']],
     body: tableData,
     theme: 'striped',
     headStyles: {
@@ -177,12 +250,8 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
       textColor: textColor,
     },
     columnStyles: {
-      0: { cellWidth: 15, halign: 'center' },
-      1: { cellWidth: 'auto' },
-      2: { cellWidth: 20, halign: 'center' },
-      3: { cellWidth: 30, halign: 'right' },
-      4: { cellWidth: 25, halign: 'right' },
-      5: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
+      0: { cellWidth: 'auto', halign: 'left' },
+      1: { cellWidth: 40, halign: 'right', fontStyle: 'bold' },
     },
     margin: { left: margin, right: margin },
   });
@@ -337,7 +406,7 @@ export interface OwnerStatementData {
  * Generate and download an Owner Statement PDF
  * @param statement - Owner statement data with revenue and expenses
  */
-export function generateOwnerStatementPDF(statement: OwnerStatementData) {
+export async function generateOwnerStatementPDF(statement: OwnerStatementData) {
   const doc = new jsPDF();
 
   // Page dimensions
@@ -347,11 +416,11 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
   let yPos = margin;
 
   // Colors - Violet & Lime Green Theme
-  const primaryColor: [number, number, number] = [139, 92, 246]; // Violet (#8b5cf6)
-  const textColor: [number, number, number] = [60, 60, 60];
-  const lightGray: [number, number, number] = [245, 243, 255]; // Light violet
-  const greenColor: [number, number, number] = [132, 204, 22]; // Lime (#84cc16)
-  const redColor: [number, number, number] = [139, 92, 246]; // Violet for expenses
+  const primaryColor: [number, number, number] = PDF_COLORS.PRIMARY;
+  const textColor: [number, number, number] = PDF_COLORS.TEXT;
+  const lightGray: [number, number, number] = PDF_COLORS.BACKGROUND_LIGHT;
+  const greenColor: [number, number, number] = PDF_COLORS.ACCENT;
+  const redColor: [number, number, number] = PDF_COLORS.PRIMARY;
 
   // Helper to format currency
   const formatCurrency = (amount: number) => {
@@ -371,24 +440,11 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
   };
 
   // ===== HEADER =====
-  // Company logo/name
-  doc.setFillColor(...primaryColor);
-  doc.rect(margin, yPos, 40, 10, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('C&C', margin + 5, yPos + 7);
-
-  doc.setTextColor(...textColor);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Casa & Concierge', margin + 45, yPos + 7);
-
-  // Company tagline
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(120, 120, 120);
-  doc.text('Property Management Services', margin + 45, yPos + 12);
+  // Try to add logo image, fallback to text
+  const logoAdded = await addLogoToPDF(doc, margin, yPos, 55, 18);
+  if (!logoAdded) {
+    addFallbackLogo(doc, margin, yPos, primaryColor);
+  }
 
   yPos += 25;
 
@@ -732,15 +788,15 @@ export async function generateAccessAuthorizationPDF(authorization: AccessAuthor
   let yPos = margin;
 
   // Colors - Violet & Lime Green Theme
-  const primaryColor: [number, number, number] = [139, 92, 246]; // Violet (#8b5cf6)
-  const textColor: [number, number, number] = [60, 60, 60];
-  const lightGray: [number, number, number] = [245, 243, 255]; // Light violet
+  const primaryColor: [number, number, number] = PDF_COLORS.PRIMARY;
+  const textColor: [number, number, number] = PDF_COLORS.TEXT;
+  const lightGray: [number, number, number] = PDF_COLORS.BACKGROUND_LIGHT;
   const statusColors: Record<string, [number, number, number]> = {
-    requested: [139, 92, 246], // Violet
-    approved: [132, 204, 22], // Lime
+    requested: PDF_COLORS.PRIMARY,
+    approved: PDF_COLORS.ACCENT,
     in_progress: [124, 58, 237], // Violet-600
-    completed: [107, 114, 128],
-    cancelled: [239, 68, 68],
+    completed: PDF_COLORS.MUTED,
+    cancelled: PDF_COLORS.ERROR,
     expired: [156, 163, 175],
   };
 
@@ -767,24 +823,11 @@ export async function generateAccessAuthorizationPDF(authorization: AccessAuthor
   };
 
   // ===== HEADER =====
-  // Company logo/name
-  doc.setFillColor(...primaryColor);
-  doc.rect(margin, yPos, 40, 10, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('C&C', margin + 5, yPos + 7);
-
-  doc.setTextColor(...textColor);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Casa & Concierge', margin + 45, yPos + 7);
-
-  // Company tagline
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(120, 120, 120);
-  doc.text('Property Management Services', margin + 45, yPos + 12);
+  // Try to add logo image, fallback to text
+  const logoAdded = await addLogoToPDF(doc, margin, yPos, 55, 18);
+  if (!logoAdded) {
+    addFallbackLogo(doc, margin, yPos, primaryColor);
+  }
 
   yPos += 25;
 
