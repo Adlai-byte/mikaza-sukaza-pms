@@ -1,5 +1,8 @@
 import { useState, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+
+// Logo path - use BASE_URL for reliable deployments
+const logoWhite = `${import.meta.env.BASE_URL}logo-white.png`;
 import {
   LayoutDashboard,
   Building,
@@ -215,7 +218,7 @@ export function AppSidebar() {
             </div>
           ) : (
             <img
-              src="/logo-white.png"
+              src={logoWhite}
               alt="Casa & Concierge"
               className="h-16 w-auto object-contain"
             />
