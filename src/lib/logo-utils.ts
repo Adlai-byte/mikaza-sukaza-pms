@@ -6,15 +6,23 @@
  * - logo-black.png: Black/dark colored logo (for light backgrounds/PDFs)
  */
 
-// Public paths for logo images
+// Get base URL for assets (handles subdirectory deployments)
+const getBaseUrl = () => {
+  // Use Vite's BASE_URL if available, otherwise default to '/'
+  return typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL
+    ? import.meta.env.BASE_URL
+    : '/';
+};
+
+// Public paths for logo images - using function to get correct base URL
 export const LOGO_PATHS = {
   /** White logo for dark backgrounds (sidebar, dark headers) */
-  WHITE: '/logo-white.png',
+  get WHITE() { return `${getBaseUrl()}logo-white.png`; },
   /** Black logo for light backgrounds and PDFs */
-  BLACK: '/logo-black.png',
+  get BLACK() { return `${getBaseUrl()}logo-black.png`; },
   // Legacy aliases
-  DARK: '/logo-white.png',
-  LIGHT: '/logo-black.png',
+  get DARK() { return `${getBaseUrl()}logo-white.png`; },
+  get LIGHT() { return `${getBaseUrl()}logo-black.png`; },
 } as const;
 
 // Company branding constants
