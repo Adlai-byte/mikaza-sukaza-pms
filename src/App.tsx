@@ -173,7 +173,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <SessionTimeoutWarning />
+            {/* Session timeout disabled for now */}
+            {/* <SessionTimeoutWarning /> */}
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
