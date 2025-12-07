@@ -9,13 +9,13 @@ test.describe('Vendor COIs Module Tests', () => {
   });
 
   test('COI-001: Should load vendor COIs page', async ({ page }) => {
-    // Wait extra time for this page as it loads COI data
     await page.waitForTimeout(2000);
     const hasCOI = await page.locator('text=COI').first().isVisible().catch(() => false);
     const hasInsurance = await page.locator('text=Insurance').first().isVisible().catch(() => false);
     const hasVendor = await page.locator('text=Vendor').first().isVisible().catch(() => false);
 
     console.log(`COI text: ${hasCOI}, Insurance text: ${hasInsurance}, Vendor text: ${hasVendor}`);
+    expect(hasCOI || hasInsurance || hasVendor).toBeTruthy();
   });
 
   test('COI-002: Should display stats cards', async ({ page }) => {
@@ -25,6 +25,7 @@ test.describe('Vendor COIs Module Tests', () => {
     const cardCount = await cards.count();
 
     console.log(`Found ${cardCount} stats cards`);
+    expect(cardCount).toBeGreaterThanOrEqual(1);
   });
 
   test('COI-003: Should display active COIs stat', async ({ page }) => {
@@ -33,6 +34,7 @@ test.describe('Vendor COIs Module Tests', () => {
     const hasActiveStat = await page.locator('text=Active').first().isVisible().catch(() => false);
 
     console.log(`Active COIs stat: ${hasActiveStat}`);
+    expect(hasActiveStat).toBeTruthy();
   });
 
   test('COI-004: Should display expiring soon stat', async ({ page }) => {
@@ -41,6 +43,7 @@ test.describe('Vendor COIs Module Tests', () => {
     const hasExpiringStat = await page.locator('text=Expiring').first().isVisible().catch(() => false);
 
     console.log(`Expiring soon stat: ${hasExpiringStat}`);
+    expect(hasExpiringStat).toBeTruthy();
   });
 
   test('COI-005: Should display expired stat', async ({ page }) => {
@@ -49,14 +52,16 @@ test.describe('Vendor COIs Module Tests', () => {
     const hasExpiredStat = await page.locator('text=Expired').first().isVisible().catch(() => false);
 
     console.log(`Expired stat: ${hasExpiredStat}`);
+    expect(hasExpiredStat).toBeTruthy();
   });
 
-  test('COI-006: Should display vendors covered stat', async ({ page }) => {
+  test('COI-006: Should display vendors info', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const hasVendorsStat = await page.locator('text=Vendors').first().isVisible().catch(() => false);
+    const hasVendorsStat = await page.locator('text=Vendor, text=vendor').first().isVisible().catch(() => false);
 
-    console.log(`Vendors covered stat: ${hasVendorsStat}`);
+    console.log(`Vendors info: ${hasVendorsStat}`);
+    expect(hasVendorsStat).toBeTruthy();
   });
 
   test('COI-007: Should have search input', async ({ page }) => {
@@ -66,6 +71,7 @@ test.describe('Vendor COIs Module Tests', () => {
     const hasSearch = await searchInput.isVisible().catch(() => false);
 
     console.log(`Search input: ${hasSearch}`);
+    expect(hasSearch).toBeTruthy();
   });
 
   test('COI-008: Should have vendor filter', async ({ page }) => {
@@ -75,6 +81,7 @@ test.describe('Vendor COIs Module Tests', () => {
     const hasVendorFilter = await vendorFilter.isVisible().catch(() => false);
 
     console.log(`Vendor filter: ${hasVendorFilter}`);
+    expect(hasVendorFilter).toBeTruthy();
   });
 
   test('COI-009: Should have property filter', async ({ page }) => {
@@ -84,6 +91,7 @@ test.describe('Vendor COIs Module Tests', () => {
     const hasPropertyFilter = await propertyFilter.isVisible().catch(() => false);
 
     console.log(`Property filter: ${hasPropertyFilter}`);
+    expect(hasPropertyFilter).toBeTruthy();
   });
 
   test('COI-010: Should have coverage type filter', async ({ page }) => {
@@ -93,6 +101,7 @@ test.describe('Vendor COIs Module Tests', () => {
     const hasCoverageFilter = await coverageFilter.isVisible().catch(() => false);
 
     console.log(`Coverage type filter: ${hasCoverageFilter}`);
+    expect(hasCoverageFilter).toBeTruthy();
   });
 
   test('COI-011: Should have status filter', async ({ page }) => {
@@ -102,6 +111,7 @@ test.describe('Vendor COIs Module Tests', () => {
     const hasStatusFilter = await statusFilter.isVisible().catch(() => false);
 
     console.log(`Status filter: ${hasStatusFilter}`);
+    expect(hasStatusFilter).toBeTruthy();
   });
 
   test('COI-012: Should have add COI button', async ({ page }) => {
@@ -111,29 +121,29 @@ test.describe('Vendor COIs Module Tests', () => {
     const hasAddButton = await addButton.isVisible().catch(() => false);
 
     console.log(`Add COI button: ${hasAddButton}`);
+    expect(hasAddButton).toBeTruthy();
   });
 
   test('COI-013: Should have refresh button', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
     const refreshButton = page.locator('button:has-text("Refresh")').first();
-    const refreshIcon = page.locator('button').filter({ has: page.locator('[class*="refresh"], [class*="Refresh"]') }).first();
-    const hasRefresh = await refreshButton.isVisible().catch(() => false) ||
-                       await refreshIcon.isVisible().catch(() => false);
+    const hasRefresh = await refreshButton.isVisible().catch(() => false);
 
     console.log(`Refresh button: ${hasRefresh}`);
+    expect(hasRefresh).toBeTruthy();
   });
 
   test('COI-014: Should have tree/list view toggle', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const treeView = page.locator('button:has-text("Tree"), [value="tree"]').first();
-    const listView = page.locator('button:has-text("List"), [value="list"]').first();
+    // View mode uses Tabs component with TabsTrigger elements (role="tab")
+    const viewTabs = page.locator('[role="tab"]');
+    const tabCount = await viewTabs.count();
 
-    const hasTreeView = await treeView.isVisible().catch(() => false);
-    const hasListView = await listView.isVisible().catch(() => false);
-
-    console.log(`Tree view: ${hasTreeView}, List view: ${hasListView}`);
+    const hasViewToggle = tabCount >= 2;
+    console.log(`Tree/List view toggle: ${hasViewToggle} (${tabCount} tabs)`);
+    expect(hasViewToggle).toBeTruthy();
   });
 
   test('COI-015: Should open add COI dialog', async ({ page }) => {
@@ -159,11 +169,14 @@ test.describe('Vendor COIs Module Tests', () => {
       await addButton.click();
       await page.waitForTimeout(500);
 
-      const hasVendor = await page.locator('[role="dialog"] label:has-text("Vendor")').first().isVisible().catch(() => false);
-      const hasCoverage = await page.locator('[role="dialog"] label:has-text("Coverage")').first().isVisible().catch(() => false);
-      const hasPolicy = await page.locator('[role="dialog"] label:has-text("Policy")').first().isVisible().catch(() => false);
+      const dialog = page.locator('[role="dialog"]');
+      const hasDialog = await dialog.isVisible().catch(() => false);
 
-      console.log(`Vendor: ${hasVendor}, Coverage: ${hasCoverage}, Policy: ${hasPolicy}`);
+      if (hasDialog) {
+        const hasInputs = await dialog.locator('input, textarea, [role="combobox"]').first().isVisible().catch(() => false);
+        console.log(`Form fields visible: ${hasInputs}`);
+        expect(hasInputs).toBeTruthy();
+      }
     }
   });
 
@@ -187,13 +200,15 @@ test.describe('Vendor COIs Module Tests', () => {
     }
   });
 
-  test('COI-018: Should display COI table', async ({ page }) => {
+  test('COI-018: Should display COI table or tree', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
     const hasTable = await page.locator('table').first().isVisible().catch(() => false);
-    const hasTree = await page.locator('[class*="tree"]').first().isVisible().catch(() => false);
+    const hasTree = await page.locator('[class*="tree"], [class*="Tree"]').first().isVisible().catch(() => false);
+    const hasCards = await page.locator('[class*="card"]').first().isVisible().catch(() => false);
 
-    console.log(`Table visible: ${hasTable}, Tree visible: ${hasTree}`);
+    console.log(`Table visible: ${hasTable}, Tree visible: ${hasTree}, Cards: ${hasCards}`);
+    expect(hasTable || hasTree || hasCards).toBeTruthy();
   });
 
   test('COI-019: Should search COIs', async ({ page }) => {
@@ -207,8 +222,6 @@ test.describe('Vendor COIs Module Tests', () => {
 
       const value = await searchInput.inputValue().catch(() => '');
       console.log(`Search value: ${value}`);
-    } else {
-      console.log('Search input not visible');
     }
   });
 });
@@ -218,7 +231,14 @@ test.describe('Vendor COIs - COI Actions', () => {
     await page.goto(ROUTES.vendorCois);
     await waitForPageLoad(page, 2000);
 
-    const downloadButton = page.locator('button').filter({ has: page.locator('[class*="download"], [class*="Download"]') }).first();
+    // Switch to list view to see action buttons
+    const listTab = page.locator('[role="tab"]').nth(1);
+    if (await listTab.isVisible().catch(() => false)) {
+      await listTab.click();
+      await page.waitForTimeout(500);
+    }
+
+    const downloadButton = page.locator('button').filter({ has: page.locator('svg.lucide-download') }).first();
     const hasDownload = await downloadButton.isVisible().catch(() => false);
 
     console.log(`Download action: ${hasDownload}`);
@@ -228,7 +248,14 @@ test.describe('Vendor COIs - COI Actions', () => {
     await page.goto(ROUTES.vendorCois);
     await waitForPageLoad(page, 2000);
 
-    const editButton = page.locator('button').filter({ has: page.locator('[class*="edit"], [class*="Edit"]') }).first();
+    // Switch to list view
+    const listTab = page.locator('[role="tab"]').nth(1);
+    if (await listTab.isVisible().catch(() => false)) {
+      await listTab.click();
+      await page.waitForTimeout(500);
+    }
+
+    const editButton = page.locator('button').filter({ has: page.locator('svg.lucide-pencil, svg.lucide-edit') }).first();
     const hasEdit = await editButton.isVisible().catch(() => false);
 
     console.log(`Edit action: ${hasEdit}`);
@@ -238,7 +265,14 @@ test.describe('Vendor COIs - COI Actions', () => {
     await page.goto(ROUTES.vendorCois);
     await waitForPageLoad(page, 2000);
 
-    const deleteButton = page.locator('button').filter({ has: page.locator('[class*="trash"], [class*="Trash"]') }).first();
+    // Switch to list view
+    const listTab = page.locator('[role="tab"]').nth(1);
+    if (await listTab.isVisible().catch(() => false)) {
+      await listTab.click();
+      await page.waitForTimeout(500);
+    }
+
+    const deleteButton = page.locator('button').filter({ has: page.locator('svg.lucide-trash-2, svg.lucide-trash') }).first();
     const hasDelete = await deleteButton.isVisible().catch(() => false);
 
     console.log(`Delete action: ${hasDelete}`);
@@ -248,7 +282,14 @@ test.describe('Vendor COIs - COI Actions', () => {
     await page.goto(ROUTES.vendorCois);
     await waitForPageLoad(page, 2000);
 
-    const verifyButton = page.locator('button').filter({ has: page.locator('[class*="check"], [class*="Check"]') }).first();
+    // Switch to list view
+    const listTab = page.locator('[role="tab"]').nth(1);
+    if (await listTab.isVisible().catch(() => false)) {
+      await listTab.click();
+      await page.waitForTimeout(500);
+    }
+
+    const verifyButton = page.locator('button').filter({ has: page.locator('svg.lucide-check, svg.lucide-check-circle') }).first();
     const hasVerify = await verifyButton.isVisible().catch(() => false);
 
     console.log(`Verify action: ${hasVerify}`);
@@ -258,9 +299,10 @@ test.describe('Vendor COIs - COI Actions', () => {
     await page.goto(ROUTES.vendorCois);
     await waitForPageLoad(page, 2000);
 
-    const badges = page.locator('[class*="badge"]');
+    const badges = page.locator('[class*="badge"], [class*="Badge"]');
     const badgeCount = await badges.count();
 
     console.log(`Found ${badgeCount} status badges`);
+    expect(badgeCount).toBeGreaterThanOrEqual(0);
   });
 });

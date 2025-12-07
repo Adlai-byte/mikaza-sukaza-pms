@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,10 +82,20 @@ export default function Messages() {
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
 
   // Queries
-  const { data: inboxMessages = [], isLoading: loadingInbox, refetch: refetchInbox } = useInboxMessages();
-  const { data: sentMessages = [], isLoading: loadingSent, refetch: refetchSent } = useSentMessages();
-  const { data: starredMessages = [], isLoading: loadingStarred } = useStarredMessages();
-  const { data: archivedMessages = [], isLoading: loadingArchived } = useArchivedMessages();
+  const { data: inboxMessages = [], isLoading: loadingInbox, refetch: refetchInbox, error: inboxError } = useInboxMessages();
+  const { data: sentMessages = [], isLoading: loadingSent, refetch: refetchSent, error: sentError } = useSentMessages();
+  const { data: starredMessages = [], isLoading: loadingStarred, error: starredError } = useStarredMessages();
+  const { data: archivedMessages = [], isLoading: loadingArchived, error: archivedError } = useArchivedMessages();
+
+  // Log errors for debugging
+  const currentError = currentView === 'inbox' ? inboxError :
+                       currentView === 'sent' ? sentError :
+                       currentView === 'starred' ? starredError :
+                       archivedError;
+
+  if (currentError) {
+    console.error(`[Messages] Error loading ${currentView} messages:`, currentError);
+  }
   const { data: unreadCount = 0 } = useUnreadCount();
   const { data: threadMessages = [] } = useMessageThread(selectedMessage?.thread_id || selectedMessage?.message_id || null);
 
@@ -405,6 +415,17 @@ export default function Messages() {
                   <div className="flex justify-center py-12">
                     <CasaSpinner />
                   </div>
+                ) : currentError ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-destructive">
+                    <AlertCircle className="h-12 w-12 mb-4" />
+                    <p className="font-medium">{t('common.error', 'Error loading messages')}</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {currentError instanceof Error ? currentError.message : 'Unknown error'}
+                    </p>
+                    <Button variant="outline" className="mt-4" onClick={handleRefresh}>
+                      {t('common.retry', 'Retry')}
+                    </Button>
+                  </div>
                 ) : filteredMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                     <AlertCircle className="h-12 w-12 mb-4" />
@@ -555,7 +576,7 @@ function ComposeDialog({ open, onOpenChange, replyTo, users, usersLoading, onSen
   const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
 
   // Reset form when dialog opens
-  useState(() => {
+  useEffect(() => {
     if (open) {
       if (replyTo) {
         setSubject(`Re: ${replyTo.subject || ''}`);
@@ -567,7 +588,7 @@ function ComposeDialog({ open, onOpenChange, replyTo, users, usersLoading, onSen
       setBody('');
       setPriority('normal');
     }
-  });
+  }, [open, replyTo]);
 
   const handleSend = () => {
     if (selectedRecipients.length === 0 || !body.trim()) return;

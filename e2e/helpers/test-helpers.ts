@@ -57,13 +57,27 @@ export const selectors = {
 };
 
 /**
- * Wait for page to fully load (DOM content loaded + extra time)
- * Note: We use 'domcontentloaded' instead of 'networkidle' because
- * Supabase maintains persistent websocket connections that prevent networkidle
+ * Wait for page to fully load
+ * Uses load state + waits for spinners/loading indicators to disappear
  */
-export async function waitForPageLoad(page: Page, timeout = 1000) {
+export async function waitForPageLoad(page: Page, timeout = 5000) {
   await page.waitForLoadState('domcontentloaded');
-  await page.waitForTimeout(timeout);
+
+  // Wait for any loading spinners to disappear
+  const spinner = page.locator('[class*="spinner"], [class*="loading"], [class*="skeleton"]').first();
+  try {
+    await spinner.waitFor({ state: 'hidden', timeout });
+  } catch {
+    // No spinner found or already hidden, continue
+  }
+
+  // Wait for main content to be visible
+  const mainContent = page.locator('main, [role="main"], #root > div').first();
+  try {
+    await mainContent.waitFor({ state: 'visible', timeout });
+  } catch {
+    // Fallback: page might not have main element
+  }
 }
 
 /**
@@ -109,7 +123,11 @@ export async function fillField(page: Page, label: string, value: string) {
     }
   }
 
-  throw new Error(`Could not find field with label: ${label}`);
+  throw new Error(
+    `Could not find field with label: "${label}"\n` +
+    `Tried selectors:\n${selectors.map(s => `  - ${s}`).join('\n')}\n` +
+    `Current page URL: ${page.url()}`
+  );
 }
 
 /**
@@ -127,13 +145,22 @@ export async function selectOption(page: Page, label: string, optionText: string
     const combobox = page.locator(selector).first();
     if (await combobox.isVisible().catch(() => false)) {
       await combobox.click();
-      await page.waitForTimeout(300);
-      await page.locator(`[role="option"]:has-text("${optionText}")`).first().click();
+      // Wait for options to appear
+      const option = page.locator(`[role="option"]:has-text("${optionText}")`).first();
+      await option.waitFor({ state: 'visible', timeout: 5000 });
+      await option.click();
+      // Wait for dropdown to close
+      await option.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
       return;
     }
   }
 
-  throw new Error(`Could not find dropdown with label: ${label}`);
+  throw new Error(
+    `Could not find dropdown with label: "${label}"\n` +
+    `Tried selectors:\n${comboboxSelectors.map(s => `  - ${s}`).join('\n')}\n` +
+    `Option text: "${optionText}"\n` +
+    `Current page URL: ${page.url()}`
+  );
 }
 
 /**
@@ -146,12 +173,32 @@ export async function verifyToast(page: Page, message: string, timeout = 5000) {
 
 /**
  * Wait for and close a dialog
+ * @returns true if dialog was closed, false if no dialog was found
  */
-export async function closeDialog(page: Page) {
-  const closeButton = page.locator('[role="dialog"] button:has-text("Close"), [role="dialog"] button:has-text("Cancel")').first();
-  if (await closeButton.isVisible().catch(() => false)) {
-    await closeButton.click();
-    await page.waitForTimeout(300);
+export async function closeDialog(page: Page): Promise<boolean> {
+  const dialog = page.locator('[role="dialog"]').first();
+
+  if (!await dialog.isVisible().catch(() => false)) {
+    console.log('[closeDialog] No dialog found on page');
+    return false;
+  }
+
+  const closeButton = dialog.locator('button:has-text("Close"), button:has-text("Cancel")').first();
+
+  if (!await closeButton.isVisible().catch(() => false)) {
+    console.log('[closeDialog] Dialog found but no close/cancel button visible');
+    return false;
+  }
+
+  await closeButton.click();
+
+  // Wait for dialog to close
+  try {
+    await dialog.waitFor({ state: 'hidden', timeout: 5000 });
+    return true;
+  } catch {
+    console.log('[closeDialog] Dialog did not close within timeout');
+    return false;
   }
 }
 
@@ -159,7 +206,18 @@ export async function closeDialog(page: Page) {
  * Click a table row by text content
  */
 export async function clickTableRow(page: Page, text: string) {
-  await page.locator(`tr:has-text("${text}"), [role="row"]:has-text("${text}")`).first().click();
+  const rowSelector = `tr:has-text("${text}"), [role="row"]:has-text("${text}")`;
+  const row = page.locator(rowSelector).first();
+
+  if (!await row.isVisible({ timeout: 5000 }).catch(() => false)) {
+    throw new Error(
+      `Could not find table row containing text: "${text}"\n` +
+      `Selector used: ${rowSelector}\n` +
+      `Current page URL: ${page.url()}`
+    );
+  }
+
+  await row.click();
 }
 
 /**
@@ -186,33 +244,118 @@ export async function isTextVisible(page: Page, text: string): Promise<boolean> 
  * Click button by text
  */
 export async function clickButton(page: Page, text: string) {
-  await page.locator(`button:has-text("${text}")`).first().click();
+  const buttonSelector = `button:has-text("${text}")`;
+  const button = page.locator(buttonSelector).first();
+
+  if (!await button.isVisible({ timeout: 5000 }).catch(() => false)) {
+    throw new Error(
+      `Could not find button with text: "${text}"\n` +
+      `Selector used: ${buttonSelector}\n` +
+      `Current page URL: ${page.url()}`
+    );
+  }
+
+  await button.click();
 }
 
 /**
  * Confirm an alert dialog
+ * @throws Error if no alert dialog or confirm button found
  */
 export async function confirmDialog(page: Page) {
-  const confirmButton = page.locator('[role="alertdialog"] button:has-text("Confirm"), [role="alertdialog"] button:has-text("Yes"), [role="alertdialog"] button:has-text("Delete"), [role="alertdialog"] button:has-text("OK")').first();
+  const alertDialog = page.locator('[role="alertdialog"]').first();
+
+  if (!await alertDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+    throw new Error(
+      `No alert dialog found on page\n` +
+      `Current page URL: ${page.url()}`
+    );
+  }
+
+  const confirmButton = alertDialog.locator('button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete"), button:has-text("OK")').first();
+
+  if (!await confirmButton.isVisible().catch(() => false)) {
+    throw new Error(
+      `Alert dialog found but no confirm button (Confirm/Yes/Delete/OK)\n` +
+      `Current page URL: ${page.url()}`
+    );
+  }
+
   await confirmButton.click();
-  await page.waitForTimeout(500);
+
+  // Wait for alert dialog to close
+  try {
+    await alertDialog.waitFor({ state: 'hidden', timeout: 5000 });
+  } catch {
+    console.log('[confirmDialog] Alert dialog did not close within 5s timeout');
+  }
 }
 
 /**
  * Cancel an alert dialog
+ * @throws Error if no alert dialog or cancel button found
  */
 export async function cancelDialog(page: Page) {
-  const cancelButton = page.locator('[role="alertdialog"] button:has-text("Cancel"), [role="alertdialog"] button:has-text("No")').first();
+  const alertDialog = page.locator('[role="alertdialog"]').first();
+
+  if (!await alertDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+    throw new Error(
+      `No alert dialog found on page\n` +
+      `Current page URL: ${page.url()}`
+    );
+  }
+
+  const cancelButton = alertDialog.locator('button:has-text("Cancel"), button:has-text("No")').first();
+
+  if (!await cancelButton.isVisible().catch(() => false)) {
+    throw new Error(
+      `Alert dialog found but no cancel button (Cancel/No)\n` +
+      `Current page URL: ${page.url()}`
+    );
+  }
+
   await cancelButton.click();
-  await page.waitForTimeout(300);
+
+  // Wait for alert dialog to close
+  try {
+    await alertDialog.waitFor({ state: 'hidden', timeout: 5000 });
+  } catch {
+    console.log('[cancelDialog] Alert dialog did not close within 5s timeout');
+  }
 }
 
 /**
  * Switch to a tab by text
+ * @throws Error if tab not found
  */
 export async function switchToTab(page: Page, tabText: string) {
-  await page.locator(`[role="tab"]:has-text("${tabText}")`).click();
-  await page.waitForTimeout(500);
+  const tabSelector = `[role="tab"]:has-text("${tabText}")`;
+  const tab = page.locator(tabSelector);
+
+  if (!await tab.isVisible({ timeout: 5000 }).catch(() => false)) {
+    throw new Error(
+      `Could not find tab with text: "${tabText}"\n` +
+      `Selector used: ${tabSelector}\n` +
+      `Current page URL: ${page.url()}`
+    );
+  }
+
+  await tab.click();
+
+  // Wait for tab to become selected
+  try {
+    await expect(tab).toHaveAttribute('aria-selected', 'true', { timeout: 5000 });
+  } catch {
+    console.log(`[switchToTab] Tab "${tabText}" did not become selected within timeout`);
+  }
+
+  // Wait for tab panel content to be visible
+  const tabPanel = page.locator('[role="tabpanel"]').first();
+  try {
+    await tabPanel.waitFor({ state: 'visible', timeout: 5000 });
+  } catch {
+    console.log(`[switchToTab] Tab panel did not become visible after switching to "${tabText}"`);
+  }
 }
 
 /**
@@ -226,27 +369,73 @@ export async function verifySidebarItem(page: Page, itemText: string): Promise<b
 
 /**
  * Search in a table/list
+ * @throws Error if search input not found
  */
 export async function searchTable(page: Page, searchText: string) {
-  const searchInput = page.locator('input[placeholder*="Search"], input[type="search"]').first();
+  const searchSelector = 'input[placeholder*="Search"], input[type="search"]';
+  const searchInput = page.locator(searchSelector).first();
+
+  if (!await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+    throw new Error(
+      `Could not find search input on page\n` +
+      `Selector used: ${searchSelector}\n` +
+      `Current page URL: ${page.url()}`
+    );
+  }
+
   await searchInput.fill(searchText);
-  await page.waitForTimeout(1000); // Wait for debounced search
+
+  // Wait for table to update (spinner disappears or content changes)
+  const spinner = page.locator('[class*="spinner"], [class*="loading"]').first();
+  try {
+    // If spinner appears, wait for it to disappear
+    await spinner.waitFor({ state: 'visible', timeout: 500 });
+    await spinner.waitFor({ state: 'hidden', timeout: 10000 });
+  } catch {
+    // No spinner, wait for network to settle
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+  }
 }
 
 /**
  * Clear search input
+ * @throws Error if search input not found
  */
 export async function clearSearch(page: Page) {
-  const searchInput = page.locator('input[placeholder*="Search"], input[type="search"]').first();
+  const searchSelector = 'input[placeholder*="Search"], input[type="search"]';
+  const searchInput = page.locator(searchSelector).first();
+
+  if (!await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+    throw new Error(
+      `Could not find search input to clear\n` +
+      `Selector used: ${searchSelector}\n` +
+      `Current page URL: ${page.url()}`
+    );
+  }
+
   await searchInput.clear();
-  await page.waitForTimeout(500);
+
+  // Wait for table to update after clearing search
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 }
 
 /**
  * Wait for table to have data (non-empty)
+ * @throws Error if table remains empty after timeout
  */
 export async function waitForTableData(page: Page, timeout = 10000) {
-  await page.waitForSelector('tbody tr:not(:has-text("No")), [role="rowgroup"] [role="row"]', { timeout });
+  const selector = 'tbody tr:not(:has-text("No")), [role="rowgroup"] [role="row"]';
+
+  try {
+    await page.waitForSelector(selector, { timeout });
+  } catch {
+    throw new Error(
+      `Table did not receive data within ${timeout}ms\n` +
+      `Selector used: ${selector}\n` +
+      `Current page URL: ${page.url()}\n` +
+      `This may indicate: no data in database, failed API call, or wrong page`
+    );
+  }
 }
 
 /**

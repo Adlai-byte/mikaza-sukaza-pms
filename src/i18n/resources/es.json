@@ -82,7 +82,31 @@
     "media": "Multimedia",
     "messages": "Mensajes",
     "reports": "Informes",
+    "pipeline": "Pipeline",
     "help": "Ayuda y Soporte"
+  },
+  "globalSearch": {
+    "placeholder": "Buscar...",
+    "noResults": "No se encontraron resultados",
+    "minChars": "Escribe al menos 2 caracteres para buscar",
+    "loading": "Buscando...",
+    "groups": {
+      "quickActions": "Acciones Rápidas",
+      "users": "Usuarios",
+      "properties": "Propiedades",
+      "guests": "Huéspedes",
+      "bookings": "Reservas",
+      "jobs": "Trabajos",
+      "tasks": "Tareas",
+      "issues": "Problemas",
+      "invoices": "Facturas",
+      "expenses": "Gastos",
+      "providers": "Proveedores de Servicios",
+      "documents": "Documentos",
+      "checkInOut": "Registros de Check-In/Out",
+      "accessAuthorizations": "Autorizaciones de Acceso",
+      "vendorCois": "COIs de Proveedores"
+    }
   },
   "header": {
     "agent": "Agente",

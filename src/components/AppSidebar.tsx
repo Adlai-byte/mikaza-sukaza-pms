@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { GlobalSearch } from "@/components/global-search";
 
 // Logo path - use BASE_URL for reliable deployments
 const logoWhite = `${import.meta.env.BASE_URL}logo-white.png`;
@@ -35,6 +36,7 @@ import {
   Percent,
   FolderOpen,
   UserCog,
+  Search,
 } from "lucide-react";
 
 import {
@@ -122,6 +124,9 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed";
   const { hasPermission, userRole, getPermissions } = usePermissions();
   const { unseenCounts } = useUnseenExpiringCounts(30);
+
+  // State for global search dialog
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // State for collapsible sections
   const [expandedSections, setExpandedSections] = useState({
@@ -215,6 +220,29 @@ export function AppSidebar() {
             />
           )}
         </div>
+
+        {/* Global Search */}
+        <div className="px-3 pb-4">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white/70 hover:text-white ${
+              isCollapsed ? 'justify-center' : ''
+            }`}
+          >
+            <Search className="h-4 w-4 shrink-0" />
+            {!isCollapsed && (
+              <>
+                <span className="text-sm flex-1 text-left">{t('globalSearch.placeholder', 'Search...')}</span>
+                <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-white/20 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-white/50">
+                  <span className="text-xs">Ctrl</span>K
+                </kbd>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* GlobalSearch Dialog */}
+        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
         {/* Main Navigation */}
         {visibleMainMenuItems.length > 0 && (

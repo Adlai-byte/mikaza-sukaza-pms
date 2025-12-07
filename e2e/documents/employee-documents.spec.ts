@@ -19,24 +19,28 @@ test.describe('Employee Documents Module Tests', () => {
     const cardCount = await cards.count();
 
     console.log(`Found ${cardCount} stats cards`);
+    expect(cardCount).toBeGreaterThanOrEqual(1);
   });
 
   test('EMP-003: Should have document type filter', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
+    // Filter is a Select with role="combobox"
     const typeFilter = page.locator('[role="combobox"]').first();
     const hasTypeFilter = await typeFilter.isVisible().catch(() => false);
 
     console.log(`Document type filter: ${hasTypeFilter}`);
+    expect(hasTypeFilter).toBeTruthy();
   });
 
   test('EMP-004: Should have upload button', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const uploadButton = page.locator('button:has-text("Upload"), button:has-text("Add")').first();
+    const uploadButton = page.locator('button:has-text("Upload")').first();
     const hasUpload = await uploadButton.isVisible().catch(() => false);
 
     console.log(`Upload button: ${hasUpload}`);
+    expect(hasUpload).toBeTruthy();
   });
 
   test('EMP-005: Should have refresh button', async ({ page }) => {
@@ -46,12 +50,13 @@ test.describe('Employee Documents Module Tests', () => {
     const hasRefresh = await refreshButton.isVisible().catch(() => false);
 
     console.log(`Refresh button: ${hasRefresh}`);
+    expect(hasRefresh).toBeTruthy();
   });
 
   test('EMP-006: Should open upload dialog', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const uploadButton = page.locator('button:has-text("Upload"), button:has-text("Add")').first();
+    const uploadButton = page.locator('button:has-text("Upload")').first();
 
     if (await uploadButton.isVisible().catch(() => false)) {
       await uploadButton.click();
@@ -65,7 +70,7 @@ test.describe('Employee Documents Module Tests', () => {
   test('EMP-007: Should close upload dialog', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const uploadButton = page.locator('button:has-text("Upload"), button:has-text("Add")').first();
+    const uploadButton = page.locator('button:has-text("Upload")').first();
 
     if (await uploadButton.isVisible().catch(() => false)) {
       await uploadButton.click();
@@ -73,7 +78,6 @@ test.describe('Employee Documents Module Tests', () => {
 
       await expect(page.locator('[role="dialog"]')).toBeVisible();
 
-      // Try ESC key instead of closeDialog
       await page.keyboard.press('Escape');
       await page.waitForTimeout(500);
 
@@ -82,27 +86,28 @@ test.describe('Employee Documents Module Tests', () => {
     }
   });
 
-  test('EMP-008: Should display documents list', async ({ page }) => {
+  test('EMP-008: Should display documents list or empty state', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
     const hasTable = await page.locator('table').first().isVisible().catch(() => false);
-    const hasTree = await page.locator('[class*="tree"]').first().isVisible().catch(() => false);
+    const hasTree = await page.locator('[class*="tree"], [class*="Tree"]').first().isVisible().catch(() => false);
     const hasCards = await page.locator('[class*="card"]').first().isVisible().catch(() => false);
-    const hasEmptyState = await page.locator('text=No documents').isVisible().catch(() => false);
+    const hasEmptyState = await page.locator('text=No documents, text=no documents').first().isVisible().catch(() => false);
 
     console.log(`Table: ${hasTable}, Tree: ${hasTree}, Cards: ${hasCards}, Empty: ${hasEmptyState}`);
+    expect(hasTable || hasTree || hasCards || hasEmptyState).toBeTruthy();
   });
 
   test('EMP-009: Should have tree/list view toggle', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const treeView = page.locator('button:has-text("Tree"), [value="tree"]').first();
-    const listView = page.locator('button:has-text("List"), [value="list"]').first();
+    // View mode uses Tabs component with TabsTrigger elements (role="tab")
+    const viewTabs = page.locator('[role="tab"]');
+    const tabCount = await viewTabs.count();
 
-    const hasTreeView = await treeView.isVisible().catch(() => false);
-    const hasListView = await listView.isVisible().catch(() => false);
-
-    console.log(`Tree view: ${hasTreeView}, List view: ${hasListView}`);
+    const hasViewToggle = tabCount >= 2;
+    console.log(`Tree/List view toggle: ${hasViewToggle} (${tabCount} tabs)`);
+    expect(hasViewToggle).toBeTruthy();
   });
 
   test('EMP-010: Should filter by document type', async ({ page }) => {
@@ -117,33 +122,42 @@ test.describe('Employee Documents Module Tests', () => {
       const hasOptions = await page.locator('[role="option"]').first().isVisible().catch(() => false);
 
       console.log(`Document type options: ${hasOptions}`);
+      expect(hasOptions).toBeTruthy();
     }
   });
 });
 
 test.describe('Employee Documents - Actions', () => {
-  test('EMP-011: Should have download action', async ({ page }) => {
+  test('EMP-011: Should have download action in tree/list', async ({ page }) => {
     await page.goto(ROUTES.employeeDocuments);
     await waitForPageLoad(page, 2000);
 
-    const downloadButton = page.locator('button:has-text("Download")').first();
-    const downloadIcon = page.locator('[class*="download"], [class*="Download"]').first();
+    // Switch to list view to see action buttons
+    const listTab = page.locator('[role="tab"]').nth(1);
+    if (await listTab.isVisible().catch(() => false)) {
+      await listTab.click();
+      await page.waitForTimeout(500);
+    }
 
-    const hasDownload = await downloadButton.isVisible().catch(() => false) ||
-                        await downloadIcon.isVisible().catch(() => false);
+    const downloadButton = page.locator('button').filter({ has: page.locator('svg.lucide-download') }).first();
+    const hasDownload = await downloadButton.isVisible().catch(() => false);
 
     console.log(`Download action: ${hasDownload}`);
   });
 
-  test('EMP-012: Should have delete action', async ({ page }) => {
+  test('EMP-012: Should have delete action in tree/list', async ({ page }) => {
     await page.goto(ROUTES.employeeDocuments);
     await waitForPageLoad(page, 2000);
 
-    const deleteButton = page.locator('button:has-text("Delete")').first();
-    const deleteIcon = page.locator('[class*="trash"], [class*="Trash"]').first();
+    // Switch to list view
+    const listTab = page.locator('[role="tab"]').nth(1);
+    if (await listTab.isVisible().catch(() => false)) {
+      await listTab.click();
+      await page.waitForTimeout(500);
+    }
 
-    const hasDelete = await deleteButton.isVisible().catch(() => false) ||
-                      await deleteIcon.isVisible().catch(() => false);
+    const deleteButton = page.locator('button').filter({ has: page.locator('svg.lucide-trash-2') }).first();
+    const hasDelete = await deleteButton.isVisible().catch(() => false);
 
     console.log(`Delete action: ${hasDelete}`);
   });

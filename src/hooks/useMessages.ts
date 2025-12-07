@@ -93,13 +93,16 @@ const fetchUserDetails = async (userIds: string[]): Promise<Map<string, any>> =>
 
   const { data, error } = await supabase
     .from('users')
-    .select('user_id, first_name, last_name, email, avatar_url')
+    .select('user_id, first_name, last_name, email, photo_url')
     .in('user_id', userIds);
 
   if (error) throw error;
 
   const userMap = new Map();
-  (data || []).forEach(user => userMap.set(user.user_id, user));
+  (data || []).forEach(user => userMap.set(user.user_id, {
+    ...user,
+    avatar_url: user.photo_url, // Map photo_url to avatar_url for consistency
+  }));
   return userMap;
 };
 
@@ -173,6 +176,8 @@ const fetchInboxMessages = async (userId: string): Promise<Message[]> => {
 
 // Fetch sent messages
 const fetchSentMessages = async (userId: string): Promise<Message[]> => {
+  console.log('[fetchSentMessages] Fetching sent messages for user:', userId);
+
   // Step 1: Fetch messages sent by user
   const { data: messagesData, error: messagesError } = await supabase
     .from('messages')
@@ -181,7 +186,12 @@ const fetchSentMessages = async (userId: string): Promise<Message[]> => {
     .is('parent_id', null)
     .order('created_at', { ascending: false });
 
-  if (messagesError) throw messagesError;
+  if (messagesError) {
+    console.error('[fetchSentMessages] Error fetching messages:', messagesError);
+    throw messagesError;
+  }
+
+  console.log('[fetchSentMessages] Found messages:', messagesData?.length || 0);
   if (!messagesData || messagesData.length === 0) return [];
 
   // Step 2: Fetch sender details (the current user)
@@ -528,15 +538,36 @@ const archiveMessage = async (messageId: string, userId: string): Promise<void> 
   if (error) throw error;
 };
 
-// Delete message (soft delete for recipient)
+// Delete message (soft delete for recipient, hard delete for sender)
 const deleteMessage = async (messageId: string, userId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('message_recipients')
-    .update({ is_deleted: true })
+  // First, check if user is the sender
+  const { data: message, error: checkError } = await supabase
+    .from('messages')
+    .select('sender_id')
     .eq('message_id', messageId)
-    .eq('user_id', userId);
+    .single();
 
-  if (error) throw error;
+  if (checkError) throw checkError;
+
+  if (message.sender_id === userId) {
+    // User is the sender - delete the message entirely
+    // This will cascade delete recipients and attachments
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('message_id', messageId);
+
+    if (error) throw error;
+  } else {
+    // User is a recipient - soft delete (hide from their view)
+    const { error } = await supabase
+      .from('message_recipients')
+      .update({ is_deleted: true })
+      .eq('message_id', messageId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+  }
 };
 
 // Hooks
@@ -556,7 +587,12 @@ export function useSentMessages() {
 
   return useQuery({
     queryKey: messageKeys.sent(),
-    queryFn: () => fetchSentMessages(user!.id),
+    queryFn: async () => {
+      console.log('[useSentMessages] Query starting, user.id:', user?.id);
+      const result = await fetchSentMessages(user!.id);
+      console.log('[useSentMessages] Query result:', result.length, 'messages');
+      return result;
+    },
     enabled: !!user?.id,
     staleTime: 30 * 1000,
   });

@@ -1339,6 +1339,16 @@ const Calendar = () => {
                         ? Math.round((propertyBookingsCount / dateRange.length) * 100)
                         : 0;
 
+                      // Get current booking (today's guest)
+                      const today = format(new Date(), 'yyyy-MM-dd');
+                      const currentBooking = bookings.find(b =>
+                        b.property_id === property.property_id &&
+                        b.booking_status !== 'cancelled' &&
+                        b.booking_status !== 'blocked' &&
+                        b.check_in_date <= today &&
+                        b.check_out_date >= today
+                      );
+
                       return (
                         <div
                           key={property.property_id}
@@ -1371,10 +1381,10 @@ const Calendar = () => {
 
                             {/* Property Info */}
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 leading-tight">
+                              <h4 className="font-semibold text-gray-900 text-sm line-clamp-1 leading-tight">
                                 {property.property_name}
                               </h4>
-                              <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                              <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
                                 <span className="flex items-center gap-1">
                                   <MapPin className="h-3 w-3" />
                                   {property.property_location?.[0]?.city || 'N/A'}
@@ -1389,9 +1399,33 @@ const Calendar = () => {
                                 </span>
                               </div>
 
+                              {/* Current Guest */}
+                              <div className="mt-1.5">
+                                {currentBooking ? (
+                                  <div className="flex items-center gap-1.5 text-xs">
+                                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <Users className="h-3 w-3 text-green-600" />
+                                    </div>
+                                    <span className="text-green-700 font-medium truncate">
+                                      {currentBooking.guest_name}
+                                    </span>
+                                    <Badge variant="outline" className="h-4 text-[10px] px-1 bg-green-50 text-green-700 border-green-200">
+                                      {currentBooking.booking_status === 'checked_in' ? t('calendar.status.checkedIn') : t('calendar.status.confirmed')}
+                                    </Badge>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                                    <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <Home className="h-3 w-3 text-gray-400" />
+                                    </div>
+                                    <span>{t('calendar.available', 'Available')}</span>
+                                  </div>
+                                )}
+                              </div>
+
                               {/* Occupancy Bar */}
-                              <div className="mt-2">
-                                <div className="flex items-center justify-between text-xs mb-1">
+                              <div className="mt-1.5">
+                                <div className="flex items-center justify-between text-xs mb-0.5">
                                   <span className="text-gray-500">{t('calendar.occupancy')}</span>
                                   <span className={`font-medium ${
                                     occupancyRate > 80 ? 'text-red-600' :
@@ -1412,23 +1446,6 @@ const Calendar = () => {
                                   />
                                 </div>
                               </div>
-
-                              {/* Quick Action */}
-                              {!bulkSelectMode && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full mt-2 h-7 text-xs"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setBlockPropertyId(property.property_id);
-                                    setShowBlockDatesDialog(true);
-                                  }}
-                                >
-                                  <Ban className="h-3 w-3 mr-1" />
-                                  {t('calendar.blockDates')}
-                                </Button>
-                              )}
                             </div>
                           </div>
                         </div>

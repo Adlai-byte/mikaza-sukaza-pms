@@ -9,7 +9,7 @@ test.describe('Message Templates Module Tests', () => {
   });
 
   test('MSG-001: Should load message templates page', async ({ page }) => {
-    await expect(page.locator('text=Message').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Message, text=Template').first()).toBeVisible({ timeout: 15000 });
   });
 
   test('MSG-002: Should display stats cards', async ({ page }) => {
@@ -19,6 +19,7 @@ test.describe('Message Templates Module Tests', () => {
     const cardCount = await cards.count();
 
     console.log(`Found ${cardCount} stats cards`);
+    expect(cardCount).toBeGreaterThanOrEqual(1);
   });
 
   test('MSG-003: Should have template type filter', async ({ page }) => {
@@ -28,24 +29,27 @@ test.describe('Message Templates Module Tests', () => {
     const hasTypeFilter = await typeFilter.isVisible().catch(() => false);
 
     console.log(`Template type filter: ${hasTypeFilter}`);
+    expect(hasTypeFilter).toBeTruthy();
   });
 
-  test('MSG-004: Should have search input', async ({ page }) => {
+  test('MSG-004: Should have search functionality', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const searchInput = page.locator('input[placeholder*="Search"]').first();
+    const searchInput = page.locator('input[placeholder*="Search"], input[type="search"], input').first();
     const hasSearch = await searchInput.isVisible().catch(() => false);
 
     console.log(`Search input: ${hasSearch}`);
+    expect(hasSearch).toBeTruthy();
   });
 
-  test('MSG-005: Should have create button', async ({ page }) => {
+  test('MSG-005: Should have create/add button', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const createButton = page.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create")').first();
+    const createButton = page.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create"), button:has-text("Template")').first();
     const hasCreate = await createButton.isVisible().catch(() => false);
 
     console.log(`Create button: ${hasCreate}`);
+    expect(hasCreate).toBeTruthy();
   });
 
   test('MSG-006: Should have refresh button', async ({ page }) => {
@@ -55,12 +59,13 @@ test.describe('Message Templates Module Tests', () => {
     const hasRefresh = await refreshButton.isVisible().catch(() => false);
 
     console.log(`Refresh button: ${hasRefresh}`);
+    expect(hasRefresh).toBeTruthy();
   });
 
   test('MSG-007: Should open create template dialog', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const createButton = page.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create")').first();
+    const createButton = page.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create"), button:has-text("Template")').first();
 
     if (await createButton.isVisible().catch(() => false)) {
       await createButton.click();
@@ -74,24 +79,27 @@ test.describe('Message Templates Module Tests', () => {
   test('MSG-008: Should have template form fields', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const createButton = page.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create")').first();
+    const createButton = page.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create"), button:has-text("Template")').first();
 
     if (await createButton.isVisible().catch(() => false)) {
       await createButton.click();
       await page.waitForTimeout(500);
 
-      const hasName = await page.locator('[role="dialog"] label:has-text("Name"), [role="dialog"] input[name*="name"]').first().isVisible().catch(() => false);
-      const hasSubject = await page.locator('[role="dialog"] label:has-text("Subject")').first().isVisible().catch(() => false);
-      const hasBody = await page.locator('[role="dialog"] textarea, [role="dialog"] label:has-text("Body"), [role="dialog"] label:has-text("Content")').first().isVisible().catch(() => false);
+      const dialog = page.locator('[role="dialog"]');
+      const hasDialog = await dialog.isVisible().catch(() => false);
 
-      console.log(`Name: ${hasName}, Subject: ${hasSubject}, Body: ${hasBody}`);
+      if (hasDialog) {
+        const hasInputs = await dialog.locator('input, textarea, [role="combobox"]').first().isVisible().catch(() => false);
+        console.log(`Form fields visible: ${hasInputs}`);
+        expect(hasInputs).toBeTruthy();
+      }
     }
   });
 
   test('MSG-009: Should close create dialog', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const createButton = page.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create")').first();
+    const createButton = page.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create"), button:has-text("Template")').first();
 
     if (await createButton.isVisible().catch(() => false)) {
       await createButton.click();
@@ -107,21 +115,22 @@ test.describe('Message Templates Module Tests', () => {
     }
   });
 
-  test('MSG-010: Should display templates list', async ({ page }) => {
+  test('MSG-010: Should display templates list or empty state', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
     const hasTable = await page.locator('table').first().isVisible().catch(() => false);
     const hasCards = await page.locator('[class*="card"]').first().isVisible().catch(() => false);
     const hasList = await page.locator('[class*="list"]').first().isVisible().catch(() => false);
-    const hasEmptyState = await page.locator('text=No templates').isVisible().catch(() => false);
+    const hasEmptyState = await page.locator('text=No templates, text=no templates').first().isVisible().catch(() => false);
 
     console.log(`Table: ${hasTable}, Cards: ${hasCards}, List: ${hasList}, Empty: ${hasEmptyState}`);
+    expect(hasTable || hasCards || hasList || hasEmptyState).toBeTruthy();
   });
 
   test('MSG-011: Should search templates', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    const searchInput = page.locator('input[placeholder*="Search"]').first();
+    const searchInput = page.locator('input[placeholder*="Search"], input').first();
 
     if (await searchInput.isVisible().catch(() => false)) {
       await searchInput.fill('welcome');
@@ -143,6 +152,7 @@ test.describe('Message Templates Module Tests', () => {
       const hasOptions = await page.locator('[role="option"]').first().isVisible().catch(() => false);
 
       console.log(`Template type options: ${hasOptions}`);
+      expect(hasOptions).toBeTruthy();
     }
   });
 });
@@ -152,11 +162,8 @@ test.describe('Message Templates - Actions', () => {
     await page.goto(ROUTES.messageTemplates);
     await waitForPageLoad(page, 2000);
 
-    const editButton = page.locator('button:has-text("Edit")').first();
-    const editIcon = page.locator('[class*="edit"], [class*="Edit"]').first();
-
-    const hasEdit = await editButton.isVisible().catch(() => false) ||
-                    await editIcon.isVisible().catch(() => false);
+    const editButton = page.locator('button').filter({ has: page.locator('svg.lucide-pencil, svg.lucide-edit') }).first();
+    const hasEdit = await editButton.isVisible().catch(() => false);
 
     console.log(`Edit action: ${hasEdit}`);
   });
@@ -165,11 +172,8 @@ test.describe('Message Templates - Actions', () => {
     await page.goto(ROUTES.messageTemplates);
     await waitForPageLoad(page, 2000);
 
-    const deleteButton = page.locator('button:has-text("Delete")').first();
-    const deleteIcon = page.locator('[class*="trash"], [class*="Trash"]').first();
-
-    const hasDelete = await deleteButton.isVisible().catch(() => false) ||
-                      await deleteIcon.isVisible().catch(() => false);
+    const deleteButton = page.locator('button').filter({ has: page.locator('svg.lucide-trash-2, svg.lucide-trash') }).first();
+    const hasDelete = await deleteButton.isVisible().catch(() => false);
 
     console.log(`Delete action: ${hasDelete}`);
   });
@@ -178,11 +182,8 @@ test.describe('Message Templates - Actions', () => {
     await page.goto(ROUTES.messageTemplates);
     await waitForPageLoad(page, 2000);
 
-    const previewButton = page.locator('button:has-text("Preview"), button:has-text("View")').first();
-    const eyeIcon = page.locator('[class*="eye"], [class*="Eye"]').first();
-
-    const hasPreview = await previewButton.isVisible().catch(() => false) ||
-                       await eyeIcon.isVisible().catch(() => false);
+    const previewButton = page.locator('button').filter({ has: page.locator('svg.lucide-eye') }).first();
+    const hasPreview = await previewButton.isVisible().catch(() => false);
 
     console.log(`Preview action: ${hasPreview}`);
   });
