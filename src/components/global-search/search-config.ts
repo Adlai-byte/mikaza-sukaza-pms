@@ -66,7 +66,7 @@ export interface EntityConfig {
   permission: string;
   fields: string[]; // Fields to select
   searchFields: string[]; // Fields to search
-  routeGenerator: (id: string) => string;
+  routeGenerator: (id: string, item?: Record<string, unknown>) => string;
   titleField: string | ((item: Record<string, unknown>) => string);
   subtitleField: string | ((item: Record<string, unknown>) => string);
 }
@@ -204,9 +204,33 @@ export const ENTITY_CONFIGS: EntityConfig[] = [
     permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW,
     fields: ['document_id', 'document_name', 'document_type', 'category', 'status'],
     searchFields: ['document_name', 'document_type', 'category'],
-    routeGenerator: (id) => `/contracts?highlight=${id}`,
+    routeGenerator: (id, item) => {
+      // Route based on document category
+      const categoryRoutes: Record<string, string> = {
+        contracts: '/contracts',
+        employee: '/employee-documents',
+        service: '/service-documents',
+        access: '/access-authorizations',
+        coi: '/vendor-cois',
+        messages: '/message-templates',
+      };
+      const category = typeof item?.category === 'string' ? item.category : 'contracts';
+      const basePath = categoryRoutes[category] || '/contracts';
+      return `${basePath}?highlight=${id}`;
+    },
     titleField: 'document_name',
-    subtitleField: (item) => `${item.category || item.document_type || 'Document'} • ${item.status || 'active'}`,
+    subtitleField: (item) => {
+      const categoryLabels: Record<string, string> = {
+        contracts: 'Contract',
+        employee: 'Employee Doc',
+        service: 'Service Doc',
+        access: 'Access Auth',
+        coi: 'Vendor COI',
+        messages: 'Message Template',
+      };
+      const categoryLabel = categoryLabels[String(item.category)] || item.document_type || 'Document';
+      return `${categoryLabel} • ${item.status || 'active'}`;
+    },
   },
   {
     type: 'checkInOut',
@@ -417,6 +441,55 @@ export const QUICK_ACTIONS: QuickAction[] = [
     route: '/users',
     icon: Users,
     permission: PERMISSIONS.USERS_VIEW,
+  },
+  // Document pages
+  {
+    id: 'contracts',
+    title: 'Contracts',
+    keywords: ['contracts', 'contract', 'agreements', 'document', 'legal'],
+    route: '/contracts',
+    icon: FileText,
+    permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW,
+  },
+  {
+    id: 'employee-documents',
+    title: 'Employee Documents',
+    keywords: ['employee', 'hr', 'staff documents', 'personnel', 'employee docs'],
+    route: '/employee-documents',
+    icon: FileText,
+    permission: PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW,
+  },
+  {
+    id: 'service-documents',
+    title: 'Service Documents',
+    keywords: ['service', 'service docs', 'maintenance documents', 'work documents'],
+    route: '/service-documents',
+    icon: FileText,
+    permission: PERMISSIONS.DOCUMENTS_SERVICE_VIEW,
+  },
+  {
+    id: 'access-authorizations',
+    title: 'Access Authorizations',
+    keywords: ['access', 'authorization', 'permissions', 'entry', 'access request'],
+    route: '/access-authorizations',
+    icon: KeyRound,
+    permission: PERMISSIONS.DOCUMENTS_ACCESS_VIEW,
+  },
+  {
+    id: 'vendor-cois',
+    title: 'Vendor COIs',
+    keywords: ['coi', 'certificate', 'insurance', 'vendor insurance', 'coverage'],
+    route: '/vendor-cois',
+    icon: Shield,
+    permission: PERMISSIONS.DOCUMENTS_COI_VIEW,
+  },
+  {
+    id: 'message-templates',
+    title: 'Message Templates',
+    keywords: ['message', 'template', 'email template', 'sms template', 'communication'],
+    route: '/message-templates',
+    icon: MessageSquare,
+    permission: PERMISSIONS.DOCUMENTS_MESSAGES_VIEW,
   },
 ];
 

@@ -55,7 +55,7 @@ async function searchEntity(
       type: config.type,
       title: getEntityTitle(config, item),
       subtitle: getEntitySubtitle(config, item),
-      route: config.routeGenerator(String(item[idField])),
+      route: config.routeGenerator(String(item[idField]), item),
       icon: config.icon,
     }));
   } catch (error) {
