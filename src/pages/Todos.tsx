@@ -21,6 +21,7 @@ import {
   Filter,
   List,
   LayoutGrid,
+  CalendarDays,
   Clock,
   AlertTriangle,
   CheckCircle2,
@@ -32,6 +33,7 @@ import { TaskDialog } from '@/components/tasks/TaskDialog';
 import { TaskViewDialog } from '@/components/tasks/TaskViewDialog';
 import { TasksTable } from '@/components/tasks/TasksTable';
 import { TasksKanban } from '@/components/tasks/TasksKanban';
+import { TasksCalendar } from '@/components/tasks/TasksCalendar';
 import { Task, TaskInsert, TaskChecklistInsert } from '@/lib/schemas';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
@@ -46,7 +48,7 @@ export default function Todos() {
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'kanban'>('calendar');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter states
@@ -87,7 +89,13 @@ export default function Todos() {
     return baseFilters;
   }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, searchQuery, showOverdue, user]);
 
+  // Filters for calendar view - show ALL tasks (not filtered by user)
+  const calendarFilters: TaskFilters = useMemo(() => ({
+    status: ['pending', 'in_progress'], // Only active tasks
+  }), []);
+
   const { tasks, loading, isFetching, refetch } = useTasks(filters);
+  const { tasks: allTasks, loading: allTasksLoading } = useTasks(calendarFilters);
 
   // Debug logging for tasks
   React.useEffect(() => {
@@ -436,8 +444,12 @@ export default function Todos() {
         </Card>
 
         {/* View Mode Tabs */}
-        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'list' | 'kanban')} className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'list' | 'calendar' | 'kanban')} className="space-y-6">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
+            <TabsTrigger value="calendar" className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4" />
+              {t('todos.calendarView')}
+            </TabsTrigger>
             <TabsTrigger value="list" className="flex items-center gap-2">
               <List className="h-4 w-4" />
               {t('todos.listView')}
@@ -447,6 +459,14 @@ export default function Todos() {
               {t('todos.boardView')}
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="calendar" className="mt-0">
+            <TasksCalendar
+              tasks={allTasks}
+              isLoading={allTasksLoading}
+              onViewTask={handleViewTask}
+            />
+          </TabsContent>
 
           <TabsContent value="list" className="mt-0">
             <TasksTable

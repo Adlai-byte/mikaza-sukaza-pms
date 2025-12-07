@@ -583,6 +583,20 @@
       "inspection": "Inspection",
       "repair": "Repair",
       "other": "Other"
+    },
+    "calendarView": "Calendar",
+    "priority": {
+      "urgent": "Urgent",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "calendar": {
+      "today": "Today",
+      "legend": "Legend",
+      "noDueDate": "without due date",
+      "task": "task",
+      "tasks": "tasks"
     }
   },
   "invoices": {

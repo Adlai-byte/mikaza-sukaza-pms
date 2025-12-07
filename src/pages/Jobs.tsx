@@ -17,7 +17,6 @@ import {
   History,
   List,
   LayoutGrid,
-  CalendarDays,
 } from "lucide-react";
 import { useJobs, useJobStats, useCreateJob, useUpdateJob, useDeleteJob, JobFilters } from "@/hooks/useJobs";
 import { format, parseISO } from "date-fns";
@@ -26,7 +25,6 @@ import { JobDialog } from "@/components/jobs/JobDialog";
 import { JobDetailsDialog } from "@/components/jobs/JobDetailsDialog";
 import { JobsTable } from "@/components/jobs/JobsTable";
 import { JobsKanban } from "@/components/jobs/JobsKanban";
-import { JobsCalendar } from "@/components/jobs/JobsCalendar";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
@@ -71,7 +69,7 @@ export default function Jobs() {
   const [editingJob, setEditingJob] = useState<JobType | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [selectedJob, setSelectedJob] = useState<JobType | null>(null);
-  const [viewMode, setViewMode] = useState<'active' | 'board' | 'calendar' | 'history'>('calendar');
+  const [viewMode, setViewMode] = useState<'active' | 'board' | 'history'>('active');
 
   // Build filters object
   const filters: JobFilters = useMemo(() => ({
@@ -522,13 +520,9 @@ export default function Jobs() {
         </CardContent>
       </Card>
 
-      {/* Main Content - Tabs for Active Jobs, Board View, Calendar, and History */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'active' | 'board' | 'calendar' | 'history')}>
-        <TabsList className="grid w-full grid-cols-4 mb-6">
-          <TabsTrigger value="calendar" className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4" />
-            {t('jobs.calendar.title', 'Calendar')}
-          </TabsTrigger>
+      {/* Main Content - Tabs for Active Jobs, Board View, and History */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'active' | 'board' | 'history')}>
+        <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="active" className="flex items-center gap-2">
             <List className="h-4 w-4" />
             {t('jobs.activeJobs')} ({activeJobs.length})
@@ -577,14 +571,6 @@ export default function Jobs() {
               onStatusChange={handleStatusChange}
             />
           )}
-        </TabsContent>
-
-        <TabsContent value="calendar" className="mt-0">
-          <JobsCalendar
-            jobs={jobs}
-            isLoading={isLoading}
-            onViewJob={handleViewJob}
-          />
         </TabsContent>
 
         <TabsContent value="history" className="mt-0">

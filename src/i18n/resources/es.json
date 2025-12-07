@@ -480,7 +480,21 @@
     "pending": "Pendiente",
     "overdue": "Atrasada",
     "noTasks": "Sin tareas",
-    "dropHere": "Soltar aquí"
+    "dropHere": "Soltar aquí",
+    "calendarView": "Calendario",
+    "priority": {
+      "urgent": "Urgente",
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Baja"
+    },
+    "calendar": {
+      "today": "Hoy",
+      "legend": "Leyenda",
+      "noDueDate": "sin fecha de vencimiento",
+      "task": "tarea",
+      "tasks": "tareas"
+    }
   },
   "invoices": {
     "title": "Facturas",
