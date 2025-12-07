@@ -496,7 +496,7 @@ export const QUICK_ACTIONS: QuickAction[] = [
   {
     id: 'guests',
     title: 'Guests',
-    keywords: ['guests', 'tenants', 'guest', 'customer'],
+    keywords: ['guests', 'tenants', 'guest', 'customer', 'person', 'people', 'name', 'resident', 'visitor', 'occupant'],
     route: '/guests',
     icon: UserCheck,
     permission: PERMISSIONS.GUESTS_VIEW,
@@ -504,7 +504,7 @@ export const QUICK_ACTIONS: QuickAction[] = [
   {
     id: 'users',
     title: 'Users',
-    keywords: ['users', 'team', 'staff', 'user', 'members'],
+    keywords: ['users', 'team', 'staff', 'user', 'members', 'person', 'people', 'name', 'employee', 'admin', 'operator'],
     route: '/users',
     icon: Users,
     permission: PERMISSIONS.USERS_VIEW,
