@@ -47,7 +47,12 @@
     "email": "Email",
     "phone": "Phone",
     "address": "Address",
-    "statusUpdated": "Status Updated"
+    "statusUpdated": "Status Updated",
+    "unassigned": "Unassigned",
+    "startTask": "Start Task",
+    "markComplete": "Mark Complete",
+    "clearAllFilters": "Clear all filters",
+    "inProgress": "In Progress"
   },
   "sessionTimeout": {
     "title": "Session Expiring Soon",
@@ -514,6 +519,18 @@
       "repair": "Repair",
       "emergency": "Emergency",
       "preventive": "Preventive"
+    },
+    "calendar": {
+      "title": "Calendar",
+      "today": "Today",
+      "viewBy": "View by",
+      "dueDate": "Due Date",
+      "scheduledDate": "Scheduled Date",
+      "legend": "Legend",
+      "task": "task",
+      "tasks": "tasks",
+      "unscheduled": "unscheduled",
+      "noJobsOnDay": "No jobs on this day"
     }
   },
   "todos": {
@@ -550,6 +567,8 @@
     "listView": "List View",
     "boardView": "Board View",
     "noTasksFound": "No tasks found. Create your first task to get started.",
+    "noTasks": "No tasks",
+    "dropHere": "Drop here",
     "highPriority": "High Priority",
     "categories": {
       "cleaning": "Cleaning",
@@ -1675,6 +1694,7 @@
   "serviceDocuments": {
     "title": "Service Documents",
     "subtitle": "Manage vendor agreements, work orders, service reports, and completion certificates",
+    "uploadDocument": "Upload Document",
     "stats": {
       "totalDocuments": "Total Documents",
       "recentUploads": "Recent Uploads",
@@ -1686,7 +1706,12 @@
     "description": "Vendor agreements, work orders, inspection reports, and completion certificates",
     "emptyState": {
       "title": "No Service Documents",
-      "message": "Upload vendor agreements, work orders, and service reports"
+      "message": "Upload vendor agreements, work orders, and service reports",
+      "treeViewMessage": "No service documents found. Tag documents to organize them in tree view."
+    },
+    "viewMode": {
+      "treeView": "Tree View",
+      "listView": "List View"
     }
   },
   "documents": {
@@ -1760,15 +1785,27 @@
       "checkIn": "Check in vendor",
       "complete": "Complete access",
       "cancel": "Cancel authorization",
+      "cancelAuth": "Cancel",
       "edit": "Edit authorization",
       "delete": "Delete authorization"
     },
     "confirmations": {
       "approve": "Approve this access request?",
+      "approveTitle": "Approve Access Request",
+      "approveDescription": "This will approve the vendor's access request and notify them that they can proceed with the scheduled visit.",
       "checkIn": "Mark vendor as arrived and in progress?",
+      "checkInTitle": "Check In Vendor",
+      "checkInDescription": "This will mark the vendor as arrived and the access authorization as in progress.",
       "completionNotes": "Optional completion notes:",
+      "completeTitle": "Complete Access",
+      "completeDescription": "Mark this access authorization as completed. You can optionally add completion notes.",
+      "completionNotesPlaceholder": "Enter any notes about the completed visit...",
       "cancel": "Cancel this access authorization?",
-      "delete": "Are you sure you want to delete this authorization?"
+      "cancelTitle": "Cancel Authorization",
+      "cancelDescription": "This will cancel the access authorization. The vendor will no longer be able to access the property.",
+      "delete": "Are you sure you want to delete this authorization?",
+      "deleteTitle": "Delete Authorization",
+      "deleteDescription": "This action cannot be undone. This will permanently delete the access authorization record."
     },
     "emptyState": {
       "title": "No Authorizations Found",
@@ -1842,7 +1879,9 @@
       "delete": "Delete COI"
     },
     "confirmations": {
-      "delete": "Are you sure you want to delete this COI?"
+      "delete": "Are you sure you want to delete this COI?",
+      "deleteTitle": "Delete Certificate of Insurance",
+      "deleteDescription": "This action cannot be undone. This will permanently delete the COI document and remove it from all associated vendors and properties."
     },
     "emptyState": {
       "title": "No COIs Found",

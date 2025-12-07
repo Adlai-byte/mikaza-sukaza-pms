@@ -13,6 +13,7 @@ import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CasaSpinner } from "@/components/ui/casa-loader";
 import type { DocumentSummary } from "@/lib/schemas";
 import { useTranslation } from "react-i18next";
 
@@ -33,7 +34,7 @@ export default function EmployeeDocuments() {
   } = useDocuments({ category: 'employee' });
 
   // Fetch users for folder structure
-  const { users: allUsers = [], isLoading: usersLoading } = useUsers();
+  const { users: allUsers = [], loading: usersLoading } = useUsers();
 
   // Filter to show only active employees (Ops and Admin)
   // Note: user_type enum is: "admin" | "ops" | "provider" | "customer"
@@ -55,9 +56,9 @@ export default function EmployeeDocuments() {
       {/* Header */}
       <PageHeader
         icon={Briefcase}
-        title="Employee Documents"
+        title={t('employeeDocuments.title')}
         subtitle={t('employeeDocuments.subtitle')}
-        action={
+        actions={
           <div className="flex gap-2 self-start sm:self-auto">
             <Button
               onClick={() => refetch()}
@@ -65,12 +66,12 @@ export default function EmployeeDocuments() {
               disabled={isFetching}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-              Refresh
+              {t('common.refresh')}
             </Button>
             {canManage && (
               <Button onClick={() => setUploadDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Upload Document
+                {t('employeeDocuments.uploadDocument')}
               </Button>
             )}
           </div>
@@ -168,18 +169,24 @@ export default function EmployeeDocuments() {
                   onClick={() => setUploadDialogOpen(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Upload Document
+                  {t('employeeDocuments.uploadDocument')}
                 </Button>
               )}
             </div>
           ) : viewMode === 'tree' ? (
-            <EmployeeDocumentTree
-              documents={employeeDocs}
-              users={users}
-              onDownloadDocument={handleDownloadDocument}
-              onDeleteDocument={canManage ? deleteDocument : undefined}
-              canDelete={canManage}
-            />
+            usersLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <CasaSpinner className="h-8 w-8" />
+              </div>
+            ) : (
+              <EmployeeDocumentTree
+                documents={employeeDocs}
+                users={users}
+                onDownloadDocument={handleDownloadDocument}
+                onDeleteDocument={canManage ? deleteDocument : undefined}
+                canDelete={canManage}
+              />
+            )
           ) : (
             <DocumentsTable
               documents={employeeDocs}

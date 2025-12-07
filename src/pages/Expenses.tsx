@@ -12,6 +12,7 @@ import {
   Trash2,
   FileText,
   Edit,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,7 +96,7 @@ export default function Expenses() {
     date_to: dateTo || undefined,
   };
 
-  const { expenses, loading } = useExpenses(filters);
+  const { expenses, loading, isFetching, refetch } = useExpenses(filters);
   const { properties } = usePropertiesOptimized();
   const { providers } = useProviders('service');
   const createExpense = useCreateExpense();
@@ -215,10 +216,21 @@ export default function Expenses() {
         subtitle={t('expenses.subtitle')}
         icon={Receipt}
         actions={
-          <Button onClick={() => handleOpenDialog()} size="lg">
-            <Plus className="h-4 w-4 mr-2" />
-            {t('expenses.newExpense')}
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
+            <Button onClick={() => handleOpenDialog()} size="lg">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('expenses.newExpense')}
+            </Button>
+          </>
         }
       />
 

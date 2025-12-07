@@ -1,10 +1,20 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -77,6 +87,8 @@ export default function VendorCOIs() {
   const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editCOI, setEditCOI] = useState<VendorCOI | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [coiToDelete, setCoiToDelete] = useState<string | null>(null);
 
   const { t } = useTranslation();
 
@@ -150,11 +162,18 @@ export default function VendorCOIs() {
     setEditCOI(null);
   };
 
-  const handleDelete = (coiId: string) => {
-    if (confirm(t('vendorCOIs.confirmations.delete'))) {
-      deleteCOI(coiId);
+  const handleDelete = useCallback((coiId: string) => {
+    setCoiToDelete(coiId);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    if (coiToDelete) {
+      deleteCOI(coiToDelete);
     }
-  };
+    setDeleteDialogOpen(false);
+    setCoiToDelete(null);
+  }, [coiToDelete, deleteCOI]);
 
   const handleDownloadCOI = (coi: VendorCOI) => {
     if (coi.file_url) {
@@ -607,11 +626,7 @@ export default function VendorCOIs() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => {
-                                        if (confirm(t('vendorCOIs.confirmations.delete'))) {
-                                          deleteCOI(coi.coi_id);
-                                        }
-                                      }}
+                                      onClick={() => handleDelete(coi.coi_id)}
                                       disabled={isDeleting}
                                     >
                                       <Trash2 className="h-4 w-4 text-red-600" />
@@ -640,6 +655,27 @@ export default function VendorCOIs() {
           onOpenChange={handleDialogClose}
           editCOI={editCOI}
         />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('vendorCOIs.confirmations.deleteTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('vendorCOIs.confirmations.deleteDescription')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {t('common.delete')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </TooltipProvider>
   );

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { Home, Building2, MapPin, Users, Database, Settings } from "lucide-react";
+import { Home, Building2, MapPin, Users, Database, Settings, RefreshCw } from "lucide-react";
 import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { PropertyTableOptimized } from "@/components/PropertyManagement/PropertyTableOptimized";
@@ -161,6 +161,15 @@ export default function Properties() {
         icon={Home}
         actions={
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
             <Button onClick={() => setIsSettingsOpen(true)} variant="outline">
               <Settings className="mr-2 h-4 w-4" />
               Settings

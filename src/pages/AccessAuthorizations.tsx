@@ -1,10 +1,21 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -84,6 +95,12 @@ export default function AccessAuthorizations() {
   const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editAuth, setEditAuth] = useState<AccessAuthorization | null>(null);
+
+  // Confirmation dialog states
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'approve' | 'checkIn' | 'complete' | 'cancel' | 'delete' | null>(null);
+  const [confirmAuthId, setConfirmAuthId] = useState<string | null>(null);
+  const [completionNotes, setCompletionNotes] = useState("");
 
   const { t } = useTranslation();
 
@@ -168,34 +185,62 @@ export default function AccessAuthorizations() {
     );
   };
 
-  const handleApprove = async (access_auth_id: string) => {
-    if (confirm(t('accessAuthorizations.confirmations.approve'))) {
-      await approveAuthorization(access_auth_id);
-    }
-  };
+  const openConfirmDialog = useCallback((action: typeof confirmAction, authId: string) => {
+    setConfirmAction(action);
+    setConfirmAuthId(authId);
+    setCompletionNotes("");
+    setConfirmDialogOpen(true);
+  }, []);
 
-  const handleCheckIn = async (access_auth_id: string) => {
-    if (confirm(t('accessAuthorizations.confirmations.checkIn'))) {
-      await markInProgress(access_auth_id);
-    }
-  };
+  const closeConfirmDialog = useCallback(() => {
+    setConfirmDialogOpen(false);
+    setConfirmAction(null);
+    setConfirmAuthId(null);
+    setCompletionNotes("");
+  }, []);
 
-  const handleComplete = async (access_auth_id: string) => {
-    const notes = prompt(t('accessAuthorizations.confirmations.completionNotes'));
-    await completeAuthorization({ access_auth_id, completion_notes: notes || undefined });
-  };
+  const handleConfirmAction = useCallback(async () => {
+    if (!confirmAuthId || !confirmAction) return;
 
-  const handleCancel = async (access_auth_id: string) => {
-    if (confirm(t('accessAuthorizations.confirmations.cancel'))) {
-      await cancelAuthorization(access_auth_id);
+    switch (confirmAction) {
+      case 'approve':
+        await approveAuthorization(confirmAuthId);
+        break;
+      case 'checkIn':
+        await markInProgress(confirmAuthId);
+        break;
+      case 'complete':
+        await completeAuthorization({ access_auth_id: confirmAuthId, completion_notes: completionNotes || undefined });
+        break;
+      case 'cancel':
+        await cancelAuthorization(confirmAuthId);
+        break;
+      case 'delete':
+        await deleteAuthorization(confirmAuthId);
+        break;
     }
-  };
+    closeConfirmDialog();
+  }, [confirmAuthId, confirmAction, completionNotes, approveAuthorization, markInProgress, completeAuthorization, cancelAuthorization, deleteAuthorization, closeConfirmDialog]);
 
-  const handleDelete = async (access_auth_id: string) => {
-    if (confirm(t('accessAuthorizations.confirmations.delete'))) {
-      await deleteAuthorization(access_auth_id);
-    }
-  };
+  const handleApprove = useCallback((access_auth_id: string) => {
+    openConfirmDialog('approve', access_auth_id);
+  }, [openConfirmDialog]);
+
+  const handleCheckIn = useCallback((access_auth_id: string) => {
+    openConfirmDialog('checkIn', access_auth_id);
+  }, [openConfirmDialog]);
+
+  const handleComplete = useCallback((access_auth_id: string) => {
+    openConfirmDialog('complete', access_auth_id);
+  }, [openConfirmDialog]);
+
+  const handleCancel = useCallback((access_auth_id: string) => {
+    openConfirmDialog('cancel', access_auth_id);
+  }, [openConfirmDialog]);
+
+  const handleDelete = useCallback((access_auth_id: string) => {
+    openConfirmDialog('delete', access_auth_id);
+  }, [openConfirmDialog]);
 
   const handleDownloadPDF = async (auth: AccessAuthorization) => {
     try {
@@ -242,7 +287,7 @@ export default function AccessAuthorizations() {
           icon={Key}
           title={t('accessAuthorizations.title')}
           subtitle={t('accessAuthorizations.subtitle')}
-          action={
+          actions={
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -396,7 +441,7 @@ export default function AccessAuthorizations() {
             {(searchTerm || selectedVendor || selectedProperty || selectedStatus) && (
               <div className="mt-4">
                 <Button variant="ghost" size="sm" onClick={handleClearFilters}>
-                  Clear all filters
+                  {t('common.clearAllFilters', 'Clear all filters')}
                 </Button>
               </div>
             )}
@@ -692,6 +737,51 @@ export default function AccessAuthorizations() {
           onOpenChange={handleDialogClose}
           editAuth={editAuth}
         />
+
+        {/* Confirmation Dialog */}
+        <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirmAction === 'approve' && t('accessAuthorizations.confirmations.approveTitle')}
+                {confirmAction === 'checkIn' && t('accessAuthorizations.confirmations.checkInTitle')}
+                {confirmAction === 'complete' && t('accessAuthorizations.confirmations.completeTitle')}
+                {confirmAction === 'cancel' && t('accessAuthorizations.confirmations.cancelTitle')}
+                {confirmAction === 'delete' && t('accessAuthorizations.confirmations.deleteTitle')}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmAction === 'approve' && t('accessAuthorizations.confirmations.approveDescription')}
+                {confirmAction === 'checkIn' && t('accessAuthorizations.confirmations.checkInDescription')}
+                {confirmAction === 'complete' && t('accessAuthorizations.confirmations.completeDescription')}
+                {confirmAction === 'cancel' && t('accessAuthorizations.confirmations.cancelDescription')}
+                {confirmAction === 'delete' && t('accessAuthorizations.confirmations.deleteDescription')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {confirmAction === 'complete' && (
+              <div className="py-4">
+                <Textarea
+                  placeholder={t('accessAuthorizations.confirmations.completionNotesPlaceholder')}
+                  value={completionNotes}
+                  onChange={(e) => setCompletionNotes(e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+            )}
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={closeConfirmDialog}>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmAction}
+                className={confirmAction === 'delete' || confirmAction === 'cancel' ? 'bg-red-600 hover:bg-red-700' : ''}
+              >
+                {confirmAction === 'approve' && t('accessAuthorizations.actions.approve')}
+                {confirmAction === 'checkIn' && t('accessAuthorizations.actions.checkIn')}
+                {confirmAction === 'complete' && t('accessAuthorizations.actions.complete')}
+                {confirmAction === 'cancel' && t('accessAuthorizations.actions.cancelAuth')}
+                {confirmAction === 'delete' && t('common.delete')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </TooltipProvider>
   );

@@ -39,6 +39,7 @@ import {
   LogIn,
   LogOut,
   DoorOpen,
+  RefreshCw,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -81,7 +82,7 @@ export default function CheckInOut() {
     agent_id: agentFilter !== 'all' ? agentFilter : undefined,
   }), [propertyFilter, typeFilter, statusFilter, agentFilter]);
 
-  const { data: records = [], isLoading } = useCheckInOutRecords(filters);
+  const { data: records = [], isLoading, isFetching, refetch } = useCheckInOutRecords(filters);
   const deleteMutation = useDeleteCheckInOutRecord();
   const completeMutation = useCompleteCheckInOutRecord();
   const generatePDFMutation = useGenerateCheckInOutPDF();
@@ -185,14 +186,25 @@ export default function CheckInOut() {
         icon={DoorOpen}
         title={t('checkInOut.title')}
         subtitle={t('checkInOut.subtitle')}
-        action={
-          <Button
-            onClick={handleCreate}
-            className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {t('checkInOut.newRecord')}
-          </Button>
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
+            <Button
+              onClick={handleCreate}
+              className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('checkInOut.newRecord')}
+            </Button>
+          </>
         }
       />
 

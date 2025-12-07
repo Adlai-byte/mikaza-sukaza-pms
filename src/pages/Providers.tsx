@@ -139,7 +139,7 @@ export default function Providers() {
   }, [startDate, endDate, serviceStatusFilter, serviceFilter, selectedPropertyId]);
 
   // Fetch scheduled services and properties
-  const { data: scheduledServices, isLoading: scheduledServicesLoading } = useScheduledServices(queryFilters);
+  const { data: scheduledServices, isLoading: scheduledServicesLoading, isFetching: servicesFetching, refetch: refetchServices } = useScheduledServices(queryFilters);
   const { properties } = usePropertiesOptimized();
   const updateScheduledService = useUpdateScheduledService();
 
@@ -386,7 +386,7 @@ export default function Providers() {
   const isFetching =
     activeTab === "service-vendors" ? serviceFetching :
     activeTab === "utility-providers" ? utilityFetching :
-    scheduledServicesLoading;
+    servicesFetching;
 
   // All providers (both service and utility) for dropdown in assign dialog
   // IMPORTANT: This must be before any early returns to follow React hooks rules
@@ -421,21 +421,21 @@ export default function Providers() {
           <p className="text-muted-foreground">{t("providers.subtitle")}</p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
-          {/* Refresh button for vendor tabs */}
-          {(activeTab === "service-vendors" || activeTab === "utility-providers") && (
-            <Button
-              onClick={() =>
-                activeTab === "service-vendors" ? refetchService() : refetchUtility()
-              }
-              variant="outline"
-              disabled={isFetching}
-            >
-              <RefreshCw
-                className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
-              />
-              {t("common.refresh")}
-            </Button>
-          )}
+          {/* Refresh button for all tabs */}
+          <Button
+            onClick={() => {
+              if (activeTab === "service-vendors") refetchService();
+              else if (activeTab === "utility-providers") refetchUtility();
+              else refetchServices();
+            }}
+            variant="outline"
+            disabled={isFetching}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+            />
+            {t("common.refresh")}
+          </Button>
           {/* Schedule Service button for services tab */}
           {activeTab === "services" && (
             <Button onClick={handleScheduleService}>

@@ -72,9 +72,9 @@ export default function ServiceDocuments() {
       {/* Header */}
       <PageHeader
         icon={FolderOpen}
-        title="Service Documents"
+        title={t('serviceDocuments.title')}
         subtitle={t('serviceDocuments.subtitle')}
-        action={
+        actions={
           <div className="flex gap-2 self-start sm:self-auto">
             <Button
               onClick={() => refetch()}
@@ -82,12 +82,12 @@ export default function ServiceDocuments() {
               disabled={isFetching}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-              Refresh
+              {t('common.refresh')}
             </Button>
             {canManage && (
               <Button onClick={() => setUploadDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Upload Document
+                {t('serviceDocuments.uploadDocument')}
               </Button>
             )}
           </div>
@@ -166,11 +166,11 @@ export default function ServiceDocuments() {
               <TabsList>
                 <TabsTrigger value="tree" className="gap-2">
                   <FolderTree className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t('employeeDocuments.viewMode.treeView')}</span>
+                  <span className="hidden sm:inline">{t('serviceDocuments.viewMode.treeView')}</span>
                 </TabsTrigger>
                 <TabsTrigger value="list" className="gap-2">
                   <List className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t('employeeDocuments.viewMode.listView')}</span>
+                  <span className="hidden sm:inline">{t('serviceDocuments.viewMode.listView')}</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -190,7 +190,7 @@ export default function ServiceDocuments() {
                   onClick={() => setUploadDialogOpen(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Upload Document
+                  {t('serviceDocuments.uploadDocument')}
                 </Button>
               )}
             </div>
@@ -202,7 +202,7 @@ export default function ServiceDocuments() {
               onDownloadDocument={handleDownloadDocument}
               onDeleteDocument={canManage ? deleteDocument : undefined}
               canDelete={canManage}
-              emptyMessage="No service documents found. Tag documents to organize them in tree view."
+              emptyMessage={t('serviceDocuments.emptyState.treeViewMessage')}
               emptyIcon={<Wrench className="h-12 w-12 mx-auto mb-4 opacity-20" />}
             />
           ) : (

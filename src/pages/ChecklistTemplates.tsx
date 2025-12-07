@@ -36,6 +36,7 @@ import {
   LogOut,
   ClipboardList,
   ListChecks,
+  RefreshCw,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -68,7 +69,7 @@ export default function ChecklistTemplates() {
     is_active: activeFilter !== 'all' ? activeFilter === 'active' : undefined,
   }), [propertyFilter, typeFilter, activeFilter]);
 
-  const { data: templates = [], isLoading } = useChecklistTemplates(filters);
+  const { data: templates = [], isLoading, isFetching, refetch } = useChecklistTemplates(filters);
   const deleteMutation = useDeleteChecklistTemplate();
 
   const filteredTemplates = useMemo(() => {
@@ -143,14 +144,25 @@ export default function ChecklistTemplates() {
         icon={ListChecks}
         title={t('checklistTemplates.title')}
         subtitle={t('checklistTemplates.subtitle')}
-        action={
-          <Button
-            onClick={handleCreate}
-            className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {t('checklistTemplates.newTemplate')}
-          </Button>
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
+            <Button
+              onClick={handleCreate}
+              className="bg-gradient-primary hover:bg-gradient-secondary w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('checklistTemplates.newTemplate')}
+            </Button>
+          </>
         }
       />
 

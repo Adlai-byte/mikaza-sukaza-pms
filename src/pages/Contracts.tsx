@@ -45,7 +45,7 @@ export default function Contracts() {
   // Mark contracts as visited when page loads
   useEffect(() => {
     markCategoryAsVisited('contracts');
-  }, []);
+  }, [markCategoryAsVisited]);
 
   // Filter contracts by type
   const filteredContracts = useMemo(() => {
@@ -98,7 +98,7 @@ export default function Contracts() {
         icon={FileText}
         title={t('contracts.title')}
         subtitle={t('contracts.subtitle')}
-        action={
+        actions={
           <div className="flex gap-2 self-start sm:self-auto">
             <Button
               onClick={() => refetch()}

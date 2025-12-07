@@ -19,6 +19,7 @@ import {
   Activity,
   FileDown,
   Star,
+  RefreshCw,
 } from "lucide-react";
 import {
   PieChart,
@@ -51,6 +52,14 @@ export default function Highlights() {
   const alerts = useFinancialAlerts();
   const trends = useFinancialTrends();
   const [isExporting, setIsExporting] = useState(false);
+
+  const isRefreshing = kpis.isFetching || alerts.isFetching || trends.isFetching;
+
+  const handleRefreshAll = () => {
+    kpis.refetch();
+    alerts.refetch();
+    trends.refetch();
+  };
 
   // Handle PDF export
   const handleExportPDF = async () => {
@@ -133,24 +142,35 @@ export default function Highlights() {
         subtitle="Real-time financial KPIs and alerts for your business"
         icon={Star}
         actions={
-          <Button
-            onClick={handleExportPDF}
-            disabled={isExporting}
-            className="gap-2"
-            size="lg"
-          >
-            {isExporting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating PDF...
-              </>
-            ) : (
-              <>
-                <FileDown className="h-4 w-4" />
-                Export PDF
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshAll}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
+            <Button
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="gap-2"
+              size="lg"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating PDF...
+                </>
+              ) : (
+                <>
+                  <FileDown className="h-4 w-4" />
+                  Export PDF
               </>
             )}
           </Button>
+          </>
         }
       />
 

@@ -47,7 +47,12 @@
     "email": "E-mail",
     "phone": "Telefone",
     "address": "Endereço",
-    "statusUpdated": "Status Atualizado"
+    "statusUpdated": "Status Atualizado",
+    "unassigned": "Não Atribuído",
+    "startTask": "Iniciar Tarefa",
+    "markComplete": "Marcar Concluída",
+    "clearAllFilters": "Limpar todos os filtros",
+    "inProgress": "Em Andamento"
   },
   "sidebar": {
     "dashboard": "Painel",
@@ -442,6 +447,18 @@
       "repair": "Reparo",
       "emergency": "Emergência",
       "preventive": "Preventivo"
+    },
+    "calendar": {
+      "title": "Calendário",
+      "today": "Hoje",
+      "viewBy": "Ver por",
+      "dueDate": "Data de Vencimento",
+      "scheduledDate": "Data Agendada",
+      "legend": "Legenda",
+      "task": "tarefa",
+      "tasks": "tarefas",
+      "unscheduled": "não agendado",
+      "noJobsOnDay": "Nenhum trabalho neste dia"
     }
   },
   "todos": {
@@ -456,7 +473,9 @@
     "taskDescription": "Descrição da Tarefa",
     "completed": "Concluída",
     "pending": "Pendente",
-    "overdue": "Atrasada"
+    "overdue": "Atrasada",
+    "noTasks": "Sem tarefas",
+    "dropHere": "Soltar aqui"
   },
   "invoices": {
     "title": "Faturas",
@@ -1572,6 +1591,7 @@
   "serviceDocuments": {
     "title": "Documentos de Serviço",
     "subtitle": "Gerencie contratos de fornecedores, ordens de serviço, relatórios de serviço e certificados de conclusão",
+    "uploadDocument": "Enviar Documento",
     "stats": {
       "totalDocuments": "Total de Documentos",
       "recentUploads": "Envios Recentes",
@@ -1583,7 +1603,12 @@
     "description": "Contratos de fornecedores, ordens de serviço, relatórios de inspeção e certificados de conclusão",
     "emptyState": {
       "title": "Nenhum Documento de Serviço",
-      "message": "Envie contratos de fornecedores, ordens de serviço e relatórios de serviço"
+      "message": "Envie contratos de fornecedores, ordens de serviço e relatórios de serviço",
+      "treeViewMessage": "Nenhum documento de serviço encontrado. Marque os documentos com tags para organizá-los na visualização em árvore."
+    },
+    "viewMode": {
+      "treeView": "Visualização em Árvore",
+      "listView": "Visualização em Lista"
     }
   },
   "documents": {
@@ -1657,15 +1682,27 @@
       "checkIn": "Registrar entrada do fornecedor",
       "complete": "Concluir acesso",
       "cancel": "Cancelar autorização",
+      "cancelAuth": "Cancelar",
       "edit": "Editar autorização",
       "delete": "Excluir autorização"
     },
     "confirmations": {
       "approve": "Aprovar esta solicitação de acesso?",
+      "approveTitle": "Aprovar Solicitação de Acesso",
+      "approveDescription": "Isso aprovará a solicitação de acesso do fornecedor e o notificará de que pode prosseguir com a visita agendada.",
       "checkIn": "Marcar fornecedor como chegado e em andamento?",
+      "checkInTitle": "Registrar Entrada do Fornecedor",
+      "checkInDescription": "Isso marcará o fornecedor como chegado e a autorização de acesso como em andamento.",
       "completionNotes": "Notas de conclusão opcionais:",
+      "completeTitle": "Concluir Acesso",
+      "completeDescription": "Marcar esta autorização de acesso como concluída. Opcionalmente, você pode adicionar notas de conclusão.",
+      "completionNotesPlaceholder": "Digite notas sobre a visita concluída...",
       "cancel": "Cancelar esta autorização de acesso?",
-      "delete": "Tem certeza de que deseja excluir esta autorização?"
+      "cancelTitle": "Cancelar Autorização",
+      "cancelDescription": "Isso cancelará a autorização de acesso. O fornecedor não poderá mais acessar a propriedade.",
+      "delete": "Tem certeza de que deseja excluir esta autorização?",
+      "deleteTitle": "Excluir Autorização",
+      "deleteDescription": "Esta ação não pode ser desfeita. Isso excluirá permanentemente o registro de autorização de acesso."
     },
     "emptyState": {
       "title": "Nenhuma Autorização Encontrada",
@@ -1739,7 +1776,9 @@
       "delete": "Excluir COI"
     },
     "confirmations": {
-      "delete": "Tem certeza de que deseja excluir este COI?"
+      "delete": "Tem certeza de que deseja excluir este COI?",
+      "deleteTitle": "Excluir Certificado de Seguro",
+      "deleteDescription": "Esta ação não pode ser desfeita. Isso excluirá permanentemente o documento COI e o removerá de todos os fornecedores e propriedades associados."
     },
     "emptyState": {
       "title": "Nenhum COI Encontrado",

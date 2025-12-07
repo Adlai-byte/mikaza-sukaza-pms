@@ -23,6 +23,7 @@ import {
   Calendar,
   Receipt,
   BarChart3,
+  RefreshCw,
 } from "lucide-react";
 import {
   Card,
@@ -31,6 +32,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,23 +69,30 @@ export default function FinancialDashboard() {
     () => new Date().toISOString().split("T")[0],
   );
 
-  const { summary, loading: summaryLoading } = useDashboardSummary(
+  const { summary, loading: summaryLoading, refetch: refetchSummary } = useDashboardSummary(
     dateFrom,
     dateTo,
   );
-  const { revenueByProperty, loading: revenueLoading } = useRevenueByProperty(
+  const { revenueByProperty, loading: revenueLoading, refetch: refetchRevenue } = useRevenueByProperty(
     dateFrom,
     dateTo,
   );
-  const { expensesByCategory, loading: expensesLoading } =
+  const { expensesByCategory, loading: expensesLoading, refetch: refetchExpenses } =
     useExpensesByCategory(dateFrom, dateTo);
-  const { financialOverTime, loading: overTimeLoading } = useFinancialOverTime(
+  const { financialOverTime, loading: overTimeLoading, refetch: refetchOverTime } = useFinancialOverTime(
     dateFrom,
     dateTo,
   );
 
   const isLoading =
     summaryLoading || revenueLoading || expensesLoading || overTimeLoading;
+
+  const handleRefreshAll = () => {
+    refetchSummary();
+    refetchRevenue();
+    refetchExpenses();
+    refetchOverTime();
+  };
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -132,6 +141,17 @@ export default function FinancialDashboard() {
         title="Financial Dashboard"
         subtitle={t("financialDashboard.subtitle")}
         icon={TrendingUp}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshAll}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            {t('common.refresh')}
+          </Button>
+        }
       />
 
       {/* Date Filters */}

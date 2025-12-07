@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, TaskFilters } from '@/hooks/useTasks';
 import { TaskDialog } from '@/components/tasks/TaskDialog';
@@ -86,7 +87,7 @@ export default function Todos() {
     return baseFilters;
   }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, searchQuery, showOverdue, user]);
 
-  const { tasks, loading } = useTasks(filters);
+  const { tasks, loading, isFetching, refetch } = useTasks(filters);
 
   // Debug logging for tasks
   React.useEffect(() => {
@@ -224,6 +225,17 @@ export default function Todos() {
         title={t('todos.title')}
         subtitle={t('todos.subtitle')}
         icon={CheckSquare}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+            {t('common.refresh')}
+          </Button>
+        }
       />
 
         {/* Statistics Dashboard */}

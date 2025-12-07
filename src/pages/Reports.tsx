@@ -39,6 +39,7 @@ import {
   UserX,
   Receipt,
   PieChart,
+  RefreshCw,
 } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
@@ -522,6 +523,30 @@ export default function Reports() {
   // Check if current report type needs enhanced booking options
   const needsBookingOptions = reportType === 'bookingsEnhanced';
 
+  // Handle refresh for current report type
+  const handleRefresh = () => {
+    switch (reportType) {
+      case 'currentBalance':
+        refetchCurrentBalance();
+        break;
+      case 'financialEntries':
+        refetchFinancialEntries();
+        break;
+      case 'activeClients':
+        refetchActiveClients();
+        break;
+      case 'inactiveClients':
+        refetchInactiveClients();
+        break;
+      case 'bookingsEnhanced':
+        refetchBookingsEnhanced();
+        break;
+      case 'rentalRevenue':
+        refetchRentalRevenue();
+        break;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -529,8 +554,12 @@ export default function Reports() {
         icon={FileText}
         title={t('reports.title', 'Reports')}
         subtitle={t('reports.subtitle', 'Generate and export custom reports')}
-        action={
+        actions={
           <div className="flex gap-2">
+            <Button onClick={handleRefresh} disabled={isLoading} variant="outline" size="sm">
+              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
             {!isNewReport && (
               <Button onClick={handleExportCSV} disabled={isLoading} variant="outline">
                 <Download className="mr-2 h-4 w-4" />

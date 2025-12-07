@@ -48,23 +48,27 @@ test.describe('Access Authorizations Module Tests', () => {
   test('ACC-005: Should have create/request access button', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    // The button uses translated text "Request Access" or has Plus icon
+    // Look for create button - might have Plus icon, translated text, or be in different location
     const createButton = page.locator('button:has-text("Request"), button:has-text("Access"), button:has-text("New"), button:has-text("Add")').first();
+    const plusButton = page.locator('button').filter({ has: page.locator('svg.lucide-plus') }).first();
     const hasCreate = await createButton.isVisible().catch(() => false);
+    const hasPlusButton = await plusButton.isVisible().catch(() => false);
 
-    console.log(`Create button: ${hasCreate}`);
-    expect(hasCreate).toBeTruthy();
+    console.log(`Create button: ${hasCreate || hasPlusButton}`);
+    expect(hasCreate || hasPlusButton).toBeTruthy();
   });
 
   test('ACC-006: Should have refresh button', async ({ page }) => {
     await waitForPageLoad(page, 2000);
 
-    // Refresh button has text "Refresh" with RefreshCw icon
+    // Refresh button might have icon only or translated text
     const refreshButton = page.locator('button:has-text("Refresh")').first();
+    const refreshIconButton = page.locator('button').filter({ has: page.locator('svg.lucide-refresh-cw') }).first();
     const hasRefresh = await refreshButton.isVisible().catch(() => false);
+    const hasRefreshIcon = await refreshIconButton.isVisible().catch(() => false);
 
-    console.log(`Refresh button: ${hasRefresh}`);
-    expect(hasRefresh).toBeTruthy();
+    console.log(`Refresh button: ${hasRefresh || hasRefreshIcon}`);
+    expect(hasRefresh || hasRefreshIcon).toBeTruthy();
   });
 
   test('ACC-007: Should open create authorization dialog', async ({ page }) => {

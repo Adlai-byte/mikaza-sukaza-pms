@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Plus, Search, Filter, UserPlus, UserCheck, DollarSign, Calendar } from 'lucide-react';
+import { Users, Plus, Search, Filter, UserPlus, UserCheck, DollarSign, Calendar, RefreshCw } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +36,7 @@ export default function GuestManagement() {
     min_spent: minSpent !== 'all' ? parseFloat(minSpent) : undefined,
   };
 
-  const { data: guests, isLoading, refetch } = useGuests(filters);
+  const { data: guests, isLoading, isFetching, refetch } = useGuests(filters);
   const { data: stats, isLoading: statsLoading } = useGuestStats();
 
   return (
@@ -48,6 +48,15 @@ export default function GuestManagement() {
         icon={Users}
         actions={
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             <Button
               type="button"
               onClick={() => setShowCreateDialog(true)}

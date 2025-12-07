@@ -15,6 +15,7 @@ import {
   Calendar,
   CreditCard,
   Settings,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -67,7 +68,7 @@ export default function Invoices() {
     date_to: dateTo || undefined,
   };
 
-  const { invoices, loading } = useInvoices(filters);
+  const { invoices, loading, isFetching, refetch } = useInvoices(filters);
   const { properties } = usePropertiesOptimized();
   const markAsSent = useMarkInvoiceAsSent();
   const markAsPaid = useMarkInvoiceAsPaid();
@@ -139,6 +140,15 @@ export default function Invoices() {
         icon={FileText}
         actions={
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
             <Button
               onClick={() => navigate('/bill-templates')}
               size="lg"

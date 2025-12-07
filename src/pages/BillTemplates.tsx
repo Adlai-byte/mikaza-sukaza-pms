@@ -17,6 +17,7 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -123,7 +124,7 @@ export default function BillTemplates() {
   });
 
   // Fetch templates without property filter to get all templates
-  const { data: allTemplates, isLoading } = useBillTemplates();
+  const { data: allTemplates, isLoading, isFetching, refetch } = useBillTemplates();
   const { properties } = usePropertiesOptimized();
   const deleteTemplate = useDeleteBillTemplate();
   const toggleActive = useToggleTemplateActive();
@@ -358,10 +359,21 @@ export default function BillTemplates() {
         title="Bill Templates"
         subtitle="Create and manage reusable invoice templates for faster billing"
         actions={
-          <Button onClick={handleCreateNew} size="lg">
-            <Plus className="h-4 w-4 mr-2" />
-            New Template
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button onClick={handleCreateNew} size="lg">
+              <Plus className="h-4 w-4 mr-2" />
+              New Template
+            </Button>
+          </>
         }
       />
 

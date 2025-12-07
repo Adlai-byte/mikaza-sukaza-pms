@@ -23,6 +23,7 @@ import {
   Clock,
   DollarSign,
   Image as ImageIcon,
+  RefreshCw,
 } from 'lucide-react';
 import {
   useIssues,
@@ -86,7 +87,7 @@ export default function Issues() {
     return baseFilters;
   }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery, user?.id]);
 
-  const { issues, loading } = useIssues(filters);
+  const { issues, loading, isFetching, refetch } = useIssues(filters);
   const createIssue = useCreateIssue();
   const updateIssue = useUpdateIssue();
   const deleteIssue = useDeleteIssue();
@@ -229,10 +230,21 @@ export default function Issues() {
         subtitle={t('issues.subtitle')}
         icon={AlertTriangle}
         actions={
-          <Button onClick={handleCreateIssue} className="bg-primary hover:bg-primary/90">
-            <Plus className="mr-2 h-4 w-4" />
-            {t('issues.reportIssue')}
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
+            <Button onClick={handleCreateIssue} className="bg-primary hover:bg-primary/90">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('issues.reportIssue')}
+            </Button>
+          </>
         }
       />
 

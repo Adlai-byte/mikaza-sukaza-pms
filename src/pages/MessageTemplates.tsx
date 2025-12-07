@@ -36,7 +36,7 @@ export default function MessageTemplates() {
         icon={Mail}
         title={t('messageTemplates.title')}
         subtitle={t('messageTemplates.subtitle')}
-        action={
+        actions={
           <div className="flex gap-2 self-start sm:self-auto">
             <Button
               onClick={() => refetch()}
