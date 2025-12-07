@@ -25,6 +25,13 @@ import {
   KeyRound,
   Shield,
   LucideIcon,
+  Car,
+  ListChecks,
+  FileSpreadsheet,
+  User,
+  Zap,
+  GitBranch,
+  Wallet,
 } from 'lucide-react';
 import { PERMISSIONS } from '@/lib/rbac/permissions';
 
@@ -43,7 +50,12 @@ export type EntityType =
   | 'document'
   | 'checkInOut'
   | 'accessAuth'
-  | 'vendorCoi';
+  | 'vendorCoi'
+  | 'billTemplate'
+  | 'checklistTemplate'
+  | 'media'
+  | 'vehicle'
+  | 'notification';
 
 // Result types including quick actions
 export type SearchResultType = 'quickAction' | EntityType;
@@ -264,6 +276,61 @@ export const ENTITY_CONFIGS: EntityConfig[] = [
     routeGenerator: (id) => `/vendor-cois?highlight=${id}`,
     titleField: (item) => `COI - ${item.coverage_type || 'Unknown type'}`,
     subtitleField: (item) => `Valid through: ${item.valid_through || 'N/A'} • ${item.status || 'pending'}`,
+  },
+  {
+    type: 'billTemplate',
+    table: 'bill_templates',
+    icon: FileSpreadsheet,
+    permission: PERMISSIONS.FINANCE_VIEW,
+    fields: ['template_id', 'template_name', 'description', 'is_active'],
+    searchFields: ['template_name', 'description'],
+    routeGenerator: (id) => `/bill-templates?highlight=${id}`,
+    titleField: 'template_name',
+    subtitleField: (item) => `Bill Template • ${item.is_active ? 'Active' : 'Inactive'}`,
+  },
+  {
+    type: 'checklistTemplate',
+    table: 'checklist_templates',
+    icon: ListChecks,
+    permission: PERMISSIONS.PROPERTIES_VIEW,
+    fields: ['template_id', 'name', 'template_type', 'is_active'],
+    searchFields: ['name', 'template_type'],
+    routeGenerator: (id) => `/checklist-templates?highlight=${id}`,
+    titleField: 'name',
+    subtitleField: (item) => `${item.template_type || 'Checklist'} • ${item.is_active ? 'Active' : 'Inactive'}`,
+  },
+  {
+    type: 'media',
+    table: 'property_images',
+    icon: Image,
+    permission: PERMISSIONS.MEDIA_VIEW,
+    fields: ['image_id', 'image_title', 'image_description', 'is_primary', 'property_id'],
+    searchFields: ['image_title', 'image_description'],
+    routeGenerator: (id) => `/media?highlight=${id}`,
+    titleField: (item) => String(item.image_title || 'Untitled Image'),
+    subtitleField: (item) => `${item.is_primary ? 'Primary' : 'Secondary'} • ${item.image_description || 'No description'}`,
+  },
+  {
+    type: 'vehicle',
+    table: 'property_vehicles',
+    icon: Car,
+    permission: PERMISSIONS.PROPERTIES_VIEW,
+    fields: ['vehicle_id', 'plate_number', 'make', 'model', 'color', 'property_id'],
+    searchFields: ['plate_number', 'make', 'model'],
+    routeGenerator: (id, item) => `/properties/${item?.property_id}/edit?tab=vehicles&highlight=${id}`,
+    titleField: (item) => `${item.make || ''} ${item.model || ''}`.trim() || 'Unknown Vehicle',
+    subtitleField: (item) => `${item.plate_number || 'No plate'} • ${item.color || 'Unknown color'}`,
+  },
+  {
+    type: 'notification',
+    table: 'notifications',
+    icon: Bell,
+    permission: PERMISSIONS.PROPERTIES_VIEW,
+    fields: ['notification_id', 'title', 'message', 'notification_type', 'is_read', 'created_at'],
+    searchFields: ['title', 'message'],
+    routeGenerator: (id) => `/notifications?highlight=${id}`,
+    titleField: 'title',
+    subtitleField: (item) => `${item.notification_type || 'Notification'} • ${item.is_read ? 'Read' : 'Unread'}`,
   },
 ];
 
@@ -491,6 +558,54 @@ export const QUICK_ACTIONS: QuickAction[] = [
     icon: MessageSquare,
     permission: PERMISSIONS.DOCUMENTS_MESSAGES_VIEW,
   },
+  // Additional pages
+  {
+    id: 'owner-statement',
+    title: 'Owner Statement',
+    keywords: ['owner', 'statement', 'payout', 'earnings', 'owner report'],
+    route: '/owner-statement',
+    icon: Wallet,
+    permission: PERMISSIONS.FINANCE_VIEW,
+  },
+  {
+    id: 'service-pipeline',
+    title: 'Service Pipeline',
+    keywords: ['pipeline', 'workflow', 'service flow', 'process'],
+    route: '/service-pipeline',
+    icon: GitBranch,
+    permission: PERMISSIONS.PIPELINE_VIEW,
+  },
+  {
+    id: 'bill-templates',
+    title: 'Bill Templates',
+    keywords: ['bill', 'template', 'recurring', 'invoice template', 'billing'],
+    route: '/bill-templates',
+    icon: FileSpreadsheet,
+    permission: PERMISSIONS.FINANCE_VIEW,
+  },
+  {
+    id: 'checklist-templates',
+    title: 'Checklist Templates',
+    keywords: ['checklist', 'template', 'inspection', 'check-in checklist', 'check-out checklist'],
+    route: '/checklist-templates',
+    icon: ListChecks,
+    permission: PERMISSIONS.PROPERTIES_VIEW,
+  },
+  {
+    id: 'utility-providers',
+    title: 'Utility Providers',
+    keywords: ['utility', 'electric', 'water', 'gas', 'power', 'internet'],
+    route: '/utility-providers',
+    icon: Zap,
+    permission: PERMISSIONS.UTILITY_PROVIDERS_VIEW,
+  },
+  {
+    id: 'profile',
+    title: 'Profile',
+    keywords: ['profile', 'account', 'settings', 'my account', 'user settings'],
+    route: '/profile',
+    icon: User,
+  },
 ];
 
 // Get entity config by type
@@ -563,6 +678,11 @@ export function getEntityIdField(type: EntityType): string {
     checkInOut: 'record_id',
     accessAuth: 'authorization_id',
     vendorCoi: 'coi_id',
+    billTemplate: 'template_id',
+    checklistTemplate: 'template_id',
+    media: 'image_id',
+    vehicle: 'vehicle_id',
+    notification: 'notification_id',
   };
   return idFields[type];
 }

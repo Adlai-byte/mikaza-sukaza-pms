@@ -110,7 +110,12 @@
       "documents": "Documentos",
       "checkInOut": "Registros de Check-In/Out",
       "accessAuthorizations": "Autorizações de Acesso",
-      "vendorCois": "COIs de Fornecedores"
+      "vendorCois": "COIs de Fornecedores",
+      "billTemplates": "Modelos de Cobrança",
+      "checklistTemplates": "Modelos de Checklist",
+      "media": "Mídia",
+      "vehicles": "Veículos",
+      "notifications": "Notificações"
     }
   },
   "header": {

@@ -35,6 +35,11 @@ const ENTITY_LABELS: Record<EntityType, string> = {
   checkInOut: 'globalSearch.groups.checkInOut',
   accessAuth: 'globalSearch.groups.accessAuthorizations',
   vendorCoi: 'globalSearch.groups.vendorCois',
+  billTemplate: 'globalSearch.groups.billTemplates',
+  checklistTemplate: 'globalSearch.groups.checklistTemplates',
+  media: 'globalSearch.groups.media',
+  vehicle: 'globalSearch.groups.vehicles',
+  notification: 'globalSearch.groups.notifications',
 };
 
 // Order of entity groups in results
@@ -53,6 +58,11 @@ const ENTITY_ORDER: EntityType[] = [
   'checkInOut',
   'accessAuth',
   'vendorCoi',
+  'billTemplate',
+  'checklistTemplate',
+  'media',
+  'vehicle',
+  'notification',
 ];
 
 export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {

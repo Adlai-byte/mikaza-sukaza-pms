@@ -143,7 +143,12 @@
       "documents": "Documents",
       "checkInOut": "Check-In/Out Records",
       "accessAuthorizations": "Access Authorizations",
-      "vendorCois": "Vendor COIs"
+      "vendorCois": "Vendor COIs",
+      "billTemplates": "Bill Templates",
+      "checklistTemplates": "Checklist Templates",
+      "media": "Media",
+      "vehicles": "Vehicles",
+      "notifications": "Notifications"
     }
   },
   "header": {
