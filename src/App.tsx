@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,48 +10,76 @@ import { ProtectedRoute as RBACProtectedRoute } from "@/components/rbac/Protecte
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "./components/MainLayout";
 import { Analytics } from "@vercel/analytics/react";
-import Dashboard from "./pages/Dashboard";
-import Properties from "./pages/Properties";
-import PropertyView from "./pages/PropertyView";
-import Jobs from "./pages/Jobs";
-import UserManagement from "./pages/UserManagement";
-import GuestManagement from "./pages/GuestManagement";
-import Providers from "./pages/Providers";
-// ServiceProviders and UtilityProviders routes redirect to /vendors
-import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import Profile from "./pages/Profile";
-import Calendar from "./pages/Calendar";
-import BookingManagement from "./pages/BookingManagement";
-import Todos from "./pages/Todos";
-import Issues from "./pages/Issues";
-import ActivityLogs from "./pages/ActivityLogs";
-import Invoices from "./pages/Invoices";
-import InvoiceForm from "./pages/InvoiceForm";
-import BookingSelector from "./pages/BookingSelector";
-import Expenses from "./pages/Expenses";
-import OwnerStatement from "./pages/OwnerStatement";
-import BillTemplates from "./pages/BillTemplates";
-import FinancialDashboard from "./pages/FinancialDashboard";
-import ServicePipeline from "./pages/ServicePipeline";
-import Contracts from "./pages/Contracts";
-import EmployeeDocuments from "./pages/EmployeeDocuments";
-import ServiceDocuments from "./pages/ServiceDocuments";
-import MessageTemplates from "./pages/MessageTemplates";
-import Messages from "./pages/Messages";
-import Reports from "./pages/Reports";
-import Help from "./pages/Help";
-import VendorCOIs from "./pages/VendorCOIs";
-import AccessAuthorizations from "./pages/AccessAuthorizations";
-// ServiceScheduling functionality merged into Providers.tsx
-import CheckInOut from "./pages/CheckInOut";
-import ChecklistTemplates from "./pages/ChecklistTemplates";
-import Media from "./pages/Media";
-import Highlights from "./pages/Highlights";
-import Commissions from "./pages/Commissions";
-import Notifications from "./pages/Notifications";
-import Unauthorized from "./pages/Unauthorized";
-import NotFound from "./pages/NotFound";
+import { Loader2 } from "lucide-react";
+
+// Lazy-loaded pages for code splitting
+// Core pages - loaded first
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Auth = lazy(() => import("./pages/Auth"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Unauthorized = lazy(() => import("./pages/Unauthorized"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Property management
+const Properties = lazy(() => import("./pages/Properties"));
+const PropertyView = lazy(() => import("./pages/PropertyView"));
+
+// Booking & Calendar
+const Calendar = lazy(() => import("./pages/Calendar"));
+const BookingManagement = lazy(() => import("./pages/BookingManagement"));
+
+// Operations
+const Jobs = lazy(() => import("./pages/Jobs"));
+const Todos = lazy(() => import("./pages/Todos"));
+const Issues = lazy(() => import("./pages/Issues"));
+const CheckInOut = lazy(() => import("./pages/CheckInOut"));
+const ChecklistTemplates = lazy(() => import("./pages/ChecklistTemplates"));
+
+// People management
+const UserManagement = lazy(() => import("./pages/UserManagement"));
+const GuestManagement = lazy(() => import("./pages/GuestManagement"));
+const Providers = lazy(() => import("./pages/Providers"));
+
+// Finance
+const Invoices = lazy(() => import("./pages/Invoices"));
+const InvoiceForm = lazy(() => import("./pages/InvoiceForm"));
+const BookingSelector = lazy(() => import("./pages/BookingSelector"));
+const Expenses = lazy(() => import("./pages/Expenses"));
+const OwnerStatement = lazy(() => import("./pages/OwnerStatement"));
+const BillTemplates = lazy(() => import("./pages/BillTemplates"));
+const FinancialDashboard = lazy(() => import("./pages/FinancialDashboard"));
+const ServicePipeline = lazy(() => import("./pages/ServicePipeline"));
+const Commissions = lazy(() => import("./pages/Commissions"));
+const Highlights = lazy(() => import("./pages/Highlights"));
+
+// Documents
+const Contracts = lazy(() => import("./pages/Contracts"));
+const EmployeeDocuments = lazy(() => import("./pages/EmployeeDocuments"));
+const ServiceDocuments = lazy(() => import("./pages/ServiceDocuments"));
+const VendorCOIs = lazy(() => import("./pages/VendorCOIs"));
+const AccessAuthorizations = lazy(() => import("./pages/AccessAuthorizations"));
+const Media = lazy(() => import("./pages/Media"));
+
+// Communications
+const MessageTemplates = lazy(() => import("./pages/MessageTemplates"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+
+// Reports & Admin
+const Reports = lazy(() => import("./pages/Reports"));
+const ActivityLogs = lazy(() => import("./pages/ActivityLogs"));
+const Help = lazy(() => import("./pages/Help"));
+
+// Automation
+const ReportSchedules = lazy(() => import("./pages/ReportSchedules"));
+
+// Loading spinner for lazy-loaded pages
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 import { SessionTimeoutWarning } from "@/components/SessionTimeoutWarning";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { createOptimizedQueryClient, initializeCacheManagers } from "@/lib/cache-manager-simplified";
@@ -175,6 +204,7 @@ const App = () => (
           <AuthProvider>
             {/* Session timeout disabled for now */}
             {/* <SessionTimeoutWarning /> */}
+            <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -537,11 +567,22 @@ const App = () => (
                     </RBACProtectedRoute>
                   }
                 />
+
+                {/* Automation - Report Schedules */}
+                <Route
+                  path="/automation/report-schedules"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.AUTOMATION_VIEW}>
+                      <ReportSchedules />
+                    </RBACProtectedRoute>
+                  }
+                />
               </Route>
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

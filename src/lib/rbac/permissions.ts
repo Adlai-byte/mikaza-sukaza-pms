@@ -140,6 +140,12 @@ export const PERMISSIONS = {
   REPORTS_EXPORT: 'reports.export',
   REPORTS_CUSTOM: 'reports.custom',
 
+  // ========== AUTOMATION ==========
+  AUTOMATION_VIEW: 'automation.view',
+  AUTOMATION_CREATE: 'automation.create',
+  AUTOMATION_EDIT: 'automation.edit',
+  AUTOMATION_DELETE: 'automation.delete',
+
   // ========== SYSTEM ==========
   SYSTEM_SETTINGS: 'system.settings',
   SYSTEM_LOGS: 'system.logs',
@@ -297,6 +303,12 @@ export const ROLES = {
       PERMISSIONS.REPORTS_EXPORT,
       // NOT: REPORTS_CUSTOM
 
+      // ========== AUTOMATION - Full access except delete ==========
+      PERMISSIONS.AUTOMATION_VIEW,
+      PERMISSIONS.AUTOMATION_CREATE,
+      PERMISSIONS.AUTOMATION_EDIT,
+      // NOT: AUTOMATION_DELETE (admin only)
+
       // NO SYSTEM ACCESS
       // NOT: SYSTEM_SETTINGS, SYSTEM_LOGS, SYSTEM_AUDIT
     ],
@@ -423,5 +435,6 @@ export const PERMISSION_CATEGORIES = {
   HIGHLIGHTS: 'Highlights',
   MESSAGES: 'Internal Messages',
   REPORTS: 'Reports',
+  AUTOMATION: 'Automation',
   SYSTEM: 'System Administration',
 } as const;

@@ -7,6 +7,15 @@ import { CACHE_CONFIG } from "@/lib/cache-config";
 import { OptimisticUpdates } from "@/lib/cache-manager-simplified";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
+import type {
+  PropertyLocationInsert,
+  PropertyCommunicationInsert,
+  PropertyAccessInsert,
+  PropertyExtrasInsert,
+  UnitInsert,
+  PropertyAmenityJoin,
+  PropertyRuleJoin,
+} from "@/lib/database-types";
 
 // Query keys for cache management - SINGLE SOURCE OF TRUTH
 export const propertyKeys = {
@@ -133,7 +142,7 @@ const fetchPropertyDetail = async (propertyId: string): Promise<Property> => {
   let actualData = data;
   if (data && typeof data === 'object' && 'data' in data && 'error' in data && 'status' in data) {
     console.warn('⚠️ Detected raw Supabase response wrapper, extracting nested data...');
-    actualData = (data as any).data;
+    actualData = (data as { data: typeof data }).data;
   }
 
   if (!actualData) {
@@ -148,8 +157,8 @@ const fetchPropertyDetail = async (propertyId: string): Promise<Property> => {
   // Transform the data to match our Property type
   const transformedData = {
     ...actualData,
-    amenities: actualData.amenities?.map((pa: any) => pa.amenities) || [],
-    rules: actualData.rules?.map((pr: any) => pr.rules) || [],
+    amenities: actualData.amenities?.map((pa: PropertyAmenityJoin) => pa.amenities) || [],
+    rules: actualData.rules?.map((pr: PropertyRuleJoin) => pr.rules) || [],
   } as Property;
 
   console.log('✅ Transformed property detail:', {
@@ -250,11 +259,11 @@ export function usePropertiesOptimized() {
     retry: 2, // Retry failed mutations twice
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
     mutationFn: async (propertyData: PropertyInsert & {
-      location?: any;
-      communication?: any;
-      access?: any;
-      extras?: any;
-      units?: any[];
+      location?: Omit<PropertyLocationInsert, "property_id" | "location_id">;
+      communication?: Omit<PropertyCommunicationInsert, "property_id" | "communication_id">;
+      access?: Omit<PropertyAccessInsert, "property_id" | "access_id">;
+      extras?: Omit<PropertyExtrasInsert, "property_id" | "extras_id">;
+      units?: Omit<UnitInsert, "property_id" | "unit_id">[];
       amenity_ids?: string[];
       rule_ids?: string[];
       images?: { url: string; title?: string; is_primary?: boolean }[];
@@ -443,11 +452,11 @@ export function usePropertiesOptimized() {
     mutationFn: async ({ propertyId, propertyData }: {
       propertyId: string;
       propertyData: Partial<PropertyInsert> & {
-        location?: any;
-        communication?: any;
-        access?: any;
-        extras?: any;
-        units?: any[];
+        location?: Omit<PropertyLocationInsert, "property_id" | "location_id">;
+        communication?: Omit<PropertyCommunicationInsert, "property_id" | "communication_id">;
+        access?: Omit<PropertyAccessInsert, "property_id" | "access_id">;
+        extras?: Omit<PropertyExtrasInsert, "property_id" | "extras_id">;
+        units?: Omit<UnitInsert, "property_id" | "unit_id">[];
         amenity_ids?: string[];
         rule_ids?: string[];
         images?: { url: string; title?: string; is_primary?: boolean }[];
@@ -810,8 +819,16 @@ export function usePropertiesOptimized() {
     amenities,
     rules,
     createProperty: createPropertyMutation.mutateAsync,
-    updateProperty: (propertyId: string, propertyData: any) =>
-      updatePropertyMutation.mutateAsync({ propertyId, propertyData }),
+    updateProperty: (propertyId: string, propertyData: Partial<PropertyInsert> & {
+      location?: Omit<PropertyLocationInsert, "property_id" | "location_id">;
+      communication?: Omit<PropertyCommunicationInsert, "property_id" | "communication_id">;
+      access?: Omit<PropertyAccessInsert, "property_id" | "access_id">;
+      extras?: Omit<PropertyExtrasInsert, "property_id" | "extras_id">;
+      units?: Omit<UnitInsert, "property_id" | "unit_id">[];
+      amenity_ids?: string[];
+      rule_ids?: string[];
+      images?: { url: string; title?: string; is_primary?: boolean }[];
+    }) => updatePropertyMutation.mutateAsync({ propertyId, propertyData }),
     deleteProperty: deletePropertyMutation.mutateAsync,
     refetch,
     // Mutation states for UI feedback

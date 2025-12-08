@@ -37,6 +37,7 @@ import {
   FolderOpen,
   UserCog,
   Search,
+  Clock,
 } from "lucide-react";
 
 import {
@@ -116,6 +117,11 @@ const financeMenuItems = [
   { titleKey: "sidebar.reports", url: "/reports", icon: FileSpreadsheet, permission: PERMISSIONS.REPORTS_VIEW },
 ];
 
+// Automation - Scheduled tasks and reports
+const automationMenuItems = [
+  { titleKey: "sidebar.reportSchedules", url: "/automation/report-schedules", icon: Clock, permission: PERMISSIONS.AUTOMATION_VIEW },
+];
+
 export function AppSidebar() {
   const { t } = useTranslation();
   const { state } = useSidebar();
@@ -133,6 +139,7 @@ export function AppSidebar() {
     main: true,
     finance: true,
     documents: true,
+    automation: true,
     support: true,
   });
 
@@ -162,6 +169,11 @@ export function AppSidebar() {
 
   const visibleSupportMenuItems = useMemo(
     () => supportMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
+    [hasPermission]
+  );
+
+  const visibleAutomationMenuItems = useMemo(
+    () => automationMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
     [hasPermission]
   );
 
@@ -409,6 +421,75 @@ export function AppSidebar() {
               <SidebarGroupContent className="px-3">
                 <SidebarMenu className="space-y-1">
                   {visibleDocumentMenuItems.map((item) => {
+                    const notificationCount = getNotificationCount(item.url);
+                    return (
+                      <SidebarMenuItem key={item.url}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <SidebarMenuButton asChild className="h-10">
+                              <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                                <item.icon className="h-5 w-5 min-w-5" />
+                                {!isCollapsed && (
+                                  <span className="ml-3 flex items-center gap-2 flex-1">
+                                    {t(item.titleKey)}
+                                    {notificationCount > 0 && (
+                                      <Badge className="ml-auto bg-red-500 hover:bg-red-600 text-white">
+                                        {notificationCount}
+                                      </Badge>
+                                    )}
+                                  </span>
+                                )}
+                                {isCollapsed && notificationCount > 0 && (
+                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                    {notificationCount}
+                                  </div>
+                                )}
+                              </NavLink>
+                            </SidebarMenuButton>
+                          </TooltipTrigger>
+                          {isCollapsed && (
+                            <TooltipContent side="right" className="font-medium">
+                              {t(item.titleKey)}
+                              {notificationCount > 0 && ` (${notificationCount})`}
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            )}
+          </SidebarGroup>
+        )}
+
+        {/* Automation */}
+        {visibleAutomationMenuItems.length > 0 && (
+          <SidebarGroup>
+            {!isCollapsed && (
+              <button
+                onClick={() => toggleSection('automation')}
+                className={`w-full flex items-center justify-between text-xs uppercase tracking-wider px-6 mb-2 hover:text-white transition-colors cursor-pointer ${
+                  hasActiveItem(visibleAutomationMenuItems) ? 'text-white font-semibold' : 'text-white/70'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>Automation</span>
+                  {hasActiveItem(visibleAutomationMenuItems) && (
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  )}
+                </div>
+                {expandedSections.automation ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+            )}
+            {expandedSections.automation && (
+              <SidebarGroupContent className="px-3">
+                <SidebarMenu className="space-y-1">
+                  {visibleAutomationMenuItems.map((item) => {
                     const notificationCount = getNotificationCount(item.url);
                     return (
                       <SidebarMenuItem key={item.url}>
