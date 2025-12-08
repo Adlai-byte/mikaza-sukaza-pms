@@ -1,9 +1,17 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { GlobalSearch } from "@/components/global-search";
 
 // Logo path - use BASE_URL for reliable deployments
 const logoWhite = `${import.meta.env.BASE_URL}logo-white.png`;
+
+// Preload logo image
+const preloadLogo = () => {
+  const img = new Image();
+  img.src = logoWhite;
+  return img;
+};
+preloadLogo();
 import {
   LayoutDashboard,
   Building,
@@ -134,6 +142,9 @@ export function AppSidebar() {
   // State for global search dialog
   const [searchOpen, setSearchOpen] = useState(false);
 
+  // State for logo loading
+  const [logoError, setLogoError] = useState(false);
+
   // State for collapsible sections
   const [expandedSections, setExpandedSections] = useState({
     main: true,
@@ -224,11 +235,17 @@ export function AppSidebar() {
             <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">C&C</span>
             </div>
+          ) : logoError ? (
+            <div className="text-white font-bold text-xl tracking-tight">
+              Casa & Concierge
+            </div>
           ) : (
             <img
               src={logoWhite}
               alt="Casa & Concierge"
               className="h-16 w-auto object-contain"
+              loading="eager"
+              onError={() => setLogoError(true)}
             />
           )}
         </div>
