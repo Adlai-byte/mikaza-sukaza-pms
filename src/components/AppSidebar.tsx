@@ -2,16 +2,9 @@ import { useState, useMemo, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { GlobalSearch } from "@/components/global-search";
 
-// Logo path - use BASE_URL for reliable deployments
+// Logo path
 const logoWhite = `${import.meta.env.BASE_URL}logo-white.png`;
 
-// Preload logo image
-const preloadLogo = () => {
-  const img = new Image();
-  img.src = logoWhite;
-  return img;
-};
-preloadLogo();
 import {
   LayoutDashboard,
   Building,
