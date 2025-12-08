@@ -22,6 +22,43 @@ const DEBOUNCE_DELAY = 300;
 // Maximum results per entity type
 const MAX_RESULTS_PER_ENTITY = 5;
 
+// Entity types that have split name fields (first_name, last_name)
+const SPLIT_NAME_ENTITIES: EntityType[] = ['user', 'guest'];
+
+// Build search clauses for a query
+// For entities with split name fields, also search each word separately
+function buildSearchClauses(
+  config: EntityConfig,
+  query: string
+): string {
+  const clauses: string[] = [];
+
+  // Standard search: each field contains the full query
+  config.searchFields.forEach(field => {
+    clauses.push(`${field}.ilike.%${query}%`);
+  });
+
+  // For split-name entities, also search each word separately across name fields
+  if (SPLIT_NAME_ENTITIES.includes(config.type)) {
+    const words = query.split(/\s+/).filter(word => word.length >= 2);
+    const nameFields = config.searchFields.filter(f =>
+      f.includes('name') || f === 'first_name' || f === 'last_name'
+    );
+
+    // If query has multiple words (like "John Doe"), search each word in name fields
+    if (words.length > 1) {
+      words.forEach(word => {
+        nameFields.forEach(field => {
+          clauses.push(`${field}.ilike.%${word}%`);
+        });
+      });
+    }
+  }
+
+  // Remove duplicates and join
+  return [...new Set(clauses)].join(',');
+}
+
 // Search a single entity table
 async function searchEntity(
   config: EntityConfig,
@@ -29,9 +66,7 @@ async function searchEntity(
 ): Promise<SearchResult[]> {
   try {
     // Build the OR clause for search fields
-    const orClauses = config.searchFields
-      .map(field => `${field}.ilike.%${query}%`)
-      .join(',');
+    const orClauses = buildSearchClauses(config, query);
 
     const { data, error } = await supabase
       .from(config.table)
