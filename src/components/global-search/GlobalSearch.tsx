@@ -43,10 +43,11 @@ const ENTITY_LABELS: Record<EntityType, string> = {
 };
 
 // Order of entity groups in results
+// Guest is prioritized before booking so searching for guest names shows guests first
 const ENTITY_ORDER: EntityType[] = [
   'property',
-  'booking',
   'guest',
+  'booking',
   'user',
   'job',
   'task',
