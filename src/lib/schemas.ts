@@ -1630,6 +1630,54 @@ export type AccessAuthorization = z.infer<typeof accessAuthorizationSchema> & {
   building_notification_sent_at?: string;
 };
 
+// ============================================
+// ACCESS DOCUMENTS (Simplified Document Storage)
+// ============================================
+
+// Access Document Types
+export const ACCESS_DOCUMENT_TYPES = {
+  access_card: 'Access Card',
+  code: 'Code',
+  key: 'Key',
+  permit: 'Permit',
+  other: 'Other',
+} as const;
+
+export type AccessDocumentType = keyof typeof ACCESS_DOCUMENT_TYPES;
+
+// Access Document Schema
+export const accessDocumentSchema = z.object({
+  access_document_id: z.string().uuid().optional(),
+  property_id: z.string().uuid().optional().nullable(),
+  vendor_id: z.string().uuid().optional().nullable(),
+  document_type: z.enum(['access_card', 'code', 'key', 'permit', 'other']),
+  document_name: z.string().min(1, 'Document name is required'),
+  description: z.string().optional().nullable(),
+  file_url: z.string().url('Invalid file URL'),
+  file_name: z.string().min(1, 'File name is required'),
+  file_type: z.string().optional().nullable(),
+  file_size: z.number().optional().nullable(),
+  expiry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional().nullable(),
+  tags: z.array(z.string()).optional().nullable(),
+});
+
+export type AccessDocumentInsert = z.infer<typeof accessDocumentSchema>;
+
+export type AccessDocument = AccessDocumentInsert & {
+  access_document_id: string;
+  uploaded_by?: string;
+  created_at?: string;
+  updated_at?: string;
+  // Joined fields from view
+  property_name?: string;
+  property_type?: string;
+  vendor_name?: string;
+  vendor_type?: string;
+  uploaded_by_first_name?: string;
+  uploaded_by_last_name?: string;
+  status?: 'active' | 'expiring_soon' | 'expired';
+};
+
 // COI Dashboard Stats
 export type COIDashboardStats = {
   active_cois: number;
@@ -2375,4 +2423,109 @@ export const SCHEDULE_STATUS_CONFIG: Record<ScheduleStatus, { label: string; col
   cancelled: { label: 'Cancelled', color: '#EF4444', bgColor: '#FEE2E2' },
   no_show: { label: 'No Show', color: '#6B7280', bgColor: '#E5E7EB' },
 };
+
+// ==========================================
+// REPORT EMAIL SCHEDULE SCHEMAS
+// ==========================================
+
+// Report Type enum
+export const reportTypeEnum = z.enum([
+  'current_balance',
+  'financial_entries',
+  'active_clients',
+  'inactive_clients',
+  'bookings_enhanced',
+  'rental_revenue'
+]);
+
+export type ReportType = z.infer<typeof reportTypeEnum>;
+
+// Report type display names
+export const REPORT_TYPE_CONFIG: Record<ReportType, { label: string; description: string }> = {
+  current_balance: { label: 'Current Balance Report', description: 'Client/Property balances with positive, negative, and current balance' },
+  financial_entries: { label: 'Financial Entries Report', description: 'All financial entries for a date range' },
+  active_clients: { label: 'Active Clients Report', description: 'List of active clients with their properties' },
+  inactive_clients: { label: 'Inactive Clients Report', description: 'List of inactive clients' },
+  bookings_enhanced: { label: 'Enhanced Bookings Report', description: 'Detailed booking report with revenue breakdown' },
+  rental_revenue: { label: 'Rental Revenue Report', description: 'Revenue analysis by property and period' },
+};
+
+// Days of week display
+export const DAYS_OF_WEEK = [
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+] as const;
+
+// Report Schedule Schema
+export const reportScheduleSchema = z.object({
+  schedule_name: z.string().min(1, "Schedule name is required").max(200),
+  report_type: reportTypeEnum,
+  day_of_week: z.number().int().min(0).max(6), // 0=Sunday, 6=Saturday
+  hour_of_day: z.number().int().min(0).max(23),
+  minute_of_hour: z.number().int().min(0).max(59).default(0),
+  timezone: z.string().default('America/New_York'),
+  recipient_emails: z.array(z.string().email("Invalid email address")).min(1, "At least one recipient is required"),
+  report_filters: z.record(z.any()).optional().default({}),
+  is_enabled: z.boolean().default(true),
+});
+
+export type ReportScheduleInsert = z.infer<typeof reportScheduleSchema>;
+
+export type ReportSchedule = ReportScheduleInsert & {
+  schedule_id: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  last_sent_at?: string | null;
+  next_run_at?: string | null;
+  creator?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
+};
+
+// Report Email History Schema
+export const reportEmailHistorySchema = z.object({
+  schedule_id: z.string().uuid("Invalid schedule ID"),
+  status: z.enum(['pending', 'sending', 'sent', 'failed']).default('pending'),
+  recipient_emails: z.array(z.string().email()),
+  email_provider_id: z.string().optional().nullable(),
+  error_message: z.string().optional().nullable(),
+  report_row_count: z.number().int().optional().nullable(),
+  report_generation_time_ms: z.number().int().optional().nullable(),
+});
+
+export type ReportEmailHistoryInsert = z.infer<typeof reportEmailHistorySchema>;
+
+export type ReportEmailHistory = ReportEmailHistoryInsert & {
+  history_id: string;
+  sent_at: string;
+};
+
+// Report Schedule Filters
+export type ReportScheduleFilters = {
+  is_enabled?: boolean;
+  report_type?: ReportType;
+  search?: string;
+};
+
+// Common timezones for dropdown
+export const COMMON_TIMEZONES = [
+  { value: 'America/New_York', label: 'Eastern Time (US)' },
+  { value: 'America/Chicago', label: 'Central Time (US)' },
+  { value: 'America/Denver', label: 'Mountain Time (US)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (US)' },
+  { value: 'America/Sao_Paulo', label: 'São Paulo (Brazil)' },
+  { value: 'Europe/London', label: 'London (UK)' },
+  { value: 'Europe/Paris', label: 'Paris (France)' },
+  { value: 'Europe/Madrid', label: 'Madrid (Spain)' },
+  { value: 'UTC', label: 'UTC' },
+] as const;
 
