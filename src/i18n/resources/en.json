@@ -2480,6 +2480,18 @@
       "bulkPaidSuccess": "Commissions marked as paid",
       "deleteSuccess": "Commission deleted successfully",
       "deleteError": "Failed to delete commission"
+    },
+    "export": {
+      "button": "Export Excel",
+      "sheetName": "Commissions",
+      "summarySheet": "Summary",
+      "guestEmail": "Guest Email",
+      "metric": "Metric",
+      "value": "Value",
+      "totalInvoices": "Total Invoices",
+      "paidInvoices": "Paid Invoices",
+      "pendingInvoices": "Pending Invoices",
+      "dateRange": "Date Range"
     }
   },
   "internalMessages": {

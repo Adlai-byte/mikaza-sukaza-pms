@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
+import * as XLSX from 'xlsx';
 import {
   DollarSign,
   CheckCircle,
@@ -11,6 +12,7 @@ import {
   FileText,
   ExternalLink,
   RefreshCw,
+  Download,
 } from 'lucide-react';
 
 // UI Components
@@ -133,6 +135,65 @@ export default function Commissions() {
     navigate(`/invoices/${invoiceId}`);
   };
 
+  // Export to Excel
+  const handleExportExcel = () => {
+    if (commissions.length === 0) return;
+
+    // Prepare data for export
+    const exportData = commissions.map((commission: InvoiceCommission) => ({
+      [t('commissions.table.invoiceNumber', 'Invoice #')]: commission.invoice?.invoice_number || 'N/A',
+      [t('commissions.table.property', 'Property')]: commission.invoice?.property?.property_name || 'N/A',
+      [t('commissions.table.guest', 'Guest')]: commission.invoice?.guest_name || 'N/A',
+      [t('commissions.export.guestEmail', 'Guest Email')]: commission.invoice?.guest_email || '',
+      [t('commissions.table.issueDate', 'Issue Date')]: commission.invoice?.issue_date
+        ? format(new Date(commission.invoice.issue_date), 'yyyy-MM-dd')
+        : 'N/A',
+      [t('commissions.table.invoiceTotal', 'Invoice Total')]: commission.invoice?.total_amount || 0,
+      [t('commissions.table.commission', 'Commission')]: commission.commission_amount,
+      [t('commissions.table.invoiceStatus', 'Status')]: commission.invoice?.status || 'draft',
+    }));
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 15 }, // Invoice #
+      { wch: 25 }, // Property
+      { wch: 20 }, // Guest
+      { wch: 30 }, // Guest Email
+      { wch: 12 }, // Issue Date
+      { wch: 15 }, // Invoice Total
+      { wch: 15 }, // Commission
+      { wch: 12 }, // Status
+    ];
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, t('commissions.export.sheetName', 'Commissions'));
+
+    // Add summary sheet
+    const summaryData = [
+      { [t('commissions.export.metric', 'Metric')]: t('commissions.stats.totalCommissions', 'Total Commissions'), [t('commissions.export.value', 'Value')]: summary?.total_commissions || 0 },
+      { [t('commissions.export.metric', 'Metric')]: t('commissions.stats.paidCommissions', 'Paid (Collected)'), [t('commissions.export.value', 'Value')]: summary?.paid_commissions || 0 },
+      { [t('commissions.export.metric', 'Metric')]: t('commissions.stats.pendingCommissions', 'Pending (Unpaid)'), [t('commissions.export.value', 'Value')]: summary?.pending_commissions || 0 },
+      { [t('commissions.export.metric', 'Metric')]: t('commissions.stats.averageCommission', 'Average Commission'), [t('commissions.export.value', 'Value')]: summary?.average_commission || 0 },
+      { [t('commissions.export.metric', 'Metric')]: t('commissions.export.totalInvoices', 'Total Invoices'), [t('commissions.export.value', 'Value')]: summary?.commission_count || 0 },
+      { [t('commissions.export.metric', 'Metric')]: t('commissions.export.paidInvoices', 'Paid Invoices'), [t('commissions.export.value', 'Value')]: summary?.paid_count || 0 },
+      { [t('commissions.export.metric', 'Metric')]: t('commissions.export.pendingInvoices', 'Pending Invoices'), [t('commissions.export.value', 'Value')]: summary?.pending_count || 0 },
+      { [t('commissions.export.metric', 'Metric')]: t('commissions.export.dateRange', 'Date Range'), [t('commissions.export.value', 'Value')]: `${dateFrom} to ${dateTo}` },
+    ];
+    const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+    summaryWs['!cols'] = [{ wch: 25 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, summaryWs, t('commissions.export.summarySheet', 'Summary'));
+
+    // Generate filename with date
+    const fileName = `commissions_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+
+    // Download the file
+    XLSX.writeFile(wb, fileName);
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
@@ -143,10 +204,21 @@ export default function Commissions() {
             {t('commissions.subtitle', 'Track commissions from invoice line items')}
           </p>
         </div>
-        <Button onClick={() => refetch()} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          {t('common.refresh', 'Refresh')}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleExportExcel}
+            variant="outline"
+            size="sm"
+            disabled={commissions.length === 0 || commissionsLoading}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {t('commissions.export.button', 'Export Excel')}
+          </Button>
+          <Button onClick={() => refetch()} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            {t('common.refresh', 'Refresh')}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}

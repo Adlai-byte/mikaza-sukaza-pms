@@ -171,15 +171,15 @@ export function DocumentUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[550px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{t('dialogs.documentUpload.title')} {DOCUMENT_CATEGORIES[category]}</DialogTitle>
           <DialogDescription>
             {t('dialogs.documentUpload.description')}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0 pr-2">
           {/* File upload area */}
           <div className="space-y-2">
             <Label>{t('dialogs.documentUpload.fields.file')} *</Label>
@@ -384,7 +384,7 @@ export function DocumentUploadDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 pt-4 border-t">
           <Button variant="outline" onClick={handleClose} disabled={isUploading}>
             {t('dialogs.documentUpload.buttons.cancel')}
           </Button>
