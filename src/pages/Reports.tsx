@@ -622,12 +622,6 @@ export default function Reports() {
                       {t('reports.propertiesReport', 'Properties')}
                     </div>
                   </SelectItem>
-                  <SelectItem value="bookings">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      {t('reports.bookingsReport', 'Bookings (Basic)')}
-                    </div>
-                  </SelectItem>
                   <SelectItem value="financial">
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-4 w-4" />
@@ -957,110 +951,6 @@ export default function Reports() {
                               {property.is_active ? 'Active' : 'Inactive'}
                             </Badge>
                           </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Bookings Report (Basic) */}
-          {reportType === 'bookings' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-violet-700">
-                          {t('reports.totalBookings', 'Total Bookings')}
-                        </p>
-                        <div className="text-2xl font-bold text-violet-900">{bookingsReport.total}</div>
-                      </div>
-                      <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-white" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-lime-700">{t('reports.totalRevenue', 'Total Revenue')}</p>
-                        <div className="text-2xl font-bold text-lime-900">
-                          {formatCurrency(bookingsReport.totalRevenue)}
-                        </div>
-                      </div>
-                      <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
-                        <DollarSign className="h-5 w-5 text-white" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-100 to-violet-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-violet-700">
-                          {t('reports.avgStay', 'Avg. Stay (days)')}
-                        </p>
-                        <div className="text-2xl font-bold text-violet-900">{bookingsReport.avgStay}</div>
-                      </div>
-                      <div className="w-10 h-10 bg-violet-400 rounded-lg flex items-center justify-center">
-                        <BarChart3 className="h-5 w-5 text-white" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-violet-700">
-                          {t('reports.confirmedBookings', 'Confirmed')}
-                        </p>
-                        <div className="text-2xl font-bold text-violet-900">{bookingsReport.confirmed}</div>
-                      </div>
-                      <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
-                        <Users className="h-5 w-5 text-white" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t('reports.bookingList', 'Booking List')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('reports.property', 'Property')}</TableHead>
-                        <TableHead>{t('reports.guest', 'Guest')}</TableHead>
-                        <TableHead>{t('reports.checkIn', 'Check In')}</TableHead>
-                        <TableHead>{t('reports.checkOut', 'Check Out')}</TableHead>
-                        <TableHead>{t('reports.status', 'Status')}</TableHead>
-                        <TableHead className="text-right">{t('reports.total', 'Total')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {bookingsReport.bookings.slice(0, 20).map((booking) => (
-                        <TableRow key={booking.booking_id}>
-                          <TableCell className="font-medium">{booking.property?.property_name}</TableCell>
-                          <TableCell>{booking.guest_name}</TableCell>
-                          <TableCell>{formatDate(booking.check_in_date)}</TableCell>
-                          <TableCell>{formatDate(booking.check_out_date)}</TableCell>
-                          <TableCell>
-                            <Badge variant={booking.booking_status === 'confirmed' ? 'default' : 'secondary'}>
-                              {booking.booking_status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">{formatCurrency(booking.total_price || 0)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
