@@ -83,6 +83,7 @@ export interface ClientBalanceData {
 }
 
 export interface FinancialEntryData {
+  expense_id: string;
   date: string;
   property_name: string;
   property_id: string;
@@ -90,6 +91,8 @@ export interface FinancialEntryData {
   description: string;
   amount: number;
   running_balance: number;
+  attachment_count: number;
+  note_count: number;
 }
 
 export interface ActiveClientData {
@@ -300,7 +303,9 @@ export function useFinancialEntriesReport(filters: FinancialEntriesFilters) {
           entry_type,
           description,
           amount,
-          property:properties(property_id, property_name)
+          property:properties(property_id, property_name),
+          expense_attachments(attachment_id),
+          expense_notes(note_id)
         `)
         .order('expense_date', { ascending: true });
 
@@ -343,6 +348,7 @@ export function useFinancialEntriesReport(filters: FinancialEntriesFilters) {
         }
 
         return {
+          expense_id: expense.expense_id,
           date: expense.expense_date,
           property_id: expense.property_id,
           property_name: expense.property?.property_name || 'N/A',
@@ -350,6 +356,8 @@ export function useFinancialEntriesReport(filters: FinancialEntriesFilters) {
           description: expense.description || '',
           amount,
           running_balance: runningBalance,
+          attachment_count: expense.expense_attachments?.length || 0,
+          note_count: expense.expense_notes?.length || 0,
         };
       });
 

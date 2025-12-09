@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -29,6 +29,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Collapsible,
+  CollapsibleContent,
+} from '@/components/ui/collapsible';
+import {
   DollarSign,
   Plus,
   Minus,
@@ -42,6 +46,9 @@ import {
   Download,
   Paperclip,
   ExternalLink,
+  ChevronRight,
+  ChevronDown,
+  MessageSquare,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import {
@@ -52,9 +59,16 @@ import {
   useDeleteExpense,
   useMarkEntryAsDone,
 } from '@/hooks/useExpenses';
+import { useBulkCreateExpenseAttachments } from '@/hooks/useExpenseAttachments';
+import { useBulkCreateExpenseNotes, useExpenseNotes } from '@/hooks/useExpenseNotes';
+import { useExpenseAttachments, useDeleteExpenseAttachment } from '@/hooks/useExpenseAttachments';
+import { useDeleteExpenseNote } from '@/hooks/useExpenseNotes';
 import { Expense, ExpenseInsert } from '@/lib/schemas';
 import { FinancialEntryDialog } from './FinancialEntryDialog';
 import { BatchEntryDialog } from './BatchEntryDialog';
+import { ExpandedEntryContent } from './ExpandedEntryContent';
+import { PendingAttachment } from './AttachmentUploadSection';
+import { PendingNote } from './NotesManagementSection';
 import { useTranslation } from 'react-i18next';
 
 interface FinancialTabProps {
@@ -92,6 +106,9 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
   const [editingEntry, setEditingEntry] = useState<Expense | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<Expense | null>(null);
 
+  // Expandable rows state
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
   // Fetch financial entries
   const { entries, loading, refetch, scheduleBalance } = usePropertyFinancialEntries(
     propertyId,
@@ -111,6 +128,27 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
   const markAsDone = useMarkEntryAsDone();
+  const bulkCreateAttachments = useBulkCreateExpenseAttachments();
+  const bulkCreateNotes = useBulkCreateExpenseNotes();
+  const deleteAttachment = useDeleteExpenseAttachment();
+  const deleteNote = useDeleteExpenseNote();
+
+  // Fetch attachments/notes for editing entry
+  const { data: editingAttachments = [] } = useExpenseAttachments(editingEntry?.expense_id || null);
+  const { data: editingNotes = [] } = useExpenseNotes(editingEntry?.expense_id || null);
+
+  // Toggle row expansion
+  const toggleRowExpansion = useCallback((expenseId: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(expenseId)) {
+        next.delete(expenseId);
+      } else {
+        next.add(expenseId);
+      }
+      return next;
+    });
+  }, []);
 
   // Calculate totals
   const totals = entries.reduce(
@@ -135,20 +173,45 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
     setShowEntryDialog(true);
   };
 
-  const handleEntrySubmit = async (data: ExpenseInsert) => {
+  const handleEntrySubmit = async (
+    data: ExpenseInsert,
+    pendingAttachments: PendingAttachment[],
+    pendingNotes: PendingNote[]
+  ) => {
     try {
+      let expenseId: string;
+
       if (editingEntry?.expense_id) {
         await updateExpense.mutateAsync({
           expenseId: editingEntry.expense_id,
           updates: data,
         });
+        expenseId = editingEntry.expense_id;
       } else {
-        await createExpense.mutateAsync({
+        const created = await createExpense.mutateAsync({
           ...data,
           property_id: propertyId,
           entry_type: entryType,
         });
+        expenseId = created.expense_id!;
       }
+
+      // Upload pending attachments
+      if (pendingAttachments.length > 0) {
+        await bulkCreateAttachments.mutateAsync({
+          expenseId,
+          files: pendingAttachments.map(a => ({ file: a.file, caption: a.caption })),
+        });
+      }
+
+      // Create pending notes
+      if (pendingNotes.length > 0) {
+        await bulkCreateNotes.mutateAsync({
+          expenseId,
+          notes: pendingNotes.map(n => ({ text: n.text })),
+        });
+      }
+
       setShowEntryDialog(false);
       setEditingEntry(null);
       refetch();
@@ -388,14 +451,15 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10"></TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead className="text-right">Credit</TableHead>
                     <TableHead className="text-right">Debit</TableHead>
                     <TableHead className="text-right">Balance</TableHead>
-                    <TableHead className="text-right">Schedule Balance</TableHead>
-                    <TableHead className="text-center">Receipt</TableHead>
+                    <TableHead className="text-center">Files</TableHead>
+                    <TableHead className="text-center">Notes</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -403,6 +467,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                 <TableBody>
                   {/* Initial Balance Row */}
                   <TableRow className="bg-slate-100/70 border-b-2 border-slate-300">
+                    <TableCell></TableCell>
                     <TableCell className="font-semibold text-slate-600">
                       {format(new Date(selectedYear, selectedMonth - 1, 1), 'MMM 01, yyyy')}
                     </TableCell>
@@ -416,7 +481,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                         {loadingInitialBalance ? '...' : formatCurrency(initialBalance)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">-</TableCell>
+                    <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-right">-</TableCell>
@@ -425,109 +490,136 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                   {entries.map((entry, index) => {
                     // Adjust running balance to include initial balance
                     const adjustedRunningBalance = initialBalance + (entry.running_balance || 0);
+                    const isExpanded = expandedRows.has(entry.expense_id!);
+                    const attachmentCount = entry.attachment_count || 0;
+                    const noteCount = entry.note_count || 0;
                     return (
-                    <TableRow
-                      key={entry.expense_id}
-                      className={entry.is_paid ? 'bg-green-50/50' : ''}
-                    >
-                      <TableCell>
-                        {entry.expense_date
-                          ? format(parseISO(entry.expense_date), 'MMM dd, yyyy')
-                          : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{entry.description}</p>
-                          {entry.is_scheduled && (
-                            <Badge variant="outline" className="text-xs mt-1">
-                              Scheduled
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getEntryTypeBadge(entry.entry_type)}</TableCell>
-                      <TableCell className="text-right text-green-600 font-medium">
-                        {entry.entry_type === 'credit' ? formatCurrency(entry.amount) : '-'}
-                      </TableCell>
-                      <TableCell className="text-right text-red-600 font-medium">
-                        {entry.entry_type !== 'credit' ? formatCurrency(entry.amount) : '-'}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        <span className={adjustedRunningBalance >= 0 ? 'text-blue-600' : 'text-red-600'}>
-                          {formatCurrency(adjustedRunningBalance)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {index === entries.length - 1 ? (
-                          <span className={entry.schedule_balance && entry.schedule_balance >= 0 ? 'text-purple-600' : 'text-red-600'}>
-                            {formatCurrency(entry.schedule_balance)}
+                    <React.Fragment key={entry.expense_id}>
+                      <TableRow
+                        className={`${entry.is_paid ? 'bg-green-50/50' : ''} ${isExpanded ? 'border-b-0' : ''} cursor-pointer hover:bg-muted/50`}
+                        onClick={() => entry.expense_id && toggleRowExpansion(entry.expense_id)}
+                      >
+                        <TableCell className="w-10">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              entry.expense_id && toggleRowExpansion(entry.expense_id);
+                            }}
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          {entry.expense_date
+                            ? format(parseISO(entry.expense_date), 'MMM dd, yyyy')
+                            : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{entry.description}</p>
+                            {entry.is_scheduled && (
+                              <Badge variant="outline" className="text-xs mt-1">
+                                Scheduled
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getEntryTypeBadge(entry.entry_type)}</TableCell>
+                        <TableCell className="text-right text-green-600 font-medium">
+                          {entry.entry_type === 'credit' ? formatCurrency(entry.amount) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right text-red-600 font-medium">
+                          {entry.entry_type !== 'credit' ? formatCurrency(entry.amount) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          <span className={adjustedRunningBalance >= 0 ? 'text-blue-600' : 'text-red-600'}>
+                            {formatCurrency(adjustedRunningBalance)}
                           </span>
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {entry.receipt_url ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => window.open(entry.receipt_url!, '_blank')}
-                            title="View receipt"
-                          >
-                            <Paperclip className="h-4 w-4 text-primary" />
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {entry.is_paid ? (
-                          <Badge className="bg-green-100 text-green-700">Paid</Badge>
-                        ) : (
-                          <Badge variant="outline">Pending</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenEntryDialog(entry.entry_type as any, entry)}
-                            title="Edit"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEntryToDelete(entry)}
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                          {!entry.is_paid && (
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {attachmentCount > 0 ? (
+                            <Badge variant="secondary" className="text-xs">
+                              <Paperclip className="h-3 w-3 mr-1" />
+                              {attachmentCount}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {noteCount > 0 ? (
+                            <Badge variant="secondary" className="text-xs">
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              {noteCount}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {entry.is_paid ? (
+                            <Badge className="bg-green-100 text-green-700">Paid</Badge>
+                          ) : (
+                            <Badge variant="outline">Pending</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleMarkAsDone(entry)}
-                              title="Mark as Done"
+                              onClick={() => handleOpenEntryDialog(entry.entry_type as any, entry)}
+                              title="Edit"
                             >
-                              <Check className="h-4 w-4 text-green-600" />
+                              <Edit className="h-4 w-4" />
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEntryToDelete(entry)}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                            {!entry.is_paid && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleMarkAsDone(entry)}
+                                title="Mark as Done"
+                              >
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {/* Expanded Content */}
+                      {isExpanded && entry.expense_id && (
+                        <TableRow className="bg-slate-50 dark:bg-slate-900/50">
+                          <TableCell colSpan={11} className="p-0">
+                            <ExpandedEntryContent expenseId={entry.expense_id} />
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   );
                   })}
 
                   {/* Final Balance Row */}
                   <TableRow className="bg-emerald-100/70 border-t-2 border-emerald-300">
+                    <TableCell></TableCell>
                     <TableCell className="font-semibold text-emerald-700">
                       {format(new Date(selectedYear, selectedMonth, 0), 'MMM dd, yyyy')}
                     </TableCell>
@@ -545,11 +637,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                         {loadingInitialBalance ? '...' : formatCurrency(finalBalance)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-bold">
-                      <span className={scheduleBalance + initialBalance >= 0 ? 'text-purple-700' : 'text-red-600'}>
-                        {formatCurrency(scheduleBalance + initialBalance)}
-                      </span>
-                    </TableCell>
+                    <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-right">-</TableCell>
@@ -568,6 +656,10 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
         onSubmit={handleEntrySubmit}
         entryType={entryType}
         editingEntry={editingEntry}
+        existingAttachments={editingAttachments}
+        existingNotes={editingNotes}
+        onDeleteAttachment={(attachmentId) => deleteAttachment.mutate(attachmentId)}
+        onDeleteNote={(noteId) => deleteNote.mutate(noteId)}
         isSubmitting={createExpense.isPending || updateExpense.isPending}
       />
 

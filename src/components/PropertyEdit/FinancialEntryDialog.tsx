@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -19,17 +19,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Minus, Users, Save, X, Upload, FileText, Trash2, ExternalLink } from 'lucide-react';
-import { Expense, ExpenseInsert } from '@/lib/schemas';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { Plus, Minus, Users, Save, X } from 'lucide-react';
+import { Expense, ExpenseInsert, ExpenseAttachment, ExpenseNote } from '@/lib/schemas';
+import { useAuth } from '@/contexts/AuthContext';
+import { AttachmentUploadSection, PendingAttachment } from './AttachmentUploadSection';
+import { NotesManagementSection, PendingNote } from './NotesManagementSection';
 
 interface FinancialEntryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: ExpenseInsert) => void;
+  onSubmit: (data: ExpenseInsert, pendingAttachments: PendingAttachment[], pendingNotes: PendingNote[]) => void;
   entryType: 'credit' | 'debit' | 'owner_payment';
   editingEntry: Expense | null;
+  existingAttachments?: ExpenseAttachment[];
+  existingNotes?: ExpenseNote[];
+  onDeleteAttachment?: (attachmentId: string) => void;
+  onDeleteNote?: (noteId: string) => void;
   isSubmitting: boolean;
 }
 
@@ -54,21 +59,34 @@ export function FinancialEntryDialog({
   onSubmit,
   entryType,
   editingEntry,
+  existingAttachments = [],
+  existingNotes = [],
+  onDeleteAttachment,
+  onDeleteNote,
   isSubmitting,
 }: FinancialEntryDialogProps) {
-  const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
+  const { user } = useAuth();
+
+  // Form state
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState('');
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDay, setScheduledDay] = useState('1');
   const [scheduledMonths, setScheduledMonths] = useState<number[]>([]);
-  const [notes, setNotes] = useState('');
   const [category, setCategory] = useState<string>('other');
-  const [receiptUrl, setReceiptUrl] = useState<string>('');
-  const [receiptFileName, setReceiptFileName] = useState<string>('');
-  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+
+  // Multi-attachment state
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+
+  // Multi-notes state
+  const [pendingNotes, setPendingNotes] = useState<PendingNote[]>([]);
+
+  // Get current user display name
+  const currentUserName = user?.user_metadata?.first_name && user?.user_metadata?.last_name
+    ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+    : user?.email?.split('@')[0] || 'Unknown';
 
   // Reset form when dialog opens/closes or editing entry changes
   useEffect(() => {
@@ -80,16 +98,7 @@ export function FinancialEntryDialog({
         setIsScheduled(editingEntry.is_scheduled || false);
         setScheduledDay(editingEntry.scheduled_day?.toString() || '1');
         setScheduledMonths(editingEntry.scheduled_months || []);
-        setNotes(editingEntry.notes || '');
         setCategory(editingEntry.category || 'other');
-        setReceiptUrl(editingEntry.receipt_url || '');
-        // Extract filename from URL if exists
-        if (editingEntry.receipt_url) {
-          const parts = editingEntry.receipt_url.split('/');
-          setReceiptFileName(decodeURIComponent(parts[parts.length - 1] || 'Receipt'));
-        } else {
-          setReceiptFileName('');
-        }
       } else {
         // Reset to defaults for new entry
         setDescription('');
@@ -98,89 +107,55 @@ export function FinancialEntryDialog({
         setIsScheduled(false);
         setScheduledDay('1');
         setScheduledMonths([]);
-        setNotes('');
         setCategory('other');
-        setReceiptUrl('');
-        setReceiptFileName('');
       }
+      // Always reset pending items
+      setPendingAttachments([]);
+      setPendingNotes([]);
     }
   }, [open, editingEntry]);
 
-  // Handle receipt file upload
-  const handleReceiptUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // Attachment handlers
+  const handleAddFiles = useCallback((files: File[]) => {
+    const newAttachments: PendingAttachment[] = files.map((file, index) => ({
+      id: `pending-${Date.now()}-${index}`,
+      file,
+      caption: '',
+      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+    }));
+    setPendingAttachments(prev => [...prev, ...newAttachments]);
+  }, []);
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: 'File too large',
-        description: 'Receipt file must be less than 10MB',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
-      toast({
-        title: 'Invalid file type',
-        description: 'Please upload an image (JPG, PNG, GIF) or PDF file',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsUploadingReceipt(true);
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `receipt_${Date.now()}.${fileExt}`;
-      const filePath = `receipts/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('property-documents')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('property-documents')
-        .getPublicUrl(filePath);
-
-      setReceiptUrl(urlData.publicUrl);
-      setReceiptFileName(file.name);
-
-      toast({
-        title: 'Receipt uploaded',
-        description: 'Your receipt has been uploaded successfully',
-      });
-    } catch (error: any) {
-      console.error('Receipt upload error:', error);
-      toast({
-        title: 'Upload failed',
-        description: error.message || 'Failed to upload receipt',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUploadingReceipt(false);
-      // Reset the file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+  const handleRemovePendingAttachment = useCallback((id: string) => {
+    setPendingAttachments(prev => {
+      const attachment = prev.find(a => a.id === id);
+      if (attachment?.preview) {
+        URL.revokeObjectURL(attachment.preview);
       }
-    }
-  };
+      return prev.filter(a => a.id !== id);
+    });
+  }, []);
 
-  // Remove receipt
-  const handleRemoveReceipt = () => {
-    setReceiptUrl('');
-    setReceiptFileName('');
-  };
+  const handleCaptionChange = useCallback((id: string, caption: string) => {
+    setPendingAttachments(prev =>
+      prev.map(a => a.id === id ? { ...a, caption } : a)
+    );
+  }, []);
+
+  // Note handlers
+  const handleAddNote = useCallback((text: string) => {
+    const newNote: PendingNote = {
+      id: `pending-note-${Date.now()}`,
+      text,
+      timestamp: new Date().toISOString(),
+      authorName: currentUserName,
+    };
+    setPendingNotes(prev => [...prev, newNote]);
+  }, [currentUserName]);
+
+  const handleRemovePendingNote = useCallback((id: string) => {
+    setPendingNotes(prev => prev.filter(n => n.id !== id));
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,13 +169,12 @@ export function FinancialEntryDialog({
       is_scheduled: isScheduled,
       scheduled_day: isScheduled ? parseInt(scheduledDay) : null,
       scheduled_months: isScheduled ? scheduledMonths : null,
-      notes,
+      notes: '', // Legacy field - kept for compatibility
       category: category as any,
       tax_amount: 0,
-      receipt_url: receiptUrl || undefined,
     };
 
-    onSubmit(data);
+    onSubmit(data, pendingAttachments, pendingNotes);
   };
 
   const toggleMonth = (month: number) => {
@@ -212,16 +186,16 @@ export function FinancialEntryDialog({
   };
 
   const getDialogTitle = () => {
-    const action = editingEntry ? 'Edit' : 'Add';
+    const action = editingEntry ? t('common.edit', 'Edit') : t('common.add', 'Add');
     switch (entryType) {
       case 'credit':
-        return `${action} Credit Entry`;
+        return `${action} ${t('financialEntries.creditEntry', 'Credit Entry')}`;
       case 'debit':
-        return `${action} Debit Entry`;
+        return `${action} ${t('financialEntries.debitEntry', 'Debit Entry')}`;
       case 'owner_payment':
-        return `${action} Owner Payment`;
+        return `${action} ${t('financialEntries.ownerPayment', 'Owner Payment')}`;
       default:
-        return `${action} Entry`;
+        return `${action} ${t('financialEntries.entry', 'Entry')}`;
     }
   };
 
@@ -238,34 +212,34 @@ export function FinancialEntryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getIcon()}
             {getDialogTitle()}
           </DialogTitle>
           <DialogDescription>
-            {entryType === 'credit' && 'Add income or payment received for this property'}
-            {entryType === 'debit' && 'Add expense or payment made for this property'}
-            {entryType === 'owner_payment' && 'Add payment to the property owner'}
+            {entryType === 'credit' && t('financialEntries.creditDescription', 'Add income or payment received for this property')}
+            {entryType === 'debit' && t('financialEntries.debitDescription', 'Add expense or payment made for this property')}
+            {entryType === 'owner_payment' && t('financialEntries.ownerPaymentDescription', 'Add payment to the property owner')}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 pr-2">
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
+            <Label htmlFor="description">{t('common.description', 'Description')} *</Label>
             <Input
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter description..."
+              placeholder={t('financialEntries.descriptionPlaceholder', 'Enter description...')}
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount *</Label>
+              <Label htmlFor="amount">{t('common.amount', 'Amount')} *</Label>
               <div className="relative">
                 <span className="absolute left-3 top-3 text-muted-foreground">$</span>
                 <Input
@@ -283,7 +257,7 @@ export function FinancialEntryDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="expenseDate">Date *</Label>
+              <Label htmlFor="expenseDate">{t('common.date', 'Date')} *</Label>
               <Input
                 id="expenseDate"
                 type="date"
@@ -295,24 +269,24 @@ export function FinancialEntryDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">{t('common.category', 'Category')}</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder={t('common.selectCategory', 'Select category')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-                <SelectItem value="utilities">Utilities</SelectItem>
-                <SelectItem value="cleaning">Cleaning</SelectItem>
-                <SelectItem value="supplies">Supplies</SelectItem>
-                <SelectItem value="marketing">Marketing</SelectItem>
-                <SelectItem value="insurance">Insurance</SelectItem>
-                <SelectItem value="property_tax">Property Tax</SelectItem>
-                <SelectItem value="hoa_fees">HOA Fees</SelectItem>
-                <SelectItem value="professional_services">Professional Services</SelectItem>
-                <SelectItem value="repairs">Repairs</SelectItem>
-                <SelectItem value="landscaping">Landscaping</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
+                <SelectItem value="maintenance">{t('categories.maintenance', 'Maintenance')}</SelectItem>
+                <SelectItem value="utilities">{t('categories.utilities', 'Utilities')}</SelectItem>
+                <SelectItem value="cleaning">{t('categories.cleaning', 'Cleaning')}</SelectItem>
+                <SelectItem value="supplies">{t('categories.supplies', 'Supplies')}</SelectItem>
+                <SelectItem value="marketing">{t('categories.marketing', 'Marketing')}</SelectItem>
+                <SelectItem value="insurance">{t('categories.insurance', 'Insurance')}</SelectItem>
+                <SelectItem value="property_tax">{t('categories.propertyTax', 'Property Tax')}</SelectItem>
+                <SelectItem value="hoa_fees">{t('categories.hoaFees', 'HOA Fees')}</SelectItem>
+                <SelectItem value="professional_services">{t('categories.professionalServices', 'Professional Services')}</SelectItem>
+                <SelectItem value="repairs">{t('categories.repairs', 'Repairs')}</SelectItem>
+                <SelectItem value="landscaping">{t('categories.landscaping', 'Landscaping')}</SelectItem>
+                <SelectItem value="other">{t('categories.other', 'Other')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -324,14 +298,14 @@ export function FinancialEntryDialog({
               onCheckedChange={(checked) => setIsScheduled(!!checked)}
             />
             <Label htmlFor="isScheduled" className="cursor-pointer">
-              This is a scheduled/recurring entry
+              {t('financialEntries.scheduledEntry', 'This is a scheduled/recurring entry')}
             </Label>
           </div>
 
           {isScheduled && (
             <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
               <div className="space-y-2">
-                <Label htmlFor="scheduledDay">Day of Month</Label>
+                <Label htmlFor="scheduledDay">{t('financialEntries.dayOfMonth', 'Day of Month')}</Label>
                 <Select value={scheduledDay} onValueChange={setScheduledDay}>
                   <SelectTrigger className="w-[120px]">
                     <SelectValue />
@@ -347,7 +321,7 @@ export function FinancialEntryDialog({
               </div>
 
               <div className="space-y-2">
-                <Label>Months</Label>
+                <Label>{t('common.months', 'Months')}</Label>
                 <div className="grid grid-cols-4 gap-2">
                   {MONTHS.map((month) => (
                     <div
@@ -367,95 +341,49 @@ export function FinancialEntryDialog({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes..."
-              rows={3}
-            />
-          </div>
+          {/* Multi-file Attachments Section */}
+          <AttachmentUploadSection
+            existingAttachments={existingAttachments}
+            pendingAttachments={pendingAttachments}
+            onAddFiles={handleAddFiles}
+            onRemovePending={handleRemovePendingAttachment}
+            onCaptionChange={handleCaptionChange}
+            onDeleteExisting={onDeleteAttachment}
+            disabled={isSubmitting}
+          />
 
-          {/* Receipt Attachment */}
-          <div className="space-y-2">
-            <Label>Receipt Attachment (Optional)</Label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,.pdf"
-              onChange={handleReceiptUpload}
-              className="hidden"
-              id="receipt-upload"
-            />
-
-            {receiptUrl ? (
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
-                <FileText className="h-5 w-5 text-primary flex-shrink-0" />
-                <span className="text-sm truncate flex-1" title={receiptFileName}>
-                  {receiptFileName || 'Receipt'}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => window.open(receiptUrl, '_blank')}
-                  title="View receipt"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={handleRemoveReceipt}
-                  title="Remove receipt"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploadingReceipt}
-              >
-                {isUploadingReceipt ? (
-                  <>
-                    <Upload className="mr-2 h-4 w-4 animate-pulse" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Receipt (Image or PDF)
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              <X className="mr-2 h-4 w-4" />
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              <Save className="mr-2 h-4 w-4" />
-              {isSubmitting ? 'Saving...' : editingEntry ? 'Update' : 'Add Entry'}
-            </Button>
-          </DialogFooter>
+          {/* Multi-notes Section */}
+          <NotesManagementSection
+            existingNotes={existingNotes}
+            pendingNotes={pendingNotes}
+            currentUserName={currentUserName}
+            onAddNote={handleAddNote}
+            onRemovePending={handleRemovePendingNote}
+            onDeleteExisting={onDeleteNote}
+            disabled={isSubmitting}
+          />
         </form>
+
+        <DialogFooter className="gap-2 pt-4 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            <X className="mr-2 h-4 w-4" />
+            {t('common.cancel', 'Cancel')}
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            <Save className="mr-2 h-4 w-4" />
+            {isSubmitting
+              ? t('common.saving', 'Saving...')
+              : editingEntry
+                ? t('common.update', 'Update')
+                : t('common.addEntry', 'Add Entry')
+            }
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

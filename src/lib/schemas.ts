@@ -1156,6 +1156,57 @@ export type InvoiceLineItem = z.infer<typeof invoiceLineItemSchema> & {
   total_amount?: number; // Computed: subtotal + tax_amount
 };
 
+// =============================================
+// EXPENSE ATTACHMENT SCHEMA
+// =============================================
+export const expenseAttachmentSchema = z.object({
+  attachment_id: z.string().uuid().optional(),
+  expense_id: z.string().uuid("Expense ID is required"),
+  file_url: z.string().url("Invalid file URL"),
+  file_name: z.string().min(1, "File name is required"),
+  file_type: z.string().optional(),
+  file_size: z.number().optional(),
+  caption: z.string().optional(),
+  uploaded_by: z.string().uuid().optional(),
+  uploaded_at: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+export type ExpenseAttachment = z.infer<typeof expenseAttachmentSchema> & {
+  uploader?: User;
+};
+
+export type ExpenseAttachmentInsert = Omit<
+  z.infer<typeof expenseAttachmentSchema>,
+  'attachment_id' | 'created_at' | 'updated_at' | 'uploaded_at'
+>;
+
+// =============================================
+// EXPENSE NOTE SCHEMA
+// =============================================
+export const expenseNoteSchema = z.object({
+  note_id: z.string().uuid().optional(),
+  expense_id: z.string().uuid("Expense ID is required"),
+  note_text: z.string().min(1, "Note text is required"),
+  author_id: z.string().uuid().optional(),
+  author_name: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+export type ExpenseNote = z.infer<typeof expenseNoteSchema> & {
+  author?: User;
+};
+
+export type ExpenseNoteInsert = Omit<
+  z.infer<typeof expenseNoteSchema>,
+  'note_id' | 'created_at' | 'updated_at'
+>;
+
+// =============================================
+// EXPENSE TYPE WITH RELATIONS
+// =============================================
 export type Expense = z.infer<typeof expenseSchema> & {
   property?: Property;
   vendor?: ServiceProvider;
@@ -1164,6 +1215,11 @@ export type Expense = z.infer<typeof expenseSchema> & {
   // For financial entries balance calculation
   running_balance?: number;
   schedule_balance?: number;
+  // Relations for attachments and notes
+  attachments?: ExpenseAttachment[];
+  expense_notes?: ExpenseNote[];
+  attachment_count?: number;
+  note_count?: number;
 };
 
 export type FinancialAuditLog = z.infer<typeof financialAuditLogSchema> & {

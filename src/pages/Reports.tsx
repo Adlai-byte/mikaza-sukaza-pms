@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,10 @@ import {
   Receipt,
   PieChart,
   RefreshCw,
+  ChevronRight,
+  ChevronDown,
+  MessageSquare,
+  Paperclip,
 } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
@@ -72,6 +76,7 @@ import {
   generateRentalRevenuePDF,
 } from '@/lib/pdf-generator';
 import { cn } from '@/lib/utils';
+import { ExpandedEntryContent } from '@/components/PropertyEdit/ExpandedEntryContent';
 
 type ReportType =
   | 'properties'
@@ -104,6 +109,22 @@ export default function Reports() {
   const [withFinancial, setWithFinancial] = useState(false);
   const [showTaxDetails, setShowTaxDetails] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Expandable rows state for financial entries
+  const [expandedFinancialRows, setExpandedFinancialRows] = useState<Set<string>>(new Set());
+
+  // Toggle financial entry row expansion
+  const toggleFinancialRowExpansion = useCallback((expenseId: string) => {
+    setExpandedFinancialRows(prev => {
+      const next = new Set(prev);
+      if (next.has(expenseId)) {
+        next.delete(expenseId);
+      } else {
+        next.add(expenseId);
+      }
+      return next;
+    });
+  }, []);
 
   // Fetch base data
   const { properties, loading: loadingProperties } = usePropertiesOptimized();
@@ -1458,34 +1479,94 @@ export default function Reports() {
                       <Table>
                         <TableHeader>
                           <TableRow>
+                            <TableHead className="w-10"></TableHead>
                             <TableHead>{t('reports.date', 'Date')}</TableHead>
                             <TableHead>{t('reports.property', 'Property')}</TableHead>
                             <TableHead>{t('reports.type', 'Type')}</TableHead>
                             <TableHead>{t('reports.description', 'Description')}</TableHead>
                             <TableHead className="text-right">{t('reports.amount', 'Amount')}</TableHead>
                             <TableHead className="text-right">{t('reports.runningBalance', 'Balance')}</TableHead>
+                            <TableHead className="text-center">{t('financialEntries.files', 'Files')}</TableHead>
+                            <TableHead className="text-center">{t('financialEntries.notes', 'Notes')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {(financialEntriesData || []).map((row, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell>{formatDate(row.date)}</TableCell>
-                              <TableCell>{row.property_name}</TableCell>
-                              <TableCell>
-                                <Badge variant={row.entry_type === 'credit' ? 'default' : row.entry_type === 'debit' ? 'destructive' : 'secondary'}>
-                                  {row.entry_type.charAt(0).toUpperCase() + row.entry_type.slice(1)}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="max-w-[200px] truncate">{row.description}</TableCell>
-                              <TableCell className={cn('text-right', row.entry_type === 'credit' ? 'text-green-600' : 'text-red-600')}>
-                                {row.entry_type === 'credit' ? '+' : '-'}{formatCurrency(row.amount)}
-                              </TableCell>
-                              <TableCell className="text-right font-medium">{formatCurrency(row.running_balance)}</TableCell>
-                            </TableRow>
-                          ))}
+                          {(financialEntriesData || []).map((row) => {
+                            const isExpanded = expandedFinancialRows.has(row.expense_id);
+                            return (
+                              <React.Fragment key={row.expense_id}>
+                                <TableRow
+                                  className={cn(
+                                    'cursor-pointer hover:bg-muted/50',
+                                    isExpanded && 'border-b-0'
+                                  )}
+                                  onClick={() => toggleFinancialRowExpansion(row.expense_id)}
+                                >
+                                  <TableCell className="w-10">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleFinancialRowExpansion(row.expense_id);
+                                      }}
+                                    >
+                                      {isExpanded ? (
+                                        <ChevronDown className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronRight className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </TableCell>
+                                  <TableCell>{formatDate(row.date)}</TableCell>
+                                  <TableCell>{row.property_name}</TableCell>
+                                  <TableCell>
+                                    <Badge variant={row.entry_type === 'credit' ? 'default' : row.entry_type === 'debit' ? 'destructive' : 'secondary'}>
+                                      {row.entry_type.charAt(0).toUpperCase() + row.entry_type.slice(1)}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="max-w-[200px] truncate">{row.description}</TableCell>
+                                  <TableCell className={cn('text-right', row.entry_type === 'credit' ? 'text-green-600' : 'text-red-600')}>
+                                    {row.entry_type === 'credit' ? '+' : '-'}{formatCurrency(row.amount)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-medium">{formatCurrency(row.running_balance)}</TableCell>
+                                  <TableCell className="text-center">
+                                    {row.attachment_count > 0 ? (
+                                      <Badge variant="secondary" className="text-xs">
+                                        <Paperclip className="h-3 w-3 mr-1" />
+                                        {row.attachment_count}
+                                      </Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">0</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    {row.note_count > 0 ? (
+                                      <Badge variant="secondary" className="text-xs">
+                                        <MessageSquare className="h-3 w-3 mr-1" />
+                                        {row.note_count}
+                                      </Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">0</span>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                                {/* Expanded Content */}
+                                {isExpanded && (
+                                  <TableRow className="bg-slate-50 dark:bg-slate-900/50">
+                                    <TableCell colSpan={9} className="p-0">
+                                      <ExpandedEntryContent expenseId={row.expense_id} />
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
                           {(!financialEntriesData || financialEntriesData.length === 0) && (
                             <TableRow>
-                              <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                              <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                                 {t('reports.noData', 'No data available')}
                               </TableCell>
                             </TableRow>
