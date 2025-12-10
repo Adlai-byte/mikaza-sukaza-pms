@@ -74,6 +74,9 @@ const Help = lazy(() => import("./pages/Help"));
 // Automation
 const ReportSchedules = lazy(() => import("./pages/ReportSchedules"));
 
+// Security & Admin
+const PasswordVault = lazy(() => import("./pages/PasswordVault"));
+
 // Loading spinner for lazy-loaded pages
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[400px]">
@@ -224,6 +227,16 @@ const App = () => (
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
                       <UserManagement />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Password Vault - Admin Only */}
+                <Route
+                  path="/password-vault"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.PASSWORDS_VIEW}>
+                      <PasswordVault />
                     </RBACProtectedRoute>
                   }
                 />

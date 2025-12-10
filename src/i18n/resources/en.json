@@ -101,6 +101,7 @@
     "vendors": "Vendors",
     "serviceScheduling": "Service Scheduling",
     "userManagement": "User Management",
+    "passwordVault": "Password Vault",
     "employeeDocs": "Employee Docs",
     "activityLogs": "Activity Logs",
     "invoices": "Invoices",
@@ -2712,5 +2713,91 @@
     "extras": "Extras",
     "cleaning": "Cleaning",
     "revenueByChannel": "Revenue by Channel"
+  },
+  "passwordVault": {
+    "title": "Password Vault",
+    "subtitle": "Securely store and manage passwords and access codes",
+    "addPassword": "Add Password",
+    "lockVault": "Lock Vault",
+    "unlockVault": "Unlock Vault",
+    "accessLogs": "Access Logs",
+    "entries": "Password Entries",
+    "searchPlaceholder": "Search passwords...",
+    "noEntries": "No password entries found",
+    "addFirst": "Add your first password entry to get started",
+    "adjustFilters": "Try adjusting your search or filters",
+    "vaultLocked": "Vault is Locked",
+    "vaultLockedDescription": "Unlock the vault with your master password to view or manage passwords.",
+    "stats": {
+      "total": "Total Entries",
+      "propertyCodes": "Property Codes",
+      "serviceAccounts": "Service Accounts",
+      "internalSystems": "Internal Systems"
+    },
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "category": "Category",
+      "property": "Property",
+      "lastUpdated": "Last Updated"
+    },
+    "fields": {
+      "entryType": "Entry Type",
+      "property": "Property",
+      "propertyDescription": "Associate this password with a specific property.",
+      "category": "Category",
+      "name": "Name / Label",
+      "nameDescription": "A descriptive name to identify this password.",
+      "username": "Username / Email",
+      "password": "Password / Code",
+      "url": "Website URL",
+      "notes": "Notes"
+    },
+    "dialog": {
+      "addTitle": "Add Password Entry",
+      "addDescription": "Add a new password entry to the secure vault.",
+      "editTitle": "Edit Password Entry",
+      "editDescription": "Update the password entry details.",
+      "addButton": "Add Password",
+      "updateButton": "Update Password"
+    },
+    "view": {
+      "decrypting": "Decrypting...",
+      "copiedToClipboard": "Copied to clipboard",
+      "copyFailed": "Failed to copy to clipboard",
+      "created": "Created",
+      "lastRotated": "Last rotated",
+      "createdBy": "Created by"
+    },
+    "delete": {
+      "title": "Delete Password Entry",
+      "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+    },
+    "masterPassword": {
+      "setupTitle": "Set Up Master Password",
+      "setupDescription": "Create a strong master password to encrypt your password vault. This password will be required to view or manage any stored passwords.",
+      "unlockTitle": "Unlock Password Vault",
+      "unlockDescription": "Enter your master password to access the password vault.",
+      "password": "Master Password",
+      "confirmPassword": "Confirm Password",
+      "requirements": "Must be at least 8 characters with uppercase, lowercase, number, and special character.",
+      "warning": "Important: Your master password cannot be recovered if forgotten. Make sure to remember it or store it securely.",
+      "setupButton": "Set Up Vault",
+      "unlockButton": "Unlock"
+    },
+    "logs": {
+      "title": "Access Logs",
+      "descriptionEntry": "Access history for \"{{name}}\"",
+      "descriptionAll": "Complete audit trail of password vault access",
+      "noLogs": "No access logs found",
+      "action": "Action",
+      "user": "User",
+      "entry": "Entry",
+      "timestamp": "Timestamp",
+      "viewed": "Viewed",
+      "created": "Created",
+      "updated": "Updated",
+      "deleted": "Deleted"
+    }
   }
 }

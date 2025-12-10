@@ -482,8 +482,17 @@ self.addEventListener('message', (event) => {
 // Helper functions
 async function cacheUrls(urls) {
   const cache = await caches.open(DYNAMIC_CACHE);
-  await cache.addAll(urls);
-  console.log('📦 Cached URLs:', urls.length);
+  // Cache URLs individually to avoid failure if any single URL fails
+  const results = await Promise.allSettled(
+    urls.map(url =>
+      cache.add(url).catch(err => {
+        console.warn(`Failed to cache ${url}:`, err.message);
+        return null;
+      })
+    )
+  );
+  const successCount = results.filter(r => r.status === 'fulfilled' && r.value !== null).length;
+  console.log(`📦 Cached ${successCount}/${urls.length} URLs`);
 }
 
 async function clearAllCaches() {

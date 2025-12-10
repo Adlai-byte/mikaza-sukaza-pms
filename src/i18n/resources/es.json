@@ -68,6 +68,7 @@
     "vendors": "Proveedores",
     "serviceScheduling": "Programación de Servicios",
     "userManagement": "Gestión de Usuarios",
+    "passwordVault": "Bóveda de Contraseñas",
     "employeeDocs": "Documentos de Empleados",
     "activityLogs": "Registro de Actividades",
     "invoices": "Facturas",
@@ -2485,5 +2486,91 @@
     "extras": "Extras",
     "cleaning": "Limpieza",
     "revenueByChannel": "Ingresos por Canal"
+  },
+  "passwordVault": {
+    "title": "Bóveda de Contraseñas",
+    "subtitle": "Almacene y administre contraseñas y códigos de acceso de forma segura",
+    "addPassword": "Agregar Contraseña",
+    "lockVault": "Bloquear Bóveda",
+    "unlockVault": "Desbloquear Bóveda",
+    "accessLogs": "Registros de Acceso",
+    "entries": "Entradas de Contraseña",
+    "searchPlaceholder": "Buscar contraseñas...",
+    "noEntries": "No se encontraron entradas de contraseña",
+    "addFirst": "Agregue su primera entrada de contraseña para comenzar",
+    "adjustFilters": "Intente ajustar su búsqueda o filtros",
+    "vaultLocked": "Bóveda Bloqueada",
+    "vaultLockedDescription": "Desbloquee la bóveda con su contraseña maestra para ver o administrar contraseñas.",
+    "stats": {
+      "total": "Total de Entradas",
+      "propertyCodes": "Códigos de Propiedad",
+      "serviceAccounts": "Cuentas de Servicio",
+      "internalSystems": "Sistemas Internos"
+    },
+    "table": {
+      "name": "Nombre",
+      "type": "Tipo",
+      "category": "Categoría",
+      "property": "Propiedad",
+      "lastUpdated": "Última Actualización"
+    },
+    "fields": {
+      "entryType": "Tipo de Entrada",
+      "property": "Propiedad",
+      "propertyDescription": "Asocie esta contraseña con una propiedad específica.",
+      "category": "Categoría",
+      "name": "Nombre / Etiqueta",
+      "nameDescription": "Un nombre descriptivo para identificar esta contraseña.",
+      "username": "Usuario / Correo",
+      "password": "Contraseña / Código",
+      "url": "URL del Sitio",
+      "notes": "Notas"
+    },
+    "dialog": {
+      "addTitle": "Agregar Entrada de Contraseña",
+      "addDescription": "Agregue una nueva entrada de contraseña a la bóveda segura.",
+      "editTitle": "Editar Entrada de Contraseña",
+      "editDescription": "Actualice los detalles de la entrada de contraseña.",
+      "addButton": "Agregar Contraseña",
+      "updateButton": "Actualizar Contraseña"
+    },
+    "view": {
+      "decrypting": "Descifrando...",
+      "copiedToClipboard": "Copiado al portapapeles",
+      "copyFailed": "Error al copiar al portapapeles",
+      "created": "Creado",
+      "lastRotated": "Última rotación",
+      "createdBy": "Creado por"
+    },
+    "delete": {
+      "title": "Eliminar Entrada de Contraseña",
+      "description": "¿Estás seguro de que deseas eliminar \"{{name}}\"? Esta acción no se puede deshacer."
+    },
+    "masterPassword": {
+      "setupTitle": "Configurar Contraseña Maestra",
+      "setupDescription": "Cree una contraseña maestra segura para cifrar su bóveda de contraseñas. Esta contraseña será necesaria para ver o administrar cualquier contraseña almacenada.",
+      "unlockTitle": "Desbloquear Bóveda de Contraseñas",
+      "unlockDescription": "Ingrese su contraseña maestra para acceder a la bóveda de contraseñas.",
+      "password": "Contraseña Maestra",
+      "confirmPassword": "Confirmar Contraseña",
+      "requirements": "Debe tener al menos 8 caracteres con mayúsculas, minúsculas, número y carácter especial.",
+      "warning": "Importante: Su contraseña maestra no se puede recuperar si la olvida. Asegúrese de recordarla o almacenarla de forma segura.",
+      "setupButton": "Configurar Bóveda",
+      "unlockButton": "Desbloquear"
+    },
+    "logs": {
+      "title": "Registros de Acceso",
+      "descriptionEntry": "Historial de acceso para \"{{name}}\"",
+      "descriptionAll": "Historial completo de acceso a la bóveda de contraseñas",
+      "noLogs": "No se encontraron registros de acceso",
+      "action": "Acción",
+      "user": "Usuario",
+      "entry": "Entrada",
+      "timestamp": "Fecha/Hora",
+      "viewed": "Visto",
+      "created": "Creado",
+      "updated": "Actualizado",
+      "deleted": "Eliminado"
+    }
   }
 }

@@ -85,6 +85,7 @@ const mainMenuItems = [
 
   // Admin & System (Low Frequency)
   { titleKey: "sidebar.userManagement", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
+  { titleKey: "sidebar.passwordVault", url: "/password-vault", icon: KeyRound, permission: PERMISSIONS.PASSWORDS_VIEW },
   { titleKey: "sidebar.activityLogs", url: "/activity-logs", icon: Activity, permission: PERMISSIONS.SYSTEM_AUDIT },
 ];
 

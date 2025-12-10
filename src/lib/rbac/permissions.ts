@@ -150,6 +150,10 @@ export const PERMISSIONS = {
   SYSTEM_SETTINGS: 'system.settings',
   SYSTEM_LOGS: 'system.logs',
   SYSTEM_AUDIT: 'system.audit',
+
+  // ========== PASSWORD VAULT ==========
+  PASSWORDS_VIEW: 'passwords.view',
+  PASSWORDS_MANAGE: 'passwords.manage',
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -437,4 +441,5 @@ export const PERMISSION_CATEGORIES = {
   REPORTS: 'Reports',
   AUTOMATION: 'Automation',
   SYSTEM: 'System Administration',
+  PASSWORDS: 'Password Vault',
 } as const;

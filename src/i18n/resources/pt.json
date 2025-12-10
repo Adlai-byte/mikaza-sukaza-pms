@@ -68,6 +68,7 @@
     "vendors": "Fornecedores",
     "serviceScheduling": "Agendamento de Serviços",
     "userManagement": "Gestão de Usuários",
+    "passwordVault": "Cofre de Senhas",
     "employeeDocs": "Documentos de Funcionários",
     "activityLogs": "Registro de Atividades",
     "invoices": "Faturas",
@@ -2485,5 +2486,91 @@
     "extras": "Extras",
     "cleaning": "Limpeza",
     "revenueByChannel": "Receita por Canal"
+  },
+  "passwordVault": {
+    "title": "Cofre de Senhas",
+    "subtitle": "Armazene e gerencie senhas e códigos de acesso com segurança",
+    "addPassword": "Adicionar Senha",
+    "lockVault": "Bloquear Cofre",
+    "unlockVault": "Desbloquear Cofre",
+    "accessLogs": "Logs de Acesso",
+    "entries": "Entradas de Senha",
+    "searchPlaceholder": "Buscar senhas...",
+    "noEntries": "Nenhuma entrada de senha encontrada",
+    "addFirst": "Adicione sua primeira entrada de senha para começar",
+    "adjustFilters": "Tente ajustar sua pesquisa ou filtros",
+    "vaultLocked": "Cofre Bloqueado",
+    "vaultLockedDescription": "Desbloqueie o cofre com sua senha mestre para visualizar ou gerenciar senhas.",
+    "stats": {
+      "total": "Total de Entradas",
+      "propertyCodes": "Códigos de Propriedade",
+      "serviceAccounts": "Contas de Serviço",
+      "internalSystems": "Sistemas Internos"
+    },
+    "table": {
+      "name": "Nome",
+      "type": "Tipo",
+      "category": "Categoria",
+      "property": "Propriedade",
+      "lastUpdated": "Última Atualização"
+    },
+    "fields": {
+      "entryType": "Tipo de Entrada",
+      "property": "Propriedade",
+      "propertyDescription": "Associe esta senha a uma propriedade específica.",
+      "category": "Categoria",
+      "name": "Nome / Rótulo",
+      "nameDescription": "Um nome descritivo para identificar esta senha.",
+      "username": "Usuário / E-mail",
+      "password": "Senha / Código",
+      "url": "URL do Site",
+      "notes": "Notas"
+    },
+    "dialog": {
+      "addTitle": "Adicionar Entrada de Senha",
+      "addDescription": "Adicione uma nova entrada de senha ao cofre seguro.",
+      "editTitle": "Editar Entrada de Senha",
+      "editDescription": "Atualize os detalhes da entrada de senha.",
+      "addButton": "Adicionar Senha",
+      "updateButton": "Atualizar Senha"
+    },
+    "view": {
+      "decrypting": "Descriptografando...",
+      "copiedToClipboard": "Copiado para a área de transferência",
+      "copyFailed": "Falha ao copiar para a área de transferência",
+      "created": "Criado",
+      "lastRotated": "Última rotação",
+      "createdBy": "Criado por"
+    },
+    "delete": {
+      "title": "Excluir Entrada de Senha",
+      "description": "Tem certeza de que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita."
+    },
+    "masterPassword": {
+      "setupTitle": "Configurar Senha Mestre",
+      "setupDescription": "Crie uma senha mestre forte para criptografar seu cofre de senhas. Esta senha será necessária para visualizar ou gerenciar qualquer senha armazenada.",
+      "unlockTitle": "Desbloquear Cofre de Senhas",
+      "unlockDescription": "Digite sua senha mestre para acessar o cofre de senhas.",
+      "password": "Senha Mestre",
+      "confirmPassword": "Confirmar Senha",
+      "requirements": "Deve ter pelo menos 8 caracteres com maiúsculas, minúsculas, número e caractere especial.",
+      "warning": "Importante: Sua senha mestre não pode ser recuperada se esquecida. Certifique-se de lembrar ou armazená-la com segurança.",
+      "setupButton": "Configurar Cofre",
+      "unlockButton": "Desbloquear"
+    },
+    "logs": {
+      "title": "Logs de Acesso",
+      "descriptionEntry": "Histórico de acesso para \"{{name}}\"",
+      "descriptionAll": "Trilha de auditoria completa do acesso ao cofre de senhas",
+      "noLogs": "Nenhum log de acesso encontrado",
+      "action": "Ação",
+      "user": "Usuário",
+      "entry": "Entrada",
+      "timestamp": "Data/Hora",
+      "viewed": "Visualizado",
+      "created": "Criado",
+      "updated": "Atualizado",
+      "deleted": "Excluído"
+    }
   }
 }

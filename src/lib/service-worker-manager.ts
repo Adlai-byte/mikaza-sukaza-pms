@@ -279,15 +279,18 @@ export class ServiceWorkerManager {
 
   // Preload critical resources
   async preloadCriticalResources(): Promise<void> {
+    // Note: Vite builds to /assets/ not /static/
+    // Only cache the root HTML - other assets will be cached dynamically
     const criticalUrls = [
-      '/static/js/bundle.js',
-      '/static/css/main.css',
-      '/api/properties',
-      '/api/users',
+      '/',
     ];
 
-    await this.cacheUrls(criticalUrls);
-    console.log('📦 Critical resources preloaded');
+    try {
+      await this.cacheUrls(criticalUrls);
+      console.log('📦 Critical resources preloaded');
+    } catch (error) {
+      console.warn('⚠️ Failed to preload some resources:', error);
+    }
   }
 
   // Background sync
