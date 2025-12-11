@@ -124,7 +124,7 @@ export function useUsersOptimized() {
         throw new Error('Failed to create authentication account');
       }
 
-      // Step 2: Update the user record created by the trigger with additional fields
+      // Step 2: Prepare update data with additional fields from the form
       // The trigger creates a basic record, we update it with all the form data
       const { confirmPassword, ...updateData } = {
         ...userData,
@@ -147,18 +147,50 @@ export function useUsersOptimized() {
       // Remove email from updateData since it's already set by the trigger
       delete (updateData as any).email;
 
-      // Step 3: Update the user record with full data
-      const { data, error } = await supabase
+      // Step 3: Wait briefly for the trigger to complete, then update or insert
+      // The trigger runs synchronously but we add a small delay for safety
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // First, check if the user record exists (created by trigger)
+      const { data: existingUser } = await supabase
         .from('users')
-        .update(updateData)
+        .select('user_id')
         .eq('user_id', authData.user.id)
-        .select()
         .single();
 
+      let data;
+      let error;
+
+      if (existingUser) {
+        // User exists (trigger worked), update with full data
+        const result = await supabase
+          .from('users')
+          .update(updateData)
+          .eq('user_id', authData.user.id)
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+      } else {
+        // User doesn't exist (trigger may have failed), insert directly
+        console.log('User record not found, inserting directly...');
+        const insertData = {
+          ...updateData,
+          user_id: authData.user.id,
+          email: userData.email,
+        };
+        const result = await supabase
+          .from('users')
+          .insert([insertData])
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+      }
+
       if (error) {
-        console.error('Failed to update user record:', error);
-        // Don't throw - the user was created, just not fully updated
-        // They can be edited later
+        console.error('Failed to save user record:', error);
+        // Don't throw - the auth user was created, they can be edited later
         toast({
           title: "User Created with Warning",
           description: `User account created but some details couldn't be saved. Please edit the user to add missing information.`,
