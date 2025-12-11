@@ -102,6 +102,7 @@ export function useUsersOptimized() {
       }
 
       // Step 1: Create Supabase Auth user first
+      // The database trigger (handle_new_user) will automatically create a record in public.users
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
@@ -123,10 +124,10 @@ export function useUsersOptimized() {
         throw new Error('Failed to create authentication account');
       }
 
-      // Step 2: Create insertion data with Supabase Auth user ID
-      const { confirmPassword, ...insertData } = {
+      // Step 2: Update the user record created by the trigger with additional fields
+      // The trigger creates a basic record, we update it with all the form data
+      const { confirmPassword, ...updateData } = {
         ...userData,
-        user_id: authData.user.id,
         password: userData.password
       };
 
@@ -137,21 +138,42 @@ export function useUsersOptimized() {
       ];
 
       optionalFields.forEach(field => {
-        if (insertData[field as keyof typeof insertData] === "" ||
-            insertData[field as keyof typeof insertData] === undefined) {
-          delete insertData[field as keyof typeof insertData];
+        if (updateData[field as keyof typeof updateData] === "" ||
+            updateData[field as keyof typeof updateData] === undefined) {
+          delete updateData[field as keyof typeof updateData];
         }
       });
 
-      // Step 3: Insert user into users table
+      // Remove email from updateData since it's already set by the trigger
+      delete (updateData as any).email;
+
+      // Step 3: Update the user record with full data
       const { data, error } = await supabase
         .from('users')
-        .insert([insertData])
+        .update(updateData)
+        .eq('user_id', authData.user.id)
         .select()
         .single();
 
       if (error) {
-        throw new Error(`User account created but database entry failed: ${error.message}. Please contact administrator.`);
+        console.error('Failed to update user record:', error);
+        // Don't throw - the user was created, just not fully updated
+        // They can be edited later
+        toast({
+          title: "User Created with Warning",
+          description: `User account created but some details couldn't be saved. Please edit the user to add missing information.`,
+          variant: "default",
+        });
+
+        // Return the basic user data
+        return {
+          user_id: authData.user.id,
+          email: userData.email,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          user_type: userData.user_type,
+          is_active: true,
+        };
       }
 
       toast({
