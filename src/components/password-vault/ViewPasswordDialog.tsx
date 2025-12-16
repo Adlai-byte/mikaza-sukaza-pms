@@ -117,12 +117,12 @@ export function ViewPasswordDialog({
             {getEntryTypeIcon(entry.entry_type)}
             {entry.name}
           </DialogTitle>
-          <DialogDescription className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-1">
             <Badge variant={getEntryTypeBadgeVariant(entry.entry_type)}>
               {ENTRY_TYPE_LABELS[entry.entry_type]}
             </Badge>
             <Badge variant="outline">{entry.category}</Badge>
-          </DialogDescription>
+          </div>
         </DialogHeader>
 
         {isDecrypting ? (

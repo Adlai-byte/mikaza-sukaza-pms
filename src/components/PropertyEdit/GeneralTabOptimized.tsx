@@ -29,6 +29,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { propertyKeys, usePropertyDetail } from '@/hooks/usePropertiesOptimized';
+import { useUsers } from '@/hooks/useUsers';
 import {
   Home,
   MapPin,
@@ -163,6 +164,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { users } = useUsers();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showLocationMap, setShowLocationMap] = useState(false);
@@ -173,6 +175,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     property_name: '',
     license_number: '',
     folio: '',
+    owner_id: null as string | null,
   });
   const [showPasswords, setShowPasswords] = useState({
     wifi_password: false,
@@ -680,7 +683,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
   // Unit Handlers
   const handleAddUnit = () => {
     setEditingUnit(null);
-    setUnitFormData({ property_name: '', license_number: '', folio: '' });
+    setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null });
     setShowUnitDialog(true);
   };
 
@@ -690,6 +693,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       property_name: unit.property_name || '',
       license_number: unit.license_number || '',
       folio: unit.folio || '',
+      owner_id: unit.owner_id || null,
     });
     setShowUnitDialog(true);
   };
@@ -1498,7 +1502,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
               {property.units.map((unit: any, index: number) => (
                 <div key={unit.unit_id || index} className="p-4 border rounded-lg bg-gradient-to-r from-gray-50 to-white hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
                       <div>
                         <Label className="text-xs text-gray-500 mb-1">Unit Name</Label>
                         <p className="font-medium text-gray-900">{unit.property_name || 'N/A'}</p>
@@ -1510,6 +1514,15 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
                       <div>
                         <Label className="text-xs text-gray-500 mb-1">Folio</Label>
                         <p className="font-medium text-gray-900">{unit.folio || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500 mb-1">Owner</Label>
+                        <p className="font-medium text-gray-900">
+                          {unit.owner_id
+                            ? users.find(u => u.user_id === unit.owner_id)?.first_name + ' ' + users.find(u => u.user_id === unit.owner_id)?.last_name || 'Unknown'
+                            : <span className="text-gray-500 italic">(Property Owner)</span>
+                          }
+                        </p>
                       </div>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
@@ -1643,6 +1656,28 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
                 placeholder="e.g., FOL-001"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="unit_owner">Unit Owner (Optional)</Label>
+              <Select
+                value={unitFormData.owner_id || "inherit"}
+                onValueChange={(value) => setUnitFormData({ ...unitFormData, owner_id: value === "inherit" ? null : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select unit owner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inherit">(Property Owner - Default)</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.user_id} value={user.user_id!}>
+                      {user.first_name} {user.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                If not selected, the unit will inherit ownership from the property owner.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -1650,7 +1685,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
               onClick={() => {
                 setShowUnitDialog(false);
                 setEditingUnit(null);
-                setUnitFormData({ property_name: '', license_number: '', folio: '' });
+                setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null });
               }}
             >
               Cancel

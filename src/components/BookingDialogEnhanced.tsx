@@ -40,6 +40,7 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
+  Home,
 } from 'lucide-react';
 import { Booking, BookingInsert, Guest } from '@/lib/schemas';
 import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay, addMonths } from 'date-fns';
@@ -79,6 +80,7 @@ export function BookingDialogEnhanced({
 
   const [formData, setFormData] = useState<BookingInsert>({
     property_id: propertyId || booking?.property_id || '',
+    unit_id: booking?.unit_id || null,
     guest_id: booking?.guest_id || null,
     guest_name: booking?.guest_name || '',
     guest_email: booking?.guest_email || '',
@@ -154,11 +156,12 @@ export function BookingDialogEnhanced({
     formData.property_id || undefined
   );
 
-  // Check for booking conflicts
+  // Check for booking conflicts (unit-aware)
   const { conflictStatus, isChecking: isCheckingConflicts } = useBookingConflicts(
     formData.property_id,
     formData.check_in_date,
     formData.check_out_date,
+    formData.unit_id,  // Unit-aware conflict checking
     booking?.booking_id // Exclude current booking when editing
   );
 
@@ -176,6 +179,7 @@ export function BookingDialogEnhanced({
     if (open) {
       setFormData({
         property_id: propertyId || booking?.property_id || '',
+        unit_id: booking?.unit_id || null,
         guest_id: booking?.guest_id || null,
         guest_name: booking?.guest_name || '',
         guest_email: booking?.guest_email || '',
@@ -316,7 +320,12 @@ export function BookingDialogEnhanced({
   };
 
   const handleChange = (field: keyof BookingInsert, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Reset unit_id when property changes (new property may have different units)
+    if (field === 'property_id') {
+      setFormData(prev => ({ ...prev, [field]: value, unit_id: null }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
     // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -398,6 +407,46 @@ export function BookingDialogEnhanced({
                     </CardContent>
                   </Card>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Unit Selection - Only show if property has units */}
+          {formData.property_id && selectedProperty?.units && selectedProperty.units.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Home className="h-5 w-5 text-primary" />
+                Select Unit
+              </h3>
+              <div className="space-y-2">
+                <Label htmlFor="unit_id">
+                  Unit
+                </Label>
+                <Select
+                  value={formData.unit_id || "entire_property"}
+                  onValueChange={(value) => handleChange('unit_id', value === "entire_property" ? null : value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a unit or entire property..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="entire_property">
+                      Entire Property (All {selectedProperty.units.length} Units)
+                    </SelectItem>
+                    {selectedProperty.units.map((unit: any) => (
+                      <SelectItem key={unit.unit_id} value={unit.unit_id}>
+                        {unit.property_name || `Unit ${unit.unit_id?.slice(0, 8)}`}
+                        {unit.license_number && ` - ${unit.license_number}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {formData.unit_id
+                    ? "Booking this specific unit only"
+                    : "Booking the entire property will block all units"
+                  }
+                </p>
               </div>
             </div>
           )}

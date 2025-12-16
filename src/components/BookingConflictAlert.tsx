@@ -1,7 +1,7 @@
 import React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, XCircle, Calendar, User } from 'lucide-react';
+import { AlertTriangle, XCircle, Calendar, User, Home } from 'lucide-react';
 import { BookingConflict } from '@/hooks/useBookingConflicts';
 import { Badge } from '@/components/ui/badge';
 
@@ -64,7 +64,11 @@ export function BookingConflictAlert({
 
         <div className="flex-1">
           <AlertTitle className="text-base font-semibold mb-2">
-            {isHardConflict ? '❌ Property Unavailable' : '⚠️ Potential Booking Conflict'}
+            {isHardConflict
+              ? conflict.unitContext?.isUnitBooking
+                ? '❌ Unit Unavailable'
+                : '❌ Property Unavailable'
+              : '⚠️ Potential Booking Conflict'}
           </AlertTitle>
 
           <AlertDescription className="space-y-3">
@@ -72,6 +76,16 @@ export function BookingConflictAlert({
             <p className={isHardConflict ? 'text-red-800' : 'text-yellow-800'}>
               {conflict.message}
             </p>
+
+            {/* Unit context info */}
+            {conflict.unitContext && conflict.unitContext.conflictingUnitNames && conflict.unitContext.conflictingUnitNames.length > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <Home className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-700">
+                  Conflicting: {conflict.unitContext.conflictingUnitNames.join(', ')}
+                </span>
+              </div>
+            )}
 
             {/* Existing booking details */}
             {conflictBooking && (
@@ -91,6 +105,18 @@ export function BookingConflictAlert({
                       {(conflictBooking.booking_status || 'unknown').replace('_', ' ').toUpperCase()}
                     </Badge>
                   </div>
+
+                  {/* Unit info for the conflicting booking */}
+                  {(conflictBooking as any).unit_id !== undefined && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Home className="h-4 w-4" />
+                      <span>
+                        {(conflictBooking as any).unit_id === null
+                          ? 'Entire Property'
+                          : (conflictBooking as any).unit?.property_name || 'Specific Unit'}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Dates */}
                   <div className="flex items-center gap-2 text-gray-600">

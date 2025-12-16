@@ -42,8 +42,10 @@ import {
   RefreshCw,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   MessageSquare,
   Paperclip,
+  Layers,
 } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
@@ -102,6 +104,7 @@ export default function Reports() {
 
   // New filter states
   const [selectedClient, setSelectedClient] = useState<string>('all');
+  const [selectedUnit, setSelectedUnit] = useState<string>('all');
   const [includeInactiveClients, setIncludeInactiveClients] = useState(false);
   const [showDebit, setShowDebit] = useState(true);
   const [showCredit, setShowCredit] = useState(true);
@@ -112,6 +115,9 @@ export default function Reports() {
 
   // Expandable rows state for financial entries
   const [expandedFinancialRows, setExpandedFinancialRows] = useState<Set<string>>(new Set());
+
+  // Expandable rows state for properties (to show units)
+  const [expandedPropertyRows, setExpandedPropertyRows] = useState<Set<string>>(new Set());
 
   // Toggle financial entry row expansion
   const toggleFinancialRowExpansion = useCallback((expenseId: string) => {
@@ -126,6 +132,19 @@ export default function Reports() {
     });
   }, []);
 
+  // Toggle property row expansion (to show units)
+  const togglePropertyRowExpansion = useCallback((propertyId: string) => {
+    setExpandedPropertyRows(prev => {
+      const next = new Set(prev);
+      if (next.has(propertyId)) {
+        next.delete(propertyId);
+      } else {
+        next.add(propertyId);
+      }
+      return next;
+    });
+  }, []);
+
   // Fetch base data
   const { properties, loading: loadingProperties } = usePropertiesOptimized();
   const { bookings, loading: loadingBookings } = useBookings();
@@ -134,6 +153,19 @@ export default function Reports() {
   const { data: clientsList, isLoading: loadingClients } = useClientsList();
 
   const isLoading = loadingProperties || loadingBookings || loadingExpenses || loadingInvoices || loadingClients;
+
+  // Get units for the selected property
+  const selectedPropertyUnits = useMemo(() => {
+    if (selectedProperty === 'all') return [];
+    const property = (properties || []).find(p => p.property_id === selectedProperty);
+    return property?.units || [];
+  }, [properties, selectedProperty]);
+
+  // Reset unit selection when property changes
+  const handlePropertyChange = useCallback((propertyId: string) => {
+    setSelectedProperty(propertyId);
+    setSelectedUnit('all'); // Reset unit selection when property changes
+  }, []);
 
   // Calculate date range based on preset
   const dateRange = useMemo(() => {
@@ -202,6 +234,7 @@ export default function Reports() {
     clientId: selectedClient,
     includeInactive: includeInactiveClients,
     propertyId: selectedProperty,
+    unitId: selectedUnit,
     dateFrom: dateFromStr,
     dateTo: dateToStr,
     withFinancial,
@@ -213,6 +246,7 @@ export default function Reports() {
     dateFrom: dateFromStr,
     dateTo: dateToStr,
     propertyId: selectedProperty,
+    unitId: selectedUnit,
     enabled: reportType === 'rentalRevenue',
   });
 
@@ -386,6 +420,15 @@ export default function Reports() {
     if (selectedProperty !== 'all') {
       const prop = (properties || []).find((p) => p.property_id === selectedProperty);
       filters['Property'] = prop?.property_name || selectedProperty;
+    }
+
+    if (selectedUnit !== 'all' && selectedPropertyUnits.length > 0) {
+      if (selectedUnit === 'entire') {
+        filters['Unit'] = 'Entire Property Only';
+      } else {
+        const unit = selectedPropertyUnits.find((u: any) => u.unit_id === selectedUnit);
+        filters['Unit'] = unit?.property_name || selectedUnit;
+      }
     }
 
     if (selectedClient !== 'all') {
@@ -696,7 +739,7 @@ export default function Reports() {
             {/* Property Filter */}
             <div className="space-y-2">
               <Label>{t('reports.property', 'Property')}</Label>
-              <Select value={selectedProperty} onValueChange={setSelectedProperty}>
+              <Select value={selectedProperty} onValueChange={handlePropertyChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -705,12 +748,38 @@ export default function Reports() {
                   {(properties || []).map((property) => (
                     <SelectItem key={property.property_id} value={property.property_id}>
                       {property.property_name}
+                      {property.units && property.units.length > 0 && (
+                        <span className="text-muted-foreground ml-1">({property.units.length} units)</span>
+                      )}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
+
+          {/* Unit Filter - only show when a property with units is selected */}
+          {selectedProperty !== 'all' && selectedPropertyUnits.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+              <div className="space-y-2">
+                <Label>{t('reports.unit', 'Unit')}</Label>
+                <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('reports.allUnits', 'All Units')}</SelectItem>
+                    <SelectItem value="entire">{t('reports.entireProperty', 'Entire Property Only')}</SelectItem>
+                    {selectedPropertyUnits.map((unit: any) => (
+                      <SelectItem key={unit.unit_id} value={unit.unit_id}>
+                        {unit.property_name || `Unit ${unit.unit_id.slice(0, 8)}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           {/* Custom Date Range */}
           {datePreset === 'custom' && (
@@ -932,27 +1001,104 @@ export default function Reports() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-10"></TableHead>
                         <TableHead>{t('reports.propertyName', 'Name')}</TableHead>
                         <TableHead>{t('reports.type', 'Type')}</TableHead>
+                        <TableHead>{t('reports.units', 'Units')}</TableHead>
                         <TableHead>{t('reports.bedrooms', 'Beds')}</TableHead>
                         <TableHead>{t('reports.bathrooms', 'Baths')}</TableHead>
                         <TableHead>{t('reports.status', 'Status')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {propertiesReport.properties.map((property) => (
-                        <TableRow key={property.property_id}>
-                          <TableCell className="font-medium">{property.property_name}</TableCell>
-                          <TableCell>{property.property_type}</TableCell>
-                          <TableCell>{property.num_bedrooms}</TableCell>
-                          <TableCell>{property.num_bathrooms}</TableCell>
-                          <TableCell>
-                            <Badge variant={property.is_active ? 'default' : 'secondary'}>
-                              {property.is_active ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {propertiesReport.properties.map((property) => {
+                        const hasUnits = property.units && property.units.length > 0;
+                        const isExpanded = expandedPropertyRows.has(property.property_id!);
+                        return (
+                          <React.Fragment key={property.property_id}>
+                            <TableRow className={`${hasUnits ? 'cursor-pointer hover:bg-muted/50' : ''} ${isExpanded ? 'bg-purple-50' : ''}`}>
+                              <TableCell>
+                                {hasUnits && (
+                                  <button
+                                    onClick={() => togglePropertyRowExpansion(property.property_id!)}
+                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 transition-colors"
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronUp className="h-4 w-4 text-purple-600" />
+                                    ) : (
+                                      <ChevronDown className="h-4 w-4 text-gray-600" />
+                                    )}
+                                  </button>
+                                )}
+                              </TableCell>
+                              <TableCell className="font-medium">{property.property_name}</TableCell>
+                              <TableCell>{property.property_type}</TableCell>
+                              <TableCell>
+                                {hasUnits ? (
+                                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                    <Layers className="h-3 w-3 mr-1" />
+                                    {property.units!.length} {property.units!.length === 1 ? 'unit' : 'units'}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell>{property.num_bedrooms}</TableCell>
+                              <TableCell>{property.num_bathrooms}</TableCell>
+                              <TableCell>
+                                <Badge variant={property.is_active ? 'default' : 'secondary'}>
+                                  {property.is_active ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                            {/* Unit rows */}
+                            {isExpanded && hasUnits && property.units!.map((unit: any, index: number) => (
+                              <TableRow
+                                key={unit.unit_id || index}
+                                className={`bg-gradient-to-r from-purple-50 to-white ${index === property.units!.length - 1 ? 'border-b-2 border-b-purple-200' : ''}`}
+                              >
+                                <TableCell>
+                                  <div className="pl-4">
+                                    <div className="w-6 h-6 rounded bg-purple-100 flex items-center justify-center">
+                                      <Layers className="h-3 w-3 text-purple-600" />
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-medium text-purple-800">
+                                  <div>{unit.property_name || `Unit ${index + 1}`}</div>
+                                  {(unit.num_bedrooms !== null || unit.num_bathrooms !== null) && (
+                                    <div className="text-xs text-purple-500 font-normal">
+                                      {unit.num_bedrooms !== null && `${unit.num_bedrooms} bed`}
+                                      {unit.num_bedrooms !== null && unit.num_bathrooms !== null && ' • '}
+                                      {unit.num_bathrooms !== null && `${unit.num_bathrooms} bath`}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-purple-600 text-sm">
+                                  {unit.license_number && `License: ${unit.license_number}`}
+                                </TableCell>
+                                <TableCell className="text-purple-600 text-sm">
+                                  {unit.folio && `Folio: ${unit.folio}`}
+                                </TableCell>
+                                <TableCell colSpan={2}>
+                                  {unit.owner ? (
+                                    <span className="text-sm text-purple-700">
+                                      {unit.owner.first_name} {unit.owner.last_name}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground italic">Inherits owner</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-600 border-purple-200">
+                                    Unit
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </React.Fragment>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -1447,7 +1593,7 @@ export default function Reports() {
                                 {isExpanded && (
                                   <TableRow className="bg-slate-50 dark:bg-slate-900/50">
                                     <TableCell colSpan={9} className="p-0">
-                                      <ExpandedEntryContent expenseId={row.expense_id} />
+                                      <ExpandedEntryContent expenseId={row.expense_id} readOnly />
                                     </TableCell>
                                   </TableRow>
                                 )}
@@ -1758,6 +1904,7 @@ export default function Reports() {
                             <TableHead>{t('reports.bookingId', 'ID')}</TableHead>
                             <TableHead>{t('reports.guest', 'Guest')}</TableHead>
                             <TableHead>{t('reports.property', 'Property')}</TableHead>
+                            <TableHead>{t('reports.unit', 'Unit')}</TableHead>
                             <TableHead>{t('reports.checkIn', 'Check In')}</TableHead>
                             <TableHead>{t('reports.checkOut', 'Check Out')}</TableHead>
                             <TableHead>{t('reports.status', 'Status')}</TableHead>
@@ -1780,6 +1927,11 @@ export default function Reports() {
                               <TableCell className="font-mono text-xs">{row.booking_id.substring(0, 8)}...</TableCell>
                               <TableCell>{row.guest_name}</TableCell>
                               <TableCell>{row.property_name}</TableCell>
+                              <TableCell>
+                                <span className={row.unit_id === null ? 'text-muted-foreground' : ''}>
+                                  {row.unit_name || 'N/A'}
+                                </span>
+                              </TableCell>
                               <TableCell>{formatDate(row.check_in_date)}</TableCell>
                               <TableCell>{formatDate(row.check_out_date)}</TableCell>
                               <TableCell>
@@ -1804,7 +1956,7 @@ export default function Reports() {
                           ))}
                           {(!bookingsEnhancedData || bookingsEnhancedData.length === 0) && (
                             <TableRow>
-                              <TableCell colSpan={withFinancial ? (showTaxDetails ? 11 : 10) : (showTaxDetails ? 8 : 7)} className="text-center text-muted-foreground py-8">
+                              <TableCell colSpan={withFinancial ? (showTaxDetails ? 12 : 11) : (showTaxDetails ? 9 : 8)} className="text-center text-muted-foreground py-8">
                                 {t('reports.noData', 'No data available')}
                               </TableCell>
                             </TableRow>
@@ -1913,6 +2065,43 @@ export default function Reports() {
                       </CardContent>
                     </Card>
 
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>{t('reports.revenueByUnit', 'Revenue by Unit')}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>{t('reports.unit', 'Unit')}</TableHead>
+                              <TableHead>{t('reports.property', 'Property')}</TableHead>
+                              <TableHead className="text-right">{t('reports.total', 'Total')}</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(rentalRevenueData?.byUnit || []).map((row) => (
+                              <TableRow key={row.unit_id || 'entire'}>
+                                <TableCell className={row.unit_id === null ? 'text-muted-foreground' : 'font-medium'}>
+                                  {row.unit_name}
+                                </TableCell>
+                                <TableCell>{row.property_name}</TableCell>
+                                <TableCell className="text-right font-medium">{formatCurrency(row.total)}</TableCell>
+                              </TableRow>
+                            ))}
+                            {(!rentalRevenueData?.byUnit || rentalRevenueData.byUnit.length === 0) && (
+                              <TableRow>
+                                <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                                  {t('reports.noData', 'No data available')}
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6">
                     <Card>
                       <CardHeader>
                         <CardTitle>{t('reports.revenueByChannel', 'Revenue by Channel')}</CardTitle>

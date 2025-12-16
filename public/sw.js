@@ -203,7 +203,12 @@ async function cacheFirst(request, cacheName, maxAge) {
     if (networkResponse.ok) {
       // Clone the response because it can only be consumed once
       const responseClone = networkResponse.clone();
-      cache.put(request, responseClone);
+      // Use try-catch for cache.put to handle network errors gracefully
+      try {
+        await cache.put(request, responseClone);
+      } catch (cacheError) {
+        console.warn('Failed to cache response:', cacheError.message);
+      }
     }
 
     return networkResponse;
@@ -231,7 +236,12 @@ async function networkFirst(request, cacheName, maxAge) {
     if (networkResponse.ok) {
       const cache = await caches.open(cacheName);
       const responseClone = networkResponse.clone();
-      cache.put(request, responseClone);
+      // Use try-catch for cache.put to handle network errors gracefully
+      try {
+        await cache.put(request, responseClone);
+      } catch (cacheError) {
+        console.warn('Failed to cache response:', cacheError.message);
+      }
     }
 
     return networkResponse;
@@ -256,9 +266,13 @@ async function staleWhileRevalidate(request, cacheName, maxAge) {
 
   // Always try to update cache in background
   const networkPromise = fetch(request)
-    .then((networkResponse) => {
+    .then(async (networkResponse) => {
       if (networkResponse.ok) {
-        cache.put(request, networkResponse.clone());
+        try {
+          await cache.put(request, networkResponse.clone());
+        } catch (cacheError) {
+          console.warn('Failed to cache response:', cacheError.message);
+        }
       }
       return networkResponse;
     })

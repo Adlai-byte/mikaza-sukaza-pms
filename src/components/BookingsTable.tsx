@@ -368,6 +368,7 @@ export function BookingsTable({
               <TableHeader>
                 <TableRow>
                   <TableHead>Guest</TableHead>
+                  <TableHead>Unit</TableHead>
                   <TableHead>Check-in</TableHead>
                   <TableHead>Check-out</TableHead>
                   <TableHead className="text-center">Nights</TableHead>
@@ -416,6 +417,19 @@ export function BookingsTable({
                                 </Badge>
                               ))}
                             </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {booking.unit_id ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {booking.unit?.property_name || 'Unit'}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+                              All Units
+                            </Badge>
                           )}
                         </div>
                       </TableCell>
@@ -622,8 +636,17 @@ export function BookingsTable({
                           </div>
                         )}
                       </div>
-                      <div className="flex-shrink-0">
+                      <div className="flex-shrink-0 flex flex-col gap-1 items-end">
                         {getStatusBadge(booking.booking_status)}
+                        {booking.unit_id ? (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            {booking.unit?.property_name || 'Unit'}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600 border-gray-200">
+                            All Units
+                          </Badge>
+                        )}
                       </div>
                     </div>
 

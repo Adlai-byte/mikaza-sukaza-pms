@@ -301,6 +301,7 @@
     "allTypes": "Todos los tipos",
     "allStatuses": "Todos los estados",
     "moreFilters": "Más Filtros",
+    "showOnlyWithBookings": "Mostrar solo propiedades con reservas",
     "hide": "Ocultar",
     "amenities": "Comodidades",
     "active": "Activo",
@@ -340,7 +341,12 @@
       "checkedIn": "Check-in Realizado",
       "completed": "Completada",
       "cancelled": "Cancelada"
-    }
+    },
+    "units": "unidades",
+    "expandUnits": "Expandir unidades",
+    "collapseUnits": "Contraer unidades",
+    "entireProperty": "Propiedad Completa",
+    "unitBooking": "Reserva de Unidad"
   },
   "properties": {
     "title": "Propiedades",
@@ -1441,6 +1447,11 @@
     "propertyNamePlaceholderUnit": "Nombre de la propiedad",
     "licenseNumberPlaceholder": "Número de licencia",
     "folioPlaceholder": "Folio",
+    "unitOwnerPlaceholder": "Propietario de la Unidad",
+    "inheritPropertyOwner": "(Propietario de la Propiedad)",
+    "unitOwner": "Propietario de la Unidad",
+    "unitOwnerOptional": "Propietario de la Unidad (Opcional)",
+    "unitOwnerInheritDescription": "Si no se selecciona, la unidad heredará la propiedad del propietario de la propiedad.",
     "communicationDetails": "Detalles de Comunicación",
     "communicationDetailsDesc": "Información de contacto y detalles de acceso a internet para esta propiedad",
     "contactInformation": "Información de Contacto",
@@ -2557,6 +2568,10 @@
       "warning": "Importante: Su contraseña maestra no se puede recuperar si la olvida. Asegúrese de recordarla o almacenarla de forma segura.",
       "setupButton": "Configurar Bóveda",
       "unlockButton": "Desbloquear"
+    },
+    "errors": {
+      "decryptFailed": "Error de Descifrado",
+      "decryptFailedDescription": "No se pudo descifrar esta entrada. Es posible que la bóveda necesite desbloquearse nuevamente."
     },
     "logs": {
       "title": "Registros de Acceso",

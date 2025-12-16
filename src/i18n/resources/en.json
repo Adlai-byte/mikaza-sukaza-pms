@@ -363,6 +363,7 @@
     "allTypes": "All types",
     "allStatuses": "All statuses",
     "moreFilters": "More Filters",
+    "showOnlyWithBookings": "Show only properties with bookings",
     "hide": "Hide",
     "amenities": "Amenities",
     "active": "Active",
@@ -402,7 +403,12 @@
       "checkedIn": "Checked In",
       "completed": "Completed",
       "cancelled": "Cancelled"
-    }
+    },
+    "units": "units",
+    "expandUnits": "Expand units",
+    "collapseUnits": "Collapse units",
+    "entireProperty": "Entire Property",
+    "unitBooking": "Unit Booking"
   },
   "properties": {
     "title": "Property Management",
@@ -1476,6 +1482,11 @@
     "propertyNamePlaceholderUnit": "Property name",
     "licenseNumberPlaceholder": "License number",
     "folioPlaceholder": "Folio",
+    "unitOwnerPlaceholder": "Unit Owner",
+    "inheritPropertyOwner": "(Property Owner)",
+    "unitOwner": "Unit Owner",
+    "unitOwnerOptional": "Unit Owner (Optional)",
+    "unitOwnerInheritDescription": "If not selected, the unit will inherit ownership from the property owner.",
     "communicationDetails": "Communication Details",
     "communicationDetailsDesc": "Contact information and internet access details for this property",
     "contactInformation": "Contact Information",
@@ -2611,6 +2622,10 @@
     "endDate": "End Date",
     "property": "Property",
     "allProperties": "All Properties",
+    "unit": "Unit",
+    "allUnits": "All Units",
+    "entireProperty": "Entire Property Only",
+    "revenueByUnit": "Revenue by Unit",
     "exportCSV": "CSV",
     "exportExcel": "Excel",
     "exportPDF": "PDF",
@@ -2784,6 +2799,10 @@
       "warning": "Important: Your master password cannot be recovered if forgotten. Make sure to remember it or store it securely.",
       "setupButton": "Set Up Vault",
       "unlockButton": "Unlock"
+    },
+    "errors": {
+      "decryptFailed": "Decryption Failed",
+      "decryptFailedDescription": "Unable to decrypt this entry. The vault may need to be re-unlocked."
     },
     "logs": {
       "title": "Access Logs",

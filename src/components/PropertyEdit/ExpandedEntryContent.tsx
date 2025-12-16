@@ -40,9 +40,10 @@ const formatFileSize = (bytes?: number) => {
 interface ExpandedEntryContentProps {
   expenseId: string;
   onClose?: () => void;
+  readOnly?: boolean;
 }
 
-export function ExpandedEntryContent({ expenseId, onClose }: ExpandedEntryContentProps) {
+export function ExpandedEntryContent({ expenseId, onClose, readOnly = false }: ExpandedEntryContentProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [newNoteText, setNewNoteText] = useState('');
@@ -130,27 +131,31 @@ export function ExpandedEntryContent({ expenseId, onClose }: ExpandedEntryConten
                 {t('financialEntries.attachments', 'Attachments')}
                 <span className="text-xs text-muted-foreground">({attachments.length})</span>
               </h4>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-              >
-                {isUploading ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                ) : (
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                )}
-                {t('financialEntries.addAttachment', 'Add File')}
-              </Button>
+              {!readOnly && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                    ) : (
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                    )}
+                    {t('financialEntries.addAttachment', 'Add File')}
+                  </Button>
+                </>
+              )}
             </div>
 
             {attachments.length === 0 ? (
@@ -190,15 +195,17 @@ export function ExpandedEntryContent({ expenseId, onClose }: ExpandedEntryConten
                             <Download className="h-3.5 w-3.5" />
                           </a>
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                          onClick={() => deleteAttachment.mutate(attachment.attachment_id!)}
-                          disabled={deleteAttachment.isPending}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {!readOnly && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            onClick={() => deleteAttachment.mutate(attachment.attachment_id!)}
+                            disabled={deleteAttachment.isPending}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );
@@ -237,15 +244,17 @@ export function ExpandedEntryContent({ expenseId, onClose }: ExpandedEntryConten
                         </div>
                         <p className="text-sm whitespace-pre-wrap">{note.note_text}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                        onClick={() => deleteNote.mutate(note.note_id!)}
-                        disabled={deleteNote.isPending}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {!readOnly && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          onClick={() => deleteNote.mutate(note.note_id!)}
+                          disabled={deleteNote.isPending}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -253,30 +262,32 @@ export function ExpandedEntryContent({ expenseId, onClose }: ExpandedEntryConten
             )}
 
             {/* Add Note Input */}
-            <div className="flex items-center gap-2 mt-2">
-              <Input
-                type="text"
-                placeholder={t('financialEntries.addNoteHint', 'Add a note...')}
-                value={newNoteText}
-                onChange={(e) => setNewNoteText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="flex-1"
-                disabled={isAddingNote}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAddNote}
-                disabled={isAddingNote || !newNoteText.trim()}
-              >
-                {isAddingNote ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                ) : (
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                )}
-                {t('common.add', 'Add')}
-              </Button>
-            </div>
+            {!readOnly && (
+              <div className="flex items-center gap-2 mt-2">
+                <Input
+                  type="text"
+                  placeholder={t('financialEntries.addNoteHint', 'Add a note...')}
+                  value={newNoteText}
+                  onChange={(e) => setNewNoteText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="flex-1"
+                  disabled={isAddingNote}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddNote}
+                  disabled={isAddingNote || !newNoteText.trim()}
+                >
+                  {isAddingNote ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                  )}
+                  {t('common.add', 'Add')}
+                </Button>
+              </div>
+            )}
           </div>
         </>
       )}

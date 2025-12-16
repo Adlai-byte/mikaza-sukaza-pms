@@ -301,6 +301,7 @@
     "allTypes": "Todos os tipos",
     "allStatuses": "Todos os status",
     "moreFilters": "Mais Filtros",
+    "showOnlyWithBookings": "Mostrar apenas propriedades com reservas",
     "hide": "Ocultar",
     "amenities": "Comodidades",
     "active": "Ativo",
@@ -340,7 +341,12 @@
       "checkedIn": "Check-in Realizado",
       "completed": "Concluída",
       "cancelled": "Cancelada"
-    }
+    },
+    "units": "unidades",
+    "expandUnits": "Expandir unidades",
+    "collapseUnits": "Recolher unidades",
+    "entireProperty": "Propriedade Inteira",
+    "unitBooking": "Reserva de Unidade"
   },
   "properties": {
     "title": "Propriedades",
@@ -1441,6 +1447,11 @@
     "propertyNamePlaceholderUnit": "Nome da propriedade",
     "licenseNumberPlaceholder": "Número da licença",
     "folioPlaceholder": "Folio",
+    "unitOwnerPlaceholder": "Proprietário da Unidade",
+    "inheritPropertyOwner": "(Proprietário da Propriedade)",
+    "unitOwner": "Proprietário da Unidade",
+    "unitOwnerOptional": "Proprietário da Unidade (Opcional)",
+    "unitOwnerInheritDescription": "Se não selecionado, a unidade herdará a propriedade do proprietário da propriedade.",
     "communicationDetails": "Detalhes de Comunicação",
     "communicationDetailsDesc": "Informações de contato e detalhes de acesso à internet para esta propriedade",
     "contactInformation": "Informações de Contato",
@@ -2557,6 +2568,10 @@
       "warning": "Importante: Sua senha mestre não pode ser recuperada se esquecida. Certifique-se de lembrar ou armazená-la com segurança.",
       "setupButton": "Configurar Cofre",
       "unlockButton": "Desbloquear"
+    },
+    "errors": {
+      "decryptFailed": "Falha na Descriptografia",
+      "decryptFailedDescription": "Não foi possível descriptografar esta entrada. O cofre pode precisar ser desbloqueado novamente."
     },
     "logs": {
       "title": "Logs de Acesso",

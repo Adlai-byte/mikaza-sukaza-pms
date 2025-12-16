@@ -72,6 +72,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   X,
   MapPin,
   Home,
@@ -95,6 +96,7 @@ import {
   Maximize2,
   Menu,
   Package,
+  Layers,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -194,6 +196,7 @@ interface FilterState {
   amenities: string[];
   bookingStatus: string;
   channel: string;
+  showOnlyWithBookings: boolean;
 }
 
 interface CalendarViewMode {
@@ -221,6 +224,7 @@ const Calendar = () => {
     amenities: [],
     bookingStatus: 'all',
     channel: 'all',
+    showOnlyWithBookings: true,
   });
 
   const [viewMode, setViewMode] = useState<CalendarViewMode>({
@@ -263,6 +267,9 @@ const Calendar = () => {
   const [dragStart, setDragStart] = useState<{ propertyId: string; date: Date } | null>(null);
   const [dragEnd, setDragEnd] = useState<Date | null>(null);
 
+  // State: Expanded Properties (for multi-unit view)
+  const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
+
   /**
    * FEATURE: Generate date range based on view mode
    * Supports: week, month, quarter, year views
@@ -297,7 +304,7 @@ const Calendar = () => {
    * Cached for 5 minutes (properties don't change often)
    */
   const { data: properties = [], isLoading: propertiesLoading, error: propertiesError } = useQuery({
-    queryKey: ['properties-with-location'],
+    queryKey: ['properties-with-location-units'],
     queryFn: async () => {
       console.log('🔍 Fetching properties from Supabase...');
       const { data, error } = await supabase
@@ -314,6 +321,11 @@ const Calendar = () => {
             amenities (
               amenity_name
             )
+          ),
+          units (
+            unit_id,
+            property_name,
+            owner_id
           )
         `)
         .eq('is_active', true);
@@ -344,7 +356,13 @@ const Calendar = () => {
       // A booking overlaps if: check_in_date <= endDate AND check_out_date >= startDate
       const { data, error } = await supabase
         .from('property_bookings')
-        .select('*')
+        .select(`
+          *,
+          unit:units!property_bookings_unit_id_fkey(
+            unit_id,
+            property_name
+          )
+        `)
         .lte('check_in_date', endDate)
         .gte('check_out_date', startDate);
 
@@ -410,9 +428,19 @@ const Calendar = () => {
           return false;
         }
       }
+      // Filter to show only properties with bookings in the current date range
+      if (filters.showOnlyWithBookings) {
+        const propertyHasBookings = bookings.some(booking =>
+          booking.property_id === property.property_id &&
+          booking.booking_status !== 'cancelled'
+        );
+        if (!propertyHasBookings) {
+          return false;
+        }
+      }
       return true;
     });
-  }, [properties, filters]);
+  }, [properties, filters, bookings]);
 
   /**
    * COMPUTED: Calculate dashboard statistics
@@ -455,14 +483,57 @@ const Calendar = () => {
 
   /**
    * UTILITY: Get booking for a specific property and date
+   * For property-level rows: shows "entire property" bookings (unit_id = null)
+   * For unit-level rows: shows specific unit bookings
    */
-  const getBookingForDate = (propertyId: string, date: Date) => {
+  const getBookingForDate = (propertyId: string, date: Date, unitId?: string | null) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return bookings.find(b => {
+      const dateMatch =
+        b.property_id === propertyId &&
+        dateStr >= b.check_in_date &&
+        dateStr <= b.check_out_date;
+
+      if (!dateMatch) return false;
+
+      // If querying for a specific unit
+      if (unitId !== undefined) {
+        // Show bookings for this specific unit OR entire-property bookings
+        return b.unit_id === unitId || b.unit_id === null;
+      }
+
+      // Property-level row: show only entire-property bookings (unit_id = null)
+      return b.unit_id === null;
+    });
+  };
+
+  /**
+   * UTILITY: Get bookings for a specific unit on a date
+   * Returns only unit-specific bookings, not entire-property bookings
+   */
+  const getUnitBookingForDate = (propertyId: string, unitId: string, date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return bookings.find(b =>
       b.property_id === propertyId &&
+      (b.unit_id === unitId || b.unit_id === null) &&
       dateStr >= b.check_in_date &&
       dateStr <= b.check_out_date
     );
+  };
+
+  /**
+   * UTILITY: Toggle property expansion (for multi-unit properties)
+   */
+  const togglePropertyExpansion = (propertyId: string) => {
+    setExpandedProperties(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(propertyId)) {
+        newSet.delete(propertyId);
+      } else {
+        newSet.add(propertyId);
+      }
+      return newSet;
+    });
   };
 
   /**
@@ -522,6 +593,7 @@ const Calendar = () => {
       amenities: [],
       bookingStatus: 'all',
       channel: 'all',
+      showOnlyWithBookings: true,
     });
   };
 
@@ -1205,6 +1277,21 @@ const Calendar = () => {
                 </Button>
               </div>
 
+              {/* Show Only With Bookings Toggle */}
+              <div className="flex items-center gap-2 pt-2">
+                <Checkbox
+                  id="showOnlyWithBookings"
+                  checked={filters.showOnlyWithBookings}
+                  onCheckedChange={(checked) => setFilters(prev => ({ ...prev, showOnlyWithBookings: checked === true }))}
+                />
+                <label
+                  htmlFor="showOnlyWithBookings"
+                  className="text-sm font-medium cursor-pointer select-none"
+                >
+                  {t('calendar.showOnlyWithBookings', 'Show only properties with bookings')}
+                </label>
+              </div>
+
               {/* Expanded Filters */}
               {filtersExpanded && (
                 <div className="pt-4 border-t space-y-4">
@@ -1349,106 +1436,202 @@ const Calendar = () => {
                         b.check_out_date >= today
                       );
 
+                      // Check if property has units
+                      const propertyUnits = property.units || [];
+                      const hasUnits = propertyUnits.length > 0;
+                      const isExpanded = expandedProperties.has(property.property_id);
+
                       return (
-                        <div
-                          key={property.property_id}
-                          className={`
-                            h-32 p-4 border-b transition-all cursor-pointer overflow-hidden flex items-center
-                            ${selectedProperty === property.property_id
-                              ? 'bg-blue-50 border-l-4 border-l-blue-500'
-                              : index % 2 === 0
-                                ? 'bg-white hover:bg-gray-50'
-                                : 'bg-gray-50 hover:bg-gray-100'
-                            }
-                          `}
-                          onClick={() => setSelectedProperty(
-                            selectedProperty === property.property_id ? null : property.property_id
-                          )}
-                        >
-                          <div className="flex items-start gap-3">
-                            {bulkSelectMode && (
-                              <Checkbox
-                                checked={selectedProperties.has(property.property_id)}
-                                onCheckedChange={() => togglePropertySelection(property.property_id)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
+                        <React.Fragment key={property.property_id}>
+                          {/* Property Row */}
+                          <div
+                            className={`
+                              h-32 p-4 border-b transition-all cursor-pointer overflow-hidden flex items-center
+                              ${selectedProperty === property.property_id
+                                ? 'bg-blue-50 border-l-4 border-l-blue-500'
+                                : index % 2 === 0
+                                  ? 'bg-white hover:bg-gray-50'
+                                  : 'bg-gray-50 hover:bg-gray-100'
+                              }
+                            `}
+                            onClick={() => setSelectedProperty(
+                              selectedProperty === property.property_id ? null : property.property_id
                             )}
+                          >
+                            <div className="flex items-start gap-3 w-full">
+                              {/* Expand/Collapse Button for Multi-Unit Properties */}
+                              {hasUnits ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    togglePropertyExpansion(property.property_id);
+                                  }}
+                                  className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 transition-colors flex-shrink-0 mt-3"
+                                  aria-label={isExpanded ? t('calendar.collapseUnits') : t('calendar.expandUnits')}
+                                >
+                                  {isExpanded ? (
+                                    <ChevronUp className="h-4 w-4 text-gray-600" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4 text-gray-600" />
+                                  )}
+                                </button>
+                              ) : (
+                                <div className="w-6 flex-shrink-0" />
+                              )}
 
-                            {/* Property Avatar */}
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-lg font-bold shadow-sm flex-shrink-0">
-                              {property.property_name?.[0] || 'P'}
-                            </div>
+                              {bulkSelectMode && (
+                                <Checkbox
+                                  checked={selectedProperties.has(property.property_id)}
+                                  onCheckedChange={() => togglePropertySelection(property.property_id)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              )}
 
-                            {/* Property Info */}
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 text-sm line-clamp-1 leading-tight">
-                                {property.property_name}
-                              </h4>
-                              <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  {property.property_location?.[0]?.city || 'N/A'}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Users className="h-3 w-3" />
-                                  {property.capacity || 0}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Bed className="h-3 w-3" />
-                                  {property.num_bedrooms || 0}
-                                </span>
+                              {/* Property Avatar */}
+                              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-lg font-bold shadow-sm flex-shrink-0">
+                                {property.property_name?.[0] || 'P'}
                               </div>
 
-                              {/* Current Guest */}
-                              <div className="mt-1.5">
-                                {currentBooking ? (
-                                  <div className="flex items-center gap-1.5 text-xs">
-                                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                      <Users className="h-3 w-3 text-green-600" />
-                                    </div>
-                                    <span className="text-green-700 font-medium truncate">
-                                      {currentBooking.guest_name}
-                                    </span>
-                                    <Badge variant="outline" className="h-4 text-[10px] px-1 bg-green-50 text-green-700 border-green-200">
-                                      {currentBooking.booking_status === 'checked_in' ? t('calendar.status.checkedIn') : t('calendar.status.confirmed')}
+                              {/* Property Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-semibold text-gray-900 text-sm line-clamp-1 leading-tight">
+                                    {property.property_name}
+                                  </h4>
+                                  {hasUnits && (
+                                    <Badge variant="outline" className="h-4 text-[10px] px-1 bg-purple-50 text-purple-700 border-purple-200 flex-shrink-0">
+                                      <Layers className="h-2.5 w-2.5 mr-0.5" />
+                                      {propertyUnits.length} {t('calendar.units', 'units')}
                                     </Badge>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                                    <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                      <Home className="h-3 w-3 text-gray-400" />
-                                    </div>
-                                    <span>{t('calendar.available', 'Available')}</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Occupancy Bar */}
-                              <div className="mt-1.5">
-                                <div className="flex items-center justify-between text-xs mb-0.5">
-                                  <span className="text-gray-500">{t('calendar.occupancy')}</span>
-                                  <span className={`font-medium ${
-                                    occupancyRate > 80 ? 'text-red-600' :
-                                    occupancyRate > 50 ? 'text-orange-600' :
-                                    'text-green-600'
-                                  }`}>
-                                    {occupancyRate}%
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    {property.property_location?.[0]?.city || 'N/A'}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Users className="h-3 w-3" />
+                                    {property.capacity || 0}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Bed className="h-3 w-3" />
+                                    {property.num_bedrooms || 0}
                                   </span>
                                 </div>
-                                <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                  <div
-                                    className={`h-1.5 rounded-full transition-all ${
-                                      occupancyRate > 80 ? 'bg-red-500' :
-                                      occupancyRate > 50 ? 'bg-orange-500' :
-                                      'bg-green-500'
-                                    }`}
-                                    style={{ width: `${Math.min(occupancyRate, 100)}%` }}
-                                  />
+
+                                {/* Current Guest */}
+                                <div className="mt-1.5">
+                                  {currentBooking ? (
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                      <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <Users className="h-3 w-3 text-green-600" />
+                                      </div>
+                                      <span className="text-green-700 font-medium truncate">
+                                        {currentBooking.guest_name}
+                                      </span>
+                                      <Badge variant="outline" className="h-4 text-[10px] px-1 bg-green-50 text-green-700 border-green-200">
+                                        {currentBooking.booking_status === 'checked_in' ? t('calendar.status.checkedIn') : t('calendar.status.confirmed')}
+                                      </Badge>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                                      <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <Home className="h-3 w-3 text-gray-400" />
+                                      </div>
+                                      <span>{t('calendar.available', 'Available')}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Occupancy Bar */}
+                                <div className="mt-1.5">
+                                  <div className="flex items-center justify-between text-xs mb-0.5">
+                                    <span className="text-gray-500">{t('calendar.occupancy')}</span>
+                                    <span className={`font-medium ${
+                                      occupancyRate > 80 ? 'text-red-600' :
+                                      occupancyRate > 50 ? 'text-orange-600' :
+                                      'text-green-600'
+                                    }`}>
+                                      {occupancyRate}%
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                    <div
+                                      className={`h-1.5 rounded-full transition-all ${
+                                        occupancyRate > 80 ? 'bg-red-500' :
+                                        occupancyRate > 50 ? 'bg-orange-500' :
+                                        'bg-green-500'
+                                      }`}
+                                      style={{ width: `${Math.min(occupancyRate, 100)}%` }}
+                                    />
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
+
+                          {/* Unit Rows (when expanded) */}
+                          {isExpanded && propertyUnits.map((unit: any, unitIndex: number) => {
+                            const unitBooking = bookings.find(b =>
+                              b.property_id === property.property_id &&
+                              (b.unit_id === unit.unit_id || b.unit_id === null) &&
+                              b.booking_status !== 'cancelled' &&
+                              b.booking_status !== 'blocked' &&
+                              b.check_in_date <= today &&
+                              b.check_out_date >= today
+                            );
+
+                            return (
+                              <div
+                                key={unit.unit_id}
+                                className={`
+                                  h-16 pl-10 pr-4 py-2 border-b transition-all flex items-center
+                                  bg-gradient-to-r from-purple-50 to-white
+                                  ${unitIndex === propertyUnits.length - 1 ? 'border-b-2 border-b-purple-200' : ''}
+                                `}
+                              >
+                                <div className="flex items-center gap-3 w-full">
+                                  {/* Unit connector line */}
+                                  <div className="w-4 h-full flex items-center justify-center">
+                                    <div className={`w-px h-full bg-purple-300 ${unitIndex === propertyUnits.length - 1 ? 'h-1/2 self-start' : ''}`} />
+                                  </div>
+                                  <div className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
+
+                                  {/* Unit Avatar */}
+                                  <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-purple-500 rounded-md flex items-center justify-center text-white text-xs font-bold shadow-sm flex-shrink-0">
+                                    {unit.property_name?.[0] || 'U'}
+                                  </div>
+
+                                  {/* Unit Info */}
+                                  <div className="flex-1 min-w-0">
+                                    <h5 className="font-medium text-gray-800 text-xs line-clamp-1">
+                                      {unit.property_name}
+                                      {(unit.num_bedrooms !== null || unit.num_bathrooms !== null) && (
+                                        <span className="font-normal text-purple-500 ml-1">
+                                          ({unit.num_bedrooms !== null ? `${unit.num_bedrooms}bd` : ''}{unit.num_bedrooms !== null && unit.num_bathrooms !== null ? '/' : ''}{unit.num_bathrooms !== null ? `${unit.num_bathrooms}ba` : ''})
+                                        </span>
+                                      )}
+                                    </h5>
+                                    {unitBooking ? (
+                                      <div className="flex items-center gap-1 text-xs text-green-600 mt-0.5">
+                                        <Users className="h-3 w-3" />
+                                        <span className="truncate">{unitBooking.guest_name}</span>
+                                        {unitBooking.unit_id === null && (
+                                          <Badge variant="outline" className="h-3 text-[8px] px-0.5 bg-blue-50 text-blue-600 border-blue-200">
+                                            {t('calendar.entireProperty', 'Entire')}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">{t('calendar.available', 'Available')}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </React.Fragment>
                       );
                     })}
                   </div>
@@ -1495,142 +1678,258 @@ const Calendar = () => {
 
                       {/* Timeline Grid */}
                     <div className="inline-flex flex-col min-w-full">
-                      {filteredProperties.map((property, propIndex) => (
-                        <div
-                          key={property.property_id}
-                          className={`
-                            border-b flex-shrink-0 h-32 flex
-                            ${selectedProperty === property.property_id ? 'bg-blue-50' :
-                              propIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                            }
-                          `}
-                        >
-                          <div className="inline-flex h-full relative">
-                            {dateRange.map((date) => {
-                              const booking = getBookingForDate(property.property_id, date);
-                              const isCheckIn = booking && format(parseISO(booking.check_in_date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
-                              const isCheckOut = booking && format(parseISO(booking.check_out_date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
-                              const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-                              const color = booking ? getBookingColor(booking.booking_status || 'pending') : null;
+                      {filteredProperties.map((property, propIndex) => {
+                        const propertyUnits = property.units || [];
+                        const hasUnits = propertyUnits.length > 0;
+                        const isExpanded = expandedProperties.has(property.property_id);
 
-                              const cellElement = (
-                                <div
-                                  key={format(date, 'yyyy-MM-dd')}
-                                  className={`
-                                    flex-shrink-0 w-12 h-full border-r flex items-center justify-center cursor-pointer transition-all relative group
-                                    ${isToday ? 'border-l-2 border-l-blue-500' : ''}
-                                    ${!booking ? 'hover:bg-blue-50' : ''}
-                                  `}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDateClick(property.property_id, date, booking);
-                                  }}
-                                >
-                                  {booking ? (
-                                    <div className={`
-                                      w-full h-16 ${color?.bg} ${color?.text} rounded-md flex items-center justify-center text-xs font-medium shadow-sm
-                                      ${isCheckIn ? 'rounded-l-lg ml-1' : isCheckOut ? 'rounded-r-lg mr-1' : 'rounded-none'}
-                                      ${color?.hover} transition-colors
-                                    `}>
-                                      {isCheckIn && (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div className="flex flex-col items-center">
-                                              <CheckCircle className="h-4 w-4 mb-1" />
-                                              <span className="text-[10px]">IN</span>
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <div className="text-xs">
-                                              <div className="font-semibold">{booking.guest_name}</div>
-                                              <div>Check-in: {format(parseISO(booking.check_in_date), 'MMM dd')}</div>
-                                              <div>Check-out: {format(parseISO(booking.check_out_date), 'MMM dd')}</div>
-                                              {booking.total_amount && (
-                                                <div className="mt-1 font-medium">${booking.total_amount}</div>
-                                              )}
-                                            </div>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      )}
-                                      {isCheckOut && !isCheckIn && (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div className="flex flex-col items-center">
-                                              <AlertCircle className="h-4 w-4 mb-1" />
-                                              <span className="text-[10px]">OUT</span>
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <div className="text-xs">
-                                              <div className="font-semibold">{booking.guest_name}</div>
-                                              <div>Check-out: {format(parseISO(booking.check_out_date), 'MMM dd')}</div>
-                                            </div>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      )}
-                                      {!isCheckIn && !isCheckOut && (
-                                        <div className="w-2 h-2 rounded-full bg-white opacity-70" />
+                        return (
+                          <React.Fragment key={property.property_id}>
+                            {/* Property Timeline Row */}
+                            <div
+                              className={`
+                                border-b flex-shrink-0 h-32 flex
+                                ${selectedProperty === property.property_id ? 'bg-blue-50' :
+                                  propIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                }
+                              `}
+                            >
+                              <div className="inline-flex h-full relative">
+                                {dateRange.map((date) => {
+                                  // For property row: show all bookings (entire property + unit-specific)
+                                  // This shows that property has activity
+                                  const booking = bookings.find(b =>
+                                    b.property_id === property.property_id &&
+                                    format(date, 'yyyy-MM-dd') >= b.check_in_date &&
+                                    format(date, 'yyyy-MM-dd') <= b.check_out_date &&
+                                    b.booking_status !== 'cancelled'
+                                  );
+                                  const isCheckIn = booking && format(parseISO(booking.check_in_date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+                                  const isCheckOut = booking && format(parseISO(booking.check_out_date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+                                  const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+                                  const color = booking ? getBookingColor(booking.booking_status || 'pending') : null;
+                                  // Use different color for entire-property bookings vs unit-specific
+                                  const isEntireProperty = booking && booking.unit_id === null;
+
+                                  const cellElement = (
+                                    <div
+                                      key={format(date, 'yyyy-MM-dd')}
+                                      className={`
+                                        flex-shrink-0 w-12 h-full border-r flex items-center justify-center cursor-pointer transition-all relative group
+                                        ${isToday ? 'border-l-2 border-l-blue-500' : ''}
+                                        ${!booking ? 'hover:bg-blue-50' : ''}
+                                      `}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDateClick(property.property_id, date, booking);
+                                      }}
+                                    >
+                                      {booking ? (
+                                        <div className={`
+                                          w-full h-16 ${color?.bg} ${color?.text} rounded-md flex items-center justify-center text-xs font-medium shadow-sm
+                                          ${isCheckIn ? 'rounded-l-lg ml-1' : isCheckOut ? 'rounded-r-lg mr-1' : 'rounded-none'}
+                                          ${color?.hover} transition-colors
+                                          ${!isEntireProperty && hasUnits ? 'opacity-60 border-2 border-dashed border-white' : ''}
+                                        `}>
+                                          {isCheckIn && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <div className="flex flex-col items-center">
+                                                  <CheckCircle className="h-4 w-4 mb-1" />
+                                                  <span className="text-[10px]">IN</span>
+                                                </div>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <div className="text-xs">
+                                                  <div className="font-semibold">{booking.guest_name}</div>
+                                                  {booking.unit_id ? (
+                                                    <div className="text-purple-600">Unit: {(booking as any).unit?.property_name || 'Specific Unit'}</div>
+                                                  ) : (
+                                                    <div className="text-blue-600 font-medium">{t('calendar.entireProperty', 'Entire Property')}</div>
+                                                  )}
+                                                  <div>Check-in: {format(parseISO(booking.check_in_date), 'MMM dd')}</div>
+                                                  <div>Check-out: {format(parseISO(booking.check_out_date), 'MMM dd')}</div>
+                                                  {booking.total_amount && (
+                                                    <div className="mt-1 font-medium">${booking.total_amount}</div>
+                                                  )}
+                                                </div>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          )}
+                                          {isCheckOut && !isCheckIn && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <div className="flex flex-col items-center">
+                                                  <AlertCircle className="h-4 w-4 mb-1" />
+                                                  <span className="text-[10px]">OUT</span>
+                                                </div>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <div className="text-xs">
+                                                  <div className="font-semibold">{booking.guest_name}</div>
+                                                  {booking.unit_id ? (
+                                                    <div className="text-purple-600">Unit: {(booking as any).unit?.property_name || 'Specific Unit'}</div>
+                                                  ) : (
+                                                    <div className="text-blue-600 font-medium">{t('calendar.entireProperty', 'Entire Property')}</div>
+                                                  )}
+                                                  <div>Check-out: {format(parseISO(booking.check_out_date), 'MMM dd')}</div>
+                                                </div>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          )}
+                                          {!isCheckIn && !isCheckOut && (
+                                            <div className="w-2 h-2 rounded-full bg-white opacity-70" />
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div className="text-gray-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                                          +
+                                        </div>
                                       )}
                                     </div>
-                                  ) : (
-                                    <div className="text-gray-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                                      +
-                                    </div>
-                                  )}
+                                  );
+
+                                  // Wrap booked cells with context menu
+                                  if (booking) {
+                                    return (
+                                      <ContextMenu key={format(date, 'yyyy-MM-dd')}>
+                                        <ContextMenuTrigger>
+                                          {cellElement}
+                                        </ContextMenuTrigger>
+                                        <ContextMenuContent className="w-48">
+                                          <ContextMenuItem
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedBookingDetails(booking);
+                                              setShowDetailsDrawer(true);
+                                            }}
+                                          >
+                                            <Info className="h-4 w-4 mr-2" />
+                                            {t('common.details')}
+                                          </ContextMenuItem>
+                                          <ContextMenuItem
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingBooking(booking);
+                                              setBookingPropertyId(property.property_id);
+                                              setShowBookingDialog(true);
+                                            }}
+                                          >
+                                            <Edit className="h-4 w-4 mr-2" />
+                                            {t('common.edit')}
+                                          </ContextMenuItem>
+                                          <ContextMenuSeparator />
+                                          <ContextMenuItem
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setDeletingBooking(booking);
+                                              setShowDeleteDialog(true);
+                                            }}
+                                            className="text-red-600 focus:text-red-600"
+                                          >
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Cancel Booking
+                                          </ContextMenuItem>
+                                        </ContextMenuContent>
+                                      </ContextMenu>
+                                    );
+                                  }
+
+                                  return cellElement;
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Unit Timeline Rows (when expanded) */}
+                            {isExpanded && propertyUnits.map((unit: any, unitIndex: number) => (
+                              <div
+                                key={unit.unit_id}
+                                className={`
+                                  border-b flex-shrink-0 h-16 flex
+                                  bg-gradient-to-r from-purple-50 to-white
+                                  ${unitIndex === propertyUnits.length - 1 ? 'border-b-2 border-b-purple-200' : ''}
+                                `}
+                              >
+                                <div className="inline-flex h-full relative">
+                                  {dateRange.map((date) => {
+                                    // For unit row: show unit-specific bookings AND entire-property bookings
+                                    const unitBooking = bookings.find(b =>
+                                      b.property_id === property.property_id &&
+                                      (b.unit_id === unit.unit_id || b.unit_id === null) &&
+                                      format(date, 'yyyy-MM-dd') >= b.check_in_date &&
+                                      format(date, 'yyyy-MM-dd') <= b.check_out_date &&
+                                      b.booking_status !== 'cancelled'
+                                    );
+                                    const isCheckIn = unitBooking && format(parseISO(unitBooking.check_in_date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+                                    const isCheckOut = unitBooking && format(parseISO(unitBooking.check_out_date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+                                    const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+                                    const isEntirePropertyBooking = unitBooking && unitBooking.unit_id === null;
+                                    // Use purple for unit-specific, blue for entire-property
+                                    const unitColor = isEntirePropertyBooking
+                                      ? { bg: 'bg-blue-400', text: 'text-white', hover: 'hover:bg-blue-500' }
+                                      : { bg: 'bg-purple-500', text: 'text-white', hover: 'hover:bg-purple-600' };
+
+                                    return (
+                                      <div
+                                        key={format(date, 'yyyy-MM-dd')}
+                                        className={`
+                                          flex-shrink-0 w-12 h-full border-r flex items-center justify-center cursor-pointer transition-all relative group
+                                          ${isToday ? 'border-l-2 border-l-blue-500' : ''}
+                                          ${!unitBooking ? 'hover:bg-purple-100' : ''}
+                                        `}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDateClick(property.property_id, date, unitBooking);
+                                        }}
+                                      >
+                                        {unitBooking ? (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div className={`
+                                                w-full h-10 ${unitColor.bg} ${unitColor.text} rounded-md flex items-center justify-center text-xs font-medium shadow-sm
+                                                ${isCheckIn ? 'rounded-l-lg ml-1' : isCheckOut ? 'rounded-r-lg mr-1' : 'rounded-none'}
+                                                ${unitColor.hover} transition-colors
+                                                ${isEntirePropertyBooking ? 'border border-dashed border-white' : ''}
+                                              `}>
+                                                {isCheckIn && <span className="text-[9px]">IN</span>}
+                                                {isCheckOut && !isCheckIn && <span className="text-[9px]">OUT</span>}
+                                                {!isCheckIn && !isCheckOut && <div className="w-1.5 h-1.5 rounded-full bg-white opacity-70" />}
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <div className="text-xs">
+                                                <div className="font-semibold">{unitBooking.guest_name}</div>
+                                                {isEntirePropertyBooking ? (
+                                                  <div className="text-blue-600 font-medium">{t('calendar.entireProperty', 'Entire Property')}</div>
+                                                ) : (
+                                                  <div className="text-purple-600">
+                                                    {unit.property_name}
+                                                    {(unit.num_bedrooms !== null || unit.num_bathrooms !== null) && (
+                                                      <span className="text-purple-400 ml-1">
+                                                        ({unit.num_bedrooms !== null ? `${unit.num_bedrooms}bd` : ''}{unit.num_bedrooms !== null && unit.num_bathrooms !== null ? '/' : ''}{unit.num_bathrooms !== null ? `${unit.num_bathrooms}ba` : ''})
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                )}
+                                                <div>Check-in: {format(parseISO(unitBooking.check_in_date), 'MMM dd')}</div>
+                                                <div>Check-out: {format(parseISO(unitBooking.check_out_date), 'MMM dd')}</div>
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        ) : (
+                                          <div className="text-purple-300 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                                            +
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                              );
-
-                              // Wrap booked cells with context menu
-                              if (booking) {
-                                return (
-                                  <ContextMenu key={format(date, 'yyyy-MM-dd')}>
-                                    <ContextMenuTrigger>
-                                      {cellElement}
-                                    </ContextMenuTrigger>
-                                    <ContextMenuContent className="w-48">
-                                      <ContextMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedBookingDetails(booking);
-                                          setShowDetailsDrawer(true);
-                                        }}
-                                      >
-                                        <Info className="h-4 w-4 mr-2" />
-                                        {t('common.details')}
-                                      </ContextMenuItem>
-                                      <ContextMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingBooking(booking);
-                                          setBookingPropertyId(property.property_id);
-                                          setShowBookingDialog(true);
-                                        }}
-                                      >
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        {t('common.edit')}
-                                      </ContextMenuItem>
-                                      <ContextMenuSeparator />
-                                      <ContextMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setDeletingBooking(booking);
-                                          setShowDeleteDialog(true);
-                                        }}
-                                        className="text-red-600 focus:text-red-600"
-                                      >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Cancel Booking
-                                      </ContextMenuItem>
-                                    </ContextMenuContent>
-                                  </ContextMenu>
-                                );
-                              }
-
-                              return cellElement;
-                            })}
-                          </div>
-                        </div>
-                      ))}
+                              </div>
+                            ))}
+                          </React.Fragment>
+                        );
+                      })}
                     </div>
                     </div>
                   </div>
@@ -1648,7 +1947,7 @@ const Calendar = () => {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
 
               {/* Legend */}
-              <div className="flex items-center gap-6 text-sm">
+              <div className="flex flex-wrap items-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-blue-500 rounded"></div>
                   <span className="text-gray-700">{t('calendar.status.confirmed')}</span>
@@ -1667,7 +1966,11 @@ const Calendar = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-purple-500 rounded"></div>
-                  <span className="text-gray-700">{t('calendar.status.completed')}</span>
+                  <span className="text-gray-700">{t('calendar.unitBooking', 'Unit Booking')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-blue-400 rounded border border-dashed border-white"></div>
+                  <span className="text-gray-700">{t('calendar.entireProperty', 'Entire Property')}</span>
                 </div>
               </div>
 

@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Trash2, Search, Eye, Download, Filter, Home, Images, Camera, ChevronLeft, ChevronRight, QrCode } from "lucide-react";
+import { Edit, Trash2, Search, Eye, Download, Filter, Home, Images, Camera, ChevronLeft, ChevronRight, QrCode, ChevronDown, ChevronUp, Layers } from "lucide-react";
 import { PropertyTableLoadingState, LoadingOverlay, InlineLoadingSpinner } from "./PropertyTableSkeleton";
 import { useNavigate } from "react-router-dom";
 import {
@@ -59,7 +59,9 @@ const PropertyTableRow = ({
   onViewDetails,
   onViewImages,
   onViewQRCodes,
-  onImageClick
+  onImageClick,
+  isExpanded,
+  onToggleExpand
 }: {
   property: Property;
   onEditProperty: (property: Property) => void;
@@ -68,39 +70,72 @@ const PropertyTableRow = ({
   onViewImages: (property: Property) => void;
   onViewQRCodes: (property: Property) => void;
   onImageClick: (image: { url: string; title?: string }) => void;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
 }) => {
   const navigate = useNavigate();
   const primaryImage = property.images?.find(img => img.is_primary) || property.images?.[0];
+  const hasUnits = property.units && property.units.length > 0;
 
   return (
-    <TableRow className="h-20">
-      <TableCell>
-        <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-          {primaryImage ? (
-            <img
-              src={primaryImage.image_url}
-              alt={property.property_type}
-              className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-              onClick={() => onImageClick({ url: primaryImage.image_url, title: property.property_type })}
-              loading="lazy"
-            />
-          ) : (
-            <Camera className="h-6 w-6 text-muted-foreground" />
-          )}
-        </div>
-      </TableCell>
-      <TableCell className="font-medium">
-        <div className="flex items-center space-x-3">
-          <Home className="h-5 w-5 text-muted-foreground" />
-          <div>
-            <p className="font-medium">{property.property_name || property.property_type}</p>
-            <p className="text-sm text-muted-foreground">{property.property_type}</p>
-            <p className="text-xs text-muted-foreground">
-              {property.num_bedrooms || 0} bed, {property.num_bathrooms || 0} bath
-            </p>
+    <>
+      <TableRow className={`h-20 ${hasUnits ? 'cursor-pointer hover:bg-muted/50' : ''} ${isExpanded ? 'bg-purple-50' : ''}`}>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            {hasUnits && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand();
+                }}
+                className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 transition-colors"
+                aria-label={isExpanded ? 'Collapse units' : 'Expand units'}
+              >
+                {isExpanded ? (
+                  <ChevronUp className="h-4 w-4 text-purple-600" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-gray-600" />
+                )}
+              </button>
+            )}
+            <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+              {primaryImage ? (
+                <img
+                  src={primaryImage.image_url}
+                  alt={property.property_type}
+                  className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onImageClick({ url: primaryImage.image_url, title: property.property_type });
+                  }}
+                  loading="lazy"
+                />
+              ) : (
+                <Camera className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
           </div>
-        </div>
-      </TableCell>
+        </TableCell>
+        <TableCell className="font-medium">
+          <div className="flex items-center space-x-3">
+            <Home className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="font-medium">{property.property_name || property.property_type}</p>
+                {hasUnits && (
+                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                    <Layers className="h-3 w-3 mr-1" />
+                    {property.units!.length} units
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">{property.property_type}</p>
+              <p className="text-xs text-muted-foreground">
+                {property.num_bedrooms || 0} bed, {property.num_bathrooms || 0} bath
+              </p>
+            </div>
+          </div>
+        </TableCell>
       <TableCell>
         <div>
           <p className="font-medium">
@@ -200,6 +235,51 @@ const PropertyTableRow = ({
         </div>
       </TableCell>
     </TableRow>
+
+      {/* Unit Rows */}
+      {isExpanded && hasUnits && property.units!.map((unit, index) => (
+        <TableRow
+          key={unit.unit_id || index}
+          className={`h-14 bg-gradient-to-r from-purple-50 to-white ${index === property.units!.length - 1 ? 'border-b-2 border-b-purple-200' : ''}`}
+        >
+          <TableCell>
+            <div className="flex items-center gap-2 pl-8">
+              <div className="w-8 h-8 rounded bg-purple-100 flex items-center justify-center">
+                <Layers className="h-4 w-4 text-purple-600" />
+              </div>
+            </div>
+          </TableCell>
+          <TableCell>
+            <div className="pl-8">
+              <p className="font-medium text-purple-800">{unit.property_name || `Unit ${index + 1}`}</p>
+              <p className="text-xs text-purple-600">
+                {(unit.num_bedrooms !== null && unit.num_bedrooms !== undefined) && `${unit.num_bedrooms} bed`}
+                {(unit.num_bathrooms !== null && unit.num_bathrooms !== undefined) && `, ${unit.num_bathrooms} bath`}
+                {unit.license_number && ` • License: ${unit.license_number}`}
+                {unit.folio && ` • Folio: ${unit.folio}`}
+              </p>
+            </div>
+          </TableCell>
+          <TableCell>
+            <div className="text-sm">
+              {unit.owner ? (
+                <>
+                  <p className="font-medium text-purple-700">{unit.owner.first_name} {unit.owner.last_name}</p>
+                  <p className="text-xs text-purple-500">{unit.owner.email}</p>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">Inherits from property</p>
+              )}
+            </div>
+          </TableCell>
+          <TableCell colSpan={4}>
+            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-600 border-purple-200">
+              Unit of {property.property_name || property.property_type}
+            </Badge>
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
   );
 };
 
@@ -223,6 +303,19 @@ export function PropertyTableOptimized({
   const [bedroomsFilter, setBedroomsFilter] = useState<string>("all");
   const [selectedImage, setSelectedImage] = useState<{ url: string; title?: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
+
+  const togglePropertyExpansion = useCallback((propertyId: string) => {
+    setExpandedProperties(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(propertyId)) {
+        newSet.delete(propertyId);
+      } else {
+        newSet.add(propertyId);
+      }
+      return newSet;
+    });
+  }, []);
 
   // Memoize filtered properties to avoid unnecessary recalculations
   const filteredProperties = useMemo(() => {
@@ -450,6 +543,8 @@ export function PropertyTableOptimized({
                 onViewImages={onViewImages}
                 onViewQRCodes={onViewQRCodes}
                 onImageClick={handleImageClick}
+                isExpanded={expandedProperties.has(property.property_id!)}
+                onToggleExpand={() => togglePropertyExpansion(property.property_id!)}
               />
             ))}
           </TableBody>

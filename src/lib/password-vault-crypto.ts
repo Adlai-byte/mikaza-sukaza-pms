@@ -145,7 +145,7 @@ export async function encryptData(plaintext: string, key: CryptoKey): Promise<En
   const encoder = new TextEncoder();
   const plaintextBuffer = encoder.encode(plaintext);
 
-  // Generate a random IV for each encryption
+  // Generate a fresh random IV for each encryption (required for AES-GCM security)
   const iv = generateRandomBytes(IV_LENGTH);
 
   const ciphertextBuffer = await crypto.subtle.encrypt(
@@ -374,6 +374,7 @@ export function getVaultSalt(): string | null {
 
 /**
  * Encrypt data using the current vault session
+ * @param plaintext - The text to encrypt
  * @throws Error if vault is locked
  */
 export async function encryptWithVault(plaintext: string): Promise<EncryptedData> {

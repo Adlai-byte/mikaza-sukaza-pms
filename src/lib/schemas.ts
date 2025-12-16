@@ -147,6 +147,7 @@ export const unitSchema = z.object({
   property_name: z.string().optional(),
   license_number: z.string().optional(),
   folio: z.string().optional(),
+  owner_id: z.string().uuid().optional().nullable(), // Optional unit-specific owner
 });
 
 // Insert types (for creating new records)
@@ -292,6 +293,10 @@ export type Unit = {
   property_name?: string;
   license_number?: string;
   folio?: string;
+  owner_id?: string | null; // Optional unit-specific owner (inherits from property if null)
+  num_bedrooms?: number | null; // Number of bedrooms in this unit
+  num_bathrooms?: number | null; // Number of bathrooms (supports half baths like 1.5)
+  owner?: User; // Joined owner data
   created_at?: string;
   updated_at?: string;
 };
@@ -321,6 +326,7 @@ export type PropertyImage = {
 // Booking schemas
 export const bookingSchema = z.object({
   property_id: z.string().uuid("Property ID is required"),
+  unit_id: z.string().uuid().optional().nullable(), // Specific unit or null for entire property
   guest_name: z.string().min(1, "Guest name is required"),
   guest_email: z.string().email("Valid email is required").optional().or(z.literal("")),
   guest_phone: z.string().optional(),
@@ -405,6 +411,8 @@ export const bookingSchema = z.object({
 export type Booking = {
   booking_id?: string;
   property_id: string;
+  unit_id?: string | null; // Specific unit or null for entire property
+  unit?: Unit; // Joined unit data
   guest_name: string;
   guest_email?: string | null;
   guest_phone?: string | null;
@@ -2584,4 +2592,57 @@ export const COMMON_TIMEZONES = [
   { value: 'Europe/Madrid', label: 'Madrid (Spain)' },
   { value: 'UTC', label: 'UTC' },
 ] as const;
+
+// =============================================================================
+// Booking Revenue Allocation Schema (for multi-unit owner revenue split)
+// =============================================================================
+
+export const bookingRevenueAllocationSchema = z.object({
+  booking_id: z.string().uuid("Invalid booking ID"),
+  unit_id: z.string().uuid("Invalid unit ID").nullable().optional(),
+  owner_id: z.string().uuid("Invalid owner ID"),
+  share_percentage: z.number().min(0).max(100),
+  allocated_amount: z.number().min(0),
+});
+
+export type BookingRevenueAllocationInsert = z.infer<typeof bookingRevenueAllocationSchema>;
+
+export type BookingRevenueAllocation = BookingRevenueAllocationInsert & {
+  allocation_id: string;
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  owner?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  unit?: {
+    unit_id: string;
+    property_name: string;
+  };
+  booking?: {
+    booking_id: string;
+    guest_name: string;
+    check_in_date: string;
+    check_out_date: string;
+    total_amount: number;
+  };
+};
+
+// Owner Revenue Summary (from view)
+export type OwnerRevenueSummary = {
+  owner_id: string;
+  owner_name: string;
+  owner_email: string;
+  revenue_month: string;
+  property_id: string;
+  property_name: string;
+  unit_id: string | null;
+  unit_name: string | null;
+  booking_count: number;
+  total_allocated_revenue: number;
+  avg_share_percentage: number;
+};
 

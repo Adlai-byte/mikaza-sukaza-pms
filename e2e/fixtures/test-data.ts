@@ -330,6 +330,9 @@ export const ROUTES = {
   commissions: '/commissions',
   profile: '/profile',
   notifications: '/notifications',
+
+  // Security
+  passwordVault: '/password-vault',
 };
 
 /**

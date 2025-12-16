@@ -57,6 +57,7 @@ export interface EnhancedBookingsFilters {
   clientId?: string;
   includeInactive?: boolean;
   propertyId?: string;
+  unitId?: string;      // Filter by specific unit
   dateFrom?: string;
   dateTo?: string;
   withFinancial?: boolean;
@@ -68,6 +69,7 @@ export interface RevenueFilters {
   dateFrom?: string;
   dateTo?: string;
   propertyId?: string;
+  unitId?: string;      // Filter by specific unit
   enabled?: boolean;
 }
 
@@ -118,6 +120,8 @@ export interface EnhancedBookingData {
   guest_email: string | null;
   property_id: string;
   property_name: string;
+  unit_id: string | null;
+  unit_name: string | null;
   check_in_date: string;
   check_out_date: string;
   booking_status: string;
@@ -136,6 +140,13 @@ export interface RentalRevenueData {
     extras: number;
     cleaning: number;
     deposits: number;
+    total: number;
+  }[];
+  byUnit: {
+    unit_id: string | null;
+    unit_name: string;
+    property_name: string;
+    base_amount: number;
     total: number;
   }[];
   byChannel: {
@@ -479,6 +490,7 @@ export function useInactiveClientsReport(filters: InactiveClientsFilters) {
 /**
  * Hook: Enhanced Bookings Report
  * Bookings with optional financial and tax details
+ * Unit-aware: Can filter by specific unit
  */
 export function useEnhancedBookingsReport(filters: EnhancedBookingsFilters) {
   const { enabled = true, ...queryFilters } = filters;
@@ -492,18 +504,31 @@ export function useEnhancedBookingsReport(filters: EnhancedBookingsFilters) {
           guest_name,
           guest_email,
           property_id,
+          unit_id,
           check_in_date,
           check_out_date,
           booking_status,
           total_amount,
           deposit_amount,
-          property:properties(property_id, property_name)
+          property:properties(property_id, property_name),
+          unit:units!property_bookings_unit_id_fkey(unit_id, property_name)
         `)
         .not('guest_name', 'is', null)
         .order('check_in_date', { ascending: false });
 
       if (queryFilters.propertyId && queryFilters.propertyId !== 'all') {
         query = query.eq('property_id', queryFilters.propertyId);
+      }
+
+      // Unit filter - filter by specific unit or 'entire' for entire property bookings
+      if (queryFilters.unitId && queryFilters.unitId !== 'all') {
+        if (queryFilters.unitId === 'entire') {
+          // Filter for entire property bookings only (unit_id is null)
+          query = query.is('unit_id', null);
+        } else {
+          // Filter for specific unit
+          query = query.eq('unit_id', queryFilters.unitId);
+        }
       }
 
       if (queryFilters.dateFrom) {
@@ -552,6 +577,10 @@ export function useEnhancedBookingsReport(filters: EnhancedBookingsFilters) {
           guest_email: booking.guest_email,
           property_id: booking.property_id,
           property_name: booking.property?.property_name || 'N/A',
+          unit_id: booking.unit_id,
+          unit_name: booking.unit_id === null
+            ? 'Entire Property'
+            : booking.unit?.property_name || null,
           check_in_date: booking.check_in_date,
           check_out_date: booking.check_out_date,
           booking_status: booking.booking_status || 'pending',
@@ -570,28 +599,42 @@ export function useEnhancedBookingsReport(filters: EnhancedBookingsFilters) {
 
 /**
  * Hook: Rental Revenue Report
- * Revenue breakdown by property and channel
+ * Revenue breakdown by property, unit, and channel
+ * Unit-aware: Can filter by specific unit
  */
 export function useRentalRevenueReport(filters: RevenueFilters) {
   const { enabled = true, ...queryFilters } = filters;
   return useQuery({
     queryKey: reportKeys.rentalRevenue(queryFilters),
     queryFn: async (): Promise<RentalRevenueData> => {
-      // Fetch bookings
+      // Fetch bookings with unit data
       let bookingsQuery = supabase
         .from('property_bookings')
         .select(`
           property_id,
+          unit_id,
           total_amount,
           deposit_amount,
           booking_status,
           check_in_date,
-          property:properties(property_id, property_name)
+          property:properties(property_id, property_name),
+          unit:units!property_bookings_unit_id_fkey(unit_id, property_name)
         `)
         .neq('booking_status', 'cancelled');
 
       if (queryFilters.propertyId && queryFilters.propertyId !== 'all') {
         bookingsQuery = bookingsQuery.eq('property_id', queryFilters.propertyId);
+      }
+
+      // Unit filter
+      if (queryFilters.unitId && queryFilters.unitId !== 'all') {
+        if (queryFilters.unitId === 'entire') {
+          // Filter for entire property bookings only (unit_id is null)
+          bookingsQuery = bookingsQuery.is('unit_id', null);
+        } else {
+          // Filter for specific unit
+          bookingsQuery = bookingsQuery.eq('unit_id', queryFilters.unitId);
+        }
       }
 
       if (queryFilters.dateFrom) {
@@ -638,6 +681,15 @@ export function useRentalRevenueReport(filters: RevenueFilters) {
         total: number;
       }>();
 
+      // Aggregate by unit
+      const byUnitMap = new Map<string, {
+        unit_id: string | null;
+        unit_name: string;
+        property_name: string;
+        base_amount: number;
+        total: number;
+      }>();
+
       const byChannelMap = new Map<string, number>();
 
       (bookings || []).forEach((booking: any) => {
@@ -663,6 +715,26 @@ export function useRentalRevenueReport(filters: RevenueFilters) {
           });
         }
 
+        // Aggregate by unit
+        const unitKey = booking.unit_id || 'entire';
+        const unitName = booking.unit_id === null
+          ? 'Entire Property'
+          : booking.unit?.property_name || 'Unknown Unit';
+        const existingUnit = byUnitMap.get(unitKey);
+
+        if (existingUnit) {
+          existingUnit.base_amount += totalAmt;
+          existingUnit.total += totalAmt;
+        } else {
+          byUnitMap.set(unitKey, {
+            unit_id: booking.unit_id,
+            unit_name: unitName,
+            property_name: propName,
+            base_amount: totalAmt,
+            total: totalAmt,
+          });
+        }
+
         // By channel - use "direct" as default since booking_channel not in schema
         const channel = 'direct';
         byChannelMap.set(channel, (byChannelMap.get(channel) || 0) + totalAmt);
@@ -674,6 +746,7 @@ export function useRentalRevenueReport(filters: RevenueFilters) {
 
       return {
         byProperty: Array.from(byPropertyMap.values()).sort((a, b) => b.total - a.total),
+        byUnit: Array.from(byUnitMap.values()).sort((a, b) => b.total - a.total),
         byChannel: Array.from(byChannelMap.entries())
           .map(([channel, revenue]) => ({ channel, revenue }))
           .sort((a, b) => b.revenue - a.revenue),

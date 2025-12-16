@@ -14,6 +14,7 @@ import {
   notifyBookingStatusChanged,
 } from "@/lib/notifications/booking-notifications";
 import { createInvoiceFromBooking } from "@/hooks/useInvoices";
+import { shouldCreateAllocation } from "@/hooks/useBookingRevenueAllocation";
 
 // Query keys for cache management
 export const bookingKeys = {
@@ -26,12 +27,21 @@ export const bookingKeys = {
   calendar: (startDate: string, endDate: string) => ['bookings', 'calendar', startDate, endDate] as const,
 } as const;
 
-// Fetch all bookings
+// Fetch all bookings (with unit data for multi-unit properties)
 const fetchBookings = async (): Promise<Booking[]> => {
   console.log('📅 Fetching all bookings...');
   const { data, error } = await supabase
     .from('property_bookings')
-    .select('*')
+    .select(`
+      *,
+      unit:units!property_bookings_unit_id_fkey(
+        unit_id,
+        property_name,
+        license_number,
+        folio,
+        owner_id
+      )
+    `)
     .order('check_in_date', { ascending: false });
 
   if (error) {
@@ -39,11 +49,20 @@ const fetchBookings = async (): Promise<Booking[]> => {
     throw error;
   }
 
-  console.log('✅ Fetched bookings:', data?.length || 0, 'bookings');
-  return (data || []) as Booking[];
+  // Flatten unit data into booking for easier access
+  const bookingsWithUnitData = (data || []).map((booking: any) => ({
+    ...booking,
+    unit_name: booking.unit?.property_name || null,
+    unit_license_number: booking.unit?.license_number || null,
+    unit_folio: booking.unit?.folio || null,
+    unit_owner_id: booking.unit?.owner_id || null,
+  }));
+
+  console.log('✅ Fetched bookings:', bookingsWithUnitData?.length || 0, 'bookings');
+  return bookingsWithUnitData as Booking[];
 };
 
-// Fetch bookings for a specific property (with invoice data)
+// Fetch bookings for a specific property (with invoice and unit data)
 const fetchPropertyBookings = async (propertyId: string): Promise<Booking[]> => {
   console.log('📅 Fetching bookings for property:', propertyId);
   const { data, error } = await supabase
@@ -55,6 +74,13 @@ const fetchPropertyBookings = async (propertyId: string): Promise<Booking[]> => 
         total_amount,
         amount_paid,
         status
+      ),
+      unit:units!property_bookings_unit_id_fkey(
+        unit_id,
+        property_name,
+        license_number,
+        folio,
+        owner_id
       )
     `)
     .eq('property_id', propertyId)
@@ -65,24 +91,37 @@ const fetchPropertyBookings = async (propertyId: string): Promise<Booking[]> => 
     throw error;
   }
 
-  // Flatten invoice data into booking for easier access
-  const bookingsWithInvoiceData = (data || []).map((booking: any) => ({
+  // Flatten invoice and unit data into booking for easier access
+  const bookingsWithData = (data || []).map((booking: any) => ({
     ...booking,
     invoice_total_amount: booking.invoice?.total_amount || null,
     invoice_amount_paid: booking.invoice?.amount_paid || null,
     invoice_status: booking.invoice?.status || booking.invoice_status || 'not_generated',
+    unit_name: booking.unit?.property_name || null,
+    unit_license_number: booking.unit?.license_number || null,
+    unit_folio: booking.unit?.folio || null,
+    unit_owner_id: booking.unit?.owner_id || null,
   }));
 
-  console.log('✅ Fetched property bookings:', bookingsWithInvoiceData?.length || 0, 'bookings');
-  return bookingsWithInvoiceData as Booking[];
+  console.log('✅ Fetched property bookings:', bookingsWithData?.length || 0, 'bookings');
+  return bookingsWithData as Booking[];
 };
 
-// Fetch bookings within a date range
+// Fetch bookings within a date range (for calendar view, with unit data)
 const fetchBookingsInRange = async (startDate: string, endDate: string): Promise<Booking[]> => {
   console.log('📅 Fetching bookings from', startDate, 'to', endDate);
   const { data, error } = await supabase
     .from('property_bookings')
-    .select('*')
+    .select(`
+      *,
+      unit:units!property_bookings_unit_id_fkey(
+        unit_id,
+        property_name,
+        license_number,
+        folio,
+        owner_id
+      )
+    `)
     .gte('check_in_date', startDate)
     .lte('check_out_date', endDate)
     .order('check_in_date', { ascending: true });
@@ -92,16 +131,34 @@ const fetchBookingsInRange = async (startDate: string, endDate: string): Promise
     throw error;
   }
 
-  console.log('✅ Fetched calendar bookings:', data?.length || 0, 'bookings');
-  return (data || []) as Booking[];
+  // Flatten unit data into booking for easier access
+  const bookingsWithUnitData = (data || []).map((booking: any) => ({
+    ...booking,
+    unit_name: booking.unit?.property_name || null,
+    unit_license_number: booking.unit?.license_number || null,
+    unit_folio: booking.unit?.folio || null,
+    unit_owner_id: booking.unit?.owner_id || null,
+  }));
+
+  console.log('✅ Fetched calendar bookings:', bookingsWithUnitData?.length || 0, 'bookings');
+  return bookingsWithUnitData as Booking[];
 };
 
-// Fetch single booking
+// Fetch single booking (with unit data)
 const fetchBookingDetail = async (bookingId: string): Promise<Booking> => {
   console.log('📅 Fetching booking detail:', bookingId);
   const { data, error } = await supabase
     .from('property_bookings')
-    .select('*')
+    .select(`
+      *,
+      unit:units!property_bookings_unit_id_fkey(
+        unit_id,
+        property_name,
+        license_number,
+        folio,
+        owner_id
+      )
+    `)
     .eq('booking_id', bookingId)
     .single();
 
@@ -110,20 +167,33 @@ const fetchBookingDetail = async (bookingId: string): Promise<Booking> => {
     throw error;
   }
 
-  console.log('✅ Fetched booking detail:', data);
-  return data as Booking;
+  // Flatten unit data into booking for easier access
+  const bookingWithUnitData = {
+    ...data,
+    unit_name: data.unit?.property_name || null,
+    unit_license_number: data.unit?.license_number || null,
+    unit_folio: data.unit?.folio || null,
+    unit_owner_id: data.unit?.owner_id || null,
+  };
+
+  console.log('✅ Fetched booking detail:', bookingWithUnitData);
+  return bookingWithUnitData as Booking;
 };
 
 // Check for booking conflicts
+// Conflict logic:
+// - If booking a specific unit (unit_id set): conflicts with same unit bookings + whole-property bookings
+// - If booking whole property (unit_id is null): conflicts with ANY booking for that property
 const checkBookingConflict = async (
   propertyId: string,
   checkIn: string,
   checkOut: string,
+  unitId?: string | null,
   excludeBookingId?: string
 ): Promise<boolean> => {
   let query = supabase
     .from('property_bookings')
-    .select('booking_id, check_in_date, check_out_date, guest_name')
+    .select('booking_id, check_in_date, check_out_date, guest_name, unit_id')
     .eq('property_id', propertyId)
     .neq('booking_status', 'cancelled')
     .or(`and(check_in_date.lte.${checkOut},check_out_date.gte.${checkIn})`);
@@ -139,9 +209,24 @@ const checkBookingConflict = async (
     throw error;
   }
 
-  const hasConflict = data && data.length > 0;
+  if (!data || data.length === 0) {
+    return false;
+  }
+
+  // Filter conflicts based on unit logic
+  let conflictingBookings = data;
+
+  if (unitId) {
+    // Booking a specific unit: conflicts with same unit OR whole-property bookings
+    conflictingBookings = data.filter(
+      (booking: any) => booking.unit_id === unitId || booking.unit_id === null
+    );
+  }
+  // If unitId is null (whole property): any booking conflicts (no filtering needed)
+
+  const hasConflict = conflictingBookings.length > 0;
   if (hasConflict) {
-    console.warn('⚠️ Booking conflict detected:', data);
+    console.warn('⚠️ Booking conflict detected:', conflictingBookings);
   }
 
   return hasConflict;
@@ -178,15 +263,17 @@ export function useBookings() {
         throw new Error("You don't have permission to create bookings");
       }
 
-      // Check for conflicts
+      // Check for conflicts (with unit awareness)
       const hasConflict = await checkBookingConflict(
         bookingData.property_id,
         bookingData.check_in_date,
-        bookingData.check_out_date
+        bookingData.check_out_date,
+        bookingData.unit_id
       );
 
       if (hasConflict) {
-        throw new Error("This property is already booked for the selected dates");
+        const unitText = bookingData.unit_id ? "This unit" : "This property";
+        throw new Error(`${unitText} is already booked for the selected dates`);
       }
 
       // Create booking
@@ -272,6 +359,34 @@ export function useBookings() {
           variant: "default",
         });
       }
+
+      // Create revenue allocation for entire-property bookings with units
+      try {
+        const needsAllocation = await shouldCreateAllocation(
+          data.property_id,
+          data.unit_id || null
+        );
+
+        if (needsAllocation && data.total_amount) {
+          console.log('💰 Creating revenue allocation for entire-property booking:', data.booking_id);
+          const { error: allocError } = await supabase.rpc('create_booking_revenue_allocations', {
+            p_booking_id: data.booking_id,
+            p_property_id: data.property_id,
+            p_total_amount: data.total_amount,
+          });
+
+          if (allocError) {
+            console.error('⚠️ Failed to create revenue allocation:', allocError);
+          } else {
+            console.log('✅ Revenue allocation created for booking:', data.booking_id);
+            // Invalidate allocation caches
+            queryClient.invalidateQueries({ queryKey: ['booking-revenue-allocations'] });
+          }
+        }
+      } catch (allocError) {
+        console.error('⚠️ Error during revenue allocation:', allocError);
+        // Don't fail the booking creation for allocation errors
+      }
     },
     onError: (error, bookingData, context) => {
       // Rollback optimistic update
@@ -294,23 +409,26 @@ export function useBookings() {
         throw new Error("You don't have permission to edit bookings");
       }
 
-      // If dates are being changed, check for conflicts
-      if (bookingData.check_in_date || bookingData.check_out_date || bookingData.property_id) {
+      // If dates, property, or unit are being changed, check for conflicts
+      if (bookingData.check_in_date || bookingData.check_out_date || bookingData.property_id || bookingData.unit_id !== undefined) {
         const existingBooking = await fetchBookingDetail(bookingId);
 
         const checkIn = bookingData.check_in_date || existingBooking.check_in_date;
         const checkOut = bookingData.check_out_date || existingBooking.check_out_date;
         const propertyId = bookingData.property_id || existingBooking.property_id;
+        const unitId = bookingData.unit_id !== undefined ? bookingData.unit_id : existingBooking.unit_id;
 
         const hasConflict = await checkBookingConflict(
           propertyId,
           checkIn,
           checkOut,
+          unitId,
           bookingId
         );
 
         if (hasConflict) {
-          throw new Error("This property is already booked for the selected dates");
+          const unitText = unitId ? "This unit" : "This property";
+          throw new Error(`${unitText} is already booked for the selected dates`);
         }
       }
 
@@ -417,6 +535,34 @@ export function useBookings() {
               currentUserId
             );
           }
+        }
+      }
+
+      // Update revenue allocation if total_amount changed for entire-property bookings
+      if (variables.bookingData.total_amount !== undefined) {
+        try {
+          const needsAllocation = await shouldCreateAllocation(
+            data.property_id,
+            data.unit_id || null
+          );
+
+          if (needsAllocation) {
+            console.log('💰 Updating revenue allocation for booking:', data.booking_id);
+            const { error: allocError } = await supabase.rpc('create_booking_revenue_allocations', {
+              p_booking_id: data.booking_id,
+              p_property_id: data.property_id,
+              p_total_amount: data.total_amount || 0,
+            });
+
+            if (allocError) {
+              console.error('⚠️ Failed to update revenue allocation:', allocError);
+            } else {
+              console.log('✅ Revenue allocation updated for booking:', data.booking_id);
+              queryClient.invalidateQueries({ queryKey: ['booking-revenue-allocations'] });
+            }
+          }
+        } catch (allocError) {
+          console.error('⚠️ Error during revenue allocation update:', allocError);
         }
       }
 

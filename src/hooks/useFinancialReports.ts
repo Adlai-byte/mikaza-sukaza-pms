@@ -36,6 +36,30 @@ export interface OwnerStatementData {
       amount: number;
     }>;
   };
+  // Unit-level revenue allocation for multi-unit properties
+  unit_allocations?: {
+    has_allocations: boolean;
+    total_allocated: number;
+    by_unit: Array<{
+      unit_id: string | null;
+      unit_name: string;
+      booking_count: number;
+      share_percentage: number;
+      allocated_amount: number;
+    }>;
+    by_booking: Array<{
+      booking_id: string;
+      guest_name: string;
+      check_in_date: string;
+      check_out_date: string;
+      total_amount: number;
+      allocations: Array<{
+        unit_name: string;
+        share_percentage: number;
+        allocated_amount: number;
+      }>;
+    }>;
+  };
   expenses: {
     total: number;
     by_category: Array<{
@@ -134,6 +158,126 @@ const fetchOwnerStatement = async (
 
   const totalExpenses = expensesList.reduce((sum, exp) => sum + exp.amount, 0);
 
+  // Fetch unit-level revenue allocations for entire-property bookings
+  let unitAllocations: OwnerStatementData['unit_allocations'] = undefined;
+
+  try {
+    // Get bookings for this property in the period
+    const { data: bookings, error: bookingsError } = await supabase
+      .from('property_bookings')
+      .select(`
+        booking_id,
+        guest_name,
+        check_in_date,
+        check_out_date,
+        total_amount,
+        unit_id
+      `)
+      .eq('property_id', propertyId)
+      .is('unit_id', null) // Only entire-property bookings
+      .neq('booking_status', 'cancelled')
+      .gte('check_in_date', periodStart)
+      .lte('check_in_date', periodEnd);
+
+    if (!bookingsError && bookings && bookings.length > 0) {
+      const bookingIds = bookings.map(b => b.booking_id);
+
+      // Fetch allocations for these bookings
+      const { data: allocations, error: allocError } = await supabase
+        .from('booking_revenue_allocation')
+        .select(`
+          allocation_id,
+          booking_id,
+          unit_id,
+          owner_id,
+          share_percentage,
+          allocated_amount,
+          unit:units!booking_revenue_allocation_unit_id_fkey(
+            unit_id,
+            property_name
+          )
+        `)
+        .in('booking_id', bookingIds);
+
+      if (!allocError && allocations && allocations.length > 0) {
+        // Group allocations by unit
+        const byUnitMap = new Map<string, {
+          unit_id: string | null;
+          unit_name: string;
+          booking_count: number;
+          share_percentage: number;
+          allocated_amount: number;
+        }>();
+
+        allocations.forEach((alloc: any) => {
+          const key = alloc.unit_id || 'entire';
+          const existing = byUnitMap.get(key);
+          const unitName = alloc.unit?.property_name || 'Entire Property';
+
+          if (existing) {
+            existing.allocated_amount += alloc.allocated_amount;
+            existing.booking_count += 1;
+          } else {
+            byUnitMap.set(key, {
+              unit_id: alloc.unit_id,
+              unit_name: unitName,
+              booking_count: 1,
+              share_percentage: alloc.share_percentage,
+              allocated_amount: alloc.allocated_amount,
+            });
+          }
+        });
+
+        // Group allocations by booking
+        const byBookingMap = new Map<string, {
+          booking_id: string;
+          guest_name: string;
+          check_in_date: string;
+          check_out_date: string;
+          total_amount: number;
+          allocations: Array<{
+            unit_name: string;
+            share_percentage: number;
+            allocated_amount: number;
+          }>;
+        }>();
+
+        bookings.forEach(booking => {
+          const bookingAllocations = allocations
+            .filter((a: any) => a.booking_id === booking.booking_id)
+            .map((a: any) => ({
+              unit_name: a.unit?.property_name || 'Entire Property',
+              share_percentage: a.share_percentage,
+              allocated_amount: a.allocated_amount,
+            }));
+
+          if (bookingAllocations.length > 0) {
+            byBookingMap.set(booking.booking_id, {
+              booking_id: booking.booking_id,
+              guest_name: booking.guest_name || 'Unknown',
+              check_in_date: booking.check_in_date,
+              check_out_date: booking.check_out_date,
+              total_amount: booking.total_amount || 0,
+              allocations: bookingAllocations,
+            });
+          }
+        });
+
+        const totalAllocated = allocations.reduce((sum: number, a: any) => sum + a.allocated_amount, 0);
+
+        unitAllocations = {
+          has_allocations: true,
+          total_allocated: totalAllocated,
+          by_unit: Array.from(byUnitMap.values()),
+          by_booking: Array.from(byBookingMap.values()),
+        };
+      }
+    }
+  } catch (allocError) {
+    console.warn('Could not fetch unit allocations:', allocError);
+    // Continue without allocations - they might not exist yet
+  }
+
   return {
     property_id: propertyId,
     property_name: property.property_name || '',
@@ -143,6 +287,7 @@ const fetchOwnerStatement = async (
       total: totalRevenue,
       by_invoice: revenueByInvoice,
     },
+    unit_allocations: unitAllocations,
     expenses: {
       total: totalExpenses,
       by_category: expensesByCategoryArray,

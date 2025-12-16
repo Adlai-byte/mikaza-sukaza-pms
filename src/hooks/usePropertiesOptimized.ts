@@ -28,7 +28,7 @@ export const propertyKeys = {
   rules: () => ['rules'],
 } as const;
 
-// Fetch properties for LIST VIEW - optimized query (includes primary image only)
+// Fetch properties for LIST VIEW - optimized query (includes primary image and units for booking)
 const fetchPropertiesList = async (): Promise<Property[]> => {
   console.log('🔍 Fetching properties list...');
   const { data, error } = await supabase
@@ -60,6 +60,21 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
         image_url,
         image_title,
         is_primary
+      ),
+      units(
+        unit_id,
+        property_name,
+        license_number,
+        folio,
+        owner_id,
+        num_bedrooms,
+        num_bathrooms,
+        owner:users!units_owner_id_fkey(
+          user_id,
+          first_name,
+          last_name,
+          email
+        )
       )
     `)
     .order('created_at', { ascending: false });

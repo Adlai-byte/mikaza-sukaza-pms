@@ -9,6 +9,9 @@ import {
   Building2,
   Receipt,
   FileBarChart,
+  Layers,
+  Users,
+  PieChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -389,6 +392,122 @@ export default function OwnerStatement() {
               )}
             </CardContent>
           </Card>
+
+          {/* Unit Revenue Allocations (for multi-unit properties) */}
+          {statement.unit_allocations?.has_allocations && (
+            <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-purple-800">
+                  <Layers className="h-5 w-5" />
+                  Unit Revenue Allocations
+                </CardTitle>
+                <CardDescription>
+                  Revenue from entire-property bookings split among unit owners
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Summary by Unit */}
+                <div>
+                  <h4 className="text-sm font-semibold text-purple-700 mb-3 flex items-center gap-2">
+                    <PieChart className="h-4 w-4" />
+                    Allocation by Unit
+                  </h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Unit</TableHead>
+                        <TableHead className="text-center">Bookings</TableHead>
+                        <TableHead className="text-center">Share %</TableHead>
+                        <TableHead className="text-right">Allocated Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {statement.unit_allocations.by_unit.map((unit, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                              {unit.unit_name}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {unit.booking_count}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                              {unit.share_percentage.toFixed(1)}%
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-purple-700">
+                            ${unit.allocated_amount.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                            })}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="bg-purple-100/50 font-medium">
+                        <TableCell colSpan={3} className="text-right">
+                          Total Allocated
+                        </TableCell>
+                        <TableCell className="text-right text-purple-800">
+                          ${statement.unit_allocations.total_allocated.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Breakdown by Booking */}
+                {statement.unit_allocations.by_booking.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-purple-700 mb-3 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Entire-Property Booking Details
+                    </h4>
+                    <div className="space-y-3">
+                      {statement.unit_allocations.by_booking.map((booking, index) => (
+                        <div key={index} className="bg-white border border-purple-100 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <div className="font-medium">{booking.guest_name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {format(new Date(booking.check_in_date), "MMM d")} - {format(new Date(booking.check_out_date), "MMM d, yyyy")}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-muted-foreground">Total</div>
+                              <div className="font-bold">
+                                ${booking.total_amount.toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {booking.allocations.map((alloc, allocIndex) => (
+                              <div key={allocIndex} className="bg-purple-50 rounded px-3 py-2 text-sm">
+                                <div className="text-purple-600 font-medium truncate">{alloc.unit_name}</div>
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-xs text-purple-500">{alloc.share_percentage.toFixed(1)}%</span>
+                                  <span className="font-semibold text-purple-800">
+                                    ${alloc.allocated_amount.toLocaleString(undefined, {
+                                      minimumFractionDigits: 2,
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Expenses by Category */}
           <Card>

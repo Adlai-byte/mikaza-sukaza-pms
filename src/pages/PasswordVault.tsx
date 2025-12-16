@@ -68,9 +68,11 @@ import {
   AccessLogsDialog,
 } from "@/components/password-vault";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PasswordVault() {
   const { t } = useTranslation();
+  const { toast } = useToast();
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
@@ -160,6 +162,15 @@ export default function PasswordVault() {
       setDecryptedEntry(decrypted);
     } catch (error) {
       console.error("Failed to decrypt entry:", error);
+      toast({
+        title: t("passwordVault.errors.decryptFailed", "Decryption Failed"),
+        description: t("passwordVault.errors.decryptFailedDescription", "Unable to decrypt this entry. The vault may need to be re-unlocked."),
+        variant: "destructive",
+      });
+      // Close dialog and prompt re-unlock
+      setViewDialogOpen(false);
+      lock();
+      handleUnlockVault();
     } finally {
       setIsDecrypting(false);
     }

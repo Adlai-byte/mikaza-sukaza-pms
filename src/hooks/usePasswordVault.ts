@@ -53,6 +53,13 @@ export interface DecryptedPasswordEntry extends Omit<PasswordEntry, 'encrypted_u
   notes: string | null;
 }
 
+// Internal type for the encrypted JSON blob
+interface SensitiveDataBlob {
+  password: string;
+  username?: string | null;
+  notes?: string | null;
+}
+
 export interface PasswordAccessLog {
   log_id: string;
   password_id: string;
@@ -175,10 +182,13 @@ export function usePasswordVault(options: UsePasswordEntriesOptions = {}) {
         throw new Error('Vault is locked. Please unlock with master password.');
       }
 
-      // Encrypt sensitive fields
-      const encryptedPassword = await encryptWithVault(input.password);
-      const encryptedUsername = input.username ? await encryptWithVault(input.username) : null;
-      const encryptedNotes = input.notes ? await encryptWithVault(input.notes) : null;
+      // Encrypt all sensitive data as a single JSON blob (cryptographically correct)
+      const sensitiveData: SensitiveDataBlob = {
+        password: input.password,
+        username: input.username || null,
+        notes: input.notes || null,
+      };
+      const encrypted = await encryptWithVault(JSON.stringify(sensitiveData));
 
       const user = (await supabase.auth.getUser()).data.user;
 
@@ -189,10 +199,10 @@ export function usePasswordVault(options: UsePasswordEntriesOptions = {}) {
           entry_type: input.entry_type,
           category: input.category,
           name: input.name,
-          encrypted_username: encryptedUsername?.ciphertext || null,
-          encrypted_password: encryptedPassword.ciphertext,
-          encrypted_notes: encryptedNotes?.ciphertext || null,
-          encryption_iv: encryptedPassword.iv, // Use same IV for all fields
+          encrypted_username: null, // Stored in encrypted_password blob
+          encrypted_password: encrypted.ciphertext, // Contains JSON blob with all sensitive data
+          encrypted_notes: null, // Stored in encrypted_password blob
+          encryption_iv: encrypted.iv,
           url: input.url || null,
           created_by: user?.id,
           updated_by: user?.id,
@@ -243,29 +253,52 @@ export function usePasswordVault(options: UsePasswordEntriesOptions = {}) {
         updated_by: user?.id,
       };
 
-      // Only encrypt fields that are being updated
-      if (updates.password !== undefined) {
-        const encrypted = await encryptWithVault(updates.password);
-        updateData.encrypted_password = encrypted.ciphertext;
-        updateData.encryption_iv = encrypted.iv;
-        updateData.last_rotated_at = new Date().toISOString();
-      }
+      // Check if any encrypted field is being updated
+      const hasEncryptedFieldUpdate =
+        updates.password !== undefined ||
+        updates.username !== undefined ||
+        updates.notes !== undefined;
 
-      if (updates.username !== undefined) {
-        if (updates.username) {
-          const encrypted = await encryptWithVault(updates.username);
-          updateData.encrypted_username = encrypted.ciphertext;
-        } else {
-          updateData.encrypted_username = null;
+      if (hasEncryptedFieldUpdate) {
+        // Fetch current entry to decrypt existing values
+        const { data: currentEntry, error: fetchError } = await supabase
+          .from('password_vault')
+          .select('encrypted_password, encryption_iv')
+          .eq('password_id', password_id)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        // Decrypt existing sensitive data blob
+        let currentData: SensitiveDataBlob = { password: '' };
+        try {
+          const decrypted = await decryptWithVault(currentEntry.encrypted_password, currentEntry.encryption_iv);
+          currentData = JSON.parse(decrypted) as SensitiveDataBlob;
+        } catch (e) {
+          // If parsing fails, it might be old format - try to decrypt as plain password
+          console.warn('Failed to parse as JSON, might be old format');
+          currentData = {
+            password: await decryptWithVault(currentEntry.encrypted_password, currentEntry.encryption_iv),
+          };
         }
-      }
 
-      if (updates.notes !== undefined) {
-        if (updates.notes) {
-          const encrypted = await encryptWithVault(updates.notes);
-          updateData.encrypted_notes = encrypted.ciphertext;
-        } else {
-          updateData.encrypted_notes = null;
+        // Merge updates with current data
+        const finalData: SensitiveDataBlob = {
+          password: updates.password !== undefined ? updates.password : currentData.password,
+          username: updates.username !== undefined ? updates.username : currentData.username,
+          notes: updates.notes !== undefined ? updates.notes : currentData.notes,
+        };
+
+        // Re-encrypt the entire blob with a new IV
+        const encrypted = await encryptWithVault(JSON.stringify(finalData));
+        updateData.encrypted_password = encrypted.ciphertext;
+        updateData.encrypted_username = null; // Stored in blob
+        updateData.encrypted_notes = null; // Stored in blob
+        updateData.encryption_iv = encrypted.iv;
+
+        // Track password rotation
+        if (updates.password !== undefined) {
+          updateData.last_rotated_at = new Date().toISOString();
         }
       }
 
@@ -368,13 +401,30 @@ export function useDecryptPasswordEntry() {
     }
 
     try {
-      const password = await decryptWithVault(entry.encrypted_password, entry.encryption_iv);
-      const username = entry.encrypted_username
-        ? await decryptWithVault(entry.encrypted_username, entry.encryption_iv)
-        : null;
-      const notes = entry.encrypted_notes
-        ? await decryptWithVault(entry.encrypted_notes, entry.encryption_iv)
-        : null;
+      // Decrypt the encrypted_password field
+      const decryptedBlob = await decryptWithVault(entry.encrypted_password, entry.encryption_iv);
+
+      let password: string;
+      let username: string | null = null;
+      let notes: string | null = null;
+
+      // Try to parse as JSON blob (new format)
+      try {
+        const parsed = JSON.parse(decryptedBlob) as SensitiveDataBlob;
+        password = parsed.password;
+        username = parsed.username || null;
+        notes = parsed.notes || null;
+      } catch (parseError) {
+        // If not valid JSON, it's the old format (plain password string)
+        // Try to decrypt username and notes from separate fields
+        password = decryptedBlob;
+        username = entry.encrypted_username
+          ? await decryptWithVault(entry.encrypted_username, entry.encryption_iv)
+          : null;
+        notes = entry.encrypted_notes
+          ? await decryptWithVault(entry.encrypted_notes, entry.encryption_iv)
+          : null;
+      }
 
       // Log the view
       await logAccess(entry.password_id, 'viewed', entry.name);
