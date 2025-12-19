@@ -333,6 +333,7 @@ export const ROUTES = {
 
   // Security
   passwordVault: '/password-vault',
+  keyControl: '/key-control',
 };
 
 /**

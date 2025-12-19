@@ -109,6 +109,7 @@ export default function Reports() {
   const [showDebit, setShowDebit] = useState(true);
   const [showCredit, setShowCredit] = useState(true);
   const [showOwnerTransactions, setShowOwnerTransactions] = useState(false);
+  const [showServiceCost, setShowServiceCost] = useState(true);
   const [withFinancial, setWithFinancial] = useState(false);
   const [showTaxDetails, setShowTaxDetails] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -214,6 +215,7 @@ export default function Reports() {
     showDebit,
     showCredit,
     showOwnerTransactions,
+    showServiceCost,
     enabled: reportType === 'financialEntries',
   });
 
@@ -858,6 +860,16 @@ export default function Reports() {
                 />
                 <Label htmlFor="showOwner" className="cursor-pointer">
                   {t('reports.showOwnerTransactions', 'Owner Transactions')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="showServiceCost"
+                  checked={showServiceCost}
+                  onCheckedChange={(checked) => setShowServiceCost(checked as boolean)}
+                />
+                <Label htmlFor="showServiceCost" className="cursor-pointer">
+                  {t('reports.showServiceCost', 'Service Cost')}
                 </Label>
               </div>
             </div>

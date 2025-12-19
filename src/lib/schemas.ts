@@ -527,6 +527,7 @@ export const taskSchema = z.object({
   assigned_to: z.string().uuid().optional().nullable(),
   created_by: z.string().uuid().optional(),
   job_id: z.string().uuid().optional().nullable(),
+  booking_id: z.string().uuid().optional().nullable(),
   status: z.enum(["pending", "in_progress", "completed", "cancelled"]).default("pending"),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
   category: z.enum(["cleaning", "maintenance", "check_in_prep", "check_out_prep", "inspection", "repair", "other"]).default("other"),
@@ -569,6 +570,7 @@ export type Task = z.infer<typeof taskSchema> & {
   property?: Property;
   assigned_user?: User;
   created_user?: User;
+  booking?: PropertyBooking;
   checklists?: TaskChecklist[];
   comments?: TaskComment[];
   attachments?: TaskAttachment[];
@@ -586,6 +588,24 @@ export type TaskInsert = Omit<z.infer<typeof taskSchema>, 'task_id' | 'created_a
 export type TaskChecklistInsert = Omit<z.infer<typeof taskChecklistSchema>, 'checklist_item_id' | 'created_at'>;
 export type TaskCommentInsert = Omit<z.infer<typeof taskCommentSchema>, 'comment_id' | 'created_at'>;
 export type TaskAttachmentInsert = Omit<z.infer<typeof taskAttachmentSchema>, 'attachment_id' | 'created_at'>;
+
+// Booking Job Configuration (for auto-generating tasks from bookings)
+export interface BookingJobConfig {
+  type: 'cleaning' | 'check_in_prep' | 'check_out_prep' | 'inspection' | 'maintenance';
+  enabled: boolean;
+  assignedTo: string | null;
+  dueDate: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  notes?: string;
+}
+
+export const defaultBookingJobConfigs: BookingJobConfig[] = [
+  { type: 'cleaning', enabled: true, assignedTo: null, dueDate: '', priority: 'medium' },
+  { type: 'check_in_prep', enabled: true, assignedTo: null, dueDate: '', priority: 'medium' },
+  { type: 'check_out_prep', enabled: true, assignedTo: null, dueDate: '', priority: 'medium' },
+  { type: 'inspection', enabled: false, assignedTo: null, dueDate: '', priority: 'low' },
+  { type: 'maintenance', enabled: false, assignedTo: null, dueDate: '', priority: 'low' },
+];
 
 // Issue schemas
 export const issueSchema = z.object({
@@ -1113,7 +1133,12 @@ export const expenseSchema = z.object({
   recurring_frequency: z.enum(["monthly", "quarterly", "yearly"]).optional(),
 
   // Financial entry type (for Credit/Debit ledger system)
-  entry_type: z.enum(["credit", "debit", "owner_payment"]).default("debit"),
+  entry_type: z.enum(["credit", "debit", "owner_payment", "service_cost"]).default("debit"),
+
+  // Approval workflow
+  is_approved: z.boolean().default(false),
+  approved_by: z.string().uuid().optional().nullable(),
+  approved_at: z.string().optional().nullable(),
 
   // Scheduled entry fields
   is_scheduled: z.boolean().default(false),
@@ -2644,5 +2669,190 @@ export type OwnerRevenueSummary = {
   booking_count: number;
   total_allocated_revenue: number;
   avg_share_percentage: number;
+};
+
+// =============================================================================
+// KEY CONTROL SYSTEM SCHEMAS
+// =============================================================================
+
+// Key categories - where keys are stored/assigned
+export const keyCategoryEnum = z.enum(['office', 'operational', 'housekeepers', 'extras']);
+export type KeyCategory = z.infer<typeof keyCategoryEnum>;
+
+// Key types available in the system
+export const keyTypeEnum = z.enum(['house_key', 'mailbox_key', 'storage_key', 'remote_control']);
+export type KeyType = z.infer<typeof keyTypeEnum>;
+
+// Display labels for key types
+export const KEY_TYPE_LABELS: Record<KeyType, string> = {
+  house_key: 'House Key',
+  mailbox_key: 'Mailbox Key',
+  storage_key: 'Storage Key',
+  remote_control: 'Remote Control',
+};
+
+// Display labels for key categories (simplified names for better UX)
+export const KEY_CATEGORY_LABELS: Record<KeyCategory, string> = {
+  office: 'Main Storage',
+  operational: 'Ops Team',
+  housekeepers: 'Cleaning Team',
+  extras: 'Spare Keys',
+};
+
+// Key Inventory Schema
+export const keyInventorySchema = z.object({
+  property_id: z.string().uuid("Invalid property ID"),
+  category: keyCategoryEnum,
+  key_type: keyTypeEnum,
+  quantity: z.number().int().min(0, "Quantity cannot be negative").default(0),
+  notes: z.string().optional().nullable(),
+});
+
+export type KeyInventoryInsert = z.infer<typeof keyInventorySchema>;
+
+export type KeyInventory = KeyInventoryInsert & {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  property?: {
+    property_id: string;
+    property_name: string;
+  };
+};
+
+// Key Transaction Schema (for audit log)
+export const keyTransactionSchema = z.object({
+  property_id: z.string().uuid("Invalid property ID"),
+  key_type: keyTypeEnum,
+  from_category: keyCategoryEnum,
+  to_category: keyCategoryEnum,
+  quantity: z.number().int().min(1, "Transfer quantity must be at least 1"),
+  notes: z.string().optional().nullable(),
+});
+
+export type KeyTransactionInsert = z.infer<typeof keyTransactionSchema>;
+
+export type KeyTransaction = KeyTransactionInsert & {
+  id: string;
+  performed_by: string;
+  created_at: string;
+  property?: {
+    property_id: string;
+    property_name: string;
+  };
+  performer?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
+};
+
+// Key Inventory Filters
+export type KeyInventoryFilters = {
+  property_id?: string;
+  category?: KeyCategory;
+  key_type?: KeyType;
+  search?: string;
+};
+
+// Key Transaction Filters
+export type KeyTransactionFilters = {
+  property_id?: string;
+  key_type?: KeyType;
+  from_category?: KeyCategory;
+  to_category?: KeyCategory;
+  performed_by?: string;
+  start_date?: string;
+  end_date?: string;
+};
+
+// Property Key Summary - aggregated view of all keys for a property
+export type PropertyKeySummary = {
+  property_id: string;
+  property_name: string;
+  inventory: {
+    [category in KeyCategory]: {
+      [keyType in KeyType]: number;
+    };
+  };
+  total_keys: number;
+  last_updated: string;
+};
+
+// ==================== Key Borrowing System ====================
+
+// Borrower type enum
+export const borrowerTypeEnum = z.enum(['employee', 'guest', 'contractor', 'owner', 'other']);
+export type BorrowerType = z.infer<typeof borrowerTypeEnum>;
+
+export const BORROWER_TYPE_LABELS: Record<BorrowerType, string> = {
+  employee: 'Employee',
+  guest: 'Guest',
+  contractor: 'Contractor',
+  owner: 'Owner',
+  other: 'Other',
+};
+
+// Borrowing status enum
+export const borrowingStatusEnum = z.enum(['borrowed', 'returned', 'overdue']);
+export type BorrowingStatus = z.infer<typeof borrowingStatusEnum>;
+
+export const BORROWING_STATUS_LABELS: Record<BorrowingStatus, string> = {
+  borrowed: 'Borrowed',
+  returned: 'Returned',
+  overdue: 'Overdue',
+};
+
+// Key Borrowing schema for check-out
+export const keyBorrowingSchema = z.object({
+  property_id: z.string().uuid('Invalid property ID'),
+  key_type: keyTypeEnum,
+  category: keyCategoryEnum,
+  quantity: z.number().int().positive('Quantity must be at least 1').default(1),
+  borrower_name: z.string().min(1, 'Borrower name is required'),
+  borrower_contact: z.string().optional(),
+  borrower_type: borrowerTypeEnum,
+  expected_return_date: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type KeyBorrowingInsert = z.infer<typeof keyBorrowingSchema>;
+
+export type KeyBorrowing = KeyBorrowingInsert & {
+  id: string;
+  checked_out_at: string;
+  checked_in_at: string | null;
+  checked_out_by: string;
+  checked_in_by: string | null;
+  status: BorrowingStatus;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  property?: {
+    property_id: string;
+    property_name: string;
+  };
+  checked_out_by_user?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
+  checked_in_by_user?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
+};
+
+// Key Borrowing Filters
+export type KeyBorrowingFilters = {
+  property_id?: string;
+  key_type?: KeyType;
+  category?: KeyCategory;
+  borrower_type?: BorrowerType;
+  status?: BorrowingStatus;
+  borrower_name?: string;
+  start_date?: string;
+  end_date?: string;
 };
 

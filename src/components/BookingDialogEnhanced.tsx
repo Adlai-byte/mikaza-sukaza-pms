@@ -42,7 +42,9 @@ import {
   Eye,
   Home,
 } from 'lucide-react';
-import { Booking, BookingInsert, Guest } from '@/lib/schemas';
+import { Booking, BookingInsert, Guest, BookingJobConfig, defaultBookingJobConfigs } from '@/lib/schemas';
+import { CreateBookingParams } from '@/hooks/useBookings';
+import { BookingJobsSection } from '@/components/booking/BookingJobsSection';
 import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay, addMonths } from 'date-fns';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useBillTemplates } from '@/hooks/useBillTemplates';
@@ -56,7 +58,7 @@ import { UserPlus } from 'lucide-react';
 interface BookingDialogEnhancedProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: BookingInsert) => void;
+  onSubmit: (data: CreateBookingParams) => void;
   isSubmitting?: boolean;
   propertyId?: string;
   booking?: Booking | null;
@@ -105,6 +107,10 @@ export function BookingDialogEnhanced({
   const [softConflictAcknowledged, setSoftConflictAcknowledged] = useState(false);
   const [showCreateGuestDialog, setShowCreateGuestDialog] = useState(false);
   const [showAvailabilityCalendar, setShowAvailabilityCalendar] = useState(false);
+
+  // Job configs for auto-generating tasks (only for new bookings)
+  const [jobConfigs, setJobConfigs] = useState<BookingJobConfig[]>([...defaultBookingJobConfigs]);
+  const [autoGenerateJobs, setAutoGenerateJobs] = useState(true);
 
   // Fetch property bookings for calendar view
   const { bookings: propertyBookings, loading: loadingPropertyBookings } = usePropertyBookings(
@@ -279,29 +285,41 @@ export function BookingDialogEnhanced({
       newErrors.number_of_guests = 'At least 1 guest required';
     }
 
+    console.log('🔍 validateForm result:', { newErrors, isValid: Object.keys(newErrors).length === 0 });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('📝 handleSubmit called', { formData, errors, conflictStatus, softConflictAcknowledged });
 
     if (!validateForm()) {
+      console.log('❌ Form validation failed', errors);
       return;
     }
 
     // Check for booking conflicts
     if (conflictStatus.type === 'hard') {
+      console.log('❌ Hard conflict detected, cannot proceed');
       // Cannot proceed with hard conflicts
       return;
     }
 
     if (conflictStatus.type === 'soft' && !softConflictAcknowledged) {
+      console.log('⚠️ Soft conflict not acknowledged');
       // User must acknowledge soft conflicts before proceeding
       return;
     }
 
-    onSubmit(formData);
+    // Include job configs for new bookings only
+    const submitData: CreateBookingParams = {
+      ...formData,
+      jobConfigs: !isEditing && autoGenerateJobs ? jobConfigs.filter(j => j.enabled) : undefined,
+    };
+
+    console.log('✅ Submitting booking data:', submitData);
+    onSubmit(submitData);
   };
 
   // Handler for acknowledging soft conflicts
@@ -906,7 +924,25 @@ export function BookingDialogEnhanced({
             </div>
           </div>
 
+          {/* Auto-Generate Jobs Section - Only for new bookings */}
+          {!isEditing && (
+            <BookingJobsSection
+              jobConfigs={jobConfigs}
+              onJobConfigsChange={setJobConfigs}
+              autoGenerate={autoGenerateJobs}
+              onAutoGenerateChange={setAutoGenerateJobs}
+              checkInDate={formData.check_in_date}
+              checkOutDate={formData.check_out_date}
+              disabled={isSubmitting}
+            />
+          )}
+
           <DialogFooter className="gap-2">
+            {/* Debug info - remove after fixing */}
+            <div className="text-xs text-gray-400 mr-auto">
+              {conflictStatus.type !== 'none' && `Conflict: ${conflictStatus.type}`}
+              {isSubmitting && ' | Submitting'}
+            </div>
             <Button
               type="button"
               variant="outline"
@@ -924,6 +960,7 @@ export function BookingDialogEnhanced({
                 (conflictStatus.type === 'soft' && !softConflictAcknowledged)
               }
               className="bg-primary hover:bg-primary/90"
+              onClick={() => console.log('🔘 Submit button clicked', { isSubmitting, conflictStatus, softConflictAcknowledged })}
             >
               <Save className="mr-2 h-4 w-4" />
               {isSubmitting

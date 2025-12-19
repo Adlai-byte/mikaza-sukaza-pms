@@ -450,6 +450,53 @@ export function useMarkEntryAsDone() {
   });
 }
 
+// Approve an entry (for reports visibility)
+const approveEntry = async ({
+  expenseId,
+  approvedBy,
+}: {
+  expenseId: string;
+  approvedBy: string;
+}): Promise<Expense> => {
+  const { data, error } = await supabase
+    .from('expenses')
+    .update({
+      is_approved: true,
+      approved_by: approvedBy,
+      approved_at: new Date().toISOString(),
+    })
+    .eq('expense_id', expenseId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Expense;
+};
+
+export function useApproveEntry() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: approveEntry,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: expenseKeys.byProperty(data.property_id) });
+      toast({
+        title: 'Success',
+        description: 'Entry approved for reports',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to approve entry',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
 // Fetch financial entries for a property with balance calculation
 const fetchPropertyFinancialEntries = async (
   propertyId: string,

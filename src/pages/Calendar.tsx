@@ -97,6 +97,7 @@ import {
   Menu,
   Package,
   Layers,
+  History,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -118,8 +119,11 @@ import { Tables } from '@/integrations/supabase/types';
 import { BookingDialogEnhanced } from '@/components/BookingDialogEnhanced';
 import { BookingInsert } from '@/lib/schemas';
 import { useToast } from '@/hooks/use-toast';
-import { bookingKeys } from '@/hooks/useBookings';
+import { bookingKeys, CreateBookingParams } from '@/hooks/useBookings';
+import { createTasksFromBooking } from '@/hooks/useBookingTasks';
+import { useAuth } from '@/contexts/AuthContext';
 import { CalendarSyncDialog } from '@/components/calendar/CalendarSyncDialog';
+import { PropertyTransactionsDrawer } from '@/components/calendar/PropertyTransactionsDrawer';
 
 type Property = Tables<'properties'>;
 type PropertyBooking = Tables<'property_bookings'>;
@@ -212,6 +216,7 @@ const Calendar = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // State: Filters and View Configuration
   const [filters, setFilters] = useState<FilterState>({
@@ -261,6 +266,11 @@ const Calendar = () => {
 
   // State: Calendar Sync Dialog
   const [showCalendarSyncDialog, setShowCalendarSyncDialog] = useState(false);
+
+  // State: Property Transactions Drawer
+  const [showTransactionsDrawer, setShowTransactionsDrawer] = useState(false);
+  const [transactionsPropertyId, setTransactionsPropertyId] = useState<string | null>(null);
+  const [transactionsPropertyName, setTransactionsPropertyName] = useState<string>('');
 
   // State: Drag-to-Create Booking
   const [isDragging, setIsDragging] = useState(false);
@@ -639,12 +649,17 @@ const Calendar = () => {
   /**
    * HANDLER: Submit booking (create or update)
    */
-  const handleBookingSubmit = async (bookingData: BookingInsert) => {
+  const handleBookingSubmit = async (bookingData: CreateBookingParams) => {
+    console.log('📅 Calendar handleBookingSubmit called with:', bookingData);
     try {
+      // Extract jobConfigs before database insert (it's not a database column)
+      const { jobConfigs, ...dbBookingData } = bookingData;
+      console.log('📅 Extracted data:', { jobConfigs, dbBookingData });
+
       if (editingBooking) {
         const { data, error } = await supabase
           .from('property_bookings')
-          .update(bookingData)
+          .update(dbBookingData)
           .eq('booking_id', editingBooking.booking_id)
           .select()
           .single();
@@ -658,11 +673,34 @@ const Calendar = () => {
       } else {
         const { data, error } = await supabase
           .from('property_bookings')
-          .insert([bookingData])
+          .insert([dbBookingData])
           .select()
           .single();
 
         if (error) throw error;
+
+        // Create tasks from job configs if provided
+        if (data && jobConfigs && jobConfigs.length > 0 && user?.id) {
+          try {
+            await createTasksFromBooking(
+              data.booking_id,
+              data.property_id,
+              data.check_in_date,
+              data.check_out_date,
+              jobConfigs,
+              user.id,
+              data.guest_name || undefined
+            );
+          } catch (taskError) {
+            console.error('Failed to create booking tasks:', taskError);
+            // Show warning but don't fail the booking
+            toast({
+              title: t('common.warning', 'Warning'),
+              description: t('calendar.tasksCreationFailed', 'Booking created but failed to generate tasks'),
+              variant: 'destructive',
+            });
+          }
+        }
 
         toast({
           title: t('common.success'),
@@ -677,6 +715,7 @@ const Calendar = () => {
       setEditingBooking(null);
 
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(bookingData.property_id) });
     } catch (error: any) {
       toast({
@@ -1407,7 +1446,7 @@ const Calendar = () => {
               <div className="flex flex-1 min-h-0 overflow-hidden">
 
                 {/* Fixed Property Column */}
-                <div className="flex-shrink-0 w-64 border-r bg-white flex flex-col">
+                <div className="flex-shrink-0 w-80 border-r bg-white flex flex-col">
                   {/* Header */}
                   <div className="h-12 border-b bg-gray-50 flex items-center px-4 font-semibold text-gray-700">
                     <Home className="h-4 w-4 mr-2" />
@@ -1544,28 +1583,45 @@ const Calendar = () => {
                                   )}
                                 </div>
 
-                                {/* Occupancy Bar */}
-                                <div className="mt-1.5">
-                                  <div className="flex items-center justify-between text-xs mb-0.5">
-                                    <span className="text-gray-500">{t('calendar.occupancy')}</span>
-                                    <span className={`font-medium ${
-                                      occupancyRate > 80 ? 'text-red-600' :
-                                      occupancyRate > 50 ? 'text-orange-600' :
-                                      'text-green-600'
-                                    }`}>
-                                      {occupancyRate}%
-                                    </span>
+                                {/* Occupancy Bar & History Button Row */}
+                                <div className="mt-1.5 flex items-end gap-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center justify-between text-xs mb-0.5">
+                                      <span className="text-gray-500">{t('calendar.occupancy')}</span>
+                                      <span className={`font-medium ${
+                                        occupancyRate > 80 ? 'text-red-600' :
+                                        occupancyRate > 50 ? 'text-orange-600' :
+                                        'text-green-600'
+                                      }`}>
+                                        {occupancyRate}%
+                                      </span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                      <div
+                                        className={`h-1.5 rounded-full transition-all ${
+                                          occupancyRate > 80 ? 'bg-red-500' :
+                                          occupancyRate > 50 ? 'bg-orange-500' :
+                                          'bg-green-500'
+                                        }`}
+                                        style={{ width: `${Math.min(occupancyRate, 100)}%` }}
+                                      />
+                                    </div>
                                   </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                    <div
-                                      className={`h-1.5 rounded-full transition-all ${
-                                        occupancyRate > 80 ? 'bg-red-500' :
-                                        occupancyRate > 50 ? 'bg-orange-500' :
-                                        'bg-green-500'
-                                      }`}
-                                      style={{ width: `${Math.min(occupancyRate, 100)}%` }}
-                                    />
-                                  </div>
+                                  {/* History Button */}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setTransactionsPropertyId(property.property_id);
+                                      setTransactionsPropertyName(property.property_name || '');
+                                      setShowTransactionsDrawer(true);
+                                    }}
+                                  >
+                                    <History className="h-3 w-3 mr-1" />
+                                    {t('calendar.history', 'History')}
+                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -2236,6 +2292,14 @@ const Calendar = () => {
           open={showCalendarSyncDialog}
           onOpenChange={setShowCalendarSyncDialog}
           properties={properties as Property[]}
+        />
+
+        {/* Property Transactions Drawer */}
+        <PropertyTransactionsDrawer
+          open={showTransactionsDrawer}
+          onOpenChange={setShowTransactionsDrawer}
+          propertyId={transactionsPropertyId}
+          propertyName={transactionsPropertyName}
         />
       </div>
     </TooltipProvider>

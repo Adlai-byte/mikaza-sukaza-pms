@@ -76,6 +76,7 @@ const ReportSchedules = lazy(() => import("./pages/ReportSchedules"));
 
 // Security & Admin
 const PasswordVault = lazy(() => import("./pages/PasswordVault"));
+const KeyControl = lazy(() => import("./pages/KeyControl"));
 
 // Loading spinner for lazy-loaded pages
 const PageLoader = () => (
@@ -237,6 +238,16 @@ const App = () => (
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.PASSWORDS_VIEW}>
                       <PasswordVault />
+                    </RBACProtectedRoute>
+                  }
+                />
+
+                {/* Key Control - Central Office */}
+                <Route
+                  path="/key-control"
+                  element={
+                    <RBACProtectedRoute permission={PERMISSIONS.PROPERTIES_VIEW}>
+                      <KeyControl />
                     </RBACProtectedRoute>
                   }
                 />

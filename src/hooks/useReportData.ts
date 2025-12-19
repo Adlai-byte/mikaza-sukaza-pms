@@ -37,6 +37,7 @@ export interface FinancialEntriesFilters {
   showDebit?: boolean;
   showCredit?: boolean;
   showOwnerTransactions?: boolean;
+  showServiceCost?: boolean;
   enabled?: boolean;
 }
 
@@ -298,7 +299,8 @@ export function useCurrentBalanceReport(filters: CurrentBalanceFilters) {
 
 /**
  * Hook: Financial Entries Report
- * Shows credits, debits, owner payments with running balance
+ * Shows credits, debits, owner payments, service costs with running balance
+ * Only shows APPROVED entries for reporting purposes
  */
 export function useFinancialEntriesReport(filters: FinancialEntriesFilters) {
   const { enabled = true, ...queryFilters } = filters;
@@ -314,10 +316,12 @@ export function useFinancialEntriesReport(filters: FinancialEntriesFilters) {
           entry_type,
           description,
           amount,
+          is_approved,
           property:properties(property_id, property_name),
           expense_attachments(attachment_id),
           expense_notes(note_id)
         `)
+        .eq('is_approved', true) // Only show approved entries in reports
         .order('expense_date', { ascending: true });
 
       if (queryFilters.propertyId && queryFilters.propertyId !== 'all') {
@@ -337,6 +341,7 @@ export function useFinancialEntriesReport(filters: FinancialEntriesFilters) {
       if (queryFilters.showDebit) entryTypes.push('debit');
       if (queryFilters.showCredit) entryTypes.push('credit');
       if (queryFilters.showOwnerTransactions) entryTypes.push('owner_payment');
+      if (queryFilters.showServiceCost) entryTypes.push('service_cost');
 
       // Apply filter if at least one type is selected
       if (entryTypes.length > 0) {
@@ -346,7 +351,7 @@ export function useFinancialEntriesReport(filters: FinancialEntriesFilters) {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Calculate running balance
+      // Calculate running balance (service_cost is a deduction like debit)
       let runningBalance = 0;
       const results: FinancialEntryData[] = (data || []).map((expense: any) => {
         const amount = expense.amount || 0;
@@ -355,6 +360,7 @@ export function useFinancialEntriesReport(filters: FinancialEntriesFilters) {
         if (entryType === 'credit') {
           runningBalance += amount;
         } else {
+          // debit, owner_payment, and service_cost are all deductions
           runningBalance -= amount;
         }
 

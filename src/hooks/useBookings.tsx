@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Booking, BookingInsert } from "@/lib/schemas";
+import { Booking, BookingInsert, BookingJobConfig } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
 import { CACHE_CONFIG } from "@/lib/cache-config";
 import { OptimisticUpdates } from "@/lib/cache-manager-simplified";
@@ -15,6 +15,13 @@ import {
 } from "@/lib/notifications/booking-notifications";
 import { createInvoiceFromBooking } from "@/hooks/useInvoices";
 import { shouldCreateAllocation } from "@/hooks/useBookingRevenueAllocation";
+import { createTasksFromBooking, bookingTaskKeys } from "@/hooks/useBookingTasks";
+import { taskKeys } from "@/hooks/useTasks";
+
+// Extended booking insert with job configs for auto-generation
+export interface CreateBookingParams extends BookingInsert {
+  jobConfigs?: BookingJobConfig[];
+}
 
 // Query keys for cache management
 export const bookingKeys = {
@@ -257,7 +264,10 @@ export function useBookings() {
 
   // Create booking mutation
   const createBookingMutation = useMutation({
-    mutationFn: async (bookingData: BookingInsert) => {
+    mutationFn: async (params: CreateBookingParams) => {
+      // Extract jobConfigs from params (not sent to database)
+      const { jobConfigs, ...bookingData } = params;
+
       // Check permission
       if (!hasPermission(PERMISSIONS.BOOKINGS_CREATE)) {
         throw new Error("You don't have permission to create bookings");
@@ -287,7 +297,10 @@ export function useBookings() {
 
       return data as Booking;
     },
-    onMutate: async (bookingData) => {
+    onMutate: async (params: CreateBookingParams) => {
+      // Extract jobConfigs to pass through context
+      const { jobConfigs, ...bookingData } = params;
+
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: bookingKeys.lists() });
 
@@ -307,10 +320,14 @@ export function useBookings() {
         return [tempBooking, ...oldData];
       });
 
-      // Return rollback function
-      return { rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings) };
+      // Return rollback function and jobConfigs for onSuccess
+      return {
+        rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings),
+        jobConfigs,
+        guestName: bookingData.guest_name,
+      };
     },
-    onSuccess: async (data) => {
+    onSuccess: async (data, variables, context) => {
       // Invalidate booking-related caches with refetchType: 'all'
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists(), refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id), refetchType: 'all' });
@@ -386,6 +403,33 @@ export function useBookings() {
       } catch (allocError) {
         console.error('⚠️ Error during revenue allocation:', allocError);
         // Don't fail the booking creation for allocation errors
+      }
+
+      // Auto-generate tasks from booking if job configs provided
+      if (context?.jobConfigs && context.jobConfigs.length > 0 && currentUserId) {
+        try {
+          const enabledJobs = context.jobConfigs.filter((job: BookingJobConfig) => job.enabled);
+          if (enabledJobs.length > 0) {
+            console.log('📋 Creating tasks for booking:', data.booking_id);
+            const tasks = await createTasksFromBooking(
+              data.booking_id!,
+              data.property_id,
+              data.check_in_date,
+              data.check_out_date,
+              enabledJobs,
+              currentUserId,
+              context.guestName
+            );
+            console.log('✅ Tasks created:', tasks.length);
+
+            // Invalidate task caches
+            queryClient.invalidateQueries({ queryKey: taskKeys.all });
+            queryClient.invalidateQueries({ queryKey: bookingTaskKeys.booking(data.booking_id!) });
+          }
+        } catch (taskError) {
+          console.error('⚠️ Failed to create tasks for booking:', taskError);
+          // Don't fail the booking creation for task errors
+        }
       }
     },
     onError: (error, bookingData, context) => {

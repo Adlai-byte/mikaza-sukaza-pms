@@ -42,6 +42,7 @@ import {
   Edit,
   Trash2,
   Check,
+  CheckCircle,
   AlertCircle,
   Download,
   Paperclip,
@@ -49,6 +50,7 @@ import {
   ChevronRight,
   ChevronDown,
   MessageSquare,
+  Wrench,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import {
@@ -58,7 +60,9 @@ import {
   useUpdateExpense,
   useDeleteExpense,
   useMarkEntryAsDone,
+  useApproveEntry,
 } from '@/hooks/useExpenses';
+import { useAuth } from '@/contexts/AuthContext';
 import { useBulkCreateExpenseAttachments } from '@/hooks/useExpenseAttachments';
 import { useBulkCreateExpenseNotes, useExpenseNotes } from '@/hooks/useExpenseNotes';
 import { useExpenseAttachments, useDeleteExpenseAttachment } from '@/hooks/useExpenseAttachments';
@@ -102,9 +106,12 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
   // Dialog states
   const [showEntryDialog, setShowEntryDialog] = useState(false);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
-  const [entryType, setEntryType] = useState<'credit' | 'debit' | 'owner_payment'>('debit');
+  const [entryType, setEntryType] = useState<'credit' | 'debit' | 'owner_payment' | 'service_cost'>('debit');
   const [editingEntry, setEditingEntry] = useState<Expense | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<Expense | null>(null);
+
+  // Auth for approval
+  const { user } = useAuth();
 
   // Expandable rows state
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -128,6 +135,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
   const markAsDone = useMarkEntryAsDone();
+  const approveEntry = useApproveEntry();
   const bulkCreateAttachments = useBulkCreateExpenseAttachments();
   const bulkCreateNotes = useBulkCreateExpenseNotes();
   const deleteAttachment = useDeleteExpenseAttachment();
@@ -150,13 +158,14 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
     });
   }, []);
 
-  // Calculate totals
+  // Calculate totals (service_cost is a deduction like debit)
   const totals = entries.reduce(
     (acc, entry) => {
       const amount = entry.amount || 0;
       if (entry.entry_type === 'credit') {
         acc.totalCredit += amount;
       } else {
+        // debit, owner_payment, and service_cost are all deductions
         acc.totalDebit += amount;
       }
       return acc;
@@ -167,10 +176,23 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
   // Calculate final balance (initial + credits - debits for current month)
   const finalBalance = initialBalance + totals.totalCredit - totals.totalDebit;
 
-  const handleOpenEntryDialog = (type: 'credit' | 'debit' | 'owner_payment', entry?: Expense) => {
+  const handleOpenEntryDialog = (type: 'credit' | 'debit' | 'owner_payment' | 'service_cost', entry?: Expense) => {
     setEntryType(type);
     setEditingEntry(entry || null);
     setShowEntryDialog(true);
+  };
+
+  const handleApproveEntry = async (entry: Expense) => {
+    if (!entry.expense_id || !user?.id) return;
+    try {
+      await approveEntry.mutateAsync({
+        expenseId: entry.expense_id,
+        approvedBy: user.id,
+      });
+      refetch();
+    } catch (error) {
+      // Error handled by mutation
+    }
   };
 
   const handleEntrySubmit = async (
@@ -270,6 +292,8 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
         return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Credit</Badge>;
       case 'debit':
         return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Debit</Badge>;
+      case 'service_cost':
+        return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">Service Cost</Badge>;
       case 'owner_payment':
         return <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">Owner Payment</Badge>;
       default:
@@ -311,6 +335,14 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
             >
               <Minus className="mr-2 h-4 w-4" />
               Debit
+            </Button>
+            <Button
+              type="button"
+              onClick={() => handleOpenEntryDialog('service_cost')}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <Wrench className="mr-2 h-4 w-4" />
+              Service Cost
             </Button>
             <Button
               type="button"
@@ -461,6 +493,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                     <TableHead className="text-center">Files</TableHead>
                     <TableHead className="text-center">Notes</TableHead>
                     <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Approved</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -481,6 +514,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                         {loadingInitialBalance ? '...' : formatCurrency(initialBalance)}
                       </span>
                     </TableCell>
+                    <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
@@ -571,6 +605,27 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                             <Badge variant="outline">Pending</Badge>
                           )}
                         </TableCell>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          {entry.is_approved ? (
+                            <Badge className="bg-blue-100 text-blue-700">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Approved
+                            </Badge>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => handleApproveEntry(entry)}
+                              disabled={approveEntry.isPending}
+                              title="Approve entry for reports"
+                            >
+                              <Check className="h-3 w-3 mr-1" />
+                              Approve
+                            </Button>
+                          )}
+                        </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1">
                             <Button
@@ -597,9 +652,9 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleMarkAsDone(entry)}
-                                title="Mark as Done"
+                                title="Mark as Paid"
                               >
-                                <Check className="h-4 w-4 text-green-600" />
+                                <DollarSign className="h-4 w-4 text-green-600" />
                               </Button>
                             )}
                           </div>
@@ -608,7 +663,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                       {/* Expanded Content */}
                       {isExpanded && entry.expense_id && (
                         <TableRow className="bg-slate-50 dark:bg-slate-900/50">
-                          <TableCell colSpan={11} className="p-0">
+                          <TableCell colSpan={12} className="p-0">
                             <ExpandedEntryContent expenseId={entry.expense_id} />
                           </TableCell>
                         </TableRow>
@@ -637,6 +692,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                         {loadingInitialBalance ? '...' : formatCurrency(finalBalance)}
                       </span>
                     </TableCell>
+                    <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
