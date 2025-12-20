@@ -147,9 +147,9 @@ const PropertyTableRow = ({
       </TableCell>
       <TableCell>
         <div>
-          <p className="font-medium">{property.location?.city || 'N/A'}</p>
+          <p className="font-medium">{(property.location as any)?.[0]?.city || property.location?.city || 'N/A'}</p>
           <p className="text-sm text-muted-foreground">
-            {property.location?.address || 'No address'}
+            {(property.location as any)?.[0]?.address || property.location?.address || 'No address'}
           </p>
         </div>
       </TableCell>
@@ -253,10 +253,10 @@ const PropertyTableRow = ({
           <TableCell>
             <div className="pl-8">
               <p className="font-medium text-purple-800">{unit.property_name || `Unit ${index + 1}`}</p>
-              {property.location?.address && (
+              {((property.location as any)?.[0]?.address || property.location?.address) && (
                 <p className="text-xs text-purple-500 flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
-                  {formatStreetWithUnit(property.location.address, unit.property_name)}
+                  {formatStreetWithUnit((property.location as any)?.[0]?.address || property.location?.address, unit.property_name)}
                 </p>
               )}
               <p className="text-xs text-purple-600">
@@ -332,8 +332,8 @@ export function PropertyTableOptimized({
         property.property_type.toLowerCase().includes(search.toLowerCase()) ||
         property.owner?.first_name?.toLowerCase().includes(search.toLowerCase()) ||
         property.owner?.last_name?.toLowerCase().includes(search.toLowerCase()) ||
-        property.location?.city?.toLowerCase().includes(search.toLowerCase()) ||
-        property.location?.address?.toLowerCase().includes(search.toLowerCase());
+        ((property.location as any)?.[0]?.city || property.location?.city)?.toLowerCase().includes(search.toLowerCase()) ||
+        ((property.location as any)?.[0]?.address || property.location?.address)?.toLowerCase().includes(search.toLowerCase());
 
       const matchesType = typeFilter === "all" || property.property_type === typeFilter;
       const matchesStatus = statusFilter === "all" ||
@@ -341,7 +341,7 @@ export function PropertyTableOptimized({
         (statusFilter === "inactive" && !property.is_active) ||
         (statusFilter === "booking" && property.is_booking);
 
-      const matchesCity = cityFilter === "all" || property.location?.city === cityFilter;
+      const matchesCity = cityFilter === "all" || ((property.location as any)?.[0]?.city || property.location?.city) === cityFilter;
       const matchesBedrooms = bedroomsFilter === "all" ||
         (bedroomsFilter === "studio" && (property.num_bedrooms === 0 || !property.num_bedrooms)) ||
         (bedroomsFilter === "1" && property.num_bedrooms === 1) ||
@@ -368,7 +368,7 @@ export function PropertyTableOptimized({
   // Memoize unique values for filters
   const { uniquePropertyTypes, uniqueCities } = useMemo(() => ({
     uniquePropertyTypes: Array.from(new Set(properties.map(p => p.property_type))),
-    uniqueCities: Array.from(new Set(properties.map(p => p.location?.city).filter(Boolean))),
+    uniqueCities: Array.from(new Set(properties.map(p => (p.location as any)?.[0]?.city || p.location?.city).filter(Boolean))),
   }), [properties]);
 
   const exportToCSV = useCallback(() => {
@@ -378,7 +378,7 @@ export function PropertyTableOptimized({
       ...filteredProperties.map(property => [
         `"${property.property_type}"`,
         `"${property.owner?.first_name} ${property.owner?.last_name}"`,
-        `"${property.location?.address || ''}, ${property.location?.city || ''}"`,
+        `"${(property.location as any)?.[0]?.address || property.location?.address || ''}, ${(property.location as any)?.[0]?.city || property.location?.city || ''}"`,
         `"${property.is_active ? 'Active' : 'Inactive'}"`,
         `"${property.num_bedrooms || 0}"`,
         `"${property.num_bathrooms || 0}"`,
@@ -612,10 +612,10 @@ export function PropertyTableOptimized({
                         <span className="font-medium">Owner:</span> {property.owner?.first_name} {property.owner?.last_name}
                       </p>
                       <p className="text-sm">
-                        <span className="font-medium">Location:</span> {property.location?.city || 'N/A'}
-                        {property.location?.address && (
+                        <span className="font-medium">Location:</span> {(property.location as any)?.[0]?.city || property.location?.city || 'N/A'}
+                        {((property.location as any)?.[0]?.address || property.location?.address) && (
                           <span className="text-muted-foreground block text-xs truncate">
-                            {property.location.address}
+                            {(property.location as any)?.[0]?.address || property.location?.address}
                           </span>
                         )}
                       </p>
