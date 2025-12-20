@@ -691,7 +691,10 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
   // Unit Handlers
   const handleAddUnit = () => {
     setEditingUnit(null);
-    setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null, latitude: null, longitude: null, address: '', city: '', state: '', postal_code: '', country: '' });
+    // Auto-suggest next unit name based on existing units count
+    const existingUnitsCount = property.units?.length || 0;
+    const suggestedName = `Unit ${existingUnitsCount + 1}`;
+    setUnitFormData({ property_name: suggestedName, license_number: '', folio: '', owner_id: null, latitude: null, longitude: null, address: '', city: '', state: '', postal_code: '', country: '' });
     setShowUnitDialog(true);
   };
 
