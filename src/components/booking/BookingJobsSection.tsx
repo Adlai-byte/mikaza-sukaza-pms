@@ -229,22 +229,32 @@ export function BookingJobsSection({
                                   onValueChange={(value) =>
                                     handleAssigneeChange(job.type, value)
                                   }
-                                  disabled={disabled || usersLoading}
+                                  disabled={disabled}
                                 >
                                   <SelectTrigger className="h-8 text-sm">
                                     <SelectValue
-                                      placeholder={usersLoading ? t('common.loading', 'Loading...') : t('bookings.jobs.unassigned', 'Unassigned')}
+                                      placeholder={t('bookings.jobs.unassigned', 'Unassigned')}
                                     />
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="unassigned">
                                       {t('bookings.jobs.unassigned', 'Unassigned')}
                                     </SelectItem>
-                                    {assignableUsers.map((user) => (
-                                      <SelectItem key={user.user_id} value={user.user_id}>
-                                        {user.first_name} {user.last_name} ({user.user_type})
+                                    {usersLoading ? (
+                                      <SelectItem value="loading" disabled>
+                                        {t('common.loading', 'Loading users...')}
                                       </SelectItem>
-                                    ))}
+                                    ) : assignableUsers.length === 0 ? (
+                                      <SelectItem value="no-users" disabled>
+                                        {t('bookings.jobs.noAssignableUsers', 'No assignable users')}
+                                      </SelectItem>
+                                    ) : (
+                                      assignableUsers.map((user) => (
+                                        <SelectItem key={user.user_id} value={user.user_id}>
+                                          {user.first_name} {user.last_name} ({user.user_type})
+                                        </SelectItem>
+                                      ))
+                                    )}
                                   </SelectContent>
                                 </Select>
                               </div>

@@ -176,15 +176,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     license_number: '',
     folio: '',
     owner_id: null as string | null,
-    latitude: null as number | null,
-    longitude: null as number | null,
-    address: '',
-    city: '',
-    state: '',
-    postal_code: '',
-    country: '',
   });
-  const [showUnitLocationMap, setShowUnitLocationMap] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     wifi_password: false,
     gate_code: false,
@@ -618,7 +610,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
         description: 'Unit created successfully',
       });
       setShowUnitDialog(false);
-      setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null, latitude: null, longitude: null, address: '', city: '', state: '', postal_code: '', country: '' });
+      setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null });
     },
     onError: (error) => {
       toast({
@@ -650,7 +642,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       });
       setShowUnitDialog(false);
       setEditingUnit(null);
-      setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null, latitude: null, longitude: null, address: '', city: '', state: '', postal_code: '', country: '' });
+      setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null });
     },
     onError: (error) => {
       toast({
@@ -694,7 +686,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     // Auto-suggest next unit name based on existing units count
     const existingUnitsCount = property.units?.length || 0;
     const suggestedName = `Unit ${existingUnitsCount + 1}`;
-    setUnitFormData({ property_name: suggestedName, license_number: '', folio: '', owner_id: null, latitude: null, longitude: null, address: '', city: '', state: '', postal_code: '', country: '' });
+    setUnitFormData({ property_name: suggestedName, license_number: '', folio: '', owner_id: null });
     setShowUnitDialog(true);
   };
 
@@ -705,29 +697,8 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       license_number: unit.license_number || '',
       folio: unit.folio || '',
       owner_id: unit.owner_id || null,
-      latitude: unit.latitude || null,
-      longitude: unit.longitude || null,
-      address: unit.address || '',
-      city: unit.city || '',
-      state: unit.state || '',
-      postal_code: unit.postal_code || '',
-      country: unit.country || '',
     });
     setShowUnitDialog(true);
-  };
-
-  const handleUnitLocationSelect = (lat: number, lng: number, address?: string, city?: string, state?: string, postal_code?: string, country?: string) => {
-    setUnitFormData(prev => ({
-      ...prev,
-      latitude: lat,
-      longitude: lng,
-      address: address || prev.address,
-      city: city || prev.city,
-      state: state || prev.state,
-      postal_code: postal_code || prev.postal_code,
-      country: country || prev.country,
-    }));
-    setShowUnitLocationMap(false);
   };
 
   const handleSaveUnit = () => {
@@ -1651,16 +1622,6 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
         initialAddress={formData.address}
       />
 
-      {/* Location Map Modal (Unit) */}
-      <LocationMap
-        isOpen={showUnitLocationMap}
-        onClose={() => setShowUnitLocationMap(false)}
-        onLocationSelect={handleUnitLocationSelect}
-        initialLat={unitFormData.latitude || undefined}
-        initialLng={unitFormData.longitude || undefined}
-        initialAddress={unitFormData.address}
-      />
-
       {/* Unit Dialog */}
       <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
@@ -1728,70 +1689,6 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
               </Select>
             </div>
 
-            {/* Unit Location Section */}
-            <div className="space-y-3 pt-3 border-t">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-green-600" />
-                  Unit Location (Optional)
-                </Label>
-                {(unitFormData.latitude || unitFormData.address) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-muted-foreground hover:text-destructive"
-                    onClick={() => setUnitFormData(prev => ({ ...prev, latitude: null, longitude: null, address: '', city: '', state: '', postal_code: '', country: '' }))}
-                  >
-                    <X className="h-3 w-3 mr-1" />
-                    Clear
-                  </Button>
-                )}
-              </div>
-
-              <Input
-                id="unit_address"
-                value={unitFormData.address}
-                onChange={(e) => setUnitFormData({ ...unitFormData, address: e.target.value })}
-                placeholder="Street Address"
-                className="h-9"
-              />
-
-              <div className="grid grid-cols-3 gap-2">
-                <Input
-                  id="unit_city"
-                  value={unitFormData.city}
-                  onChange={(e) => setUnitFormData({ ...unitFormData, city: e.target.value })}
-                  placeholder="City"
-                  className="h-9"
-                />
-                <Input
-                  id="unit_state"
-                  value={unitFormData.state}
-                  onChange={(e) => setUnitFormData({ ...unitFormData, state: e.target.value })}
-                  placeholder="State"
-                  className="h-9"
-                />
-                <Input
-                  id="unit_postal_code"
-                  value={unitFormData.postal_code}
-                  onChange={(e) => setUnitFormData({ ...unitFormData, postal_code: e.target.value })}
-                  placeholder="ZIP"
-                  className="h-9"
-                />
-              </div>
-
-              <Button
-                type="button"
-                onClick={() => setShowUnitLocationMap(true)}
-                variant="outline"
-                size="sm"
-                className="w-full"
-              >
-                <MapPin className="mr-2 h-4 w-4" />
-                {(unitFormData.latitude && unitFormData.longitude) ? 'Update on Map' : 'Select on Map'}
-              </Button>
-            </div>
           </div>
           <DialogFooter>
             <Button
@@ -1799,7 +1696,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
               onClick={() => {
                 setShowUnitDialog(false);
                 setEditingUnit(null);
-                setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null, latitude: null, longitude: null, address: '', city: '', state: '', postal_code: '', country: '' });
+                setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null });
               }}
             >
               Cancel

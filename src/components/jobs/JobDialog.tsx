@@ -11,6 +11,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Form,
   FormControl,
   FormDescription,
@@ -36,7 +46,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { AlertTriangle, CalendarIcon, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
@@ -76,6 +86,9 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
   const { properties } = usePropertiesOptimized();
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
+  const [showActiveBookingWarning, setShowActiveBookingWarning] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<any>(null);
+  const [activeBookings, setActiveBookings] = useState<any[]>([]);
 
   // Fetch users for assignment
   const { data: users = [] } = useQuery({
@@ -158,13 +171,50 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
       scheduled_date: scheduledDate?.toISOString() || null,
     };
 
+    // Skip warning for check_in/check_out job types (these are expected)
+    const skipWarningTypes = ['check_in', 'check_out'];
+    if (skipWarningTypes.includes(values.job_type)) {
+      await onSubmit(submitData);
+      form.reset();
+      setDueDate(undefined);
+      setScheduledDate(undefined);
+      return;
+    }
+
+    // Check for active bookings (confirmed or checked_in) on this property
+    const { data: bookings } = await supabase
+      .from('property_bookings')
+      .select('booking_id, guest_name, check_in_date, check_out_date, booking_status')
+      .eq('property_id', values.property_id)
+      .in('booking_status', ['confirmed', 'checked_in']);
+
+    if (bookings && bookings.length > 0) {
+      setActiveBookings(bookings);
+      setPendingSubmitData(submitData);
+      setShowActiveBookingWarning(true);
+      return;
+    }
+
     await onSubmit(submitData);
     form.reset();
     setDueDate(undefined);
     setScheduledDate(undefined);
   };
 
+  const handleConfirmSubmit = async () => {
+    if (pendingSubmitData) {
+      await onSubmit(pendingSubmitData);
+      form.reset();
+      setDueDate(undefined);
+      setScheduledDate(undefined);
+      setPendingSubmitData(null);
+    }
+    setShowActiveBookingWarning(false);
+    setActiveBookings([]);
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -518,5 +568,37 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
         </Form>
       </DialogContent>
     </Dialog>
+
+    {/* Active Booking Warning Dialog */}
+    <AlertDialog open={showActiveBookingWarning} onOpenChange={setShowActiveBookingWarning}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            {t('jobs.activeBookingWarning.title')}
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div>
+              {activeBookings.map((booking) => (
+                <div key={booking.booking_id} className="mb-2">
+                  {t('jobs.activeBookingWarning.message', {
+                    guestName: booking.guest_name || t('common.unknown'),
+                    checkIn: format(new Date(booking.check_in_date), 'PPP'),
+                    checkOut: format(new Date(booking.check_out_date), 'PPP'),
+                  })}
+                </div>
+              ))}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmSubmit}>
+            {t('jobs.activeBookingWarning.proceed')}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

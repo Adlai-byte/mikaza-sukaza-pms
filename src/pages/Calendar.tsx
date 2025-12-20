@@ -124,6 +124,7 @@ import { createTasksFromBooking } from '@/hooks/useBookingTasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { CalendarSyncDialog } from '@/components/calendar/CalendarSyncDialog';
 import { PropertyTransactionsDrawer } from '@/components/calendar/PropertyTransactionsDrawer';
+import { formatStreetWithUnit } from '@/lib/address-utils';
 
 type Property = Tables<'properties'>;
 type PropertyBooking = Tables<'property_bookings'>;
@@ -1799,9 +1800,16 @@ const Calendar = () => {
                                                 <div className="text-xs">
                                                   <div className="font-semibold">{booking.guest_name}</div>
                                                   {booking.unit_id ? (
-                                                    <div className="text-purple-600">Unit: {(booking as any).unit?.property_name || 'Specific Unit'}</div>
+                                                    <div className="text-purple-600">
+                                                      {formatStreetWithUnit(
+                                                        property.property_location?.[0]?.address,
+                                                        (booking as any).unit?.property_name
+                                                      ) || 'Specific Unit'}
+                                                    </div>
                                                   ) : (
-                                                    <div className="text-blue-600 font-medium">{t('calendar.entireProperty', 'Entire Property')}</div>
+                                                    <div className="text-blue-600">
+                                                      {property.property_location?.[0]?.address || t('calendar.entireProperty', 'Entire Property')}
+                                                    </div>
                                                   )}
                                                   <div>Check-in: {format(parseISO(booking.check_in_date), 'MMM dd')}</div>
                                                   <div>Check-out: {format(parseISO(booking.check_out_date), 'MMM dd')}</div>
@@ -1824,9 +1832,16 @@ const Calendar = () => {
                                                 <div className="text-xs">
                                                   <div className="font-semibold">{booking.guest_name}</div>
                                                   {booking.unit_id ? (
-                                                    <div className="text-purple-600">Unit: {(booking as any).unit?.property_name || 'Specific Unit'}</div>
+                                                    <div className="text-purple-600">
+                                                      {formatStreetWithUnit(
+                                                        property.property_location?.[0]?.address,
+                                                        (booking as any).unit?.property_name
+                                                      ) || 'Specific Unit'}
+                                                    </div>
                                                   ) : (
-                                                    <div className="text-blue-600 font-medium">{t('calendar.entireProperty', 'Entire Property')}</div>
+                                                    <div className="text-blue-600">
+                                                      {property.property_location?.[0]?.address || t('calendar.entireProperty', 'Entire Property')}
+                                                    </div>
                                                   )}
                                                   <div>Check-out: {format(parseISO(booking.check_out_date), 'MMM dd')}</div>
                                                 </div>

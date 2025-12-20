@@ -23,6 +23,13 @@ export interface CreateBookingParams extends BookingInsert {
   jobConfigs?: BookingJobConfig[];
 }
 
+// Extended update params with job configs for generating jobs on existing bookings
+export interface UpdateBookingParams {
+  bookingId: string;
+  bookingData: Partial<BookingInsert>;
+  jobConfigs?: BookingJobConfig[];
+}
+
 // Query keys for cache management
 export const bookingKeys = {
   all: () => ['bookings'] as const,
@@ -447,20 +454,38 @@ export function useBookings() {
 
   // Update booking mutation
   const updateBookingMutation = useMutation({
-    mutationFn: async ({ bookingId, bookingData }: { bookingId: string; bookingData: Partial<BookingInsert> }) => {
+    mutationFn: async ({ bookingId, bookingData, jobConfigs }: UpdateBookingParams) => {
       // Check permission
       if (!hasPermission(PERMISSIONS.BOOKINGS_EDIT)) {
         throw new Error("You don't have permission to edit bookings");
       }
 
+      // Valid booking fields that can be updated in the database
+      const validBookingFields = [
+        'property_id', 'unit_id', 'guest_id', 'guest_name', 'guest_email', 'guest_phone',
+        'check_in_date', 'check_out_date', 'number_of_guests', 'total_amount', 'deposit_amount',
+        'payment_method', 'booking_status', 'special_requests', 'booking_channel',
+        'payment_status', 'bill_template_id', 'notes', 'confirmation_code'
+      ];
+
+      // Filter bookingData to only include valid fields
+      const filteredBookingData: Partial<BookingInsert> = {};
+      for (const key of validBookingFields) {
+        if (key in bookingData && bookingData[key as keyof typeof bookingData] !== undefined) {
+          (filteredBookingData as any)[key] = bookingData[key as keyof typeof bookingData];
+        }
+      }
+
+      console.log('📝 Updating booking with filtered data:', { bookingId, filteredBookingData, hasJobConfigs: !!jobConfigs?.length });
+
       // If dates, property, or unit are being changed, check for conflicts
-      if (bookingData.check_in_date || bookingData.check_out_date || bookingData.property_id || bookingData.unit_id !== undefined) {
+      if (filteredBookingData.check_in_date || filteredBookingData.check_out_date || filteredBookingData.property_id || filteredBookingData.unit_id !== undefined) {
         const existingBooking = await fetchBookingDetail(bookingId);
 
-        const checkIn = bookingData.check_in_date || existingBooking.check_in_date;
-        const checkOut = bookingData.check_out_date || existingBooking.check_out_date;
-        const propertyId = bookingData.property_id || existingBooking.property_id;
-        const unitId = bookingData.unit_id !== undefined ? bookingData.unit_id : existingBooking.unit_id;
+        const checkIn = filteredBookingData.check_in_date || existingBooking.check_in_date;
+        const checkOut = filteredBookingData.check_out_date || existingBooking.check_out_date;
+        const propertyId = filteredBookingData.property_id || existingBooking.property_id;
+        const unitId = filteredBookingData.unit_id !== undefined ? filteredBookingData.unit_id : existingBooking.unit_id;
 
         const hasConflict = await checkBookingConflict(
           propertyId,
@@ -476,22 +501,25 @@ export function useBookings() {
         }
       }
 
-      // Update booking
+      // Update booking with only valid fields
       const { data, error } = await supabase
         .from('property_bookings')
         .update({
-          ...bookingData,
+          ...filteredBookingData,
           updated_at: new Date().toISOString(),
         })
         .eq('booking_id', bookingId)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase update error:', error);
+        throw error;
+      }
 
       return data as Booking;
     },
-    onMutate: async ({ bookingId, bookingData }) => {
+    onMutate: async ({ bookingId, bookingData, jobConfigs }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: bookingKeys.lists() });
 
@@ -509,15 +537,83 @@ export function useBookings() {
         );
       });
 
-      // Return rollback function
-      return { rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings) };
+      // Return rollback function and jobConfigs for onSuccess
+      return {
+        rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings),
+        jobConfigs,
+      };
     },
-    onSuccess: async (data, variables) => {
+    onSuccess: async (data, variables, context) => {
       // Invalidate booking-related caches with refetchType: 'all'
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists(), refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id), refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(data.booking_id!), refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['bookings', 'calendar'], refetchType: 'all' });
+
+      // Create jobs if jobConfigs were provided (for generating jobs on existing bookings)
+      if (context?.jobConfigs && context.jobConfigs.length > 0 && currentUserId) {
+        try {
+          const enabledJobs = context.jobConfigs.filter((job: BookingJobConfig) => job.enabled);
+          if (enabledJobs.length > 0) {
+            console.log('🔧 Creating jobs for updated booking:', data.booking_id, enabledJobs);
+
+            // Get property for notifications
+            const { data: property } = await supabase
+              .from('properties')
+              .select('property_name')
+              .eq('property_id', data.property_id)
+              .single();
+
+            // Create jobs using the same logic as create booking
+            const jobsToCreate = enabledJobs.map((config: BookingJobConfig) => {
+              let dueDate = data.check_out_date; // Default to checkout
+              if (config.jobType === 'check_in') {
+                dueDate = data.check_in_date;
+              } else if (config.jobType === 'check_out') {
+                dueDate = data.check_out_date;
+              }
+
+              return {
+                property_id: data.property_id,
+                booking_id: data.booking_id,
+                job_type: config.jobType,
+                job_title: config.label,
+                job_description: `Auto-generated ${config.label.toLowerCase()} for booking`,
+                job_status: 'pending',
+                priority: config.priority || 'medium',
+                due_date: dueDate,
+                assigned_to: config.assignedTo || null,
+                created_by: currentUserId,
+              };
+            });
+
+            const { error: jobsError } = await supabase
+              .from('jobs')
+              .insert(jobsToCreate);
+
+            if (jobsError) {
+              console.error('⚠️ Failed to create jobs:', jobsError);
+              toast({
+                title: "Booking Updated",
+                description: `Booking updated but failed to create some jobs: ${jobsError.message}`,
+                variant: "destructive",
+              });
+            } else {
+              console.log('✅ Jobs created for updated booking:', jobsToCreate.length);
+              // Invalidate jobs cache
+              queryClient.invalidateQueries({ queryKey: ['jobs'] });
+
+              toast({
+                title: "Success",
+                description: `Booking updated and ${jobsToCreate.length} job(s) created`,
+              });
+              return; // Skip regular success toast
+            }
+          }
+        } catch (jobError) {
+          console.error('⚠️ Error creating jobs:', jobError);
+        }
+      }
 
       // Cross-entity invalidation: Property availability changed
       queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
@@ -726,8 +822,8 @@ export function useBookings() {
     isFetching,
     error: bookingsError,
     createBooking: createBookingMutation.mutateAsync,
-    updateBooking: (bookingId: string, bookingData: Partial<BookingInsert>) =>
-      updateBookingMutation.mutateAsync({ bookingId, bookingData }),
+    updateBooking: (bookingId: string, bookingData: Partial<BookingInsert>, jobConfigs?: BookingJobConfig[]) =>
+      updateBookingMutation.mutateAsync({ bookingId, bookingData, jobConfigs }),
     deleteBooking: deleteBookingMutation.mutateAsync,
     refetch,
     // Mutation states for UI feedback

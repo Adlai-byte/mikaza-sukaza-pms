@@ -560,6 +560,11 @@
       "tasks": "tareas",
       "unscheduled": "sin programar",
       "noJobsOnDay": "No hay trabajos en este día"
+    },
+    "activeBookingWarning": {
+      "title": "Advertencia de Reserva Activa",
+      "message": "Esta propiedad tiene una reserva confirmada para {{guestName}} ({{checkIn}} - {{checkOut}}). ¿Está seguro de que desea asignar este trabajo?",
+      "proceed": "Proceder de Todos Modos"
     }
   },
   "todos": {

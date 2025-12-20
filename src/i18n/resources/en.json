@@ -632,6 +632,11 @@
       "tasks": "tasks",
       "unscheduled": "unscheduled",
       "noJobsOnDay": "No jobs on this day"
+    },
+    "activeBookingWarning": {
+      "title": "Active Booking Warning",
+      "message": "This property has a confirmed booking for {{guestName}} ({{checkIn}} - {{checkOut}}). Are you sure you want to assign this job?",
+      "proceed": "Proceed Anyway"
     }
   },
   "todos": {

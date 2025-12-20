@@ -19,6 +19,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Collapsible,
@@ -41,6 +51,7 @@ import {
   ChevronUp,
   Eye,
   Home,
+  AlertTriangle,
 } from 'lucide-react';
 import { Booking, BookingInsert, Guest, BookingJobConfig, defaultBookingJobConfigs } from '@/lib/schemas';
 import { CreateBookingParams } from '@/hooks/useBookings';
@@ -111,6 +122,10 @@ export function BookingDialogEnhanced({
   // Job configs for auto-generating tasks (only for new bookings)
   const [jobConfigs, setJobConfigs] = useState<BookingJobConfig[]>([...defaultBookingJobConfigs]);
   const [autoGenerateJobs, setAutoGenerateJobs] = useState(true);
+
+  // Active booking warning state for job generation
+  const [showActiveBookingWarning, setShowActiveBookingWarning] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<CreateBookingParams | null>(null);
 
   // Fetch property bookings for calendar view
   const { bookings: propertyBookings, loading: loadingPropertyBookings } = usePropertyBookings(
@@ -312,14 +327,45 @@ export function BookingDialogEnhanced({
       return;
     }
 
-    // Include job configs for new bookings only
+    // Include job configs when auto-generating jobs (for both create and edit)
     const submitData: CreateBookingParams = {
       ...formData,
-      jobConfigs: !isEditing && autoGenerateJobs ? jobConfigs.filter(j => j.enabled) : undefined,
+      jobConfigs: autoGenerateJobs ? jobConfigs.filter(j => j.enabled) : undefined,
     };
+
+    // Check for active bookings when auto-generating jobs (except check_in/check_out)
+    if (autoGenerateJobs) {
+      const enabledJobTypes = jobConfigs.filter(j => j.enabled).map(j => j.jobType);
+      const skipWarningTypes = ['check_in', 'check_out'];
+      const hasNonSkipJobs = enabledJobTypes.some(t => !skipWarningTypes.includes(t));
+
+      if (hasNonSkipJobs && propertyBookings) {
+        const activeBookings = propertyBookings.filter(b =>
+          ['confirmed', 'checked_in'].includes(b.booking_status) &&
+          b.booking_id !== booking?.booking_id
+        );
+
+        if (activeBookings.length > 0) {
+          console.log('⚠️ Active bookings found, showing warning', activeBookings);
+          setPendingSubmitData(submitData);
+          setShowActiveBookingWarning(true);
+          return;
+        }
+      }
+    }
 
     console.log('✅ Submitting booking data:', submitData);
     onSubmit(submitData);
+  };
+
+  // Handler for proceeding with submission despite active booking warning
+  const handleProceedWithActiveBooking = () => {
+    if (pendingSubmitData) {
+      console.log('✅ Proceeding with booking despite active bookings');
+      onSubmit(pendingSubmitData);
+      setShowActiveBookingWarning(false);
+      setPendingSubmitData(null);
+    }
   };
 
   // Handler for acknowledging soft conflicts
@@ -924,18 +970,16 @@ export function BookingDialogEnhanced({
             </div>
           </div>
 
-          {/* Auto-Generate Jobs Section - Only for new bookings */}
-          {!isEditing && (
-            <BookingJobsSection
-              jobConfigs={jobConfigs}
-              onJobConfigsChange={setJobConfigs}
-              autoGenerate={autoGenerateJobs}
-              onAutoGenerateChange={setAutoGenerateJobs}
-              checkInDate={formData.check_in_date}
-              checkOutDate={formData.check_out_date}
-              disabled={isSubmitting}
-            />
-          )}
+          {/* Auto-Generate Jobs Section - Available for both new and existing bookings */}
+          <BookingJobsSection
+            jobConfigs={jobConfigs}
+            onJobConfigsChange={setJobConfigs}
+            autoGenerate={autoGenerateJobs}
+            onAutoGenerateChange={setAutoGenerateJobs}
+            checkInDate={formData.check_in_date}
+            checkOutDate={formData.check_out_date}
+            disabled={isSubmitting}
+          />
 
           <DialogFooter className="gap-2">
             {/* Debug info - remove after fixing */}
@@ -981,6 +1025,79 @@ export function BookingDialogEnhanced({
         onClose={() => setShowCreateGuestDialog(false)}
         guestId={null}
       />
+
+      {/* Active Booking Warning Dialog for Job Generation */}
+      <AlertDialog open={showActiveBookingWarning} onOpenChange={setShowActiveBookingWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Active Booking Warning
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  This property has active bookings (confirmed or checked-in). Creating jobs
+                  for this booking may affect guests currently staying at the property.
+                </p>
+                {propertyBookings && (
+                  <div className="bg-amber-50 dark:bg-amber-950 rounded-md p-3 text-sm">
+                    <p className="font-medium text-amber-800 dark:text-amber-200 mb-2">
+                      Active bookings:
+                    </p>
+                    <ul className="list-disc list-inside text-amber-700 dark:text-amber-300 space-y-1">
+                      {propertyBookings
+                        .filter(b =>
+                          ['confirmed', 'checked_in'].includes(b.booking_status) &&
+                          b.booking_id !== booking?.booking_id
+                        )
+                        .slice(0, 3)
+                        .map(b => (
+                          <li key={b.booking_id}>
+                            {b.guest_name} ({b.booking_status === 'checked_in' ? 'Checked In' : 'Confirmed'})
+                            {b.check_in_date && b.check_out_date && (
+                              <span className="text-xs ml-1">
+                                ({format(parseISO(b.check_in_date), 'MMM d')} - {format(parseISO(b.check_out_date), 'MMM d')})
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                    </ul>
+                    {propertyBookings.filter(b =>
+                      ['confirmed', 'checked_in'].includes(b.booking_status) &&
+                      b.booking_id !== booking?.booking_id
+                    ).length > 3 && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                        And {propertyBookings.filter(b =>
+                          ['confirmed', 'checked_in'].includes(b.booking_status) &&
+                          b.booking_id !== booking?.booking_id
+                        ).length - 3} more...
+                      </p>
+                    )}
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Do you want to proceed with creating this booking and its jobs?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowActiveBookingWarning(false);
+              setPendingSubmitData(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleProceedWithActiveBooking}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              Proceed Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

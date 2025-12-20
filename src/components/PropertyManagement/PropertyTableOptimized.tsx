@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Trash2, Search, Eye, Download, Filter, Home, Images, Camera, ChevronLeft, ChevronRight, QrCode, ChevronDown, ChevronUp, Layers } from "lucide-react";
+import { Edit, Trash2, Search, Eye, Download, Filter, Home, Images, Camera, ChevronLeft, ChevronRight, QrCode, ChevronDown, ChevronUp, Layers, MapPin } from "lucide-react";
+import { formatStreetWithUnit } from "@/lib/address-utils";
 import { PropertyTableLoadingState, LoadingOverlay, InlineLoadingSpinner } from "./PropertyTableSkeleton";
 import { useNavigate } from "react-router-dom";
 import {
@@ -252,6 +253,12 @@ const PropertyTableRow = ({
           <TableCell>
             <div className="pl-8">
               <p className="font-medium text-purple-800">{unit.property_name || `Unit ${index + 1}`}</p>
+              {property.location?.address && (
+                <p className="text-xs text-purple-500 flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {formatStreetWithUnit(property.location.address, unit.property_name)}
+                </p>
+              )}
               <p className="text-xs text-purple-600">
                 {(unit.num_bedrooms !== null && unit.num_bedrooms !== undefined) && `${unit.num_bedrooms} bed`}
                 {(unit.num_bathrooms !== null && unit.num_bathrooms !== undefined) && `, ${unit.num_bathrooms} bath`}
