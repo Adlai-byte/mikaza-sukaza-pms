@@ -417,6 +417,7 @@ export function useUsersOptimized() {
     users,
     loading,
     isFetching,
+    error: usersError,
     createUser: createUserMutation.mutateAsync,
     updateUser: (userId: string, userData: Partial<UserInsert>) =>
       updateUserMutation.mutateAsync({ userId, userData }),

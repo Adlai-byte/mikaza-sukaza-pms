@@ -28,7 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BookingJobConfig } from '@/lib/schemas';
 import { calculateJobDueDate } from '@/hooks/useBookingTasks';
-import { useUsers } from '@/hooks/useUsers';
+import { useUsersOptimized } from '@/hooks/useUsersOptimized';
 import { format, parseISO } from 'date-fns';
 
 interface BookingJobsSectionProps {
@@ -72,10 +72,28 @@ export function BookingJobsSection({
   const [isOpen, setIsOpen] = React.useState(true);
 
   // Fetch users who can be assigned tasks (admin, ops, provider)
-  const { users = [], loading: usersLoading } = useUsers();
+  const { users = [], loading: usersLoading, error: usersError, refetch: refetchUsers } = useUsersOptimized();
   const assignableUsers = users.filter(
     (u) => ['admin', 'ops', 'provider'].includes(u.user_type || '') && u.is_active !== false
   );
+
+  // Debug logging for production issues
+  React.useEffect(() => {
+    console.log('📋 BookingJobsSection - Users state:', {
+      usersLoading,
+      usersError: usersError?.message || null,
+      totalUsers: users.length,
+      assignableUsers: assignableUsers.length,
+      userTypes: users.map(u => u.user_type),
+      userDetails: users.slice(0, 3).map(u => ({ id: u.user_id, name: `${u.first_name} ${u.last_name}`, type: u.user_type, active: u.is_active })),
+    });
+
+    // If there's an error or no users after loading, try to refetch
+    if (!usersLoading && users.length === 0 && !usersError) {
+      console.log('📋 BookingJobsSection - No users found, attempting refetch...');
+      refetchUsers();
+    }
+  }, [users, usersLoading, usersError, assignableUsers.length, refetchUsers]);
 
   // Update due dates when check-in/out dates change
   useEffect(() => {
@@ -243,6 +261,10 @@ export function BookingJobsSection({
                                     {usersLoading ? (
                                       <SelectItem value="loading" disabled>
                                         {t('common.loading', 'Loading users...')}
+                                      </SelectItem>
+                                    ) : usersError ? (
+                                      <SelectItem value="error" disabled>
+                                        {t('bookings.jobs.errorLoadingUsers', 'Error loading users')}
                                       </SelectItem>
                                     ) : assignableUsers.length === 0 ? (
                                       <SelectItem value="no-users" disabled>
