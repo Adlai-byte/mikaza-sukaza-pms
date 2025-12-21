@@ -57,6 +57,7 @@ import {
   KeyRound,
   FileCheck,
   HelpCircle,
+  Eye,
 } from "lucide-react";
 import { useAccessDocuments, useAccessDocumentDownload } from "@/hooks/useAccessDocuments";
 import { usePropertiesOptimized } from "@/hooks/usePropertiesOptimized";
@@ -67,6 +68,8 @@ import { ACCESS_DOCUMENT_TYPES, type AccessDocument } from "@/lib/schemas";
 import { format, parseISO } from "date-fns";
 import { CasaSpinner } from "@/components/ui/casa-loader";
 import { AddAccessDocumentDialog } from "@/components/access/AddAccessDocumentDialog";
+import { FileViewerDialog, FileViewerDocument } from "@/components/ui/file-viewer-dialog";
+import { format as formatDate } from "date-fns";
 
 // Document type icons
 const DOCUMENT_TYPE_ICONS = {
@@ -95,6 +98,7 @@ export default function AccessAuthorizations() {
   const [editDocument, setEditDocument] = useState<AccessDocument | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<AccessDocument | null>(null);
+  const [viewingDocument, setViewingDocument] = useState<FileViewerDocument | null>(null);
 
   const { t } = useTranslation();
 
@@ -190,6 +194,26 @@ export default function AccessAuthorizations() {
       setDeleteDialogOpen(false);
       setDocumentToDelete(null);
     }
+  };
+
+  const handleViewDocument = (doc: AccessDocument) => {
+    if (!doc.file_url) return;
+    setViewingDocument({
+      url: doc.file_url,
+      name: doc.document_name,
+      fileName: doc.file_name || undefined,
+      fileType: doc.file_type || undefined,
+      fileSize: doc.file_size || undefined,
+      description: doc.description || undefined,
+      metadata: {
+        type: ACCESS_DOCUMENT_TYPES[doc.document_type as keyof typeof ACCESS_DOCUMENT_TYPES],
+        property: doc.property_name || 'N/A',
+        vendor: doc.vendor_name || 'N/A',
+        status: doc.status || 'N/A',
+        expiry_date: doc.expiry_date ? formatDate(parseISO(doc.expiry_date), 'MMM dd, yyyy') : 'No expiry',
+        created_at: doc.created_at ? formatDate(parseISO(doc.created_at), 'MMM dd, yyyy') : undefined,
+      },
+    });
   };
 
   const getStatusBadge = (status?: string) => {
@@ -485,6 +509,16 @@ export default function AccessAuthorizations() {
                             </div>
                             <div className="flex items-center gap-2">
                               {getStatusBadge(doc.status)}
+                              {doc.file_url && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="sm" onClick={() => handleViewDocument(doc)}>
+                                      <Eye className="h-4 w-4 text-green-600" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{t('common.view', 'View')}</TooltipContent>
+                                </Tooltip>
+                              )}
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button variant="ghost" size="sm" onClick={() => downloadDocument(doc)}>
@@ -582,6 +616,16 @@ export default function AccessAuthorizations() {
                         <TableCell>{getStatusBadge(doc.status)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {doc.file_url && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" onClick={() => handleViewDocument(doc)}>
+                                    <Eye className="h-4 w-4 text-green-600" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{t('common.view', 'View')}</TooltipContent>
+                              </Tooltip>
+                            )}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button variant="ghost" size="sm" onClick={() => downloadDocument(doc)}>
@@ -650,6 +694,13 @@ export default function AccessAuthorizations() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Document Viewer Dialog */}
+        <FileViewerDialog
+          document={viewingDocument}
+          open={!!viewingDocument}
+          onOpenChange={(open) => !open && setViewingDocument(null)}
+        />
       </div>
     </TooltipProvider>
   );

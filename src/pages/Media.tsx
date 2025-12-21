@@ -40,7 +40,9 @@ import {
   Loader2,
   HardDrive,
   Image,
+  Eye,
 } from "lucide-react";
+import { FileViewerDialog, FileViewerDocument } from "@/components/ui/file-viewer-dialog";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   useMedia,
@@ -66,8 +68,24 @@ export default function Media() {
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [imageToDelete, setImageToDelete] =
     useState<PropertyImageWithDetails | null>(null);
+  const [viewingImage, setViewingImage] = useState<FileViewerDocument | null>(null);
 
   const { properties } = usePropertiesOptimized();
+
+  // Open image viewer
+  const handleViewImage = (image: PropertyImageWithDetails) => {
+    setViewingImage({
+      url: image.image_url,
+      name: image.image_title || "Property Image",
+      fileName: image.image_title ? `${image.image_title}.jpg` : "image.jpg",
+      description: image.image_description || undefined,
+      metadata: {
+        property: image.property?.property_name,
+        primary: image.is_primary ? "Yes" : "No",
+        tags: image.tags?.join(", ") || undefined,
+      },
+    });
+  };
   const deleteMutation = useDeleteMedia();
   const bulkDeleteMutation = useBulkDeleteMedia();
   const setPrimaryMutation = useSetPrimaryImage();
@@ -446,13 +464,15 @@ export default function Media() {
                     <img
                       src={image.image_url}
                       alt={image.image_title || t("media.actions.untitled")}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => handleViewImage(image)}
                     />
                   ) : (
                     <img
                       src={image.image_url}
                       alt={image.image_title || t("media.actions.untitled")}
-                      className="w-24 h-24 object-cover rounded flex-shrink-0"
+                      className="w-24 h-24 object-cover rounded flex-shrink-0 cursor-pointer"
+                      onClick={() => handleViewImage(image)}
                     />
                   )}
 
@@ -482,6 +502,13 @@ export default function Media() {
 
                       {/* Actions */}
                       <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleViewImage(image)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="secondary"
                           size="sm"
@@ -564,6 +591,13 @@ export default function Media() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Image Viewer Dialog */}
+      <FileViewerDialog
+        document={viewingImage}
+        open={!!viewingImage}
+        onOpenChange={(open) => !open && setViewingImage(null)}
+      />
     </div>
   );
 }

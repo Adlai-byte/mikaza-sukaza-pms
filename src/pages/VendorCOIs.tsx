@@ -55,6 +55,7 @@ import {
   Building2,
   FolderTree,
   List,
+  Eye,
 } from "lucide-react";
 import { COITreeView } from "@/components/coi/COITreeView";
 import { useVendorCOIs, useExpiringCOIs } from "@/hooks/useVendorCOIs";
@@ -69,6 +70,7 @@ import { format, parseISO, differenceInDays } from "date-fns";
 import { CasaSpinner } from "@/components/ui/casa-loader";
 import { useSearchParams } from "react-router-dom";
 import { AddCOIDialog } from "@/components/AddCOIDialog";
+import { FileViewerDialog, FileViewerDocument } from "@/components/ui/file-viewer-dialog";
 
 export default function VendorCOIs() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -89,6 +91,7 @@ export default function VendorCOIs() {
   const [editCOI, setEditCOI] = useState<VendorCOI | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [coiToDelete, setCoiToDelete] = useState<string | null>(null);
+  const [viewingCOI, setViewingCOI] = useState<FileViewerDocument | null>(null);
 
   const { t } = useTranslation();
 
@@ -185,6 +188,27 @@ export default function VendorCOIs() {
       link.click();
       document.body.removeChild(link);
     }
+  };
+
+  const handleViewCOI = (coi: VendorCOI) => {
+    if (!coi.file_url) return;
+    setViewingCOI({
+      url: coi.file_url,
+      name: `COI - ${coi.policy_number}`,
+      fileName: coi.file_name || `coi_${coi.policy_number}.pdf`,
+      description: `${COI_COVERAGE_TYPES[coi.coverage_type as keyof typeof COI_COVERAGE_TYPES] || coi.coverage_type} coverage from ${coi.insurance_company}`,
+      metadata: {
+        vendor: coi.vendor?.provider_name || 'Unknown',
+        policy_number: coi.policy_number,
+        insurance_company: coi.insurance_company,
+        coverage_type: COI_COVERAGE_TYPES[coi.coverage_type as keyof typeof COI_COVERAGE_TYPES] || coi.coverage_type,
+        coverage_amount: `$${coi.coverage_amount.toLocaleString()}`,
+        valid_from: format(parseISO(coi.valid_from), "MMM d, yyyy"),
+        valid_through: format(parseISO(coi.valid_through), "MMM d, yyyy"),
+        status: coi.status,
+        verified: coi.verified_at ? `Yes (${format(parseISO(coi.verified_at), "MMM d, yyyy")})` : 'No',
+      },
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -587,6 +611,23 @@ export default function VendorCOIs() {
                                 </Tooltip>
                               )}
 
+                              {coi.file_url && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleViewCOI(coi)}
+                                    >
+                                      <Eye className="h-4 w-4 text-green-600" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{t('vendorCOIs.actions.view', 'View')}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
@@ -676,6 +717,13 @@ export default function VendorCOIs() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* COI Viewer Dialog */}
+        <FileViewerDialog
+          document={viewingCOI}
+          open={!!viewingCOI}
+          onOpenChange={(open) => !open && setViewingCOI(null)}
+        />
       </div>
     </TooltipProvider>
   );

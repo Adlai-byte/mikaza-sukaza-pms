@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronRight, ChevronDown, User, Folder, FolderOpen, File, Download, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronDown, User, Folder, FolderOpen, File, Download, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DocumentSummary } from "@/lib/schemas";
@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { FileViewerDialog, FileViewerDocument } from "@/components/ui/file-viewer-dialog";
 
 interface User {
   user_id: string;
@@ -52,6 +53,25 @@ export function EmployeeDocumentTree({
   canDelete = false,
 }: EmployeeDocumentTreeProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [viewingDocument, setViewingDocument] = useState<FileViewerDocument | null>(null);
+
+  const openDocumentViewer = (doc: DocumentSummary) => {
+    setViewingDocument({
+      url: doc.file_url,
+      name: doc.document_name,
+      fileName: doc.file_name,
+      fileType: doc.file_type,
+      fileSize: doc.file_size,
+      description: doc.description || undefined,
+      metadata: {
+        uploaded_by: doc.uploaded_by_name,
+        upload_date: doc.created_at ? format(new Date(doc.created_at), "MMM d, yyyy") : undefined,
+        expiry_date: doc.expiry_date ? format(new Date(doc.expiry_date), "MMM d, yyyy") : undefined,
+        version: `v${doc.version_number}`,
+        status: doc.status,
+      },
+    });
+  };
 
   // Build tree structure
   const tree = useMemo(() => {
@@ -255,6 +275,22 @@ export function EmployeeDocumentTree({
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0"
+                  onClick={() => openDocumentViewer(doc)}
+                >
+                  <Eye className="h-4 w-4 text-green-600" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
                   onClick={() => onDownloadDocument(doc)}
                 >
                   <Download className="h-4 w-4" />
@@ -301,36 +337,45 @@ export function EmployeeDocumentTree({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Tree Controls */}
-      <div className="flex items-center justify-between pb-2 border-b">
-        <div className="text-sm text-muted-foreground">
-          {tree.length} {tree.length === 1 ? 'folder' : 'folders'} • {documents.length} {documents.length === 1 ? 'document' : 'documents'}
+    <>
+      <div className="space-y-4">
+        {/* Tree Controls */}
+        <div className="flex items-center justify-between pb-2 border-b">
+          <div className="text-sm text-muted-foreground">
+            {tree.length} {tree.length === 1 ? 'folder' : 'folders'} • {documents.length} {documents.length === 1 ? 'document' : 'documents'}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={expandAll}
+              className="h-8 text-xs"
+            >
+              Expand All
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={collapseAll}
+              className="h-8 text-xs"
+            >
+              Collapse All
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={expandAll}
-            className="h-8 text-xs"
-          >
-            Expand All
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={collapseAll}
-            className="h-8 text-xs"
-          >
-            Collapse All
-          </Button>
+
+        {/* Tree */}
+        <div className="space-y-1">
+          {tree.map(node => renderNode(node))}
         </div>
       </div>
 
-      {/* Tree */}
-      <div className="space-y-1">
-        {tree.map(node => renderNode(node))}
-      </div>
-    </div>
+      {/* Document Viewer Dialog */}
+      <FileViewerDialog
+        document={viewingDocument}
+        open={!!viewingDocument}
+        onOpenChange={(open) => !open && setViewingDocument(null)}
+      />
+    </>
   );
 }

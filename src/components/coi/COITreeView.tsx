@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Shield, Building2, CheckCircle2, Clock, XCircle, Download } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Shield, Building2, CheckCircle2, Clock, XCircle, Download, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VendorCOI } from "@/lib/schemas";
@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { FileViewerDialog, FileViewerDocument } from "@/components/ui/file-viewer-dialog";
 
 interface COITreeViewProps {
   cois: VendorCOI[];
@@ -44,6 +45,29 @@ export function COITreeView({
   canDelete = false,
 }: COITreeViewProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [viewingDocument, setViewingDocument] = useState<FileViewerDocument | null>(null);
+
+  // Open COI document viewer
+  const openCOIViewer = (coi: VendorCOI) => {
+    if (!coi.file_url) return;
+    setViewingDocument({
+      url: coi.file_url,
+      name: `COI - ${coi.policy_number}`,
+      fileName: `coi_${coi.policy_number}.pdf`,
+      description: `${coi.coverage_type} coverage from ${coi.insurance_company}`,
+      metadata: {
+        vendor: coi.vendor?.provider_name,
+        policy_number: coi.policy_number,
+        insurance_company: coi.insurance_company,
+        coverage_type: coi.coverage_type,
+        coverage_amount: `$${coi.coverage_amount.toLocaleString()}`,
+        valid_from: format(parseISO(coi.valid_from), "MMM d, yyyy"),
+        valid_through: format(parseISO(coi.valid_through), "MMM d, yyyy"),
+        status: coi.status,
+        verified: coi.verified_at ? `Yes (${format(parseISO(coi.verified_at), "MMM d, yyyy")})` : 'No',
+      },
+    });
+  };
 
   // Build tree structure
   const tree = useMemo(() => {
@@ -249,6 +273,25 @@ export function COITreeView({
 
         {/* Actions */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {coi.file_url && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => openCOIViewer(coi)}
+                  >
+                    <Eye className="h-4 w-4 text-green-600" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View COI</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {onDownloadCOI && coi.file_url && (
             <TooltipProvider>
               <Tooltip>
@@ -282,7 +325,7 @@ export function COITreeView({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>View/Edit COI</p>
+                  <p>Edit COI</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -332,6 +375,13 @@ export function COITreeView({
       <div className="space-y-1">
         {tree.map(node => renderNode(node))}
       </div>
+
+      {/* File Viewer Dialog */}
+      <FileViewerDialog
+        document={viewingDocument}
+        open={!!viewingDocument}
+        onOpenChange={(open) => !open && setViewingDocument(null)}
+      />
     </div>
   );
 }
