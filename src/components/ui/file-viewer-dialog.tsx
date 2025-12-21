@@ -144,10 +144,8 @@ export function FileViewerDialog({ document, open, onOpenChange, onDownload }: F
         fetchTextDocument(document.url);
       } else if (fileType === 'image') {
         setIsLoading(true);
-      } else if (fileType === 'pdf') {
-        setIsLoading(true);
-        // PDF loading is handled by the object tag onLoad/onError
       } else {
+        // PDFs and other files don't need loading state
         setIsLoading(false);
       }
     }
@@ -164,10 +162,6 @@ export function FileViewerDialog({ document, open, onOpenChange, onDownload }: F
       const fileType = getFileType(fileName, document.fileType);
       if (fileType === 'text') {
         fetchTextDocument(document.url);
-      } else if (fileType === 'pdf') {
-        // For PDF, just reset error state to try again
-        setHasError(false);
-        setIsLoading(true);
       }
     }
   };
@@ -222,81 +216,59 @@ export function FileViewerDialog({ document, open, onOpenChange, onDownload }: F
 
     switch (fileType) {
       case 'pdf':
+        // PDFs from external storage (Supabase) cannot be embedded due to security headers
+        // Show a clean preview card with action buttons instead
         return (
-          <div className="relative w-full h-full" style={{ minHeight: isFullscreen ? '85vh' : '70vh' }}>
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-sm text-muted-foreground">Loading PDF...</p>
-                </div>
+          <div
+            className="flex flex-col items-center justify-center py-12 space-y-6"
+            style={{ minHeight: isFullscreen ? '70vh' : '50vh' }}
+          >
+            {/* PDF Icon with animation */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse" />
+              <div className="relative bg-gradient-to-br from-red-500 to-red-600 p-6 rounded-2xl shadow-lg">
+                <FileText className="h-16 w-16 text-white" />
               </div>
-            )}
-            {hasError ? (
-              <div className="flex flex-col items-center justify-center py-16 space-y-4">
-                <FileText className="h-20 w-20 text-red-500" />
-                <div className="text-center space-y-2">
-                  <p className="text-lg font-medium">PDF Preview</p>
-                  <p className="text-sm text-muted-foreground max-w-md">
-                    The PDF cannot be embedded due to security restrictions. Use the options below to view it.
-                  </p>
-                </div>
-                <div className="flex gap-3 mt-4">
-                  <Button
-                    variant="default"
-                    onClick={() => window.open(document.url, '_blank')}
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Open PDF in New Tab
-                  </Button>
-                  <Button variant="outline" onClick={handleDownload}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download
-                  </Button>
-                </div>
+            </div>
+
+            {/* Document info */}
+            <div className="text-center space-y-2 max-w-md">
+              <h3 className="text-xl font-semibold">{document.name}</h3>
+              {document.description && (
+                <p className="text-sm text-muted-foreground">{document.description}</p>
+              )}
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Badge variant="secondary" className="uppercase">PDF</Badge>
+                {document.fileSize && (
+                  <Badge variant="outline">{formatFileSize(document.fileSize)}</Badge>
+                )}
               </div>
-            ) : (
-              <object
-                data={`${document.url}#toolbar=1&navpanes=0&scrollbar=1`}
-                type="application/pdf"
-                className="w-full border-0 rounded-lg bg-gray-100"
-                style={{
-                  height: isFullscreen ? '85vh' : '70vh',
-                  transform: `scale(${zoom / 100})`,
-                  transformOrigin: 'top left',
-                  width: `${10000 / zoom}%`,
-                }}
-                onLoad={() => setIsLoading(false)}
-                onError={() => {
-                  setIsLoading(false);
-                  setHasError(true);
-                }}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                size="lg"
+                onClick={() => window.open(document.url, '_blank')}
+                className="min-w-[180px]"
               >
-                {/* Fallback content if object tag fails */}
-                <div className="flex flex-col items-center justify-center py-16 space-y-4">
-                  <FileText className="h-20 w-20 text-red-500" />
-                  <div className="text-center space-y-2">
-                    <p className="text-lg font-medium">PDF Preview Not Available</p>
-                    <p className="text-sm text-muted-foreground max-w-md">
-                      Your browser cannot display this PDF. Please open it in a new tab or download it.
-                    </p>
-                  </div>
-                  <div className="flex gap-3 mt-4">
-                    <Button
-                      variant="default"
-                      onClick={() => window.open(document.url, '_blank')}
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      Open in New Tab
-                    </Button>
-                    <Button variant="outline" onClick={handleDownload}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Button>
-                  </div>
-                </div>
-              </object>
-            )}
+                <ExternalLink className="mr-2 h-5 w-5" />
+                Open in New Tab
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={handleDownload}
+                className="min-w-[180px]"
+              >
+                <Download className="mr-2 h-5 w-5" />
+                Download PDF
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center max-w-sm">
+              PDF files open in a new browser tab for the best viewing experience
+            </p>
           </div>
         );
 
