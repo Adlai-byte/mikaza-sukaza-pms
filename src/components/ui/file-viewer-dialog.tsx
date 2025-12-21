@@ -99,18 +99,14 @@ export function FileViewerDialog({ document, open, onOpenChange, onDownload }: F
   const [rotation, setRotation] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>("");
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [textContent, setTextContent] = useState<string | null>(null);
 
-  // Fetch document and create blob URL for PDFs/text to avoid X-Frame-Options issues
-  const fetchDocument = useCallback(async (url: string, fileType: string) => {
+  // Fetch text files only (PDFs will use object tag with direct URL)
+  const fetchTextDocument = useCallback(async (url: string) => {
     try {
       setIsLoading(true);
       setHasError(false);
-      setErrorMessage("");
-      setBlobUrl(null);
       setTextContent(null);
 
       const response = await fetch(url, {
@@ -119,75 +115,59 @@ export function FileViewerDialog({ document, open, onOpenChange, onDownload }: F
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch document: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch: ${response.status}`);
       }
 
-      if (fileType === 'text') {
-        const text = await response.text();
-        setTextContent(text);
-        setIsLoading(false);
-      } else {
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        setBlobUrl(objectUrl);
-        setIsLoading(false);
-      }
+      const text = await response.text();
+      setTextContent(text);
+      setIsLoading(false);
     } catch (error) {
-      console.error('Failed to fetch document:', error);
+      console.error('Failed to fetch text document:', error);
+      // For text files, show error
       setHasError(true);
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Failed to load document. The file may be blocked by security settings.'
-      );
       setIsLoading(false);
     }
   }, []);
 
-  // Reset state and fetch when document changes
+  // Reset state when document changes
   useEffect(() => {
-    let currentBlobUrl: string | null = null;
-
     if (document && open) {
       setZoom(100);
       setRotation(0);
+      setHasError(false);
+      setTextContent(null);
 
       const fileName = document.fileName || document.name || 'document';
       const fileType = getFileType(fileName, document.fileType);
 
-      // For PDFs and text files, fetch and create blob URL to bypass X-Frame-Options
-      if (fileType === 'pdf' || fileType === 'text') {
-        fetchDocument(document.url, fileType);
+      if (fileType === 'text') {
+        fetchTextDocument(document.url);
       } else if (fileType === 'image') {
-        // Images load directly via img tag
         setIsLoading(true);
-        setHasError(false);
-        setErrorMessage("");
+      } else if (fileType === 'pdf') {
+        setIsLoading(true);
+        // PDF loading is handled by the object tag onLoad/onError
       } else {
         setIsLoading(false);
       }
     }
 
-    // Cleanup blob URL when dialog closes or document changes
     return () => {
-      if (currentBlobUrl) {
-        URL.revokeObjectURL(currentBlobUrl);
-      }
-      setBlobUrl(prev => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
       setTextContent(null);
     };
-  }, [document?.url, open, fetchDocument]);
+  }, [document?.url, open, fetchTextDocument]);
 
-  // Retry function
+  // Retry function for text files
   const handleRetry = () => {
     if (document) {
       const fileName = document.fileName || document.name || 'document';
       const fileType = getFileType(fileName, document.fileType);
-      if (fileType === 'pdf' || fileType === 'text') {
-        fetchDocument(document.url, fileType);
+      if (fileType === 'text') {
+        fetchTextDocument(document.url);
+      } else if (fileType === 'pdf') {
+        // For PDF, just reset error state to try again
+        setHasError(false);
+        setIsLoading(true);
       }
     }
   };
@@ -252,49 +232,70 @@ export function FileViewerDialog({ document, open, onOpenChange, onDownload }: F
                 </div>
               </div>
             )}
-            {hasError && (
+            {hasError ? (
               <div className="flex flex-col items-center justify-center py-16 space-y-4">
-                <AlertTriangle className="h-16 w-16 text-destructive" />
+                <FileText className="h-20 w-20 text-red-500" />
                 <div className="text-center space-y-2">
-                  <p className="text-lg font-medium">Unable to preview PDF</p>
+                  <p className="text-lg font-medium">PDF Preview</p>
                   <p className="text-sm text-muted-foreground max-w-md">
-                    {errorMessage || 'The PDF could not be loaded in the browser. Please use the options below to view it.'}
+                    The PDF cannot be embedded due to security restrictions. Use the options below to view it.
                   </p>
                 </div>
                 <div className="flex gap-3 mt-4">
                   <Button
-                    variant="outline"
-                    onClick={handleRetry}
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Retry
-                  </Button>
-                  <Button
-                    variant="outline"
+                    variant="default"
                     onClick={() => window.open(document.url, '_blank')}
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
-                    Open in New Tab
+                    Open PDF in New Tab
                   </Button>
-                  <Button onClick={handleDownload}>
+                  <Button variant="outline" onClick={handleDownload}>
                     <Download className="mr-2 h-4 w-4" />
-                    Download PDF
+                    Download
                   </Button>
                 </div>
               </div>
-            )}
-            {!hasError && blobUrl && (
-              <iframe
-                src={`${blobUrl}#toolbar=1&navpanes=0&scrollbar=1`}
-                className="w-full border-0 rounded-lg"
+            ) : (
+              <object
+                data={`${document.url}#toolbar=1&navpanes=0&scrollbar=1`}
+                type="application/pdf"
+                className="w-full border-0 rounded-lg bg-gray-100"
                 style={{
                   height: isFullscreen ? '85vh' : '70vh',
                   transform: `scale(${zoom / 100})`,
                   transformOrigin: 'top left',
                   width: `${10000 / zoom}%`,
                 }}
-                title={document.name}
-              />
+                onLoad={() => setIsLoading(false)}
+                onError={() => {
+                  setIsLoading(false);
+                  setHasError(true);
+                }}
+              >
+                {/* Fallback content if object tag fails */}
+                <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                  <FileText className="h-20 w-20 text-red-500" />
+                  <div className="text-center space-y-2">
+                    <p className="text-lg font-medium">PDF Preview Not Available</p>
+                    <p className="text-sm text-muted-foreground max-w-md">
+                      Your browser cannot display this PDF. Please open it in a new tab or download it.
+                    </p>
+                  </div>
+                  <div className="flex gap-3 mt-4">
+                    <Button
+                      variant="default"
+                      onClick={() => window.open(document.url, '_blank')}
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Open in New Tab
+                    </Button>
+                    <Button variant="outline" onClick={handleDownload}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download
+                    </Button>
+                  </div>
+                </div>
+              </object>
             )}
           </div>
         );
@@ -367,7 +368,7 @@ export function FileViewerDialog({ document, open, onOpenChange, onDownload }: F
                 <div className="text-center space-y-2">
                   <p className="text-lg font-medium">Unable to load file</p>
                   <p className="text-sm text-muted-foreground max-w-md">
-                    {errorMessage || 'The file could not be loaded. Please download it instead.'}
+                    The file could not be loaded. Please download it instead.
                   </p>
                 </div>
                 <div className="flex gap-3 mt-4">
