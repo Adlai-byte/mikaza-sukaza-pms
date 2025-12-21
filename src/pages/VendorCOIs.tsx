@@ -70,7 +70,6 @@ import { format, parseISO, differenceInDays } from "date-fns";
 import { CasaSpinner } from "@/components/ui/casa-loader";
 import { useSearchParams } from "react-router-dom";
 import { AddCOIDialog } from "@/components/AddCOIDialog";
-import { FileViewerDialog, FileViewerDocument } from "@/components/ui/file-viewer-dialog";
 
 export default function VendorCOIs() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -91,7 +90,6 @@ export default function VendorCOIs() {
   const [editCOI, setEditCOI] = useState<VendorCOI | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [coiToDelete, setCoiToDelete] = useState<string | null>(null);
-  const [viewingCOI, setViewingCOI] = useState<FileViewerDocument | null>(null);
 
   const { t } = useTranslation();
 
@@ -190,25 +188,11 @@ export default function VendorCOIs() {
     }
   };
 
+  // Open COI directly in new tab
   const handleViewCOI = (coi: VendorCOI) => {
-    if (!coi.file_url) return;
-    setViewingCOI({
-      url: coi.file_url,
-      name: `COI - ${coi.policy_number}`,
-      fileName: coi.file_name || `coi_${coi.policy_number}.pdf`,
-      description: `${COI_COVERAGE_TYPES[coi.coverage_type as keyof typeof COI_COVERAGE_TYPES] || coi.coverage_type} coverage from ${coi.insurance_company}`,
-      metadata: {
-        vendor: coi.vendor?.provider_name || 'Unknown',
-        policy_number: coi.policy_number,
-        insurance_company: coi.insurance_company,
-        coverage_type: COI_COVERAGE_TYPES[coi.coverage_type as keyof typeof COI_COVERAGE_TYPES] || coi.coverage_type,
-        coverage_amount: `$${coi.coverage_amount.toLocaleString()}`,
-        valid_from: format(parseISO(coi.valid_from), "MMM d, yyyy"),
-        valid_through: format(parseISO(coi.valid_through), "MMM d, yyyy"),
-        status: coi.status,
-        verified: coi.verified_at ? `Yes (${format(parseISO(coi.verified_at), "MMM d, yyyy")})` : 'No',
-      },
-    });
+    if (coi.file_url) {
+      window.open(coi.file_url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -717,13 +701,6 @@ export default function VendorCOIs() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        {/* COI Viewer Dialog */}
-        <FileViewerDialog
-          document={viewingCOI}
-          open={!!viewingCOI}
-          onOpenChange={(open) => !open && setViewingCOI(null)}
-        />
       </div>
     </TooltipProvider>
   );

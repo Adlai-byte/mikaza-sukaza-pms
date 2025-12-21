@@ -42,7 +42,6 @@ import {
   Image,
   Eye,
 } from "lucide-react";
-import { FileViewerDialog, FileViewerDocument } from "@/components/ui/file-viewer-dialog";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   useMedia,
@@ -68,23 +67,14 @@ export default function Media() {
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [imageToDelete, setImageToDelete] =
     useState<PropertyImageWithDetails | null>(null);
-  const [viewingImage, setViewingImage] = useState<FileViewerDocument | null>(null);
 
   const { properties } = usePropertiesOptimized();
 
-  // Open image viewer
+  // Open image directly in new tab
   const handleViewImage = (image: PropertyImageWithDetails) => {
-    setViewingImage({
-      url: image.image_url,
-      name: image.image_title || "Property Image",
-      fileName: image.image_title ? `${image.image_title}.jpg` : "image.jpg",
-      description: image.image_description || undefined,
-      metadata: {
-        property: image.property?.property_name,
-        primary: image.is_primary ? "Yes" : "No",
-        tags: image.tags?.join(", ") || undefined,
-      },
-    });
+    if (image.image_url) {
+      window.open(image.image_url, '_blank', 'noopener,noreferrer');
+    }
   };
   const deleteMutation = useDeleteMedia();
   const bulkDeleteMutation = useBulkDeleteMedia();
@@ -591,13 +581,6 @@ export default function Media() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Image Viewer Dialog */}
-      <FileViewerDialog
-        document={viewingImage}
-        open={!!viewingImage}
-        onOpenChange={(open) => !open && setViewingImage(null)}
-      />
     </div>
   );
 }

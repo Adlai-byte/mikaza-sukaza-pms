@@ -68,7 +68,6 @@ import { ACCESS_DOCUMENT_TYPES, type AccessDocument } from "@/lib/schemas";
 import { format, parseISO } from "date-fns";
 import { CasaSpinner } from "@/components/ui/casa-loader";
 import { AddAccessDocumentDialog } from "@/components/access/AddAccessDocumentDialog";
-import { FileViewerDialog, FileViewerDocument } from "@/components/ui/file-viewer-dialog";
 import { format as formatDate } from "date-fns";
 
 // Document type icons
@@ -98,7 +97,6 @@ export default function AccessAuthorizations() {
   const [editDocument, setEditDocument] = useState<AccessDocument | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<AccessDocument | null>(null);
-  const [viewingDocument, setViewingDocument] = useState<FileViewerDocument | null>(null);
 
   const { t } = useTranslation();
 
@@ -196,24 +194,11 @@ export default function AccessAuthorizations() {
     }
   };
 
+  // Open document directly in new tab
   const handleViewDocument = (doc: AccessDocument) => {
-    if (!doc.file_url) return;
-    setViewingDocument({
-      url: doc.file_url,
-      name: doc.document_name,
-      fileName: doc.file_name || undefined,
-      fileType: doc.file_type || undefined,
-      fileSize: doc.file_size || undefined,
-      description: doc.description || undefined,
-      metadata: {
-        type: ACCESS_DOCUMENT_TYPES[doc.document_type as keyof typeof ACCESS_DOCUMENT_TYPES],
-        property: doc.property_name || 'N/A',
-        vendor: doc.vendor_name || 'N/A',
-        status: doc.status || 'N/A',
-        expiry_date: doc.expiry_date ? formatDate(parseISO(doc.expiry_date), 'MMM dd, yyyy') : 'No expiry',
-        created_at: doc.created_at ? formatDate(parseISO(doc.created_at), 'MMM dd, yyyy') : undefined,
-      },
-    });
+    if (doc.file_url) {
+      window.open(doc.file_url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const getStatusBadge = (status?: string) => {
@@ -694,13 +679,6 @@ export default function AccessAuthorizations() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        {/* Document Viewer Dialog */}
-        <FileViewerDialog
-          document={viewingDocument}
-          open={!!viewingDocument}
-          onOpenChange={(open) => !open && setViewingDocument(null)}
-        />
       </div>
     </TooltipProvider>
   );

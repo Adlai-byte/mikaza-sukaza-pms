@@ -32,7 +32,6 @@ import {
 } from "lucide-react";
 import { DocumentSummary, CONTRACT_TYPES } from "@/lib/schemas";
 import { useDocumentDownload } from "@/hooks/useDocuments";
-import { FileViewerDialog, FileViewerDocument } from "@/components/ui/file-viewer-dialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -86,26 +85,12 @@ export function DocumentsTable({
 }: DocumentsTableProps) {
   const { downloadDocument } = useDocumentDownload();
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewingDocument, setViewingDocument] = useState<FileViewerDocument | null>(null);
 
-  // Convert DocumentSummary to FileViewerDocument
-  const openDocumentViewer = (doc: DocumentSummary) => {
-    setViewingDocument({
-      url: doc.file_url,
-      name: doc.document_name,
-      fileName: doc.file_name,
-      fileType: doc.file_type,
-      fileSize: doc.file_size,
-      description: doc.description || undefined,
-      metadata: {
-        property: doc.property_name,
-        uploaded_by: doc.uploaded_by_name,
-        upload_date: doc.created_at ? format(new Date(doc.created_at), "MMM d, yyyy") : undefined,
-        expiry_date: doc.expiry_date ? format(new Date(doc.expiry_date), "MMM d, yyyy") : undefined,
-        version: `v${doc.version_number}`,
-        status: doc.status,
-      },
-    });
+  // Open document directly in new tab
+  const openDocumentInNewTab = (doc: DocumentSummary) => {
+    if (doc.file_url) {
+      window.open(doc.file_url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   // Filter documents by search
@@ -288,7 +273,7 @@ export function DocumentsTable({
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
 
-                        <DropdownMenuItem onClick={() => openDocumentViewer(document)}>
+                        <DropdownMenuItem onClick={() => openDocumentInNewTab(document)}>
                           <Eye className="mr-2 h-4 w-4" />
                           View
                         </DropdownMenuItem>
@@ -341,12 +326,6 @@ export function DocumentsTable({
         </div>
       )}
 
-      {/* Document Viewer Dialog */}
-      <FileViewerDialog
-        document={viewingDocument}
-        open={!!viewingDocument}
-        onOpenChange={(open) => !open && setViewingDocument(null)}
-      />
     </div>
   );
 }

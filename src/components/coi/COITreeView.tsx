@@ -11,7 +11,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FileViewerDialog, FileViewerDocument } from "@/components/ui/file-viewer-dialog";
 
 interface COITreeViewProps {
   cois: VendorCOI[];
@@ -45,28 +44,12 @@ export function COITreeView({
   canDelete = false,
 }: COITreeViewProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-  const [viewingDocument, setViewingDocument] = useState<FileViewerDocument | null>(null);
 
-  // Open COI document viewer
-  const openCOIViewer = (coi: VendorCOI) => {
-    if (!coi.file_url) return;
-    setViewingDocument({
-      url: coi.file_url,
-      name: `COI - ${coi.policy_number}`,
-      fileName: `coi_${coi.policy_number}.pdf`,
-      description: `${coi.coverage_type} coverage from ${coi.insurance_company}`,
-      metadata: {
-        vendor: coi.vendor?.provider_name,
-        policy_number: coi.policy_number,
-        insurance_company: coi.insurance_company,
-        coverage_type: coi.coverage_type,
-        coverage_amount: `$${coi.coverage_amount.toLocaleString()}`,
-        valid_from: format(parseISO(coi.valid_from), "MMM d, yyyy"),
-        valid_through: format(parseISO(coi.valid_through), "MMM d, yyyy"),
-        status: coi.status,
-        verified: coi.verified_at ? `Yes (${format(parseISO(coi.verified_at), "MMM d, yyyy")})` : 'No',
-      },
-    });
+  // Open COI directly in new tab
+  const openCOIInNewTab = (coi: VendorCOI) => {
+    if (coi.file_url) {
+      window.open(coi.file_url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   // Build tree structure
@@ -281,7 +264,7 @@ export function COITreeView({
                     variant="ghost"
                     size="sm"
                     className="h-8 w-8 p-0"
-                    onClick={() => openCOIViewer(coi)}
+                    onClick={() => openCOIInNewTab(coi)}
                   >
                     <Eye className="h-4 w-4 text-green-600" />
                   </Button>
@@ -376,12 +359,6 @@ export function COITreeView({
         {tree.map(node => renderNode(node))}
       </div>
 
-      {/* File Viewer Dialog */}
-      <FileViewerDialog
-        document={viewingDocument}
-        open={!!viewingDocument}
-        onOpenChange={(open) => !open && setViewingDocument(null)}
-      />
     </div>
   );
 }

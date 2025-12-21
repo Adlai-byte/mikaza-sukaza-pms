@@ -11,7 +11,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FileViewerDialog, FileViewerDocument } from "@/components/ui/file-viewer-dialog";
 
 export interface TreeFolder {
   id: string;
@@ -62,25 +61,12 @@ export function DocumentTreeView({
   emptyIcon,
 }: DocumentTreeViewProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-  const [viewingDocument, setViewingDocument] = useState<FileViewerDocument | null>(null);
 
-  const openDocumentViewer = (doc: DocumentSummary) => {
-    setViewingDocument({
-      url: doc.file_url,
-      name: doc.document_name,
-      fileName: doc.file_name,
-      fileType: doc.file_type,
-      fileSize: doc.file_size,
-      description: doc.description || undefined,
-      metadata: {
-        property: doc.property_name,
-        uploaded_by: doc.uploaded_by_name,
-        upload_date: doc.created_at ? format(new Date(doc.created_at), "MMM d, yyyy") : undefined,
-        expiry_date: doc.expiry_date ? format(new Date(doc.expiry_date), "MMM d, yyyy") : undefined,
-        version: `v${doc.version_number}`,
-        status: doc.status,
-      },
-    });
+  // Open document directly in new tab
+  const openDocumentInNewTab = (doc: DocumentSummary) => {
+    if (doc.file_url) {
+      window.open(doc.file_url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   // Build tree structure
@@ -258,7 +244,7 @@ export function DocumentTreeView({
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0"
-                  onClick={() => openDocumentViewer(doc)}
+                  onClick={() => openDocumentInNewTab(doc)}
                 >
                   <Eye className="h-4 w-4 text-green-600" />
                 </Button>
@@ -317,8 +303,7 @@ export function DocumentTreeView({
   }
 
   return (
-    <>
-      <div className="space-y-4">
+    <div className="space-y-4">
         {/* Tree Controls */}
         <div className="flex items-center justify-between pb-2 border-b">
           <div className="text-sm text-muted-foreground">
@@ -349,13 +334,5 @@ export function DocumentTreeView({
           {tree.map(node => renderNode(node))}
         </div>
       </div>
-
-      {/* Document Viewer Dialog */}
-      <FileViewerDialog
-        document={viewingDocument}
-        open={!!viewingDocument}
-        onOpenChange={(open) => !open && setViewingDocument(null)}
-      />
-    </>
   );
 }
