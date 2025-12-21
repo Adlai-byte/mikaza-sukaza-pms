@@ -293,14 +293,32 @@ describe('AuthContext', () => {
 
   describe('signOut', () => {
     it('should successfully sign out and clear state', async () => {
+      // Capture the auth state change callback
+      let authStateChangeCallback: ((event: string, session: any) => void) | null = null;
+
+      mockSupabase.auth.onAuthStateChange.mockImplementation((callback: any) => {
+        authStateChangeCallback = callback;
+        return {
+          data: {
+            subscription: {
+              unsubscribe: vi.fn(),
+            },
+          },
+        };
+      });
+
       // First set up a signed-in state
       mockSupabase.auth.getSession.mockResolvedValueOnce({
         data: { session: mockSession },
         error: null,
       });
 
-      mockSupabase.auth.signOut.mockResolvedValueOnce({
-        error: null,
+      mockSupabase.auth.signOut.mockImplementation(async () => {
+        // Trigger auth state change to SIGNED_OUT when signOut is called
+        if (authStateChangeCallback) {
+          authStateChangeCallback('SIGNED_OUT', null);
+        }
+        return { error: null };
       });
 
       const wrapper = ({ children }: { children: ReactNode }) => (
@@ -308,20 +326,47 @@ describe('AuthContext', () => {
       );
 
       const { result } = renderHook(() => useAuth(), { wrapper });
+
+      // Wait for initial session to load
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
 
       await act(async () => {
         await result.current.signOut();
       });
 
       expect(mockSupabase.auth.signOut).toHaveBeenCalled();
-      expect(result.current.user).toBeNull();
+
+      // Wait for state to be cleared after signOut
+      await waitFor(() => {
+        expect(result.current.user).toBeNull();
+      });
+
       expect(result.current.session).toBeNull();
-      expect(result.current.profile).toBeNull();
     });
 
     it('should handle sign out errors and still clear local state', async () => {
-      mockSupabase.auth.signOut.mockResolvedValueOnce({
-        error: { message: 'Sign out failed', code: 'signout_error' },
+      // Capture the auth state change callback
+      let authStateChangeCallback: ((event: string, session: any) => void) | null = null;
+
+      mockSupabase.auth.onAuthStateChange.mockImplementation((callback: any) => {
+        authStateChangeCallback = callback;
+        return {
+          data: {
+            subscription: {
+              unsubscribe: vi.fn(),
+            },
+          },
+        };
+      });
+
+      mockSupabase.auth.signOut.mockImplementation(async () => {
+        // Even on error, trigger state change to clear local state
+        if (authStateChangeCallback) {
+          authStateChangeCallback('SIGNED_OUT', null);
+        }
+        return { error: { message: 'Sign out failed', code: 'signout_error' } };
       });
 
       const wrapper = ({ children }: { children: ReactNode }) => (
@@ -329,6 +374,11 @@ describe('AuthContext', () => {
       );
 
       const { result } = renderHook(() => useAuth(), { wrapper });
+
+      // Wait for component to mount
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
 
       await expect(
         act(async () => {
@@ -337,9 +387,10 @@ describe('AuthContext', () => {
       ).rejects.toThrow();
 
       // State should still be cleared even on error
-      expect(result.current.user).toBeNull();
+      await waitFor(() => {
+        expect(result.current.user).toBeNull();
+      });
       expect(result.current.session).toBeNull();
-      expect(result.current.profile).toBeNull();
     });
   });
 

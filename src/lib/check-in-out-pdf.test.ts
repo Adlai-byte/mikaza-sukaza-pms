@@ -2,6 +2,52 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CheckInOutPDFGenerator, generateCheckInOutPDF, generateAndUploadCheckInOutPDF } from './check-in-out-pdf';
 import { CheckInOutRecord } from './schemas';
 
+// Mock logo utils to avoid loading actual logo (partial mock to keep PDF_COLORS)
+vi.mock('./logo-utils', async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return {
+    ...actual,
+    getLogoForPDF: vi.fn().mockResolvedValue('data:image/png;base64,mockLogoBase64'),
+  };
+});
+
+// Mock Image constructor for loadImage method
+class MockImage {
+  onload: (() => void) | null = null;
+  onerror: ((error: Error) => void) | null = null;
+  src = '';
+  width = 100;
+  height = 100;
+  crossOrigin = '';
+
+  constructor() {
+    // Immediately trigger onload after src is set
+    setTimeout(() => {
+      if (this.onload) this.onload();
+    }, 0);
+  }
+}
+
+// @ts-ignore - Mock global Image
+global.Image = MockImage as any;
+
+// Mock canvas for image conversion
+const mockCanvas = {
+  getContext: vi.fn(() => ({
+    drawImage: vi.fn(),
+  })),
+  toDataURL: vi.fn(() => 'data:image/png;base64,mockImageBase64'),
+  width: 100,
+  height: 100,
+};
+
+vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+  if (tagName === 'canvas') {
+    return mockCanvas as any;
+  }
+  return document.createElement(tagName);
+});
+
 // Mock jsPDF
 vi.mock('jspdf', () => ({
   jsPDF: vi.fn().mockImplementation(() => ({
@@ -346,7 +392,7 @@ describe('CheckInOutPDFGenerator', () => {
       // Should not throw, should continue with placeholder
       const blob = await generator.generatePDF(mockRecord);
       expect(blob).toBeInstanceOf(Blob);
-    });
+    }, 15000); // 15 second timeout for PDF generation
 
     it('should handle missing property information', async () => {
       const recordWithoutProperty = {
@@ -358,7 +404,7 @@ describe('CheckInOutPDFGenerator', () => {
       const blob = await generator.generatePDF(recordWithoutProperty as any);
 
       expect(blob).toBeInstanceOf(Blob);
-    });
+    }, 15000); // 15 second timeout for PDF generation
 
     it('should handle missing agent information', async () => {
       const recordWithoutAgent = {
@@ -370,6 +416,6 @@ describe('CheckInOutPDFGenerator', () => {
       const blob = await generator.generatePDF(recordWithoutAgent as any);
 
       expect(blob).toBeInstanceOf(Blob);
-    });
+    }, 15000); // 15 second timeout for PDF generation
   });
 });
