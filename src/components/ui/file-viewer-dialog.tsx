@@ -1,31 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Download,
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
   ExternalLink,
-  AlertTriangle,
-  FileQuestion,
   FileText,
   Image as ImageIcon,
   File,
-  Maximize2,
-  Minimize2,
-  RefreshCw,
+  X,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export interface FileViewerDocument {
   url: string;
@@ -44,46 +33,14 @@ interface FileViewerDialogProps {
   onDownload?: () => void;
 }
 
-// File type detection
-const getFileType = (fileName: string, mimeType?: string): string => {
-  const extension = fileName.split('.').pop()?.toLowerCase() || '';
+// Simple file type detection
+const getFileType = (fileName: string, mimeType?: string): "pdf" | "image" | "other" => {
+  const ext = fileName.split('.').pop()?.toLowerCase() || '';
 
-  // PDF
-  if (extension === 'pdf' || mimeType === 'application/pdf') return 'pdf';
+  if (ext === 'pdf' || mimeType === 'application/pdf') return 'pdf';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext) || mimeType?.startsWith('image/')) return 'image';
 
-  // Images
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'tif'].includes(extension)) return 'image';
-  if (mimeType?.startsWith('image/')) return 'image';
-
-  // Text files
-  if (['txt', 'md', 'json', 'xml', 'csv', 'log', 'html', 'css', 'js', 'ts'].includes(extension)) return 'text';
-  if (mimeType?.startsWith('text/')) return 'text';
-
-  // Office documents
-  if (['doc', 'docx'].includes(extension)) return 'word';
-  if (['xls', 'xlsx'].includes(extension)) return 'excel';
-  if (['ppt', 'pptx'].includes(extension)) return 'powerpoint';
-
-  // Other
   return 'other';
-};
-
-// File type icon component
-const FileTypeIcon = ({ fileType, className }: { fileType: string; className?: string }) => {
-  switch (fileType) {
-    case 'pdf':
-      return <FileText className={cn("text-red-500", className)} />;
-    case 'image':
-      return <ImageIcon className={cn("text-blue-500", className)} />;
-    case 'word':
-      return <FileText className={cn("text-blue-600", className)} />;
-    case 'excel':
-      return <FileText className={cn("text-green-600", className)} />;
-    case 'powerpoint':
-      return <FileText className={cn("text-orange-500", className)} />;
-    default:
-      return <File className={cn("text-gray-500", className)} />;
-  }
 };
 
 // Format file size
@@ -94,418 +51,155 @@ const formatFileSize = (bytes?: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-export function FileViewerDialog({ document, open, onOpenChange, onDownload }: FileViewerDialogProps) {
-  const [zoom, setZoom] = useState(100);
-  const [rotation, setRotation] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [textContent, setTextContent] = useState<string | null>(null);
+export function FileViewerDialog({ document, open, onOpenChange }: FileViewerDialogProps) {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Fetch text files only (PDFs will use object tag with direct URL)
-  const fetchTextDocument = useCallback(async (url: string) => {
-    try {
-      setIsLoading(true);
-      setHasError(false);
-      setTextContent(null);
-
-      const response = await fetch(url, {
-        method: 'GET',
-        mode: 'cors',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status}`);
-      }
-
-      const text = await response.text();
-      setTextContent(text);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Failed to fetch text document:', error);
-      // For text files, show error
-      setHasError(true);
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Reset state when document changes
-  useEffect(() => {
-    if (document && open) {
-      setZoom(100);
-      setRotation(0);
-      setHasError(false);
-      setTextContent(null);
-
-      const fileName = document.fileName || document.name || 'document';
-      const fileType = getFileType(fileName, document.fileType);
-
-      if (fileType === 'text') {
-        fetchTextDocument(document.url);
-      } else if (fileType === 'image') {
-        setIsLoading(true);
-      } else {
-        // PDFs and other files don't need loading state
-        setIsLoading(false);
-      }
-    }
-
-    return () => {
-      setTextContent(null);
-    };
-  }, [document?.url, open, fetchTextDocument]);
-
-  // Retry function for text files
-  const handleRetry = () => {
-    if (document) {
-      const fileName = document.fileName || document.name || 'document';
-      const fileType = getFileType(fileName, document.fileType);
-      if (fileType === 'text') {
-        fetchTextDocument(document.url);
-      }
-    }
-  };
+  // Debug logging
+  console.log('[FileViewerDialog] Render:', { open, hasDocument: !!document, url: document?.url });
 
   if (!document) return null;
 
   const fileName = document.fileName || document.name || 'document';
   const fileType = getFileType(fileName, document.fileType);
-  const canViewInline = ['pdf', 'image', 'text'].includes(fileType);
 
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 300));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 25));
-  const handleRotate = () => setRotation(prev => (prev + 90) % 360);
-  const handleReset = () => {
-    setZoom(100);
-    setRotation(0);
+  const handleOpenInNewTab = () => {
+    console.log('[FileViewerDialog] Opening URL:', document.url);
+    window.open(document.url, '_blank', 'noopener,noreferrer');
   };
 
   const handleDownload = () => {
-    if (onDownload) {
-      onDownload();
-    } else {
-      // Default download behavior
-      const link = window.document.createElement('a');
-      link.href = document.url;
-      link.download = fileName;
-      link.target = '_blank';
-      window.document.body.appendChild(link);
-      link.click();
-      window.document.body.removeChild(link);
-    }
-  };
-
-  const renderDocumentPreview = () => {
-    if (!canViewInline) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 space-y-4">
-          <FileQuestion className="h-20 w-20 text-muted-foreground" />
-          <div className="text-center space-y-2">
-            <p className="text-lg font-medium">Preview not available</p>
-            <p className="text-sm text-muted-foreground max-w-md">
-              This file type ({fileType}) cannot be previewed in the browser. Please download the file to view it.
-            </p>
-          </div>
-          <Button onClick={handleDownload} className="mt-4">
-            <Download className="mr-2 h-4 w-4" />
-            Download File
-          </Button>
-        </div>
-      );
-    }
-
-    switch (fileType) {
-      case 'pdf':
-        // PDFs from external storage (Supabase) cannot be embedded due to security headers
-        // Show a clean preview card with action buttons instead
-        return (
-          <div
-            className="flex flex-col items-center justify-center py-12 space-y-6"
-            style={{ minHeight: isFullscreen ? '70vh' : '50vh' }}
-          >
-            {/* PDF Icon with animation */}
-            <div className="relative">
-              <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse" />
-              <div className="relative bg-gradient-to-br from-red-500 to-red-600 p-6 rounded-2xl shadow-lg">
-                <FileText className="h-16 w-16 text-white" />
-              </div>
-            </div>
-
-            {/* Document info */}
-            <div className="text-center space-y-2 max-w-md">
-              <h3 className="text-xl font-semibold">{document.name}</h3>
-              {document.description && (
-                <p className="text-sm text-muted-foreground">{document.description}</p>
-              )}
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Badge variant="secondary" className="uppercase">PDF</Badge>
-                {document.fileSize && (
-                  <Badge variant="outline">{formatFileSize(document.fileSize)}</Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                size="lg"
-                onClick={() => window.open(document.url, '_blank')}
-                className="min-w-[180px]"
-              >
-                <ExternalLink className="mr-2 h-5 w-5" />
-                Open in New Tab
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={handleDownload}
-                className="min-w-[180px]"
-              >
-                <Download className="mr-2 h-5 w-5" />
-                Download PDF
-              </Button>
-            </div>
-
-            <p className="text-xs text-muted-foreground text-center max-w-sm">
-              PDF files open in a new browser tab for the best viewing experience
-            </p>
-          </div>
-        );
-
-      case 'image':
-        return (
-          <div
-            className={cn(
-              "relative flex items-center justify-center bg-[#1a1a2e] overflow-auto",
-              isFullscreen ? "min-h-[85vh]" : "min-h-[70vh]"
-            )}
-          >
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center z-10 bg-muted/50">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-sm text-muted-foreground">Loading image...</p>
-                </div>
-              </div>
-            )}
-            {hasError && (
-              <Alert variant="destructive" className="m-4">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Failed to load image. Please try downloading the file instead.
-                </AlertDescription>
-              </Alert>
-            )}
-            {!hasError && (
-              <img
-                src={document.url}
-                alt={document.name}
-                className="max-w-full object-contain cursor-move"
-                style={{
-                  maxHeight: isFullscreen ? '85vh' : '70vh',
-                  transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-                  transition: 'transform 0.2s ease-in-out',
-                  visibility: isLoading ? 'hidden' : 'visible',
-                }}
-                onLoad={() => setIsLoading(false)}
-                onError={() => {
-                  setIsLoading(false);
-                  setHasError(true);
-                }}
-                draggable={false}
-              />
-            )}
-          </div>
-        );
-
-      case 'text':
-        return (
-          <div
-            className={cn(
-              "relative bg-muted/30 p-2 rounded-lg overflow-auto",
-              isFullscreen ? "min-h-[85vh] max-h-[85vh]" : "min-h-[70vh] max-h-[70vh]"
-            )}
-          >
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center z-10 bg-muted/50">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-sm text-muted-foreground">Loading file...</p>
-                </div>
-              </div>
-            )}
-            {hasError && (
-              <div className="flex flex-col items-center justify-center py-16 space-y-4">
-                <AlertTriangle className="h-16 w-16 text-destructive" />
-                <div className="text-center space-y-2">
-                  <p className="text-lg font-medium">Unable to load file</p>
-                  <p className="text-sm text-muted-foreground max-w-md">
-                    The file could not be loaded. Please download it instead.
-                  </p>
-                </div>
-                <div className="flex gap-3 mt-4">
-                  <Button variant="outline" onClick={handleRetry}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Retry
-                  </Button>
-                  <Button onClick={handleDownload}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download File
-                  </Button>
-                </div>
-              </div>
-            )}
-            {!hasError && textContent !== null && (
-              <pre
-                className="w-full h-full p-4 bg-white dark:bg-gray-900 rounded font-mono text-sm overflow-auto whitespace-pre-wrap"
-                style={{
-                  minHeight: isFullscreen ? '80vh' : '65vh',
-                  fontSize: `${zoom}%`,
-                }}
-              >
-                {textContent}
-              </pre>
-            )}
-          </div>
-        );
-
-      default:
-        return null;
-    }
+    console.log('[FileViewerDialog] Downloading:', document.url);
+    // Use anchor element for download
+    const a = window.document.createElement('a');
+    a.href = document.url;
+    a.download = fileName;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    window.document.body.appendChild(a);
+    a.click();
+    window.document.body.removeChild(a);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={cn(
-          "flex flex-col overflow-hidden",
-          isFullscreen
-            ? "max-w-[98vw] max-h-[98vh] w-[98vw] h-[98vh]"
-            : "max-w-6xl max-h-[95vh]"
-        )}
-      >
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
         <DialogHeader className="flex-shrink-0">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <DialogTitle className="text-xl flex items-center gap-2">
-                <FileTypeIcon fileType={fileType} className="h-6 w-6" />
-                <span className="truncate">{document.name}</span>
-              </DialogTitle>
-              <DialogDescription className="mt-2">
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  {document.fileName && (
-                    <Badge variant="outline">{document.fileName}</Badge>
-                  )}
-                  {document.fileSize && (
-                    <Badge variant="secondary">{formatFileSize(document.fileSize)}</Badge>
-                  )}
-                  <Badge variant="secondary" className="uppercase">{fileType}</Badge>
-                </div>
-                {document.description && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {document.description}
-                  </p>
-                )}
-              </DialogDescription>
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            {fileType === 'pdf' && <FileText className="h-5 w-5 text-red-500" />}
+            {fileType === 'image' && <ImageIcon className="h-5 w-5 text-blue-500" />}
+            {fileType === 'other' && <File className="h-5 w-5 text-gray-500" />}
+            <span className="truncate">{document.name}</span>
+          </DialogTitle>
+          {(document.fileName || document.fileSize) && (
+            <div className="flex gap-2 mt-2">
+              {document.fileName && <Badge variant="outline">{document.fileName}</Badge>}
+              {document.fileSize && <Badge variant="secondary">{formatFileSize(document.fileSize)}</Badge>}
             </div>
-          </div>
+          )}
         </DialogHeader>
 
-        <Separator className="my-2" />
-
-        {/* Viewer Controls */}
-        <div className="flex items-center justify-between gap-2 py-2 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            {canViewInline && !hasError && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleZoomOut}
-                  disabled={zoom <= 25}
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <span className="text-sm font-medium min-w-[50px] text-center">
-                  {zoom}%
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleZoomIn}
-                  disabled={zoom >= 300}
-                  title="Zoom In"
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                {fileType === 'image' && (
-                  <Button variant="outline" size="sm" onClick={handleRotate} title="Rotate">
-                    <RotateCw className="h-4 w-4" />
-                  </Button>
-                )}
-                {(zoom !== 100 || rotation !== 0) && (
-                  <Button variant="ghost" size="sm" onClick={handleReset}>
-                    Reset
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-            >
-              {isFullscreen ? (
-                <Minimize2 className="h-4 w-4" />
-              ) : (
-                <Maximize2 className="h-4 w-4" />
+        {/* Content */}
+        <div className="flex-1 overflow-auto min-h-0 mt-4">
+          {/* Images - try to display inline */}
+          {fileType === 'image' && !imageError && (
+            <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg p-4 min-h-[300px]">
+              {!imageLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+                </div>
               )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.open(document.url, '_blank')}
-              title="Open in New Tab"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleDownload}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-          </div>
+              <img
+                src={document.url}
+                alt={document.name}
+                className="max-w-full max-h-[60vh] object-contain"
+                style={{ display: imageLoaded ? 'block' : 'none' }}
+                onLoad={() => {
+                  console.log('[FileViewerDialog] Image loaded');
+                  setImageLoaded(true);
+                }}
+                onError={() => {
+                  console.log('[FileViewerDialog] Image failed to load');
+                  setImageError(true);
+                }}
+              />
+            </div>
+          )}
+
+          {/* PDF or failed image - show action buttons */}
+          {(fileType === 'pdf' || fileType === 'other' || (fileType === 'image' && imageError)) && (
+            <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-900 rounded-lg min-h-[300px]">
+              {/* Icon */}
+              <div className="mb-6">
+                {fileType === 'pdf' ? (
+                  <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-full">
+                    <FileText className="h-12 w-12 text-red-600 dark:text-red-400" />
+                  </div>
+                ) : (
+                  <div className="bg-gray-200 dark:bg-gray-700 p-4 rounded-full">
+                    <File className="h-12 w-12 text-gray-600 dark:text-gray-400" />
+                  </div>
+                )}
+              </div>
+
+              {/* File info */}
+              <h3 className="text-lg font-semibold text-center mb-2">{document.name}</h3>
+              {document.description && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-4 max-w-md">
+                  {document.description}
+                </p>
+              )}
+
+              {/* Action buttons - using anchor tags for reliability */}
+              <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                <a
+                  href={document.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
+                  onClick={() => console.log('[FileViewerDialog] Anchor click - Open')}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open in New Tab
+                </a>
+                <a
+                  href={document.url}
+                  download={fileName}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-input bg-background rounded-md font-medium hover:bg-accent transition-colors"
+                  onClick={() => console.log('[FileViewerDialog] Anchor click - Download')}
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </a>
+              </div>
+
+              <p className="text-xs text-gray-400 mt-6 text-center">
+                Click "Open in New Tab" to view in your browser
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Document Preview */}
-        <div className="flex-1 overflow-auto rounded-lg border bg-muted/10 min-h-0">
-          {renderDocumentPreview()}
-        </div>
-
-        {/* Document Metadata */}
+        {/* Metadata */}
         {document.metadata && Object.keys(document.metadata).length > 0 && (
-          <>
-            <Separator className="my-2" />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm flex-shrink-0">
+          <div className="flex-shrink-0 mt-4 pt-4 border-t">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               {Object.entries(document.metadata).map(([key, value]) => {
                 if (value === undefined || value === null || value === '') return null;
                 return (
                   <div key={key}>
-                    <p className="text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs capitalize">
+                      {key.replace(/_/g, ' ')}
+                    </p>
                     <p className="font-medium truncate">{String(value)}</p>
                   </div>
                 );
               })}
             </div>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
