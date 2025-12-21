@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ import {
   File,
   Maximize2,
   Minimize2,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -98,24 +99,98 @@ export function FileViewerDialog({ document, open, onOpenChange, onDownload }: F
   const [rotation, setRotation] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [textContent, setTextContent] = useState<string | null>(null);
 
-  // Reset state when document changes
-  useEffect(() => {
-    if (document) {
-      setZoom(100);
-      setRotation(0);
+  // Fetch document and create blob URL for PDFs/text to avoid X-Frame-Options issues
+  const fetchDocument = useCallback(async (url: string, fileType: string) => {
+    try {
       setIsLoading(true);
       setHasError(false);
+      setErrorMessage("");
+      setBlobUrl(null);
+      setTextContent(null);
 
-      // Auto-clear loading state after 5 seconds as fallback
-      const timeout = setTimeout(() => {
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch document: ${response.status} ${response.statusText}`);
+      }
+
+      if (fileType === 'text') {
+        const text = await response.text();
+        setTextContent(text);
         setIsLoading(false);
-      }, 5000);
-
-      return () => clearTimeout(timeout);
+      } else {
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Failed to fetch document:', error);
+      setHasError(true);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Failed to load document. The file may be blocked by security settings.'
+      );
+      setIsLoading(false);
     }
-  }, [document?.url]);
+  }, []);
+
+  // Reset state and fetch when document changes
+  useEffect(() => {
+    let currentBlobUrl: string | null = null;
+
+    if (document && open) {
+      setZoom(100);
+      setRotation(0);
+
+      const fileName = document.fileName || document.name || 'document';
+      const fileType = getFileType(fileName, document.fileType);
+
+      // For PDFs and text files, fetch and create blob URL to bypass X-Frame-Options
+      if (fileType === 'pdf' || fileType === 'text') {
+        fetchDocument(document.url, fileType);
+      } else if (fileType === 'image') {
+        // Images load directly via img tag
+        setIsLoading(true);
+        setHasError(false);
+        setErrorMessage("");
+      } else {
+        setIsLoading(false);
+      }
+    }
+
+    // Cleanup blob URL when dialog closes or document changes
+    return () => {
+      if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl);
+      }
+      setBlobUrl(prev => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+      setTextContent(null);
+    };
+  }, [document?.url, open, fetchDocument]);
+
+  // Retry function
+  const handleRetry = () => {
+    if (document) {
+      const fileName = document.fileName || document.name || 'document';
+      const fileType = getFileType(fileName, document.fileType);
+      if (fileType === 'pdf' || fileType === 'text') {
+        fetchDocument(document.url, fileType);
+      }
+    }
+  };
 
   if (!document) return null;
 
@@ -178,29 +253,49 @@ export function FileViewerDialog({ document, open, onOpenChange, onDownload }: F
               </div>
             )}
             {hasError && (
-              <Alert variant="destructive" className="m-4">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Failed to load PDF. Please try downloading the file instead.
-                </AlertDescription>
-              </Alert>
+              <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                <AlertTriangle className="h-16 w-16 text-destructive" />
+                <div className="text-center space-y-2">
+                  <p className="text-lg font-medium">Unable to preview PDF</p>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    {errorMessage || 'The PDF could not be loaded in the browser. Please use the options below to view it.'}
+                  </p>
+                </div>
+                <div className="flex gap-3 mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={handleRetry}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Retry
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.open(document.url, '_blank')}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open in New Tab
+                  </Button>
+                  <Button onClick={handleDownload}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download PDF
+                  </Button>
+                </div>
+              </div>
             )}
-            <iframe
-              src={`${document.url}#toolbar=1&navpanes=0&scrollbar=1`}
-              className="w-full border-0 rounded-lg"
-              style={{
-                height: isFullscreen ? '85vh' : '70vh',
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: 'top left',
-                width: `${10000 / zoom}%`,
-              }}
-              title={document.name}
-              onLoad={() => setIsLoading(false)}
-              onError={() => {
-                setIsLoading(false);
-                setHasError(true);
-              }}
-            />
+            {!hasError && blobUrl && (
+              <iframe
+                src={`${blobUrl}#toolbar=1&navpanes=0&scrollbar=1`}
+                className="w-full border-0 rounded-lg"
+                style={{
+                  height: isFullscreen ? '85vh' : '70vh',
+                  transform: `scale(${zoom / 100})`,
+                  transformOrigin: 'top left',
+                  width: `${10000 / zoom}%`,
+                }}
+                title={document.name}
+              />
+            )}
           </div>
         );
 
@@ -267,28 +362,36 @@ export function FileViewerDialog({ document, open, onOpenChange, onDownload }: F
               </div>
             )}
             {hasError && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Failed to load file. Please try downloading the file instead.
-                </AlertDescription>
-              </Alert>
+              <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                <AlertTriangle className="h-16 w-16 text-destructive" />
+                <div className="text-center space-y-2">
+                  <p className="text-lg font-medium">Unable to load file</p>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    {errorMessage || 'The file could not be loaded. Please download it instead.'}
+                  </p>
+                </div>
+                <div className="flex gap-3 mt-4">
+                  <Button variant="outline" onClick={handleRetry}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Retry
+                  </Button>
+                  <Button onClick={handleDownload}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download File
+                  </Button>
+                </div>
+              </div>
             )}
-            {!hasError && (
-              <iframe
-                src={document.url}
-                className="w-full h-full border-0 bg-white rounded"
+            {!hasError && textContent !== null && (
+              <pre
+                className="w-full h-full p-4 bg-white dark:bg-gray-900 rounded font-mono text-sm overflow-auto whitespace-pre-wrap"
                 style={{
                   minHeight: isFullscreen ? '80vh' : '65vh',
                   fontSize: `${zoom}%`,
                 }}
-                title={document.name}
-                onLoad={() => setIsLoading(false)}
-                onError={() => {
-                  setIsLoading(false);
-                  setHasError(true);
-                }}
-              />
+              >
+                {textContent}
+              </pre>
             )}
           </div>
         );
