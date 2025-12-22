@@ -425,8 +425,8 @@ const Calendar = () => {
         return false;
       }
       if (filters.city !== 'all') {
-        const propertyLocation = property.property_location?.[0];
-        if (!propertyLocation || propertyLocation.city !== filters.city) {
+        const propertyCity = property.property_location?.[0]?.city || (property as any).location?.[0]?.city || (property as any).location?.city;
+        if (!propertyCity || propertyCity !== filters.city) {
           return false;
         }
       }
@@ -561,7 +561,7 @@ const Calendar = () => {
   const cities = useMemo(() => {
     const citySet = new Set<string>();
     properties.forEach(property => {
-      const city = property.property_location?.[0]?.city;
+      const city = property.property_location?.[0]?.city || (property as any).location?.[0]?.city || (property as any).location?.city;
       if (city) citySet.add(city);
     });
     return Array.from(citySet).sort();
@@ -1578,7 +1578,10 @@ const Calendar = () => {
                                 <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
                                   <span className="flex items-center gap-1">
                                     <MapPin className="h-3 w-3" />
-                                    {property.property_location?.[0]?.city || 'N/A'}
+                                    {[
+                                      property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address,
+                                      property.property_location?.[0]?.city || (property as any).location?.[0]?.city || (property as any).location?.city
+                                    ].filter(Boolean).join(', ') || 'N/A'}
                                   </span>
                                   <span className="flex items-center gap-1">
                                     <Users className="h-3 w-3" />
@@ -1705,8 +1708,8 @@ const Calendar = () => {
                                       <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
                                       <span className="truncate">
                                         {[
-                                          property.property_location?.[0]?.address,
-                                          property.property_location?.[0]?.city
+                                          property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address,
+                                          property.property_location?.[0]?.city || (property as any).location?.[0]?.city || (property as any).location?.city
                                         ].filter(Boolean).join(', ') || property.property_name}
                                       </span>
                                     </div>
@@ -1842,13 +1845,13 @@ const Calendar = () => {
                                                   {booking.unit_id ? (
                                                     <div className="text-purple-600">
                                                       {formatStreetWithUnit(
-                                                        property.property_location?.[0]?.address,
+                                                        property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address,
                                                         (booking as any).unit?.property_name
                                                       ) || 'Specific Unit'}
                                                     </div>
                                                   ) : (
                                                     <div className="text-blue-600">
-                                                      {property.property_location?.[0]?.address || t('calendar.entireProperty', 'Entire Property')}
+                                                      {property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address || t('calendar.entireProperty', 'Entire Property')}
                                                     </div>
                                                   )}
                                                   <div>Check-in: {format(parseISO(booking.check_in_date), 'MMM dd')}</div>
@@ -1874,13 +1877,13 @@ const Calendar = () => {
                                                   {booking.unit_id ? (
                                                     <div className="text-purple-600">
                                                       {formatStreetWithUnit(
-                                                        property.property_location?.[0]?.address,
+                                                        property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address,
                                                         (booking as any).unit?.property_name
                                                       ) || 'Specific Unit'}
                                                     </div>
                                                   ) : (
                                                     <div className="text-blue-600">
-                                                      {property.property_location?.[0]?.address || t('calendar.entireProperty', 'Entire Property')}
+                                                      {property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address || t('calendar.entireProperty', 'Entire Property')}
                                                     </div>
                                                   )}
                                                   <div>Check-out: {format(parseISO(booking.check_out_date), 'MMM dd')}</div>
@@ -2022,12 +2025,12 @@ const Calendar = () => {
                                                     )}
                                                   </div>
                                                 )}
-                                                {(property.property_location?.[0]?.address || property.property_location?.[0]?.city) && (
+                                                {(property.property_location?.[0]?.address || property.property_location?.[0]?.city || (property as any).location?.[0]?.address || (property as any).location?.[0]?.city || (property as any).location?.address || (property as any).location?.city) && (
                                                   <div className="text-gray-500 flex items-center gap-1">
                                                     <MapPin className="h-3 w-3" />
                                                     {[
-                                                      property.property_location?.[0]?.address,
-                                                      property.property_location?.[0]?.city
+                                                      property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address,
+                                                      property.property_location?.[0]?.city || (property as any).location?.[0]?.city || (property as any).location?.city
                                                     ].filter(Boolean).join(', ')}
                                                   </div>
                                                 )}
