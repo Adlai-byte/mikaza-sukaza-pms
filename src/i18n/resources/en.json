@@ -440,7 +440,37 @@
     "customRange": "Custom range",
     "noTransactionsFound": "No transactions found",
     "noTransactionsDescription": "No transactions found for the selected period and filters",
-    "showingTransactions": "Showing {{count}} transactions"
+    "showingTransactions": "Showing {{count}} transactions",
+    "guide": {
+      "title": "Calendar Guide - How to Use",
+      "bookingTypes": {
+        "title": "Booking Types",
+        "entireProperty": "Entire Property",
+        "entirePropertyDesc": "Blocks all units under the property. Shown on property row and all unit rows.",
+        "unitSpecific": "Unit-Specific",
+        "unitSpecificDesc": "Only blocks the selected unit. Other units remain available for booking.",
+        "tip": "Click on a unit row to pre-select that unit when creating a booking."
+      },
+      "colorLegend": {
+        "title": "Status Colors",
+        "confirmed": "Confirmed - Booking is confirmed",
+        "pending": "Pending - Awaiting confirmation",
+        "checkedIn": "Checked In - Guest has arrived",
+        "checkedOut": "Checked Out - Stay completed",
+        "cancelled": "Cancelled - Booking cancelled",
+        "blocked": "Blocked - Dates unavailable"
+      },
+      "actions": {
+        "title": "Actions & Navigation",
+        "createBooking": "Create Booking",
+        "createBookingDesc": "Click on an empty date cell to create a new booking.",
+        "viewBooking": "View/Edit Booking",
+        "viewBookingDesc": "Click on a booking bar to view details or edit.",
+        "expandUnits": "Expand Units",
+        "expandUnitsDesc": "Click the arrow or property row to show/hide individual units.",
+        "tip": "Right-click on dates for more options like blocking dates or quick actions."
+      }
+    }
   },
   "properties": {
     "title": "Property Management",

@@ -124,6 +124,7 @@ import { createTasksFromBooking } from '@/hooks/useBookingTasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { CalendarSyncDialog } from '@/components/calendar/CalendarSyncDialog';
 import { PropertyTransactionsDrawer } from '@/components/calendar/PropertyTransactionsDrawer';
+import { CalendarGuide } from '@/components/calendar/CalendarGuide';
 import { formatStreetWithUnit } from '@/lib/address-utils';
 
 /**
@@ -288,6 +289,7 @@ const Calendar = () => {
   const [bookingCheckIn, setBookingCheckIn] = useState<string>('');
   const [bookingCheckOut, setBookingCheckOut] = useState<string>('');
   const [editingBooking, setEditingBooking] = useState<PropertyBooking | null>(null);
+  const [bookingUnitId, setBookingUnitId] = useState<string | null>(null);
 
   // State: Dialog Management
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -662,10 +664,12 @@ const Calendar = () => {
 
   /**
    * HANDLER: Open booking dialog for date
+   * @param unitId - Optional unit ID when clicking from a unit row (pre-selects that unit)
    */
-  const handleDateClick = (propertyId: string, date: Date, booking?: PropertyBooking) => {
+  const handleDateClick = (propertyId: string, date: Date, booking?: PropertyBooking, unitId?: string) => {
     console.log('📅 Date clicked:', {
       propertyId,
+      unitId,
       date: format(date, 'yyyy-MM-dd'),
       hasBooking: !!booking,
       booking: booking ? { id: booking.booking_id, guest: booking.guest_name } : null
@@ -675,11 +679,13 @@ const Calendar = () => {
       console.log('✏️ Opening dialog to edit booking');
       setEditingBooking(booking);
       setBookingPropertyId(propertyId);
+      setBookingUnitId(null); // Use booking's unit_id when editing
       setShowBookingDialog(true);
     } else {
       console.log('➕ Opening dialog to create new booking');
       setEditingBooking(null);
       setBookingPropertyId(propertyId);
+      setBookingUnitId(unitId || null); // Pre-select unit when clicking from unit row
       setBookingCheckIn(format(date, 'yyyy-MM-dd'));
       setBookingCheckOut(format(addDays(date, 1), 'yyyy-MM-dd'));
       setShowBookingDialog(true);
@@ -1077,7 +1083,7 @@ const Calendar = () => {
    */
   return (
     <TooltipProvider>
-      <div className="flex flex-col gap-4 h-full">
+      <div className="flex flex-col gap-4 h-full overflow-x-hidden">
 
         {/* ========================================
             HEADER: Title, Stats, Actions (Fixed - no horizontal scroll)
@@ -1130,6 +1136,13 @@ const Calendar = () => {
               </>
             }
           />
+        </div>
+
+        {/* ========================================
+            GUIDE: How to use the calendar
+            ======================================== */}
+        <div className="flex-shrink-0">
+          <CalendarGuide />
         </div>
 
         {/* ========================================
@@ -2032,7 +2045,7 @@ const Calendar = () => {
                                         `}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleDateClick(property.property_id, date, unitBooking);
+                                          handleDateClick(property.property_id, date, unitBooking, unit.unit_id);
                                         }}
                                       >
                                         {unitBooking ? (
@@ -2153,12 +2166,14 @@ const Calendar = () => {
             if (!open) {
               setEditingBooking(null);
               setBookingPropertyId(null);
+              setBookingUnitId(null);
               setBookingCheckIn('');
               setBookingCheckOut('');
             }
           }}
           onSubmit={handleBookingSubmit}
           propertyId={bookingPropertyId || undefined}
+          unitId={bookingUnitId}
           booking={editingBooking}
           defaultCheckIn={bookingCheckIn}
           defaultCheckOut={bookingCheckOut}

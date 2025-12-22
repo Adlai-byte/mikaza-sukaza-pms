@@ -73,6 +73,7 @@ interface BookingDialogEnhancedProps {
   onSubmit: (data: CreateBookingParams) => void;
   isSubmitting?: boolean;
   propertyId?: string;
+  unitId?: string | null; // Pre-select unit when clicking from unit row in calendar
   booking?: Booking | null;
   defaultCheckIn?: string;
   defaultCheckOut?: string;
@@ -84,6 +85,7 @@ export function BookingDialogEnhanced({
   onSubmit,
   isSubmitting = false,
   propertyId,
+  unitId,
   booking,
   defaultCheckIn,
   defaultCheckOut,
@@ -99,7 +101,7 @@ export function BookingDialogEnhanced({
 
   const [formData, setFormData] = useState<BookingInsert>({
     property_id: propertyId || booking?.property_id || '',
-    unit_id: booking?.unit_id || null,
+    unit_id: booking ? booking.unit_id : (unitId ?? null), // Use booking's unit when editing, unitId prop when creating
     guest_id: booking?.guest_id || null,
     guest_name: booking?.guest_name || '',
     guest_email: booking?.guest_email || '',
@@ -208,7 +210,7 @@ export function BookingDialogEnhanced({
     if (open) {
       setFormData({
         property_id: propertyId || booking?.property_id || '',
-        unit_id: booking?.unit_id || null,
+        unit_id: booking ? booking.unit_id : (unitId ?? null), // Use booking's unit when editing, unitId prop when creating
         guest_id: booking?.guest_id || null,
         guest_name: booking?.guest_name || '',
         guest_email: booking?.guest_email || '',
@@ -231,7 +233,7 @@ export function BookingDialogEnhanced({
       // Reset custom tasks when opening dialog
       setCustomTasks([]);
     }
-  }, [open, booking, propertyId, defaultCheckIn, defaultCheckOut, isEditing]);
+  }, [open, booking, propertyId, unitId, defaultCheckIn, defaultCheckOut, isEditing]);
 
   // Handle guest selection
   const handleGuestSelect = (guestId: string) => {
