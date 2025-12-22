@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Task, TaskInsert, BookingJobConfig } from '@/lib/schemas';
+import { Task, TaskInsert, BookingJobConfig, CustomBookingTask } from '@/lib/schemas';
 import { taskKeys } from './useTasks';
 import { format, subDays, parseISO } from 'date-fns';
 
@@ -59,7 +59,7 @@ export function calculateJobDueDate(
 }
 
 /**
- * Create tasks from booking job configurations
+ * Create tasks from booking job configurations and custom tasks
  */
 export async function createTasksFromBooking(
   bookingId: string,
@@ -68,17 +68,26 @@ export async function createTasksFromBooking(
   checkOutDate: string,
   jobConfigs: BookingJobConfig[],
   createdBy: string,
-  guestName?: string
+  guestName?: string,
+  customTasks?: CustomBookingTask[]
 ): Promise<Task[]> {
+  console.log('🔍 createTasksFromBooking called with:');
+  console.log('  - jobConfigs:', jobConfigs);
+  console.log('  - customTasks:', customTasks);
+
   // Filter only enabled jobs
   const enabledJobs = jobConfigs.filter(job => job.enabled);
+  const validCustomTasks = customTasks?.filter(task => task.title.trim() !== '') || [];
 
-  if (enabledJobs.length === 0) {
+  console.log('  - enabledJobs:', enabledJobs.length);
+  console.log('  - validCustomTasks:', validCustomTasks.length, validCustomTasks);
+
+  if (enabledJobs.length === 0 && validCustomTasks.length === 0) {
     return [];
   }
 
-  // Prepare task inserts
-  const taskInserts: TaskInsert[] = enabledJobs.map(job => ({
+  // Prepare task inserts from job configs
+  const jobTaskInserts: TaskInsert[] = enabledJobs.map(job => ({
     title: `${jobTypeToTitle[job.type]}${guestName ? ` - ${guestName}` : ''}`,
     description: job.notes || `Auto-generated task for booking. Check-in: ${checkInDate}, Check-out: ${checkOutDate}`,
     property_id: propertyId,
@@ -90,6 +99,23 @@ export async function createTasksFromBooking(
     category: jobTypeToCategory[job.type],
     due_date: job.dueDate || calculateJobDueDate(job.type, checkInDate, checkOutDate),
   }));
+
+  // Prepare task inserts from custom tasks
+  const customTaskInserts: TaskInsert[] = validCustomTasks.map(task => ({
+    title: `${task.title}${guestName ? ` - ${guestName}` : ''}`,
+    description: task.description || `Custom task for booking. Check-in: ${checkInDate}, Check-out: ${checkOutDate}`,
+    property_id: propertyId,
+    booking_id: bookingId,
+    assigned_to: task.assignedTo,
+    created_by: createdBy,
+    status: 'pending' as const,
+    priority: task.priority,
+    category: task.category,
+    due_date: task.dueDate || checkOutDate,
+  }));
+
+  // Combine all task inserts
+  const taskInserts: TaskInsert[] = [...jobTaskInserts, ...customTaskInserts];
 
   // Bulk insert tasks
   const { data, error } = await supabase
@@ -109,6 +135,8 @@ export async function createTasksFromBooking(
 
   // Create notifications for assigned users
   const assignedTasks = (data || []).filter(task => task.assigned_to);
+  console.log('📬 Tasks with assignments:', assignedTasks.length, assignedTasks.map(t => ({ title: t.title, assigned_to: t.assigned_to })));
+
   if (assignedTasks.length > 0) {
     const notifications = assignedTasks.map(task => ({
       user_id: task.assigned_to!,
@@ -119,7 +147,14 @@ export async function createTasksFromBooking(
       is_read: false,
     }));
 
-    await supabase.from('notifications').insert(notifications);
+    console.log('📬 Creating notifications:', notifications);
+    const { error: notificationError } = await supabase.from('notifications').insert(notifications);
+
+    if (notificationError) {
+      console.error('❌ Failed to create notifications:', notificationError);
+    } else {
+      console.log('✅ Notifications created successfully');
+    }
   }
 
   return data || [];

@@ -653,9 +653,9 @@ const Calendar = () => {
   const handleBookingSubmit = async (bookingData: CreateBookingParams) => {
     console.log('📅 Calendar handleBookingSubmit called with:', bookingData);
     try {
-      // Extract jobConfigs before database insert (it's not a database column)
-      const { jobConfigs, ...dbBookingData } = bookingData;
-      console.log('📅 Extracted data:', { jobConfigs, dbBookingData });
+      // Extract jobConfigs and customTasks before database insert (not database columns)
+      const { jobConfigs, customTasks, ...dbBookingData } = bookingData;
+      console.log('📅 Extracted data:', { jobConfigs, customTasks, dbBookingData });
 
       if (editingBooking) {
         const { data, error } = await supabase
@@ -666,6 +666,32 @@ const Calendar = () => {
           .single();
 
         if (error) throw error;
+
+        // Create tasks from job configs or custom tasks if provided (for editing)
+        const hasJobs = jobConfigs && jobConfigs.length > 0;
+        const hasCustomTasks = customTasks && customTasks.length > 0;
+
+        if (data && (hasJobs || hasCustomTasks) && user?.id) {
+          try {
+            await createTasksFromBooking(
+              data.booking_id,
+              data.property_id,
+              data.check_in_date,
+              data.check_out_date,
+              jobConfigs || [],
+              user.id,
+              data.guest_name || undefined,
+              customTasks
+            );
+          } catch (taskError) {
+            console.error('Failed to create booking tasks:', taskError);
+            toast({
+              title: t('common.warning', 'Warning'),
+              description: t('calendar.tasksCreationFailed', 'Booking updated but failed to generate tasks'),
+              variant: 'destructive',
+            });
+          }
+        }
 
         toast({
           title: t('common.success'),
@@ -680,17 +706,21 @@ const Calendar = () => {
 
         if (error) throw error;
 
-        // Create tasks from job configs if provided
-        if (data && jobConfigs && jobConfigs.length > 0 && user?.id) {
+        // Create tasks from job configs or custom tasks if provided
+        const hasJobs = jobConfigs && jobConfigs.length > 0;
+        const hasCustomTasks = customTasks && customTasks.length > 0;
+
+        if (data && (hasJobs || hasCustomTasks) && user?.id) {
           try {
             await createTasksFromBooking(
               data.booking_id,
               data.property_id,
               data.check_in_date,
               data.check_out_date,
-              jobConfigs,
+              jobConfigs || [],
               user.id,
-              data.guest_name || undefined
+              data.guest_name || undefined,
+              customTasks
             );
           } catch (taskError) {
             console.error('Failed to create booking tasks:', taskError);

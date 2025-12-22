@@ -18,12 +18,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, X } from "lucide-react";
 import { TaskCalendarDayCell } from "./TaskCalendarDayCell";
 import { Task } from "@/lib/schemas";
 
@@ -70,7 +71,7 @@ export function TasksCalendar({ tasks, isLoading, onViewTask }: TasksCalendarPro
   const { t } = useTranslation();
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDayTasks, setSelectedDayTasks] = useState<Task[]>([]);
 
   // Generate calendar days for the current month view (6 weeks × 7 days = 42 days)
@@ -113,13 +114,13 @@ export function TasksCalendar({ tasks, isLoading, onViewTask }: TasksCalendarPro
   const handleDayClick = (date: Date, dayTasks: Task[]) => {
     setSelectedDate(date);
     setSelectedDayTasks(dayTasks);
-    setPopoverOpen(true);
+    setDialogOpen(true);
   };
 
   // Task click handler
   const handleTaskClick = (task: Task, event: React.MouseEvent) => {
     event.stopPropagation();
-    setPopoverOpen(false);
+    setDialogOpen(false);
     onViewTask(task);
   };
 
@@ -226,67 +227,77 @@ export function TasksCalendar({ tasks, isLoading, onViewTask }: TasksCalendarPro
           </>
         )}
 
-        {/* Day Popover for task details */}
-        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-          <PopoverTrigger asChild>
-            <span className="hidden" />
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="center">
-            {selectedDate && (
-              <>
-                <div className="p-3 border-b bg-muted/30">
-                  <h4 className="font-semibold">
-                    {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedDayTasks.length} {selectedDayTasks.length === 1 ? t('todos.calendar.task', 'task') : t('todos.calendar.tasks', 'tasks')}
-                  </p>
-                </div>
-                <ScrollArea className="max-h-[300px]">
-                  <div className="p-2 space-y-2">
-                    {selectedDayTasks.map((task) => (
+      </CardContent>
+
+      {/* Day Dialog for task details */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          {selectedDate && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-primary" />
+                  {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground">
+                  {selectedDayTasks.length} {selectedDayTasks.length === 1 ? t('todos.calendar.task', 'task') : t('todos.calendar.tasks', 'tasks')}
+                </p>
+              </DialogHeader>
+              <ScrollArea className="max-h-[400px] mt-4">
+                <div className="space-y-3 pr-4">
+                  {selectedDayTasks.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      {t('todos.calendar.noTasks', 'No tasks for this day')}
+                    </p>
+                  ) : (
+                    selectedDayTasks.map((task) => (
                       <button
                         key={task.task_id}
                         onClick={(e) => handleTaskClick(task, e)}
-                        className="w-full p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors text-left"
+                        className="w-full p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors text-left"
                       >
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
-                              <span className="font-medium text-sm truncate">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`w-3 h-3 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
+                              <span className="font-medium text-sm">
                                 {task.title}
                               </span>
                             </div>
+                            {task.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                                {task.description}
+                              </p>
+                            )}
                             {task.property && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {task.property.property_name}
+                              <p className="text-xs text-muted-foreground">
+                                📍 {task.property.property_name}
                               </p>
                             )}
                             {task.assigned_user && (
                               <p className="text-xs text-muted-foreground">
-                                {task.assigned_user.first_name} {task.assigned_user.last_name}
+                                👤 {task.assigned_user.first_name} {task.assigned_user.last_name}
                               </p>
                             )}
                           </div>
-                          <div className="flex flex-col gap-1 items-end">
-                            <Badge variant={getPriorityVariant(task.priority)} className="text-[10px] px-1.5 py-0">
+                          <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
+                            <Badge variant={getPriorityVariant(task.priority)} className="text-xs">
                               {t(`todos.priority.${task.priority}`, task.priority)}
                             </Badge>
-                            <Badge variant={getStatusVariant(task.status)} className="text-[10px] px-1.5 py-0">
+                            <Badge variant={getStatusVariant(task.status)} className="text-xs">
                               {t(`todos.status.${task.status}`, task.status)}
                             </Badge>
                           </div>
                         </div>
                       </button>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </>
-            )}
-          </PopoverContent>
-        </Popover>
-      </CardContent>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

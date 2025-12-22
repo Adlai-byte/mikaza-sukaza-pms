@@ -31,7 +31,7 @@ import {
   History,
   RefreshCw,
 } from 'lucide-react';
-import { useBookings } from '@/hooks/useBookings';
+import { useBookings, CreateBookingParams } from '@/hooks/useBookings';
 import { BookingDialogEnhanced } from '@/components/BookingDialogEnhanced';
 import { BookingsTable } from '@/components/BookingsTable';
 import { Pagination } from '@/components/Pagination';
@@ -153,12 +153,15 @@ export default function BookingManagement() {
     setShowBookingDialog(true);
   };
 
-  const handleBookingSubmit = async (bookingData: BookingInsert) => {
+  const handleBookingSubmit = async (data: CreateBookingParams) => {
     try {
+      // Extract jobConfigs and customTasks from the data
+      const { jobConfigs, customTasks, ...bookingData } = data;
+
       if (editingBooking?.booking_id) {
-        await updateBooking(editingBooking.booking_id, bookingData);
+        await updateBooking(editingBooking.booking_id, bookingData, jobConfigs, customTasks);
       } else {
-        await createBooking(bookingData);
+        await createBooking(data);
       }
       setShowBookingDialog(false);
       setEditingBooking(null);

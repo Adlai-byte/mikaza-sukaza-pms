@@ -28,10 +28,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { TabLoadingSpinner } from './PropertyEditSkeleton';
 import { format, addMonths, subMonths } from 'date-fns';
-import { usePropertyBookings, bookingKeys as bookingQueryKeys } from '@/hooks/useBookings';
+import { usePropertyBookings, bookingKeys as bookingQueryKeys, CreateBookingParams } from '@/hooks/useBookings';
+import { createTasksFromBooking } from '@/hooks/useBookingTasks';
 import { BookingDialogEnhanced } from '@/components/BookingDialogEnhanced';
 import { BookingsTable } from '@/components/BookingsTable';
 import { Booking, BookingInsert } from '@/lib/schemas';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BookingRates {
   rate_id?: string;
@@ -103,6 +105,7 @@ const fetchBookings = async (propertyId: string): Promise<Booking[]> => {
 export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showBookingDialog, setShowBookingDialog] = useState(false);
@@ -220,18 +223,42 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
     setShowBookingDialog(true);
   };
 
-  const handleBookingSubmit = async (bookingData: BookingInsert) => {
+  const handleBookingSubmit = async (bookingData: CreateBookingParams) => {
     try {
+      // Extract jobConfigs and customTasks (not database columns)
+      const { jobConfigs, customTasks, ...dbBookingData } = bookingData;
+
       if (editingBooking) {
         // Update existing booking
         const { data, error } = await supabase
           .from('property_bookings')
-          .update(bookingData)
+          .update(dbBookingData)
           .eq('booking_id', editingBooking.booking_id)
           .select()
           .single();
 
         if (error) throw error;
+
+        // Create tasks if provided
+        const hasJobs = jobConfigs && jobConfigs.length > 0;
+        const hasCustomTasks = customTasks && customTasks.length > 0;
+
+        if (data && (hasJobs || hasCustomTasks) && user?.id) {
+          try {
+            await createTasksFromBooking(
+              data.booking_id,
+              data.property_id,
+              data.check_in_date,
+              data.check_out_date,
+              jobConfigs || [],
+              user.id,
+              data.guest_name || undefined,
+              customTasks
+            );
+          } catch (taskError) {
+            console.error('Failed to create tasks:', taskError);
+          }
+        }
 
         toast({
           title: "Success",
@@ -241,11 +268,32 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
         // Create new booking
         const { data, error } = await supabase
           .from('property_bookings')
-          .insert([bookingData])
+          .insert([dbBookingData])
           .select()
           .single();
 
         if (error) throw error;
+
+        // Create tasks if provided
+        const hasJobs = jobConfigs && jobConfigs.length > 0;
+        const hasCustomTasks = customTasks && customTasks.length > 0;
+
+        if (data && (hasJobs || hasCustomTasks) && user?.id) {
+          try {
+            await createTasksFromBooking(
+              data.booking_id,
+              data.property_id,
+              data.check_in_date,
+              data.check_out_date,
+              jobConfigs || [],
+              user.id,
+              data.guest_name || undefined,
+              customTasks
+            );
+          } catch (taskError) {
+            console.error('Failed to create tasks:', taskError);
+          }
+        }
 
         toast({
           title: "Success",
@@ -257,6 +305,7 @@ export function BookingTabOptimized({ propertyId }: BookingTabOptimizedProps) {
       setShowBookingDialog(false);
       setEditingBooking(null);
       queryClient.invalidateQueries({ queryKey: bookingQueryKeys.property(propertyId), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch (error: any) {
       toast({
         title: "Error",

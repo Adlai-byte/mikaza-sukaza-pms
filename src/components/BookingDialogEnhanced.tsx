@@ -53,8 +53,9 @@ import {
   Home,
   AlertTriangle,
 } from 'lucide-react';
-import { Booking, BookingInsert, Guest, BookingJobConfig, defaultBookingJobConfigs } from '@/lib/schemas';
+import { Booking, BookingInsert, Guest, BookingJobConfig, defaultBookingJobConfigs, CustomBookingTask, Task } from '@/lib/schemas';
 import { CreateBookingParams } from '@/hooks/useBookings';
+import { useBookingTasks } from '@/hooks/useBookingTasks';
 import { BookingJobsSection } from '@/components/booking/BookingJobsSection';
 import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay, addMonths } from 'date-fns';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
@@ -64,7 +65,7 @@ import { useGuests } from '@/hooks/useGuests';
 import { usePropertyBookings } from '@/hooks/useBookings';
 import { BookingConflictAlert } from '@/components/BookingConflictAlert';
 import { GuestDialog } from '@/components/GuestDialog';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, ListTodo } from 'lucide-react';
 
 interface BookingDialogEnhancedProps {
   open: boolean;
@@ -90,6 +91,11 @@ export function BookingDialogEnhanced({
   const isEditing = !!booking;
   const { properties, loading: loadingProperties } = usePropertiesOptimized();
   const { data: guests, isLoading: loadingGuests } = useGuests();
+
+  // Fetch existing tasks for the booking (when editing)
+  const { data: existingTasks = [], isLoading: loadingTasks } = useBookingTasks(
+    isEditing && booking?.booking_id ? booking.booking_id : null
+  );
 
   const [formData, setFormData] = useState<BookingInsert>({
     property_id: propertyId || booking?.property_id || '',
@@ -122,6 +128,8 @@ export function BookingDialogEnhanced({
   // Job configs for auto-generating tasks (only for new bookings)
   const [jobConfigs, setJobConfigs] = useState<BookingJobConfig[]>([...defaultBookingJobConfigs]);
   const [autoGenerateJobs, setAutoGenerateJobs] = useState(true);
+  // Custom tasks (always available, independent of auto-generate)
+  const [customTasks, setCustomTasks] = useState<CustomBookingTask[]>([]);
 
   // Active booking warning state for job generation
   const [showActiveBookingWarning, setShowActiveBookingWarning] = useState(false);
@@ -220,6 +228,8 @@ export function BookingDialogEnhanced({
       setSelectedTemplateId(booking?.bill_template_id || null);
       setSoftConflictAcknowledged(false);
       setErrors({});
+      // Reset custom tasks when opening dialog
+      setCustomTasks([]);
     }
   }, [open, booking, propertyId, defaultCheckIn, defaultCheckOut, isEditing]);
 
@@ -328,9 +338,12 @@ export function BookingDialogEnhanced({
     }
 
     // Include job configs when auto-generating jobs (for both create and edit)
+    // Also include custom tasks (always, as they're independent of auto-generate toggle)
+    const validCustomTasks = customTasks.filter(t => t.title.trim() !== '');
     const submitData: CreateBookingParams = {
       ...formData,
       jobConfigs: autoGenerateJobs ? jobConfigs.filter(j => j.enabled) : undefined,
+      customTasks: validCustomTasks.length > 0 ? validCustomTasks : undefined,
     };
 
     // Check for active bookings when auto-generating jobs (except check_in/check_out)
@@ -979,6 +992,10 @@ export function BookingDialogEnhanced({
             checkInDate={formData.check_in_date}
             checkOutDate={formData.check_out_date}
             disabled={isSubmitting}
+            customTasks={customTasks}
+            onCustomTasksChange={setCustomTasks}
+            existingTasks={existingTasks}
+            isLoadingTasks={loadingTasks}
           />
 
           <DialogFooter className="gap-2">

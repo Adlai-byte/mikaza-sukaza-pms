@@ -87,12 +87,12 @@ export function BookingsTab({ propertyId, propertyName }: BookingsTabProps) {
 
   const handleBookingSubmit = async (bookingData: CreateBookingParams) => {
     try {
-      // Extract jobConfigs from booking data
-      const { jobConfigs, ...bookingFields } = bookingData;
+      // Extract jobConfigs and customTasks from booking data
+      const { jobConfigs, customTasks, ...bookingFields } = bookingData;
 
       if (editingBooking?.booking_id) {
-        // Pass jobConfigs when updating to create jobs for existing booking
-        await updateBooking(editingBooking.booking_id, bookingFields, jobConfigs);
+        // Pass jobConfigs and customTasks when updating to create tasks for existing booking
+        await updateBooking(editingBooking.booking_id, bookingFields, jobConfigs, customTasks);
       } else {
         await createBooking({
           ...bookingData,

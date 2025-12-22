@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePropertyBookings, useBookings } from "@/hooks/useBookings";
+import { usePropertyBookings, useBookings, CreateBookingParams } from "@/hooks/useBookings";
 import { usePropertyInvoices } from "@/hooks/usePropertyInvoices";
 import { useCreateInvoiceFromBooking } from "@/hooks/useInvoices";
 import { useToast } from "@/hooks/use-toast";
@@ -108,7 +108,7 @@ export function PropertyBookingsInvoicesDialog({
   };
 
   // Handle booking creation
-  const handleCreateBooking = async (bookingData: BookingInsert) => {
+  const handleCreateBooking = async (bookingData: CreateBookingParams) => {
     try {
       await createBooking(bookingData);
       setIsBookingDialogOpen(false);

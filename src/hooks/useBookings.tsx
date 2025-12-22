@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Booking, BookingInsert, BookingJobConfig } from "@/lib/schemas";
+import { Booking, BookingInsert, BookingJobConfig, CustomBookingTask } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
 import { CACHE_CONFIG } from "@/lib/cache-config";
 import { OptimisticUpdates } from "@/lib/cache-manager-simplified";
@@ -21,13 +21,15 @@ import { taskKeys } from "@/hooks/useTasks";
 // Extended booking insert with job configs for auto-generation
 export interface CreateBookingParams extends BookingInsert {
   jobConfigs?: BookingJobConfig[];
+  customTasks?: CustomBookingTask[];
 }
 
-// Extended update params with job configs for generating jobs on existing bookings
+// Extended update params with job configs and custom tasks for generating jobs on existing bookings
 export interface UpdateBookingParams {
   bookingId: string;
   bookingData: Partial<BookingInsert>;
   jobConfigs?: BookingJobConfig[];
+  customTasks?: CustomBookingTask[];
 }
 
 // Query keys for cache management
@@ -272,8 +274,8 @@ export function useBookings() {
   // Create booking mutation
   const createBookingMutation = useMutation({
     mutationFn: async (params: CreateBookingParams) => {
-      // Extract jobConfigs from params (not sent to database)
-      const { jobConfigs, ...bookingData } = params;
+      // Extract jobConfigs and customTasks from params (not sent to database)
+      const { jobConfigs, customTasks, ...bookingData } = params;
 
       // Check permission
       if (!hasPermission(PERMISSIONS.BOOKINGS_CREATE)) {
@@ -305,8 +307,11 @@ export function useBookings() {
       return data as Booking;
     },
     onMutate: async (params: CreateBookingParams) => {
-      // Extract jobConfigs to pass through context
-      const { jobConfigs, ...bookingData } = params;
+      // Extract jobConfigs and customTasks to pass through context
+      const { jobConfigs, customTasks, ...bookingData } = params;
+
+      console.log('🔍 onMutate - customTasks received:', customTasks);
+      console.log('🔍 onMutate - jobConfigs received:', jobConfigs);
 
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: bookingKeys.lists() });
@@ -327,10 +332,11 @@ export function useBookings() {
         return [tempBooking, ...oldData];
       });
 
-      // Return rollback function and jobConfigs for onSuccess
+      // Return rollback function, jobConfigs and customTasks for onSuccess
       return {
         rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings),
         jobConfigs,
+        customTasks,
         guestName: bookingData.guest_name,
       };
     },
@@ -412,12 +418,28 @@ export function useBookings() {
         // Don't fail the booking creation for allocation errors
       }
 
-      // Auto-generate tasks from booking if job configs provided
-      if (context?.jobConfigs && context.jobConfigs.length > 0 && currentUserId) {
+      // Auto-generate tasks from booking if job configs or custom tasks provided
+      console.log('🔍 onSuccess - context:', context);
+      console.log('🔍 onSuccess - context.customTasks:', context?.customTasks);
+      console.log('🔍 onSuccess - context.jobConfigs:', context?.jobConfigs);
+
+      const hasJobConfigs = context?.jobConfigs && context.jobConfigs.length > 0;
+      const hasCustomTasks = context?.customTasks && context.customTasks.length > 0;
+
+      console.log('🔍 onSuccess - hasJobConfigs:', hasJobConfigs, 'hasCustomTasks:', hasCustomTasks);
+
+      if ((hasJobConfigs || hasCustomTasks) && currentUserId) {
         try {
-          const enabledJobs = context.jobConfigs.filter((job: BookingJobConfig) => job.enabled);
-          if (enabledJobs.length > 0) {
-            console.log('📋 Creating tasks for booking:', data.booking_id);
+          const enabledJobs = hasJobConfigs
+            ? context.jobConfigs.filter((job: BookingJobConfig) => job.enabled)
+            : [];
+          const customTasks = context?.customTasks || [];
+
+          if (enabledJobs.length > 0 || customTasks.length > 0) {
+            console.log('📋 Creating tasks for booking:', data.booking_id, {
+              enabledJobs: enabledJobs.length,
+              customTasks: customTasks.length
+            });
             const tasks = await createTasksFromBooking(
               data.booking_id!,
               data.property_id,
@@ -425,7 +447,8 @@ export function useBookings() {
               data.check_out_date,
               enabledJobs,
               currentUserId,
-              context.guestName
+              context.guestName,
+              customTasks
             );
             console.log('✅ Tasks created:', tasks.length);
 
@@ -519,7 +542,10 @@ export function useBookings() {
 
       return data as Booking;
     },
-    onMutate: async ({ bookingId, bookingData, jobConfigs }) => {
+    onMutate: async ({ bookingId, bookingData, jobConfigs, customTasks }) => {
+      console.log('🔍 updateBooking onMutate - customTasks:', customTasks);
+      console.log('🔍 updateBooking onMutate - jobConfigs:', jobConfigs);
+
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: bookingKeys.lists() });
 
@@ -537,10 +563,12 @@ export function useBookings() {
         );
       });
 
-      // Return rollback function and jobConfigs for onSuccess
+      // Return rollback function, jobConfigs and customTasks for onSuccess
       return {
         rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings),
         jobConfigs,
+        customTasks,
+        guestName: bookingData.guest_name,
       };
     },
     onSuccess: async (data, variables, context) => {
@@ -612,6 +640,48 @@ export function useBookings() {
           }
         } catch (jobError) {
           console.error('⚠️ Error creating jobs:', jobError);
+        }
+      }
+
+      // Create custom tasks if provided
+      const hasCustomTasks = context?.customTasks && context.customTasks.length > 0;
+      console.log('🔍 updateBooking onSuccess - hasCustomTasks:', hasCustomTasks, context?.customTasks);
+
+      if (hasCustomTasks && currentUserId) {
+        try {
+          const validCustomTasks = context.customTasks.filter((task: CustomBookingTask) => task.title.trim() !== '');
+          if (validCustomTasks.length > 0) {
+            console.log('📋 Creating custom tasks for updated booking:', data.booking_id, validCustomTasks);
+
+            const tasks = await createTasksFromBooking(
+              data.booking_id!,
+              data.property_id,
+              data.check_in_date,
+              data.check_out_date,
+              [], // No job configs, just custom tasks
+              currentUserId,
+              context.guestName || data.guest_name,
+              validCustomTasks
+            );
+
+            console.log('✅ Custom tasks created:', tasks.length);
+
+            // Invalidate task caches
+            queryClient.invalidateQueries({ queryKey: taskKeys.all });
+            queryClient.invalidateQueries({ queryKey: bookingTaskKeys.booking(data.booking_id!) });
+
+            toast({
+              title: "Success",
+              description: `Booking updated and ${tasks.length} custom task(s) created`,
+            });
+          }
+        } catch (taskError) {
+          console.error('⚠️ Error creating custom tasks:', taskError);
+          toast({
+            title: "Booking Updated",
+            description: "Booking updated but failed to create custom tasks",
+            variant: "destructive",
+          });
         }
       }
 
@@ -822,8 +892,8 @@ export function useBookings() {
     isFetching,
     error: bookingsError,
     createBooking: createBookingMutation.mutateAsync,
-    updateBooking: (bookingId: string, bookingData: Partial<BookingInsert>, jobConfigs?: BookingJobConfig[]) =>
-      updateBookingMutation.mutateAsync({ bookingId, bookingData, jobConfigs }),
+    updateBooking: (bookingId: string, bookingData: Partial<BookingInsert>, jobConfigs?: BookingJobConfig[], customTasks?: CustomBookingTask[]) =>
+      updateBookingMutation.mutateAsync({ bookingId, bookingData, jobConfigs, customTasks }),
     deleteBooking: deleteBookingMutation.mutateAsync,
     refetch,
     // Mutation states for UI feedback

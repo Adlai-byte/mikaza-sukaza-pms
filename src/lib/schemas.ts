@@ -607,6 +607,17 @@ export const defaultBookingJobConfigs: BookingJobConfig[] = [
   { type: 'maintenance', enabled: false, assignedTo: null, dueDate: '', priority: 'low' },
 ];
 
+// Custom Booking Task (for adding specified tasks during booking creation)
+export interface CustomBookingTask {
+  id: string;  // Temporary ID for UI tracking
+  title: string;
+  description?: string;
+  assignedTo: string | null;
+  dueDate: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  category: 'cleaning' | 'maintenance' | 'check_in_prep' | 'check_out_prep' | 'inspection' | 'repair' | 'other';
+}
+
 // Issue schemas
 export const issueSchema = z.object({
   issue_id: z.string().uuid().optional(),
