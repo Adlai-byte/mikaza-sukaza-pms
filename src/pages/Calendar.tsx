@@ -126,6 +126,47 @@ import { CalendarSyncDialog } from '@/components/calendar/CalendarSyncDialog';
 import { PropertyTransactionsDrawer } from '@/components/calendar/PropertyTransactionsDrawer';
 import { formatStreetWithUnit } from '@/lib/address-utils';
 
+/**
+ * Helper to get location data from property
+ * Handles both array format (one-to-many) and object format (one-to-one relationship)
+ */
+const getPropertyLocation = (property: any): { address?: string; city?: string; state?: string } | null => {
+  // Check property_location (the relation) - could be array or object
+  const propLoc = property?.property_location;
+  if (propLoc) {
+    // If it's an array, get first element
+    if (Array.isArray(propLoc) && propLoc.length > 0) {
+      return propLoc[0];
+    }
+    // If it's an object with city or address, return it directly
+    if (typeof propLoc === 'object' && (propLoc.city || propLoc.address)) {
+      return propLoc;
+    }
+  }
+
+  // Fallback: check location field (aliased or direct JSONB)
+  const loc = property?.location;
+  if (loc) {
+    if (Array.isArray(loc) && loc.length > 0) {
+      return loc[0];
+    }
+    if (typeof loc === 'object' && (loc.city || loc.address)) {
+      return loc;
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Helper to format full location string
+ */
+const formatPropertyLocation = (property: any): string => {
+  const loc = getPropertyLocation(property);
+  if (!loc) return '';
+  return [loc.address, loc.city].filter(Boolean).join(', ');
+};
+
 type Property = Tables<'properties'>;
 type PropertyBooking = Tables<'property_bookings'>;
 
@@ -425,8 +466,8 @@ const Calendar = () => {
         return false;
       }
       if (filters.city !== 'all') {
-        const propertyCity = property.property_location?.[0]?.city || (property as any).location?.[0]?.city || (property as any).location?.city;
-        if (!propertyCity || propertyCity !== filters.city) {
+        const loc = getPropertyLocation(property);
+        if (!loc?.city || loc.city !== filters.city) {
           return false;
         }
       }
@@ -561,8 +602,8 @@ const Calendar = () => {
   const cities = useMemo(() => {
     const citySet = new Set<string>();
     properties.forEach(property => {
-      const city = property.property_location?.[0]?.city || (property as any).location?.[0]?.city || (property as any).location?.city;
-      if (city) citySet.add(city);
+      const loc = getPropertyLocation(property);
+      if (loc?.city) citySet.add(loc.city);
     });
     return Array.from(citySet).sort();
   }, [properties]);
@@ -1578,10 +1619,7 @@ const Calendar = () => {
                                 <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
                                   <span className="flex items-center gap-1">
                                     <MapPin className="h-3 w-3" />
-                                    {[
-                                      property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address,
-                                      property.property_location?.[0]?.city || (property as any).location?.[0]?.city || (property as any).location?.city
-                                    ].filter(Boolean).join(', ') || 'N/A'}
+                                    {formatPropertyLocation(property) || 'N/A'}
                                   </span>
                                   <span className="flex items-center gap-1">
                                     <Users className="h-3 w-3" />
@@ -1707,10 +1745,7 @@ const Calendar = () => {
                                     <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5">
                                       <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
                                       <span className="truncate">
-                                        {[
-                                          property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address,
-                                          property.property_location?.[0]?.city || (property as any).location?.[0]?.city || (property as any).location?.city
-                                        ].filter(Boolean).join(', ') || property.property_name}
+                                        {formatPropertyLocation(property) || property.property_name}
                                       </span>
                                     </div>
                                     {unitBooking ? (
@@ -1845,13 +1880,13 @@ const Calendar = () => {
                                                   {booking.unit_id ? (
                                                     <div className="text-purple-600">
                                                       {formatStreetWithUnit(
-                                                        property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address,
+                                                        getPropertyLocation(property)?.address,
                                                         (booking as any).unit?.property_name
                                                       ) || 'Specific Unit'}
                                                     </div>
                                                   ) : (
                                                     <div className="text-blue-600">
-                                                      {property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address || t('calendar.entireProperty', 'Entire Property')}
+                                                      {getPropertyLocation(property)?.address || t('calendar.entireProperty', 'Entire Property')}
                                                     </div>
                                                   )}
                                                   <div>Check-in: {format(parseISO(booking.check_in_date), 'MMM dd')}</div>
@@ -1877,13 +1912,13 @@ const Calendar = () => {
                                                   {booking.unit_id ? (
                                                     <div className="text-purple-600">
                                                       {formatStreetWithUnit(
-                                                        property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address,
+                                                        getPropertyLocation(property)?.address,
                                                         (booking as any).unit?.property_name
                                                       ) || 'Specific Unit'}
                                                     </div>
                                                   ) : (
                                                     <div className="text-blue-600">
-                                                      {property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address || t('calendar.entireProperty', 'Entire Property')}
+                                                      {getPropertyLocation(property)?.address || t('calendar.entireProperty', 'Entire Property')}
                                                     </div>
                                                   )}
                                                   <div>Check-out: {format(parseISO(booking.check_out_date), 'MMM dd')}</div>
@@ -2025,13 +2060,10 @@ const Calendar = () => {
                                                     )}
                                                   </div>
                                                 )}
-                                                {(property.property_location?.[0]?.address || property.property_location?.[0]?.city || (property as any).location?.[0]?.address || (property as any).location?.[0]?.city || (property as any).location?.address || (property as any).location?.city) && (
+                                                {getPropertyLocation(property) && (
                                                   <div className="text-gray-500 flex items-center gap-1">
                                                     <MapPin className="h-3 w-3" />
-                                                    {[
-                                                      property.property_location?.[0]?.address || (property as any).location?.[0]?.address || (property as any).location?.address,
-                                                      property.property_location?.[0]?.city || (property as any).location?.[0]?.city || (property as any).location?.city
-                                                    ].filter(Boolean).join(', ')}
+                                                    {formatPropertyLocation(property)}
                                                   </div>
                                                 )}
                                                 <div>Check-in: {format(parseISO(unitBooking.check_in_date), 'MMM dd')}</div>
