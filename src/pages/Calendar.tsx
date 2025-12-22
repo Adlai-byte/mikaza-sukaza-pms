@@ -2026,7 +2026,7 @@ const Calendar = () => {
                                       <div
                                         key={format(date, 'yyyy-MM-dd')}
                                         className={`
-                                          flex-shrink-0 w-12 h-full border-r flex items-center justify-center cursor-pointer transition-all relative group
+                                          flex-shrink-0 w-12 min-h-[5rem] border-r flex items-center justify-center cursor-pointer transition-all relative group
                                           ${isToday ? 'border-l-2 border-l-blue-500' : ''}
                                           ${!unitBooking ? 'hover:bg-purple-100' : ''}
                                         `}
