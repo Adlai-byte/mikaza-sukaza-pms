@@ -1742,9 +1742,9 @@ const Calendar = () => {
                                       )}
                                     </h5>
                                     {/* Show property location with property name + unit name */}
-                                    <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5">
-                                      <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
-                                      <span className="truncate">
+                                    <div className="flex items-start gap-1 text-[10px] text-gray-500 mt-0.5">
+                                      <MapPin className="h-2.5 w-2.5 flex-shrink-0 mt-0.5" />
+                                      <span className="break-words">
                                         {[
                                           formatPropertyLocation(property),
                                           property.property_name && unit.property_name
