@@ -253,10 +253,15 @@ const PropertyTableRow = ({
           <TableCell>
             <div className="pl-8">
               <p className="font-medium text-purple-800">{unit.property_name || `Unit ${index + 1}`}</p>
-              {((property.location as any)?.[0]?.address || property.location?.address) && (
+              {(property.location?.address || property.property_name) && (
                 <p className="text-xs text-purple-500 flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
-                  {formatStreetWithUnit((property.location as any)?.[0]?.address || property.location?.address, unit.property_name)}
+                  {[
+                    (property.location as any)?.[0]?.address || property.location?.address,
+                    (property.location as any)?.[0]?.city || property.location?.city,
+                    property.property_name,
+                    unit.property_name || `Unit ${index + 1}`
+                  ].filter(Boolean).join(', ')}
                 </p>
               )}
               <p className="text-xs text-purple-600">
