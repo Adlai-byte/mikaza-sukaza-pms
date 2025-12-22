@@ -66,6 +66,7 @@
   "errors": {
     "generic": "An unexpected error occurred. Please try again.",
     "network": "Network error. Please check your connection.",
+    "networkError": "Network error. Please check your internet connection and try again.",
     "unauthorized": "You are not authorized to perform this action.",
     "forbidden": "Access denied. You don't have permission.",
     "notFound": "The requested resource was not found.",

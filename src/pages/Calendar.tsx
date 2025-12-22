@@ -699,10 +699,25 @@ const Calendar = () => {
    */
   const handleBookingSubmit = async (bookingData: CreateBookingParams) => {
     console.log('📅 Calendar handleBookingSubmit called with:', bookingData);
+    console.log('📅 Current auth state:', { userId: user?.id, hasSession: !!user });
+
+    // Check if user is authenticated
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.error('❌ No valid session found');
+      toast({
+        title: t('common.error'),
+        description: t('errors.sessionExpired', 'Session expired. Please log in again.'),
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       // Extract jobConfigs and customTasks before database insert (not database columns)
       const { jobConfigs, customTasks, ...dbBookingData } = bookingData;
       console.log('📅 Extracted data:', { jobConfigs, customTasks, dbBookingData });
+      console.log('📅 Unit ID being saved:', dbBookingData.unit_id, 'Type:', typeof dbBookingData.unit_id);
 
       if (editingBooking) {
         const { data, error } = await supabase
@@ -796,9 +811,28 @@ const Calendar = () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(bookingData.property_id) });
     } catch (error: any) {
+      console.error('❌ Booking submission error:', error);
+      console.error('❌ Error details:', {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        hint: error?.hint,
+        details: error?.details,
+      });
+
+      // Handle specific error types
+      let errorMessage = error.message || t(editingBooking ? 'notifications.error.updateFailed' : 'notifications.error.createFailed');
+
+      if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
+        errorMessage = t('errors.networkError', 'Network error. Please check your internet connection and try again.');
+      } else if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+        errorMessage = t('errors.sessionExpired', 'Session expired. Please refresh the page and try again.');
+      }
+
       toast({
         title: t('common.error'),
-        description: error.message || t(editingBooking ? 'notifications.error.updateFailed' : 'notifications.error.createFailed'),
+        description: errorMessage,
         variant: 'destructive',
       });
     }
