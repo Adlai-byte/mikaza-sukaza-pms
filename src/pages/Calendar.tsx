@@ -1704,7 +1704,10 @@ const Calendar = () => {
                                     <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5">
                                       <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
                                       <span className="truncate">
-                                        {property.property_location?.[0]?.city || property.property_location?.[0]?.address || property.property_name}
+                                        {[
+                                          property.property_location?.[0]?.address,
+                                          property.property_location?.[0]?.city
+                                        ].filter(Boolean).join(', ') || property.property_name}
                                       </span>
                                     </div>
                                     {unitBooking ? (
@@ -2017,6 +2020,15 @@ const Calendar = () => {
                                                         ({unit.num_bedrooms != null ? `${unit.num_bedrooms}bd` : ''}{unit.num_bedrooms != null && unit.num_bathrooms != null ? '/' : ''}{unit.num_bathrooms != null ? `${unit.num_bathrooms}ba` : ''})
                                                       </span>
                                                     )}
+                                                  </div>
+                                                )}
+                                                {(property.property_location?.[0]?.address || property.property_location?.[0]?.city) && (
+                                                  <div className="text-gray-500 flex items-center gap-1">
+                                                    <MapPin className="h-3 w-3" />
+                                                    {[
+                                                      property.property_location?.[0]?.address,
+                                                      property.property_location?.[0]?.city
+                                                    ].filter(Boolean).join(', ')}
                                                   </div>
                                                 )}
                                                 <div>Check-in: {format(parseISO(unitBooking.check_in_date), 'MMM dd')}</div>
