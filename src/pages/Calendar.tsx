@@ -1694,9 +1694,9 @@ const Calendar = () => {
                                   <div className="flex-1 min-w-0">
                                     <h5 className="font-medium text-gray-800 text-xs leading-tight">
                                       {unit.property_name}
-                                      {(unit.num_bedrooms !== null || unit.num_bathrooms !== null) && (
+                                      {(unit.num_bedrooms != null || unit.num_bathrooms != null) && (
                                         <span className="font-normal text-purple-500 ml-1">
-                                          ({unit.num_bedrooms !== null ? `${unit.num_bedrooms}bd` : ''}{unit.num_bedrooms !== null && unit.num_bathrooms !== null ? '/' : ''}{unit.num_bathrooms !== null ? `${unit.num_bathrooms}ba` : ''})
+                                          ({unit.num_bedrooms != null ? `${unit.num_bedrooms}bd` : ''}{unit.num_bedrooms != null && unit.num_bathrooms != null ? '/' : ''}{unit.num_bathrooms != null ? `${unit.num_bathrooms}ba` : ''})
                                         </span>
                                       )}
                                     </h5>
@@ -2012,9 +2012,9 @@ const Calendar = () => {
                                                 ) : (
                                                   <div className="text-purple-600">
                                                     {unit.property_name}
-                                                    {(unit.num_bedrooms !== null || unit.num_bathrooms !== null) && (
+                                                    {(unit.num_bedrooms != null || unit.num_bathrooms != null) && (
                                                       <span className="text-purple-400 ml-1">
-                                                        ({unit.num_bedrooms !== null ? `${unit.num_bedrooms}bd` : ''}{unit.num_bedrooms !== null && unit.num_bathrooms !== null ? '/' : ''}{unit.num_bathrooms !== null ? `${unit.num_bathrooms}ba` : ''})
+                                                        ({unit.num_bedrooms != null ? `${unit.num_bedrooms}bd` : ''}{unit.num_bedrooms != null && unit.num_bathrooms != null ? '/' : ''}{unit.num_bathrooms != null ? `${unit.num_bathrooms}ba` : ''})
                                                       </span>
                                                     )}
                                                   </div>
