@@ -1741,11 +1741,16 @@ const Calendar = () => {
                                         </span>
                                       )}
                                     </h5>
-                                    {/* Show property location */}
+                                    {/* Show property location with property name + unit name */}
                                     <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5">
                                       <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
                                       <span className="truncate">
-                                        {formatPropertyLocation(property) || property.property_name}
+                                        {[
+                                          formatPropertyLocation(property),
+                                          property.property_name && unit.property_name
+                                            ? `${property.property_name} + ${unit.property_name}`
+                                            : property.property_name || unit.property_name
+                                        ].filter(Boolean).join(', ') || property.property_name}
                                       </span>
                                     </div>
                                     {unitBooking ? (
