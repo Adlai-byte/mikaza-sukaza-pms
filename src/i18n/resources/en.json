@@ -694,6 +694,7 @@
     "filtersAndSearch": "Filters & Search",
     "searchTasks": "Search Tasks",
     "searchPlaceholder": "Search by title or description...",
+    "property": "Property",
     "allProperties": "All properties",
     "allCategories": "All categories",
     "overdueOnly": "Overdue Only",
