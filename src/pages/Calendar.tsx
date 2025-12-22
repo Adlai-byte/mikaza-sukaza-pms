@@ -1673,7 +1673,7 @@ const Calendar = () => {
                               <div
                                 key={unit.unit_id}
                                 className={`
-                                  h-16 pl-10 pr-4 py-2 border-b transition-all flex items-center
+                                  min-h-[5rem] pl-10 pr-4 py-2 border-b transition-all flex items-center
                                   bg-gradient-to-r from-purple-50 to-white
                                   ${unitIndex === propertyUnits.length - 1 ? 'border-b-2 border-b-purple-200' : ''}
                                 `}
@@ -1692,7 +1692,7 @@ const Calendar = () => {
 
                                   {/* Unit Info */}
                                   <div className="flex-1 min-w-0">
-                                    <h5 className="font-medium text-gray-800 text-xs line-clamp-1">
+                                    <h5 className="font-medium text-gray-800 text-xs leading-tight">
                                       {unit.property_name}
                                       {(unit.num_bedrooms !== null || unit.num_bathrooms !== null) && (
                                         <span className="font-normal text-purple-500 ml-1">
@@ -1700,6 +1700,13 @@ const Calendar = () => {
                                         </span>
                                       )}
                                     </h5>
+                                    {/* Show property location */}
+                                    <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5">
+                                      <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
+                                      <span className="truncate">
+                                        {property.property_location?.[0]?.city || property.property_location?.[0]?.address || property.property_name}
+                                      </span>
+                                    </div>
                                     {unitBooking ? (
                                       <div className="flex items-center gap-1 text-xs text-green-600 mt-0.5">
                                         <Users className="h-3 w-3" />
@@ -1946,7 +1953,7 @@ const Calendar = () => {
                               <div
                                 key={unit.unit_id}
                                 className={`
-                                  border-b flex-shrink-0 h-16 flex
+                                  border-b flex-shrink-0 min-h-[5rem] flex
                                   bg-gradient-to-r from-purple-50 to-white
                                   ${unitIndex === propertyUnits.length - 1 ? 'border-b-2 border-b-purple-200' : ''}
                                 `}
