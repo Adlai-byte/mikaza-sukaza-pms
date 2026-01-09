@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   encryptWithVault,
   decryptWithVault,
@@ -515,18 +516,19 @@ export function usePasswordAccessLogs(passwordId?: string) {
 export function useMasterPassword() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Check if user has set up master password
-  const { data: masterData, isLoading, refetch } = useQuery({
+  const { data: masterData, isLoading, isError, error: queryError, refetch } = useQuery({
     queryKey: passwordVaultKeys.masterPassword(),
     queryFn: async () => {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error('Not authenticated');
+      const authUser = (await supabase.auth.getUser()).data.user;
+      if (!authUser) throw new Error('Not authenticated');
 
       const { data, error } = await supabase
         .from('password_vault_master')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', authUser.id)
         .maybeSingle();
 
       if (error) {
@@ -536,9 +538,15 @@ export function useMasterPassword() {
 
       return data as MasterPasswordData | null;
     },
+    // Only run query when user is authenticated
+    enabled: !!user,
+    // Keep data fresh for 5 minutes to prevent unnecessary refetches
+    staleTime: 5 * 60 * 1000,
+    // Retry on failure
+    retry: 2,
   });
 
-  // Set up master password (first time)
+  // Set up master password (first time or reset)
   const setupMasterPassword = useMutation({
     mutationFn: async (masterPassword: string) => {
       const user = (await supabase.auth.getUser()).data.user;
@@ -547,25 +555,71 @@ export function useMasterPassword() {
       // Generate salt and hash
       const { hash, salt } = await hashMasterPassword(masterPassword);
 
-      const { data, error } = await supabase
-        .from('password_vault_master')
-        .insert([{
-          user_id: user.id,
-          password_hash: hash,
-          salt: salt,
-        }])
-        .select()
-        .single();
+      console.log('[PasswordVault] Setting up master password for user:', user.id);
+      console.log('[PasswordVault] Generated salt length:', salt.length);
+      console.log('[PasswordVault] Generated hash length:', hash.length);
 
-      if (error) throw error;
+      // Check if user already has a master password
+      const { data: existing, error: checkError } = await supabase
+        .from('password_vault_master')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('[PasswordVault] Error checking existing master password:', checkError);
+        throw checkError;
+      }
+
+      let data;
+      let error;
+
+      if (existing) {
+        // Update existing
+        console.log('[PasswordVault] Updating existing master password');
+        const result = await supabase
+          .from('password_vault_master')
+          .update({
+            password_hash: hash,
+            salt: salt,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id)
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+      } else {
+        // Insert new
+        console.log('[PasswordVault] Inserting new master password');
+        const result = await supabase
+          .from('password_vault_master')
+          .insert({
+            user_id: user.id,
+            password_hash: hash,
+            salt: salt,
+          })
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+      }
+
+      if (error) {
+        console.error('[PasswordVault] Error saving master password:', error);
+        throw error;
+      }
+
+      console.log('[PasswordVault] Master password saved successfully');
 
       // Unlock the vault after setup
       await unlockVault(masterPassword, salt);
 
-      return data;
+      return data as MasterPasswordData;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: passwordVaultKeys.masterPassword() });
+    onSuccess: (data) => {
+      // Immediately update the cache with the new data to prevent stale state
+      queryClient.setQueryData(passwordVaultKeys.masterPassword(), data);
       toast({
         title: 'Master Password Set',
         description: 'Your master password has been configured. The vault is now unlocked.',
@@ -616,10 +670,11 @@ export function useMasterPassword() {
       // For now, changing master password will make existing entries unreadable
       // Consider implementing key re-encryption in a future update
 
-      return data;
+      return data as MasterPasswordData;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: passwordVaultKeys.masterPassword() });
+    onSuccess: (data) => {
+      // Immediately update the cache with the new data
+      queryClient.setQueryData(passwordVaultKeys.masterPassword(), data);
       toast({
         title: 'Master Password Changed',
         description: 'Your master password has been updated.',
@@ -637,7 +692,10 @@ export function useMasterPassword() {
 
   // Unlock vault with master password
   const unlock = async (masterPassword: string): Promise<boolean> => {
+    console.log('[PasswordVault] Attempting to unlock vault');
+
     if (!masterData) {
+      console.error('[PasswordVault] No master data found');
       toast({
         title: 'Error',
         description: 'Master password not set up. Please set up your master password first.',
@@ -646,25 +704,60 @@ export function useMasterPassword() {
       return false;
     }
 
-    const isValid = await verifyMasterPassword(masterPassword, masterData.password_hash, masterData.salt);
-
-    if (!isValid) {
+    // Validate that we have the required fields
+    if (!masterData.password_hash || !masterData.salt) {
+      console.error('[PasswordVault] Master password data is incomplete:', {
+        hasHash: !!masterData.password_hash,
+        hashLength: masterData.password_hash?.length,
+        hasSalt: !!masterData.salt,
+        saltLength: masterData.salt?.length,
+        masterData
+      });
       toast({
-        title: 'Invalid Password',
-        description: 'The master password is incorrect.',
+        title: 'Error',
+        description: 'Master password data is corrupted. Please contact support.',
         variant: 'destructive',
       });
       return false;
     }
 
-    await unlockVault(masterPassword, masterData.salt);
-
-    toast({
-      title: 'Vault Unlocked',
-      description: 'You can now view and manage passwords.',
+    console.log('[PasswordVault] Master data validation passed:', {
+      hashLength: masterData.password_hash.length,
+      saltLength: masterData.salt.length
     });
 
-    return true;
+    try {
+      console.log('[PasswordVault] Verifying password...');
+      const isValid = await verifyMasterPassword(masterPassword, masterData.password_hash, masterData.salt);
+      console.log('[PasswordVault] Password verification result:', isValid);
+
+      if (!isValid) {
+        toast({
+          title: 'Invalid Password',
+          description: 'The master password is incorrect.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      await unlockVault(masterPassword, masterData.salt);
+      console.log('[PasswordVault] Vault unlocked successfully');
+
+      toast({
+        title: 'Vault Unlocked',
+        description: 'You can now view and manage passwords.',
+      });
+
+      return true;
+    } catch (error) {
+      console.error('[PasswordVault] Error during password verification:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to verify password. Please try again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
   };
 
   // Lock vault
@@ -679,6 +772,8 @@ export function useMasterPassword() {
   return {
     masterData,
     isLoading,
+    isError,
+    queryError,
     refetch,
     hasMasterPassword: !!masterData,
     isUnlocked: isVaultUnlocked(),

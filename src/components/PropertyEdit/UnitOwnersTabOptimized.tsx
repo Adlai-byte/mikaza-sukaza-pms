@@ -148,11 +148,23 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
   // Add owner mutation
   const addOwnerMutation = useMutation({
     mutationFn: async (ownerData: typeof emptyOwner) => {
-      // Generate a default password if not provided
+      // Explicitly construct the insert object to ensure user_type is set
+      // This prevents any undefined properties from being included
       const dataToInsert = {
-        ...ownerData,
+        first_name: ownerData.first_name,
+        last_name: ownerData.last_name,
+        email: ownerData.email,
         password: ownerData.password || `Owner${Date.now()}!`, // Default password
+        user_type: 'customer' as const, // Required field - owners are customers
+        date_of_birth: ownerData.date_of_birth || null,
+        cellphone_primary: ownerData.cellphone_primary || null,
+        cellphone_usa: ownerData.cellphone_usa || null,
+        whatsapp: ownerData.whatsapp || null,
+        relationship_to_main_owner: ownerData.relationship_to_main_owner || null,
+        is_active: true, // New users should be active
       };
+
+      console.log('[UnitOwners] Creating owner with data:', dataToInsert);
 
       const { data, error } = await supabase
         .from('users')
@@ -160,7 +172,10 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[UnitOwners] Error creating owner:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: async () => {

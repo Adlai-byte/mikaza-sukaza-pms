@@ -81,9 +81,13 @@ describe('AuthContext', () => {
         }),
       }),
       update: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({
-          data: mockUserData,
-          error: null,
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: mockUserData,
+              error: null,
+            }),
+          }),
         }),
       }),
     });
@@ -455,9 +459,13 @@ describe('AuthContext', () => {
       // Mock update to return error
       mockSupabase.from.mockReturnValue({
         update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({
-            data: null,
-            error: { message: 'Update failed', code: 'update_error' },
+          eq: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: null,
+                error: { message: 'Update failed', code: 'update_error' },
+              }),
+            }),
           }),
         }),
         select: vi.fn().mockReturnValue({
