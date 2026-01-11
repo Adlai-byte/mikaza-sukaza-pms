@@ -21,9 +21,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckInOutDialog } from '@/components/checkinout/CheckInOutDialog';
-import { useCheckInOutRecords, useDeleteCheckInOutRecord, useCompleteCheckInOutRecord, useGenerateCheckInOutPDF } from '@/hooks/useCheckInOutRecords';
+import { useCheckInOutRecords, useDeleteCheckInOutRecord, useCompleteCheckInOutRecord, useGenerateCheckInOutPDF, useRestoreCheckInOutRecord } from '@/hooks/useCheckInOutRecords';
 import { useProperties } from '@/hooks/useProperties';
 import { useUsersOptimized } from '@/hooks/useUsersOptimized';
+import { useAuth } from '@/contexts/AuthContext';
 import { CheckInOutRecord } from '@/lib/schemas';
 import { formatUserDisplay } from '@/lib/user-display';
 import {
@@ -40,7 +41,11 @@ import {
   LogOut,
   DoorOpen,
   RefreshCw,
+  RotateCcw,
+  Archive,
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { StatusBadge } from '@/components/StatusBadge';
 import {
@@ -56,17 +61,20 @@ import {
 
 export default function CheckInOut() {
   const { t } = useTranslation();
+  const { user, profile } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [propertyFilter, setPropertyFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
+  const [showDeleted, setShowDeleted] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<CheckInOutRecord | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
   const [recordToComplete, setRecordToComplete] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState(false);
 
+  const isAdmin = profile?.user_type === 'admin';
   const { properties = [] } = useProperties();
   const { users: allUsers = [] } = useUsersOptimized();
 
@@ -80,10 +88,12 @@ export default function CheckInOut() {
     record_type: (typeFilter !== 'all' ? typeFilter : undefined) as 'check_in' | 'check_out' | undefined,
     status: (statusFilter !== 'all' ? statusFilter : undefined) as 'draft' | 'completed' | 'archived' | undefined,
     agent_id: agentFilter !== 'all' ? agentFilter : undefined,
-  }), [propertyFilter, typeFilter, statusFilter, agentFilter]);
+    include_deleted: showDeleted && isAdmin ? true : undefined,
+  }), [propertyFilter, typeFilter, statusFilter, agentFilter, showDeleted, isAdmin]);
 
   const { data: records = [], isLoading, isFetching, refetch } = useCheckInOutRecords(filters);
   const deleteMutation = useDeleteCheckInOutRecord();
+  const restoreMutation = useRestoreCheckInOutRecord();
   const completeMutation = useCompleteCheckInOutRecord();
   const generatePDFMutation = useGenerateCheckInOutPDF();
 
@@ -123,12 +133,19 @@ export default function CheckInOut() {
 
   const confirmDelete = () => {
     if (recordToDelete) {
-      deleteMutation.mutate(recordToDelete, {
-        onSuccess: () => {
-          setRecordToDelete(null);
-        },
-      });
+      deleteMutation.mutate(
+        { recordId: recordToDelete, userId: profile?.user_id },
+        {
+          onSuccess: () => {
+            setRecordToDelete(null);
+          },
+        }
+      );
     }
+  };
+
+  const handleRestore = (recordId: string) => {
+    restoreMutation.mutate(recordId);
   };
 
   const handleComplete = (recordId: string) => {
@@ -357,6 +374,21 @@ export default function CheckInOut() {
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Admin-only: Show deleted records toggle */}
+            {isAdmin && (
+              <div className="flex items-center space-x-2 px-2 py-1 border rounded-md bg-muted/30">
+                <Checkbox
+                  id="showDeleted"
+                  checked={showDeleted}
+                  onCheckedChange={(checked) => setShowDeleted(!!checked)}
+                />
+                <Label htmlFor="showDeleted" className="text-sm cursor-pointer flex items-center gap-1">
+                  <Archive className="h-4 w-4" />
+                  {t('checkInOut.filters.showDeleted', 'Show Deleted')}
+                </Label>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -392,8 +424,20 @@ export default function CheckInOut() {
                 </TableRow>
               ) : (
                 filteredRecords.map((record) => (
-                  <TableRow key={record.record_id}>
-                    <TableCell>{getRecordTypeBadge(record.record_type)}</TableCell>
+                  <TableRow
+                    key={record.record_id}
+                    className={record.deleted_at ? 'opacity-60 bg-red-50/50' : ''}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getRecordTypeBadge(record.record_type)}
+                        {record.deleted_at && (
+                          <Badge variant="destructive" className="text-xs">
+                            {t('checkInOut.status.deleted', 'Deleted')}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       {format(new Date(record.record_date), 'MMM dd, yyyy')}
                     </TableCell>
@@ -468,11 +512,22 @@ export default function CheckInOut() {
                           <Edit className="h-4 w-4" />
                         </Button>
                         {record.pdf_url ? (
-                          <Button size="sm" variant="outline" asChild title="Download PDF">
-                            <a href={record.pdf_url} target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4" />
-                            </a>
-                          </Button>
+                          <>
+                            <Button size="sm" variant="outline" asChild title="Download PDF">
+                              <a href={record.pdf_url} target="_blank" rel="noopener noreferrer">
+                                <Download className="h-4 w-4" />
+                              </a>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleGeneratePDF(record.record_id)}
+                              disabled={generatePDFMutation.isPending}
+                              title="Regenerate PDF"
+                            >
+                              <RefreshCw className={`h-4 w-4 ${generatePDFMutation.isPending ? 'animate-spin' : ''}`} />
+                            </Button>
+                          </>
                         ) : (
                           <Button
                             size="sm"
@@ -484,14 +539,29 @@ export default function CheckInOut() {
                             <FileText className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(record.record_id)}
-                          title="Delete record"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {record.deleted_at ? (
+                          // Restore button for deleted records (admin only)
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRestore(record.record_id)}
+                            disabled={restoreMutation.isPending}
+                            title={t('checkInOut.actions.restore', 'Restore record')}
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <RotateCcw className={`h-4 w-4 ${restoreMutation.isPending ? 'animate-spin' : ''}`} />
+                          </Button>
+                        ) : (
+                          // Delete button for active records
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(record.record_id)}
+                            title={t('checkInOut.actions.delete', 'Delete record')}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

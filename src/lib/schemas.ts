@@ -1957,6 +1957,10 @@ export type CheckInOutRecord = CheckInOutRecordInsert & {
   created_by?: string | null;
   created_at: string;
   updated_at: string;
+  /** Soft delete timestamp - null if not deleted */
+  deleted_at?: string | null;
+  /** User who deleted the record */
+  deleted_by?: string | null;
   property?: {
     property_id: string;
     property_name: string;
@@ -1975,6 +1979,12 @@ export type CheckInOutRecord = CheckInOutRecordInsert & {
     user_type: string;
   };
   template?: ChecklistTemplate;
+  /** User who deleted the record (populated when fetching deleted records) */
+  deletedBy?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
 };
 
 // Check-in/Out filters
@@ -1987,6 +1997,8 @@ export type CheckInOutFilters = {
   start_date?: string;
   end_date?: string;
   search?: string;
+  /** When true, include soft-deleted records in results */
+  include_deleted?: boolean;
 };
 
 // ============================================
@@ -2786,22 +2798,24 @@ export type PropertyKeySummary = {
       [keyType in KeyType]: number;
     };
   };
+  inventoryNotes: {
+    [category in KeyCategory]: {
+      [keyType in KeyType]: string | null;
+    };
+  };
   total_keys: number;
   last_updated: string;
 };
 
 // ==================== Key Borrowing System ====================
 
-// Borrower type enum
-export const borrowerTypeEnum = z.enum(['employee', 'guest', 'contractor', 'owner', 'other']);
+// Borrower type enum - matches DB constraint: only admin/ops can borrow keys
+export const borrowerTypeEnum = z.enum(['admin', 'ops']);
 export type BorrowerType = z.infer<typeof borrowerTypeEnum>;
 
 export const BORROWER_TYPE_LABELS: Record<BorrowerType, string> = {
-  employee: 'Employee',
-  guest: 'Guest',
-  contractor: 'Contractor',
-  owner: 'Owner',
-  other: 'Other',
+  admin: 'Admin',
+  ops: 'Operations',
 };
 
 // Borrowing status enum

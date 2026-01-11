@@ -9,17 +9,35 @@ export function useCheckInOutRecords(filters?: CheckInOutFilters) {
   return useQuery({
     queryKey: ['check_in_out_records', filters],
     queryFn: async () => {
-      let query = supabase
-        .from('check_in_out_records')
-        .select(`
+      // Build select with optional deletedBy relation for deleted records
+      const selectFields = filters?.include_deleted
+        ? `
+          *,
+          property:properties(property_id, property_name),
+          booking:property_bookings(booking_id, guest_name, check_in_date, check_out_date, booking_status),
+          agent:users!check_in_out_records_agent_id_fkey(user_id, first_name, last_name, user_type),
+          template:checklist_templates(template_id, template_name, template_type),
+          creator:users!check_in_out_records_created_by_fkey(user_id, first_name, last_name, user_type),
+          deletedBy:users!check_in_out_records_deleted_by_fkey(user_id, first_name, last_name)
+        `
+        : `
           *,
           property:properties(property_id, property_name),
           booking:property_bookings(booking_id, guest_name, check_in_date, check_out_date, booking_status),
           agent:users!check_in_out_records_agent_id_fkey(user_id, first_name, last_name, user_type),
           template:checklist_templates(template_id, template_name, template_type),
           creator:users!check_in_out_records_created_by_fkey(user_id, first_name, last_name, user_type)
-        `)
+        `;
+
+      let query = supabase
+        .from('check_in_out_records')
+        .select(selectFields)
         .order('record_date', { ascending: false });
+
+      // Filter out soft-deleted records by default
+      if (!filters?.include_deleted) {
+        query = query.is('deleted_at', null);
+      }
 
       if (filters?.property_id) {
         query = query.eq('property_id', filters.property_id);
@@ -90,13 +108,36 @@ export function useCreateCheckInOutRecord() {
 
   return useMutation({
     mutationFn: async (record: CheckInOutRecordInsert) => {
+      console.log('[CheckInOut] Creating record with data:', {
+        ...record,
+        signature_data: record.signature_data ? `[${record.signature_data.length} chars]` : null,
+        photos: record.photos?.length || 0,
+        documents: record.documents?.length || 0,
+      });
+
+      // Ensure photos and documents are proper arrays
+      const recordToInsert = {
+        ...record,
+        photos: Array.isArray(record.photos) ? record.photos : [],
+        documents: Array.isArray(record.documents) ? record.documents : [],
+        signature_data: record.signature_data || null,
+        signature_name: record.signature_name || null,
+      };
+
+      console.log('[CheckInOut] Inserting record:', recordToInsert);
+
       const { data, error } = await supabase
         .from('check_in_out_records')
-        .insert(record)
+        .insert(recordToInsert)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[CheckInOut] Insert error:', error);
+        throw error;
+      }
+
+      console.log('[CheckInOut] Record created successfully:', data);
       return data;
     },
     onSuccess: (data) => {
@@ -133,14 +174,40 @@ export function useUpdateCheckInOutRecord() {
 
   return useMutation({
     mutationFn: async ({ recordId, updates }: { recordId: string; updates: Partial<CheckInOutRecordInsert> }) => {
+      console.log('[CheckInOut] Updating record:', recordId, {
+        ...updates,
+        signature_data: updates.signature_data ? `[${updates.signature_data.length} chars]` : null,
+        photos: updates.photos?.length || 0,
+        documents: updates.documents?.length || 0,
+      });
+
+      // Ensure photos and documents are proper arrays if provided
+      const updateData: Partial<CheckInOutRecordInsert> = {
+        ...updates,
+      };
+
+      if (updates.photos !== undefined) {
+        updateData.photos = Array.isArray(updates.photos) ? updates.photos : [];
+      }
+      if (updates.documents !== undefined) {
+        updateData.documents = Array.isArray(updates.documents) ? updates.documents : [];
+      }
+
+      console.log('[CheckInOut] Update data:', updateData);
+
       const { data, error } = await supabase
         .from('check_in_out_records')
-        .update(updates)
+        .update(updateData)
         .eq('record_id', recordId)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[CheckInOut] Update error:', error);
+        throw error;
+      }
+
+      console.log('[CheckInOut] Record updated successfully:', data);
       return data;
     },
     onSuccess: (data) => {
@@ -175,17 +242,21 @@ export function useDeleteCheckInOutRecord() {
   const { logActivity } = useActivityLogs();
 
   return useMutation({
-    mutationFn: async (recordId: string) => {
-      // Fetch record details before deletion for logging
+    mutationFn: async ({ recordId, userId }: { recordId: string; userId?: string }) => {
+      // Fetch record details before soft deletion for logging
       const { data: record } = await supabase
         .from('check_in_out_records')
         .select('record_id, record_type, property_id, resident_name, status')
         .eq('record_id', recordId)
         .single();
 
+      // Soft delete: set deleted_at timestamp and deleted_by user
       const { error } = await supabase
         .from('check_in_out_records')
-        .delete()
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: userId || null,
+        })
         .eq('record_id', recordId);
 
       if (error) throw error;
@@ -200,11 +271,12 @@ export function useDeleteCheckInOutRecord() {
         property_id: record?.property_id,
         resident_name: record?.resident_name,
         status: record?.status,
+        soft_delete: true,
       });
 
       toast({
         title: 'Record deleted',
-        description: 'Check-in/out record has been deleted successfully.',
+        description: 'Check-in/out record has been deleted. It can be restored by an administrator.',
       });
     },
     onError: (error) => {
@@ -212,6 +284,104 @@ export function useDeleteCheckInOutRecord() {
       toast({
         title: 'Error',
         description: 'Failed to delete check-in/out record. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useRestoreCheckInOutRecord() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { logActivity } = useActivityLogs();
+
+  return useMutation({
+    mutationFn: async (recordId: string) => {
+      // Clear the deleted_at and deleted_by fields to restore
+      const { data, error } = await supabase
+        .from('check_in_out_records')
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+        })
+        .eq('record_id', recordId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['check_in_out_records'] });
+      queryClient.invalidateQueries({ queryKey: ['check_in_out_record', data.record_id] });
+
+      logActivity('check_in_out_record_restored', {
+        record_id: data.record_id,
+        record_type: data.record_type,
+        property_id: data.property_id,
+        resident_name: data.resident_name,
+      });
+
+      toast({
+        title: 'Record restored',
+        description: 'Check-in/out record has been restored successfully.',
+      });
+    },
+    onError: (error) => {
+      console.error('Error restoring check-in/out record:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to restore check-in/out record. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function usePermanentDeleteCheckInOutRecord() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { logActivity } = useActivityLogs();
+
+  return useMutation({
+    mutationFn: async (recordId: string) => {
+      // Fetch record details before permanent deletion for logging
+      const { data: record } = await supabase
+        .from('check_in_out_records')
+        .select('record_id, record_type, property_id, resident_name, status')
+        .eq('record_id', recordId)
+        .single();
+
+      // Hard delete - permanently remove from database
+      const { error } = await supabase
+        .from('check_in_out_records')
+        .delete()
+        .eq('record_id', recordId);
+
+      if (error) throw error;
+      return { recordId, record };
+    },
+    onSuccess: ({ recordId, record }) => {
+      queryClient.invalidateQueries({ queryKey: ['check_in_out_records'] });
+
+      logActivity('check_in_out_record_permanently_deleted', {
+        record_id: recordId,
+        record_type: record?.record_type,
+        property_id: record?.property_id,
+        resident_name: record?.resident_name,
+        status: record?.status,
+      });
+
+      toast({
+        title: 'Record permanently deleted',
+        description: 'Check-in/out record has been permanently removed.',
+      });
+    },
+    onError: (error) => {
+      console.error('Error permanently deleting check-in/out record:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to permanently delete check-in/out record. Please try again.',
         variant: 'destructive',
       });
     },

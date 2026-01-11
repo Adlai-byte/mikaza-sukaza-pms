@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { sanitizeText } from '@/lib/sanitize';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -137,7 +139,7 @@ export default function Messages() {
 
   const messages = getCurrentMessages();
 
-  // Filter messages by search
+  // Filter messages by search (subject, body, sender, and recipient)
   const filteredMessages = messages.filter((msg) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -145,7 +147,9 @@ export default function Messages() {
       msg.subject?.toLowerCase().includes(query) ||
       msg.body?.toLowerCase().includes(query) ||
       msg.sender?.first_name?.toLowerCase().includes(query) ||
-      msg.sender?.last_name?.toLowerCase().includes(query)
+      msg.sender?.last_name?.toLowerCase().includes(query) ||
+      msg.recipient?.first_name?.toLowerCase().includes(query) ||
+      msg.recipient?.last_name?.toLowerCase().includes(query)
     );
   });
 
@@ -349,7 +353,7 @@ export default function Messages() {
                                 </Badge>
                               )}
                               <div className="mt-4 prose prose-sm max-w-none whitespace-pre-wrap">
-                                {msg.body}
+                                {sanitizeText(msg.body)}
                               </div>
                             </div>
                           </div>
@@ -472,7 +476,7 @@ export default function Messages() {
                               {message.subject || t('internalMessages.noSubject', '(No subject)')}
                             </p>
                             <p className="text-sm text-muted-foreground truncate">
-                              {message.body}
+                              {sanitizeText(message.body)}
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                               {message.priority !== 'normal' && (
@@ -626,31 +630,28 @@ function ComposeDialog({ open, onOpenChange, replyTo, users, usersLoading, onSen
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>{t('internalMessages.to', 'To')}</Label>
-            <Select
-              value={selectedRecipients[0] || ''}
-              onValueChange={(value) => setSelectedRecipients([value])}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('internalMessages.selectRecipient', 'Select recipient...')} />
-              </SelectTrigger>
-              <SelectContent>
-                {usersLoading ? (
-                  <div className="py-2 px-2 text-sm text-muted-foreground">
-                    {t('common.loading', 'Loading...')}
-                  </div>
-                ) : users.length === 0 ? (
-                  <div className="py-2 px-2 text-sm text-muted-foreground">
-                    {t('internalMessages.noRecipients', 'No other admin/ops users available')}
-                  </div>
-                ) : (
-                  users.map((user) => (
-                    <SelectItem key={user.user_id} value={user.user_id}>
-                      {user.first_name} {user.last_name} ({user.email})
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            {usersLoading ? (
+              <div className="py-2 px-2 text-sm text-muted-foreground border rounded-md">
+                {t('common.loading', 'Loading...')}
+              </div>
+            ) : users.length === 0 ? (
+              <div className="py-2 px-2 text-sm text-muted-foreground border rounded-md">
+                {t('internalMessages.noRecipients', 'No other admin/ops users available')}
+              </div>
+            ) : (
+              <Combobox
+                options={users.map((user) => ({
+                  value: user.user_id,
+                  label: `${user.first_name} ${user.last_name} (${user.email})`,
+                }))}
+                value={selectedRecipients[0] || ''}
+                onValueChange={(value) => setSelectedRecipients(value ? [value] : [])}
+                placeholder={t('internalMessages.selectRecipient', 'Select recipient...')}
+                searchPlaceholder={t('internalMessages.searchRecipient', 'Search recipients...')}
+                emptyText={t('internalMessages.noRecipientFound', 'No recipient found.')}
+                clearable
+              />
+            )}
           </div>
 
           <div className="space-y-2">

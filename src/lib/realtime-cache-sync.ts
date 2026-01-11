@@ -50,6 +50,21 @@ export class RealtimeCacheSync {
       // Subscribe to units changes
       await this.subscribeToUnits();
 
+      // Subscribe to issues changes
+      await this.subscribeToIssues();
+
+      // Subscribe to tasks changes
+      await this.subscribeToTasks();
+
+      // Subscribe to key control changes
+      await this.subscribeToKeyControl();
+
+      // Subscribe to check-in/out records changes
+      await this.subscribeToCheckInOut();
+
+      // Subscribe to service providers changes
+      await this.subscribeToProviders();
+
       console.log('✅ Realtime cache sync initialized');
     } catch (error) {
       console.error('❌ Failed to initialize realtime sync:', error);
@@ -522,6 +537,214 @@ export class RealtimeCacheSync {
   }
 
   /**
+   * Subscribe to issues table changes
+   */
+  private async subscribeToIssues() {
+    const channel = supabase
+      .channel('issues-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'issues',
+        },
+        (payload) => {
+          console.log('🔄 Issues table changed:', payload.eventType);
+
+          // Invalidate all issue queries
+          this.queryClient.invalidateQueries({ queryKey: ['issues'] });
+
+          // Invalidate dashboard data (KPIs)
+          this.queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+
+          // Invalidate property-specific queries
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as Record<string, unknown>).property_id as string;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['issues', 'byProperty', propertyId],
+              });
+              this.queryClient.invalidateQueries({
+                queryKey: ['properties', 'detail', propertyId],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('issues', channel);
+  }
+
+  /**
+   * Subscribe to tasks table changes
+   */
+  private async subscribeToTasks() {
+    const channel = supabase
+      .channel('tasks-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tasks',
+        },
+        (payload) => {
+          console.log('🔄 Tasks table changed:', payload.eventType);
+
+          // Invalidate all task queries
+          this.queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          this.queryClient.invalidateQueries({ queryKey: ['todos'] });
+
+          // Invalidate dashboard data (KPIs)
+          this.queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+
+          // Invalidate property-specific queries
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as Record<string, unknown>).property_id as string;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['tasks', 'byProperty', propertyId],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('tasks', channel);
+  }
+
+  /**
+   * Subscribe to key control tables changes
+   */
+  private async subscribeToKeyControl() {
+    // Key inventory
+    const keyInventoryChannel = supabase
+      .channel('key-inventory-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'key_inventory',
+        },
+        (payload) => {
+          console.log('🔄 Key inventory changed:', payload.eventType);
+
+          // Invalidate key control queries
+          this.queryClient.invalidateQueries({ queryKey: ['key-inventory'] });
+          this.queryClient.invalidateQueries({ queryKey: ['key-control'] });
+
+          // Invalidate property-specific queries
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as Record<string, unknown>).property_id as string;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['key-inventory', propertyId],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('key_inventory', keyInventoryChannel);
+
+    // Key borrowings
+    const keyBorrowingsChannel = supabase
+      .channel('key-borrowings-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'key_borrowings',
+        },
+        (payload) => {
+          console.log('🔄 Key borrowings changed:', payload.eventType);
+
+          // Invalidate key control queries
+          this.queryClient.invalidateQueries({ queryKey: ['key-borrowings'] });
+          this.queryClient.invalidateQueries({ queryKey: ['key-control'] });
+          this.queryClient.invalidateQueries({ queryKey: ['key-inventory'] });
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('key_borrowings', keyBorrowingsChannel);
+  }
+
+  /**
+   * Subscribe to check-in/out records table changes
+   */
+  private async subscribeToCheckInOut() {
+    const channel = supabase
+      .channel('check-in-out-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'check_in_out_records',
+        },
+        (payload) => {
+          console.log('🔄 Check-in/out records changed:', payload.eventType);
+
+          // Invalidate check-in/out queries
+          this.queryClient.invalidateQueries({ queryKey: ['check_in_out_records'] });
+          this.queryClient.invalidateQueries({ queryKey: ['check_in_out_record'] });
+
+          // Invalidate dashboard data (KPIs)
+          this.queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+
+          // Invalidate property-specific queries
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as Record<string, unknown>).property_id as string;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['check_in_out_records', { property_id: propertyId }],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('check_in_out_records', channel);
+  }
+
+  /**
+   * Subscribe to service providers table changes
+   */
+  private async subscribeToProviders() {
+    const channel = supabase
+      .channel('providers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'service_providers',
+        },
+        (payload) => {
+          console.log('🔄 Service providers changed:', payload.eventType);
+
+          // Invalidate provider queries
+          this.queryClient.invalidateQueries({ queryKey: ['providers'] });
+          this.queryClient.invalidateQueries({ queryKey: ['service-providers'] });
+
+          // Invalidate property-provider mappings
+          this.queryClient.invalidateQueries({ queryKey: ['property-providers'] });
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('service_providers', channel);
+  }
+
+  /**
    * Subscribe to a custom table
    */
   async subscribeToTable(
@@ -600,7 +823,7 @@ export class RealtimeCacheSync {
    * Manually trigger cache invalidation for a specific change type
    */
   async invalidateForChange(
-    changeType: 'property' | 'booking' | 'user' | 'financial' | 'static' | 'expense' | 'invoice' | 'highlight' | 'unit'
+    changeType: 'property' | 'booking' | 'user' | 'financial' | 'static' | 'expense' | 'invoice' | 'highlight' | 'unit' | 'issue' | 'task' | 'keyControl' | 'checkInOut' | 'provider'
   ) {
     const invalidationMap: Record<string, string[][]> = {
       property: [
@@ -656,6 +879,31 @@ export class RealtimeCacheSync {
         ['units'],
         ['properties', 'detail'],
         ['properties', 'list'],
+      ],
+      issue: [
+        ['issues'],
+        ['dashboard'],
+        ['properties', 'detail'],
+      ],
+      task: [
+        ['tasks'],
+        ['todos'],
+        ['dashboard'],
+      ],
+      keyControl: [
+        ['key-inventory'],
+        ['key-borrowings'],
+        ['key-control'],
+      ],
+      checkInOut: [
+        ['check_in_out_records'],
+        ['check_in_out_record'],
+        ['dashboard'],
+      ],
+      provider: [
+        ['providers'],
+        ['service-providers'],
+        ['property-providers'],
       ],
     };
 
