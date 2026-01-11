@@ -425,37 +425,111 @@ export function useDocumentStats() {
   };
 }
 
+// Helper to get bucket name from document category
+const getBucketForCategory = (category: string): string => {
+  switch (category) {
+    case 'employee':
+      return 'employee-documents';
+    case 'messages':
+      return 'message-templates';
+    case 'contracts':
+    case 'access':
+    case 'coi':
+    case 'service':
+    default:
+      return 'property-documents';
+  }
+};
+
 // Hook for downloading documents
 export function useDocumentDownload() {
   const { toast } = useToast();
   const { logDocumentAccess } = useDocuments();
 
-  const downloadDocument = async (document: Document) => {
+  const downloadDocument = async (doc: DocumentSummary | Document) => {
     try {
-      console.log('📥 [Documents] Downloading:', document.document_name);
+      console.log('📥 [Documents] Downloading:', doc.document_name);
 
-      // Extract bucket and path from file_url
-      const url = new URL(document.file_url);
-      const pathParts = url.pathname.split('/');
-      const bucket = pathParts[pathParts.length - 2];
-      const filePath = pathParts.slice(pathParts.length - 2).join('/').replace(`${bucket}/`, '');
+      // Validate file_url exists
+      if (!doc.file_url) {
+        throw new Error('Document has no file URL');
+      }
 
-      // Get signed URL for download
+      // Determine bucket from document category (most reliable)
+      // This ensures we use the correct bucket even if URL parsing fails
+      const categoryBucket = doc.category ? getBucketForCategory(doc.category) : null;
+
+      // Extract file path from URL
+      let bucket: string;
+      let filePath: string;
+
+      try {
+        // Handle both full URLs and relative paths
+        const isFullUrl = doc.file_url.startsWith('http://') || doc.file_url.startsWith('https://');
+
+        if (isFullUrl) {
+          const url = new URL(doc.file_url);
+          const pathParts = url.pathname.split('/').filter(Boolean);
+
+          // Find 'storage' or 'object' in path to determine bucket location
+          const storageIndex = pathParts.findIndex(p => p === 'storage' || p === 'object');
+          if (storageIndex >= 0 && pathParts.length > storageIndex + 2) {
+            // Skip 'storage/v1/object/public/' or similar patterns
+            const publicIndex = pathParts.indexOf('public');
+            if (publicIndex >= 0 && pathParts.length > publicIndex + 1) {
+              bucket = pathParts[publicIndex + 1];
+              filePath = pathParts.slice(publicIndex + 2).join('/');
+            } else {
+              // Fallback to category-based bucket
+              bucket = categoryBucket || pathParts[pathParts.length - 2] || 'property-documents';
+              filePath = pathParts[pathParts.length - 1];
+            }
+          } else {
+            // Simple case: use category bucket
+            bucket = categoryBucket || pathParts[pathParts.length - 2] || 'property-documents';
+            filePath = pathParts[pathParts.length - 1];
+          }
+        } else {
+          // Relative path - assume it's bucket/path format
+          const parts = doc.file_url.split('/').filter(Boolean);
+          bucket = categoryBucket || parts[0] || 'property-documents';
+          filePath = parts.slice(1).join('/');
+        }
+      } catch (parseError) {
+        console.error('❌ [Documents] URL parsing error:', parseError);
+        // Use category-based bucket as primary fallback
+        bucket = categoryBucket || 'property-documents';
+        filePath = doc.file_url.split('/').pop() || doc.file_name;
+      }
+
+      // Final fallback: if bucket doesn't match expected patterns, use category bucket
+      const validBuckets = ['property-documents', 'employee-documents', 'message-templates'];
+      if (!validBuckets.includes(bucket) && categoryBucket) {
+        console.log('📥 [Documents] Invalid bucket detected, using category bucket:', categoryBucket);
+        bucket = categoryBucket;
+      }
+
+      console.log('📥 [Documents] Bucket:', bucket, 'Path:', filePath, 'Category:', doc.category);
+
+      // Get signed URL for download with longer expiry (5 minutes)
       const { data, error } = await supabase.storage
         .from(bucket)
-        .createSignedUrl(filePath, 60); // 60 second expiry
+        .createSignedUrl(filePath, 300); // 5 minute expiry
 
       if (error) throw error;
 
       if (data) {
-        // Create temporary link and trigger download
-        const link = document.createElement('a');
+        // Create temporary link and trigger download using global document object
+        const link = globalThis.document.createElement('a');
         link.href = data.signedUrl;
-        link.download = document.file_name;
+        link.download = doc.file_name;
+        link.style.display = 'none';
+        globalThis.document.body.appendChild(link);
         link.click();
+        globalThis.document.body.removeChild(link);
 
         // Log download
-        await logDocumentAccess(document.document_id, 'downloaded');
+        await logDocumentAccess(doc.document_id, 'downloaded');
 
         toast({
           title: "Success",

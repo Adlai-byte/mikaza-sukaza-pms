@@ -99,18 +99,22 @@ export default function PasswordVault() {
   const {
     hasMasterPassword,
     isLoading: masterLoading,
+    isError: masterError,
     isUnlocked,
     setupMasterPassword,
     unlock,
     lock,
     isSettingUp,
+    refetch: refetchMaster,
   } = useMasterPassword();
   const { decryptEntry } = useDecryptPasswordEntry();
   const { deleteEntry, isDeleting } = usePasswordVault();
 
-  // Check vault status on mount
+  // Check vault status on mount - only auto-open dialog once
   useEffect(() => {
-    if (!masterLoading) {
+    // Only proceed if not loading, no error, and dialog is not already open
+    // This prevents race conditions from re-opening the dialog
+    if (!masterLoading && !masterError && !masterPasswordDialogOpen) {
       if (!hasMasterPassword) {
         setMasterPasswordMode("setup");
         setMasterPasswordDialogOpen(true);
@@ -119,7 +123,7 @@ export default function PasswordVault() {
         setMasterPasswordDialogOpen(true);
       }
     }
-  }, [masterLoading, hasMasterPassword]);
+  }, [masterLoading, masterError, hasMasterPassword, masterPasswordDialogOpen]);
 
   // Filter entries
   const filteredEntries = entries.filter((entry) => {
@@ -136,7 +140,12 @@ export default function PasswordVault() {
 
   // Handlers
   const handleUnlockVault = () => {
-    setMasterPasswordMode("unlock");
+    // Check if master password exists before deciding mode
+    if (!hasMasterPassword) {
+      setMasterPasswordMode("setup");
+    } else {
+      setMasterPasswordMode("unlock");
+    }
     setMasterPasswordDialogOpen(true);
   };
 
@@ -283,6 +292,27 @@ export default function PasswordVault() {
             <Button onClick={handleUnlockVault} className="ml-auto" size="sm">
               <Unlock className="mr-2 h-4 w-4" />
               {t("passwordVault.unlockVault", "Unlock")}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error Banner - Show when there's an error loading master password data */}
+      {masterError && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex items-center gap-3 py-4">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div>
+              <p className="font-medium text-red-800">
+                {t("passwordVault.error.loadFailed", "Failed to load vault data")}
+              </p>
+              <p className="text-sm text-red-600">
+                {t("passwordVault.error.loadFailedDescription", "There was an error loading your master password data. Please try again.")}
+              </p>
+            </div>
+            <Button onClick={() => refetchMaster()} className="ml-auto" size="sm" variant="outline">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {t("common.retry", "Retry")}
             </Button>
           </CardContent>
         </Card>

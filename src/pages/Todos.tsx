@@ -89,13 +89,7 @@ export default function Todos() {
     return baseFilters;
   }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, searchQuery, showOverdue, user]);
 
-  // Filters for calendar view - show ALL tasks (not filtered by user)
-  const calendarFilters: TaskFilters = useMemo(() => ({
-    status: ['pending', 'in_progress'], // Only active tasks
-  }), []);
-
   const { tasks, loading, isFetching, refetch } = useTasks(filters);
-  const { tasks: allTasks, loading: allTasksLoading } = useTasks(calendarFilters);
 
   // Debug logging for tasks
   React.useEffect(() => {
@@ -234,15 +228,25 @@ export default function Todos() {
         subtitle={t('todos.subtitle')}
         icon={CheckSquare}
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-            {t('common.refresh')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleCreateTask}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('todos.createTask', 'Create Task')}
+            </Button>
+          </div>
         }
       />
 
@@ -462,8 +466,8 @@ export default function Todos() {
 
           <TabsContent value="calendar" className="mt-0">
             <TasksCalendar
-              tasks={allTasks}
-              isLoading={allTasksLoading}
+              tasks={tasks}
+              isLoading={loading}
               onViewTask={handleViewTask}
             />
           </TabsContent>

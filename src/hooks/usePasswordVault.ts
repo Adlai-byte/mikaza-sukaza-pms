@@ -559,54 +559,31 @@ export function useMasterPassword() {
       console.log('[PasswordVault] Generated salt length:', salt.length);
       console.log('[PasswordVault] Generated hash length:', hash.length);
 
-      // Check if user already has a master password
-      const { data: existing, error: checkError } = await supabase
+      // Use upsert to atomically insert or update - prevents duplicate key race condition
+      // This is safer than check-then-insert/update pattern
+      const { data, error } = await supabase
         .from('password_vault_master')
-        .select('user_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error('[PasswordVault] Error checking existing master password:', checkError);
-        throw checkError;
-      }
-
-      let data;
-      let error;
-
-      if (existing) {
-        // Update existing
-        console.log('[PasswordVault] Updating existing master password');
-        const result = await supabase
-          .from('password_vault_master')
-          .update({
-            password_hash: hash,
-            salt: salt,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', user.id)
-          .select()
-          .single();
-        data = result.data;
-        error = result.error;
-      } else {
-        // Insert new
-        console.log('[PasswordVault] Inserting new master password');
-        const result = await supabase
-          .from('password_vault_master')
-          .insert({
+        .upsert(
+          {
             user_id: user.id,
             password_hash: hash,
             salt: salt,
-          })
-          .select()
-          .single();
-        data = result.data;
-        error = result.error;
-      }
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'user_id',
+            ignoreDuplicates: false, // Update on conflict
+          }
+        )
+        .select()
+        .single();
 
       if (error) {
         console.error('[PasswordVault] Error saving master password:', error);
+        // Provide user-friendly error message for duplicate key (shouldn't happen with upsert, but just in case)
+        if (error.code === '23505') {
+          throw new Error('Master password already exists. Please try unlocking instead.');
+        }
         throw error;
       }
 

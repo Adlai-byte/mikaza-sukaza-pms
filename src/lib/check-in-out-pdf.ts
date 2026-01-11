@@ -481,6 +481,42 @@ export class CheckInOutPDFGenerator {
   }
 
   /**
+   * Validate that a signature is a valid data URL with sufficient content
+   */
+  private isValidSignatureDataUrl(data: string | null | undefined): data is string {
+    if (!data || typeof data !== 'string') {
+      console.log('⚠️ Signature validation failed: data is null, undefined, or not a string');
+      return false;
+    }
+    if (!data.startsWith('data:image/')) {
+      console.log('⚠️ Signature validation failed: does not start with data:image/');
+      return false;
+    }
+    if (!data.includes('base64,')) {
+      console.log('⚠️ Signature validation failed: missing base64 marker');
+      return false;
+    }
+    // Minimum reasonable length for a signature image (base64 encoded)
+    if (data.length < 100) {
+      console.log('⚠️ Signature validation failed: data too short (length:', data.length, ')');
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Extract image format from data URL
+   */
+  private getImageFormatFromDataUrl(dataUrl: string): 'PNG' | 'JPEG' | 'GIF' | 'WEBP' {
+    if (dataUrl.includes('data:image/png')) return 'PNG';
+    if (dataUrl.includes('data:image/jpeg') || dataUrl.includes('data:image/jpg')) return 'JPEG';
+    if (dataUrl.includes('data:image/gif')) return 'GIF';
+    if (dataUrl.includes('data:image/webp')) return 'WEBP';
+    // Default to PNG for signatures (most common from canvas)
+    return 'PNG';
+  }
+
+  /**
    * Add signature section
    */
   private async addSignatureSection(record: CheckInOutRecord): Promise<void> {
@@ -497,19 +533,49 @@ export class CheckInOutPDFGenerator {
     this.doc.setFillColor(255, 255, 255);
     this.doc.rect(signatureX, this.currentY, signatureWidth, signatureHeight, 'FD');
 
-    // Try to add signature image
-    if (record.signature_data) {
+    // Try to add signature image with robust validation
+    if (this.isValidSignatureDataUrl(record.signature_data)) {
+      let signatureAdded = false;
       try {
+        console.log('📝 Adding signature to PDF, data length:', record.signature_data.length);
+        console.log('📝 Signature data prefix:', record.signature_data.substring(0, 50));
+
+        // Auto-detect image format from data URL
+        const imageFormat = this.getImageFormatFromDataUrl(record.signature_data);
+        console.log('📝 Detected image format:', imageFormat);
+
         this.doc.addImage(
           record.signature_data,
-          'PNG',
+          imageFormat,
           signatureX + 2,
           this.currentY + 2,
           signatureWidth - 4,
           signatureHeight - 4
         );
-      } catch (error) {
-        console.error('Error adding signature image:', error);
+        signatureAdded = true;
+        console.log('✅ Signature added to PDF successfully');
+      } catch (error: any) {
+        console.error('❌ Error adding signature image:', error?.message || error);
+
+        // Try with different format as fallback
+        try {
+          console.log('🔄 Retrying with JPEG format...');
+          this.doc.addImage(
+            record.signature_data,
+            'JPEG',
+            signatureX + 2,
+            this.currentY + 2,
+            signatureWidth - 4,
+            signatureHeight - 4
+          );
+          signatureAdded = true;
+          console.log('✅ Signature added with JPEG fallback');
+        } catch (fallbackError) {
+          console.error('❌ JPEG fallback also failed:', fallbackError);
+        }
+      }
+
+      if (!signatureAdded) {
         // Fallback: Display text message if image fails
         this.doc.setFontSize(8);
         this.doc.setTextColor(150, 150, 150);
@@ -519,6 +585,8 @@ export class CheckInOutPDFGenerator {
         this.doc.setTextColor(0, 0, 0);
       }
     } else {
+      console.log('⚠️ No valid signature_data in record, signature_data:',
+        record.signature_data ? `${typeof record.signature_data}, length: ${String(record.signature_data).length}` : 'null/undefined');
       // No signature data - show placeholder
       this.doc.setFontSize(8);
       this.doc.setTextColor(150, 150, 150);

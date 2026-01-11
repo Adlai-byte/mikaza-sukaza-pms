@@ -235,6 +235,7 @@ const BOOKING_CHANNELS = [
 
 interface FilterState {
   startDate: Date;
+  selectedPropertyId: string;
   minCapacity: string;
   minRooms: string;
   minBathrooms: string;
@@ -264,6 +265,7 @@ const Calendar = () => {
   // State: Filters and View Configuration
   const [filters, setFilters] = useState<FilterState>({
     startDate: new Date(),
+    selectedPropertyId: 'all',
     minCapacity: 'all',
     minRooms: 'all',
     minBathrooms: 'all',
@@ -455,6 +457,10 @@ const Calendar = () => {
    */
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
+      // Filter by specific property
+      if (filters.selectedPropertyId !== 'all' && property.property_id !== filters.selectedPropertyId) {
+        return false;
+      }
       if (filters.minCapacity !== 'all' && property.capacity && property.capacity < parseInt(filters.minCapacity)) {
         return false;
       }
@@ -1130,6 +1136,25 @@ const Calendar = () => {
             actions={
               <>
                 <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    // Pre-select the filtered property if one is selected
+                    const preSelectedProperty = filters.selectedPropertyId !== 'all' ? filters.selectedPropertyId : null;
+                    setBookingPropertyId(preSelectedProperty);
+                    setBookingUnitId(null);
+                    setEditingBooking(null);
+                    setBookingCheckIn(format(new Date(), 'yyyy-MM-dd'));
+                    setBookingCheckOut(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
+                    setShowBookingDialog(true);
+                  }}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  {t('calendar.newBooking', 'New Booking')}
+                </Button>
+
+                <Button
                   variant={bulkSelectMode ? "default" : "outline"}
                   size="sm"
                   onClick={() => {
@@ -1142,7 +1167,7 @@ const Calendar = () => {
                 </Button>
 
                 <Button
-                  variant="default"
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowCalendarSyncDialog(true)}
                 >
@@ -1374,7 +1399,21 @@ const Calendar = () => {
               </div>
 
               {/* Bottom Row: Quick Filters */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                <Select value={filters.selectedPropertyId} onValueChange={(value) => setFilters(prev => ({ ...prev, selectedPropertyId: value }))}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder={t('calendar.selectProperty', 'Property')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('calendar.allProperties', 'All Properties')}</SelectItem>
+                    {properties.map(property => (
+                      <SelectItem key={property.property_id} value={property.property_id}>
+                        {property.property_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <Select value={filters.minCapacity} onValueChange={(value) => setFilters(prev => ({ ...prev, minCapacity: value }))}>
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="Capacity" />

@@ -83,6 +83,9 @@ export function FinancialEntryDialog({
   // Multi-notes state
   const [pendingNotes, setPendingNotes] = useState<PendingNote[]>([]);
 
+  // Validation errors state
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   // Get current user display name
   const currentUserName = user?.user_metadata?.first_name && user?.user_metadata?.last_name
     ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
@@ -109,9 +112,10 @@ export function FinancialEntryDialog({
         setScheduledMonths([]);
         setCategory('other');
       }
-      // Always reset pending items
+      // Always reset pending items and errors
       setPendingAttachments([]);
       setPendingNotes([]);
+      setErrors({});
     }
   }, [open, editingEntry]);
 
@@ -157,8 +161,33 @@ export function FinancialEntryDialog({
     setPendingNotes(prev => prev.filter(n => n.id !== id));
   }, []);
 
+  // Validation function
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!description.trim()) {
+      newErrors.description = t('validation.required', 'This field is required');
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      newErrors.amount = t('validation.positiveAmount', 'Please enter a valid amount greater than 0');
+    }
+
+    if (!expenseDate) {
+      newErrors.date = t('validation.required', 'This field is required');
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate before submitting
+    if (!validateForm()) {
+      return;
+    }
 
     const data: ExpenseInsert = {
       property_id: editingEntry?.property_id || '', // Will be set by parent
@@ -225,16 +254,23 @@ export function FinancialEntryDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 pr-2">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-3 pr-2">
           <div className="space-y-2">
             <Label htmlFor="description">{t('common.description', 'Description')} *</Label>
             <Input
               id="description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (errors.description) setErrors(prev => ({ ...prev, description: '' }));
+              }}
               placeholder={t('financialEntries.descriptionPlaceholder', 'Enter description...')}
               required
+              className={errors.description ? 'border-red-500' : ''}
             />
+            {errors.description && (
+              <p className="text-sm text-red-500">{errors.description}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -248,12 +284,18 @@ export function FinancialEntryDialog({
                   min="0"
                   step="0.01"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    if (errors.amount) setErrors(prev => ({ ...prev, amount: '' }));
+                  }}
                   placeholder="0.00"
-                  className="pl-8"
+                  className={`pl-8 ${errors.amount ? 'border-red-500' : ''}`}
                   required
                 />
               </div>
+              {errors.amount && (
+                <p className="text-sm text-red-500">{errors.amount}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -262,9 +304,16 @@ export function FinancialEntryDialog({
                 id="expenseDate"
                 type="date"
                 value={expenseDate}
-                onChange={(e) => setExpenseDate(e.target.value)}
+                onChange={(e) => {
+                  setExpenseDate(e.target.value);
+                  if (errors.date) setErrors(prev => ({ ...prev, date: '' }));
+                }}
                 required
+                className={errors.date ? 'border-red-500' : ''}
               />
+              {errors.date && (
+                <p className="text-sm text-red-500">{errors.date}</p>
+              )}
             </div>
           </div>
 
@@ -374,7 +423,11 @@ export function FinancialEntryDialog({
             <X className="mr-2 h-4 w-4" />
             {t('common.cancel', 'Cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !description.trim() || !amount || parseFloat(amount) <= 0 || !expenseDate}
+          >
             <Save className="mr-2 h-4 w-4" />
             {isSubmitting
               ? t('common.saving', 'Saving...')

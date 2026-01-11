@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { sanitizeText } from '@/lib/sanitize';
 
 interface NoteAttachment {
   url: string;
@@ -102,8 +103,8 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
     queryKey: ['property-notes', propertyId],
     queryFn: () => fetchNotes(propertyId),
     enabled: !!propertyId,
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes - reduce refetch frequency
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
   });
 
   const createNoteMutation = useMutation({
@@ -117,18 +118,46 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['property-notes', propertyId],
-        refetchType: 'all',
-      });
+    onMutate: async (newNoteData) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['property-notes', propertyId] });
+
+      // Snapshot current data
+      const previousNotes = queryClient.getQueryData<Note[]>(['property-notes', propertyId]);
+
+      // Optimistically add new note
+      const optimisticNote: Note = {
+        note_id: `temp-${Date.now()}`,
+        property_id: propertyId,
+        note_title: newNoteData.note_title,
+        note_content: newNoteData.note_content,
+        note_type: newNoteData.note_type,
+        is_pinned: newNoteData.is_pinned,
+        attachments: newNoteData.attachments,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) => [optimisticNote, ...old]);
+
+      return { previousNotes };
+    },
+    onSuccess: (data) => {
+      // Replace optimistic note with real data
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) =>
+        old.map(note => note.note_id.startsWith('temp-') ? data : note)
+      );
       toast({
         title: "Success",
         description: "Note created successfully",
       });
       resetForm();
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousNotes) {
+        queryClient.setQueryData(['property-notes', propertyId], context.previousNotes);
+      }
       toast({
         title: "Error",
         description: error.message || "Failed to create note",
@@ -149,18 +178,32 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['property-notes', propertyId],
-        refetchType: 'all',
-      });
+    onMutate: async ({ noteId, updates }) => {
+      await queryClient.cancelQueries({ queryKey: ['property-notes', propertyId] });
+      const previousNotes = queryClient.getQueryData<Note[]>(['property-notes', propertyId]);
+
+      // Optimistically update the note
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) =>
+        old.map(note => note.note_id === noteId ? { ...note, ...updates, updated_at: new Date().toISOString() } : note)
+      );
+
+      return { previousNotes };
+    },
+    onSuccess: (data) => {
+      // Update with real server data
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) =>
+        old.map(note => note.note_id === data.note_id ? data : note)
+      );
       toast({
         title: "Success",
         description: "Note updated successfully",
       });
       resetForm();
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousNotes) {
+        queryClient.setQueryData(['property-notes', propertyId], context.previousNotes);
+      }
       toast({
         title: "Error",
         description: error.message || "Failed to update note",
@@ -179,17 +222,27 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return noteId;
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['property-notes', propertyId],
-        refetchType: 'all',
-      });
+    onMutate: async (noteId) => {
+      await queryClient.cancelQueries({ queryKey: ['property-notes', propertyId] });
+      const previousNotes = queryClient.getQueryData<Note[]>(['property-notes', propertyId]);
+
+      // Optimistically remove the note
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) =>
+        old.filter(note => note.note_id !== noteId)
+      );
+
+      return { previousNotes };
+    },
+    onSuccess: () => {
       toast({
         title: "Success",
         description: "Note deleted successfully",
       });
     },
-    onError: (error) => {
+    onError: (error, _noteId, context) => {
+      if (context?.previousNotes) {
+        queryClient.setQueryData(['property-notes', propertyId], context.previousNotes);
+      }
       toast({
         title: "Error",
         description: error.message || "Failed to delete note",
@@ -210,17 +263,27 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({
-        queryKey: ['property-notes', propertyId],
-        refetchType: 'all',
-      });
+    onMutate: async ({ noteId, isPinned }) => {
+      await queryClient.cancelQueries({ queryKey: ['property-notes', propertyId] });
+      const previousNotes = queryClient.getQueryData<Note[]>(['property-notes', propertyId]);
+
+      // Optimistically toggle pin state
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) =>
+        old.map(note => note.note_id === noteId ? { ...note, is_pinned: !isPinned } : note)
+      );
+
+      return { previousNotes, newPinnedState: !isPinned };
+    },
+    onSuccess: (_data, _variables, context) => {
       toast({
         title: "Success",
-        description: `Note ${data.is_pinned ? 'pinned' : 'unpinned'} successfully`,
+        description: `Note ${context?.newPinnedState ? 'pinned' : 'unpinned'} successfully`,
       });
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousNotes) {
+        queryClient.setQueryData(['property-notes', propertyId], context.previousNotes);
+      }
       toast({
         title: "Error",
         description: error.message || "Failed to update note",
@@ -400,31 +463,34 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
     }
   };
 
-  const filteredNotes = notes.filter(note => {
-    const matchesSearch = (note.note_title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-                         note.note_content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterType === 'all' || note.note_type === filterType;
-    return matchesSearch && matchesFilter;
-  });
+  // Memoize filtered notes to avoid recalculation on every render
+  const filteredNotes = useMemo(() => {
+    return notes.filter(note => {
+      const matchesSearch = (note.note_title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                           note.note_content.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFilter = filterType === 'all' || note.note_type === filterType;
+      return matchesSearch && matchesFilter;
+    });
+  }, [notes, searchQuery, filterType]);
 
-  const pinnedNotes = filteredNotes.filter(note => note.is_pinned);
-  const regularNotes = filteredNotes.filter(note => !note.is_pinned);
+  // Memoize pinned and regular notes separation
+  const { pinnedNotes, regularNotes } = useMemo(() => ({
+    pinnedNotes: filteredNotes.filter(note => note.is_pinned),
+    regularNotes: filteredNotes.filter(note => !note.is_pinned),
+  }), [filteredNotes]);
 
-  const getStatistics = () => {
-    const totalNotes = notes.length;
-    const pinnedCount = notes.filter(note => note.is_pinned).length;
-    const importantCount = notes.filter(note => note.note_type === 'important').length;
-    const recentCount = notes.filter(note => {
-      const noteDate = new Date(note.created_at);
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return noteDate > weekAgo;
-    }).length;
+  // Memoize statistics calculation
+  const { totalNotes, pinnedCount, importantCount, recentCount } = useMemo(() => {
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
 
-    return { totalNotes, pinnedCount, importantCount, recentCount };
-  };
-
-  const { totalNotes, pinnedCount, importantCount, recentCount } = getStatistics();
+    return {
+      totalNotes: notes.length,
+      pinnedCount: notes.filter(note => note.is_pinned).length,
+      importantCount: notes.filter(note => note.note_type === 'important').length,
+      recentCount: notes.filter(note => new Date(note.created_at) > weekAgo).length,
+    };
+  }, [notes]);
 
   if (isLoading) {
     return (
@@ -821,7 +887,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
                               </Badge>
                             </div>
                             <p className="text-sm text-gray-700 mb-3 whitespace-pre-wrap">
-                              {note.note_content}
+                              {sanitizeText(note.note_content)}
                             </p>
                             {/* Attachments Display */}
                             {note.attachments && note.attachments.length > 0 && (
@@ -929,7 +995,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
                               </Badge>
                             </div>
                             <p className="text-sm text-gray-700 mb-3 whitespace-pre-wrap">
-                              {note.note_content}
+                              {sanitizeText(note.note_content)}
                             </p>
                             {/* Attachments Display */}
                             {note.attachments && note.attachments.length > 0 && (

@@ -311,22 +311,22 @@ export default function Expenses() {
             {t('expenses.filters')}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <CardContent className="overflow-x-hidden">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             {/* Search */}
-            <div className="relative">
+            <div className="relative sm:col-span-2 lg:col-span-1 xl:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t('expenses.searchVendorPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+                className="pl-9 w-full"
               />
             </div>
 
             {/* Property Filter */}
             <Select value={selectedProperty} onValueChange={setSelectedProperty}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder={t('expenses.allProperties')} />
               </SelectTrigger>
               <SelectContent>
@@ -341,7 +341,7 @@ export default function Expenses() {
 
             {/* Category Filter */}
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder={t('expenses.allCategories')} />
               </SelectTrigger>
               <SelectContent>
@@ -356,7 +356,7 @@ export default function Expenses() {
 
             {/* Status Filter */}
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder={t('expenses.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
@@ -368,21 +368,23 @@ export default function Expenses() {
               </SelectContent>
             </Select>
 
-            {/* Date Range */}
-            <div className="flex gap-2">
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                placeholder="From"
-              />
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                placeholder="To"
-              />
-            </div>
+            {/* Date From */}
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              placeholder="From"
+              className="w-full"
+            />
+
+            {/* Date To */}
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              placeholder="To"
+              className="w-full"
+            />
           </div>
         </CardContent>
       </Card>

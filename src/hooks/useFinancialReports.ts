@@ -98,32 +98,34 @@ const fetchOwnerStatement = async (
 
   if (propertyError) throw propertyError;
 
-  // Fetch invoices (revenue)
+  // Fetch invoices (revenue) - use paid_date for accurate revenue reporting
   const { data: invoices, error: invoicesError } = await supabase
     .from('invoices')
-    .select('invoice_number, guest_name, issue_date, total_amount, status')
+    .select('invoice_number, guest_name, issue_date, paid_date, total_amount, status')
     .eq('property_id', propertyId)
     .eq('status', 'paid')
     .gte('paid_date', periodStart)
     .lte('paid_date', periodEnd)
-    .order('issue_date', { ascending: true });
+    .order('paid_date', { ascending: true });
 
   if (invoicesError) throw invoicesError;
 
   const revenueByInvoice = (invoices || []).map(inv => ({
     invoice_number: inv.invoice_number,
     guest_name: inv.guest_name,
-    issue_date: inv.issue_date,
+    issue_date: inv.paid_date || inv.issue_date, // Use paid_date for revenue recognition
     amount: inv.total_amount,
   }));
 
   const totalRevenue = revenueByInvoice.reduce((sum, inv) => sum + inv.amount, 0);
 
-  // Fetch expenses
+  // Fetch expenses - only DEBIT entries count as expenses
+  // Credit entries are income, owner_payment entries are payouts to owners
   const { data: expenses, error: expensesError } = await supabase
     .from('expenses')
-    .select('expense_date, vendor_name, category, description, amount, tax_amount')
+    .select('expense_date, vendor_name, category, description, amount, tax_amount, entry_type')
     .eq('property_id', propertyId)
+    .eq('entry_type', 'debit') // Only count debit entries as expenses
     .gte('expense_date', periodStart)
     .lte('expense_date', periodEnd)
     .order('expense_date', { ascending: true });

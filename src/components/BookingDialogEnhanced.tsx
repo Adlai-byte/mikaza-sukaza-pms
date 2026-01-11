@@ -92,7 +92,7 @@ export function BookingDialogEnhanced({
 }: BookingDialogEnhancedProps) {
   const isEditing = !!booking;
   const { properties, loading: loadingProperties } = usePropertiesOptimized();
-  const { data: guests, isLoading: loadingGuests } = useGuests();
+  const { data: guests, isLoading: loadingGuests, refetch: refetchGuests } = useGuests();
 
   // Fetch existing tasks for the booking (when editing)
   const { data: existingTasks = [], isLoading: loadingTasks } = useBookingTasks(
@@ -1043,6 +1043,21 @@ export function BookingDialogEnhanced({
         open={showCreateGuestDialog}
         onClose={() => setShowCreateGuestDialog(false)}
         guestId={null}
+        onSuccess={async (newGuest) => {
+          // Refetch guests list to ensure new guest appears in dropdown
+          await refetchGuests();
+
+          // Auto-select the newly created guest
+          if (newGuest?.guest_id) {
+            setFormData((prev) => ({
+              ...prev,
+              guest_id: newGuest.guest_id,
+              guest_name: `${newGuest.first_name} ${newGuest.last_name}`,
+              guest_email: newGuest.email || '',
+              guest_phone: newGuest.phone_primary || '',
+            }));
+          }
+        }}
       />
 
       {/* Active Booking Warning Dialog for Job Generation */}
