@@ -7,7 +7,7 @@
 -- 1. ADD UNIT_ID TO ISSUES TABLE
 -- ============================================
 ALTER TABLE public.issues
-ADD COLUMN IF NOT EXISTS unit_id UUID REFERENCES public.property_units(unit_id) ON DELETE SET NULL;
+ADD COLUMN IF NOT EXISTS unit_id UUID REFERENCES public.units(unit_id) ON DELETE SET NULL;
 
 -- Create index for efficient unit-based queries
 DO $$
@@ -24,7 +24,7 @@ COMMENT ON COLUMN public.issues.unit_id IS 'Optional reference to a specific uni
 -- 2. ADD UNIT_ID TO JOBS TABLE
 -- ============================================
 ALTER TABLE public.jobs
-ADD COLUMN IF NOT EXISTS unit_id UUID REFERENCES public.property_units(unit_id) ON DELETE SET NULL;
+ADD COLUMN IF NOT EXISTS unit_id UUID REFERENCES public.units(unit_id) ON DELETE SET NULL;
 
 -- Create index for efficient unit-based queries
 DO $$
