@@ -127,6 +127,7 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
   const [signatureData, setSignatureData] = useState<string>('');
   const [signatureName, setSignatureName] = useState<string>('');
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [signatureResetKey, setSignatureResetKey] = useState(0);
 
   const createMutation = useCreateCheckInOutRecord();
   const updateMutation = useUpdateCheckInOutRecord();
@@ -179,6 +180,32 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
     }
   }, [watchBookingId, propertyBookings, watchRecordType, setValue]);
 
+  // Reset form when opening for a NEW record (no existing record)
+  useEffect(() => {
+    if (open && !record) {
+      // Reset form to default values
+      reset({
+        record_type: 'check_in',
+        record_date: new Date().toISOString().split('T')[0],
+        agent_id: user?.id,
+        property_id: '',
+        booking_id: '',
+        resident_name: '',
+        resident_contact: '',
+        template_id: '',
+        notes: '',
+      });
+      // Reset non-form state
+      setChecklistResponses([]);
+      setPhotos([]);
+      setDocuments([]);
+      setSignatureData('');
+      setSignatureName('');
+      // Increment key to force SignaturePad remount and clear internal state
+      setSignatureResetKey(prev => prev + 1);
+    }
+  }, [open, record, reset, user?.id]);
+
   // Load record data when editing
   useEffect(() => {
     if (record) {
@@ -207,6 +234,7 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
   const handleFileUpload = async (file: File, type: 'photo' | 'document') => {
     try {
       setUploadingFile(true);
+      console.log(`📤 [CheckInOut] Uploading ${type}:`, file.name, file.size);
 
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
@@ -216,11 +244,18 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
         .from('documents')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error(`❌ [CheckInOut] Upload error:`, uploadError);
+        throw uploadError;
+      }
+
+      console.log(`✅ [CheckInOut] Upload successful:`, filePath);
 
       const { data: { publicUrl } } = supabase.storage
         .from('documents')
         .getPublicUrl(filePath);
+
+      console.log(`🔗 [CheckInOut] Public URL:`, publicUrl);
 
       const attachment: Attachment = {
         url: publicUrl,
@@ -232,12 +267,22 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
       };
 
       if (type === 'photo') {
-        setPhotos(prev => [...prev, attachment]);
+        setPhotos(prev => {
+          const newPhotos = [...prev, attachment];
+          console.log(`📷 [CheckInOut] Photos array now has ${newPhotos.length} items`);
+          return newPhotos;
+        });
       } else {
-        setDocuments(prev => [...prev, attachment]);
+        setDocuments(prev => {
+          const newDocs = [...prev, attachment];
+          console.log(`📄 [CheckInOut] Documents array now has ${newDocs.length} items`);
+          return newDocs;
+        });
       }
-    } catch (error) {
-      console.error(`Error uploading ${type}:`, error);
+    } catch (error: any) {
+      console.error(`❌ [CheckInOut] Error uploading ${type}:`, error);
+      // Show error to user instead of silently failing
+      alert(`Failed to upload ${type}: ${error.message || 'Unknown error'}. Please try again.`);
     } finally {
       setUploadingFile(false);
     }
@@ -256,6 +301,12 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
   const onSubmit = async (data: CheckInOutFormData) => {
     console.log('📝 Form submitted with data:', data);
     console.log('👤 Current user:', user);
+
+    // Log detailed state for debugging
+    console.log('📷 Photos state:', photos.length, 'items:', photos.map(p => p.name));
+    console.log('📄 Documents state:', documents.length, 'items:', documents.map(d => d.name));
+    console.log('✍️ Signature state:', signatureData ? `${signatureData.length} chars` : 'empty');
+    console.log('👤 Signature name:', signatureName || 'empty');
 
     const recordData = {
       property_id: data.property_id,
@@ -277,7 +328,12 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
       created_by: user?.id || null,
     };
 
-    console.log('💾 Record data to be saved:', recordData);
+    console.log('💾 Record data to be saved:', {
+      ...recordData,
+      photos: `${recordData.photos.length} photos`,
+      documents: `${recordData.documents.length} documents`,
+      signature_data: recordData.signature_data ? `${recordData.signature_data.length} chars` : null,
+    });
 
     if (record) {
       console.log('✏️ Updating existing record:', record.record_id);
@@ -316,14 +372,14 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {viewMode ? 'View' : record ? 'Edit' : 'New'} Check-{watchRecordType === 'check_in' ? 'In' : 'Out'} Record
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form id="check-in-out-form" onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto space-y-6 min-h-0">
           <Tabs defaultValue="basic" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
@@ -569,7 +625,7 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
                                   <Checkbox
                                     checked={response?.response === true}
                                     onCheckedChange={(checked) =>
-                                      handleChecklistResponse(item.id, checked as boolean)
+                                      handleChecklistResponse(item.id, checked as boolean, response?.notes)
                                     }
                                   />
                                   <span className="text-sm">Completed</span>
@@ -620,19 +676,21 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
                                 </div>
                               )}
 
-                              <div className="mt-2">
+                              {/* Notes field - separate from response to prevent clearing */}
+                              <div className="mt-3 pt-3 border-t border-dashed">
                                 <Label className="text-xs text-muted-foreground">Notes</Label>
-                                <Input
+                                <Textarea
                                   value={response?.notes || ''}
                                   onChange={(e) =>
                                     handleChecklistResponse(
                                       item.id,
-                                      response?.response || '',
+                                      response?.response !== undefined ? response.response : (item.type === 'checkbox' ? false : ''),
                                       e.target.value
                                     )
                                   }
-                                  placeholder="Optional notes..."
+                                  placeholder="Optional notes for this item..."
                                   className="mt-1"
+                                  rows={2}
                                 />
                               </div>
                             </div>
@@ -748,6 +806,7 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
             {/* Signature Tab */}
             <TabsContent value="signature" className="mt-4">
               <SignaturePad
+                key={record?.record_id || `new-${signatureResetKey}`}
                 onSave={setSignatureData}
                 signatureName={signatureName}
                 onNameChange={setSignatureName}
@@ -757,32 +816,34 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
               />
             </TabsContent>
           </Tabs>
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose}>
-              {viewMode ? 'Close' : 'Cancel'}
-            </Button>
-            {!viewMode && (
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending || uploadingFile}
-                onClick={() => {
-                  console.log('🔘 Submit button clicked, Form errors:', errors);
-                  // If there are validation errors, show them in console
-                  if (Object.keys(errors).length > 0) {
-                    console.error('❌ Form has validation errors:', errors);
-                    Object.entries(errors).forEach(([field, error]) => {
-                      console.error(`  - ${field}: ${(error as any)?.message}`);
-                    });
-                  }
-                }}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {record ? 'Update' : 'Create'} Record
-              </Button>
-            )}
-          </div>
         </form>
+
+        {/* Footer buttons - always visible outside scrollable area */}
+        <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
+          <Button type="button" variant="outline" onClick={onClose}>
+            {viewMode ? 'Close' : 'Cancel'}
+          </Button>
+          {!viewMode && (
+            <Button
+              type="submit"
+              form="check-in-out-form"
+              disabled={createMutation.isPending || updateMutation.isPending || uploadingFile}
+              onClick={() => {
+                console.log('🔘 Submit button clicked, Form errors:', errors);
+                // If there are validation errors, show them in console
+                if (Object.keys(errors).length > 0) {
+                  console.error('❌ Form has validation errors:', errors);
+                  Object.entries(errors).forEach(([field, error]) => {
+                    console.error(`  - ${field}: ${(error as any)?.message}`);
+                  });
+                }
+              }}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {record ? 'Update' : 'Create'} Record
+            </Button>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

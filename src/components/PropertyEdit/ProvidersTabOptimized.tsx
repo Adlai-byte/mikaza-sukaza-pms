@@ -502,18 +502,18 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                 />
               </div>
 
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Provider</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Account</TableHead>
-                      <TableHead>Billing Name</TableHead>
-                      <TableHead>Username</TableHead>
-                      <TableHead>Notes</TableHead>
-                      <TableHead className="w-[80px]">Actions</TableHead>
+                      <TableHead className="whitespace-nowrap">Provider</TableHead>
+                      <TableHead className="whitespace-nowrap">Type</TableHead>
+                      <TableHead className="whitespace-nowrap">Contact</TableHead>
+                      <TableHead className="whitespace-nowrap">Account</TableHead>
+                      <TableHead className="whitespace-nowrap">Billing Name</TableHead>
+                      <TableHead className="whitespace-nowrap">Username</TableHead>
+                      <TableHead className="whitespace-nowrap">Notes</TableHead>
+                      <TableHead className="w-[80px] whitespace-nowrap">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -759,20 +759,20 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
                 />
               </div>
 
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Company</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Account</TableHead>
-                      <TableHead>Billing Name</TableHead>
-                      <TableHead>Username</TableHead>
-                      <TableHead>Rating</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Notes</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
+                      <TableHead className="whitespace-nowrap">Company</TableHead>
+                      <TableHead className="whitespace-nowrap">Category</TableHead>
+                      <TableHead className="whitespace-nowrap">Contact</TableHead>
+                      <TableHead className="whitespace-nowrap">Account</TableHead>
+                      <TableHead className="whitespace-nowrap">Billing Name</TableHead>
+                      <TableHead className="whitespace-nowrap">Username</TableHead>
+                      <TableHead className="whitespace-nowrap">Rating</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Notes</TableHead>
+                      <TableHead className="w-[100px] whitespace-nowrap">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
