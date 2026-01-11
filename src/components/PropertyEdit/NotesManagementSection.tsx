@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ExpenseNote } from '@/lib/schemas';
 import { format, parseISO } from 'date-fns';
+import { sanitizeText } from '@/lib/sanitize';
 
 // Pending note type (for new notes being added)
 export interface PendingNote {
@@ -103,7 +104,7 @@ export function NotesManagementSection({
                     <Clock className="h-3 w-3" />
                     <span>{formatNoteDate(note.created_at)}</span>
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{note.note_text}</p>
+                  <p className="text-sm whitespace-pre-wrap">{sanitizeText(note.note_text)}</p>
                 </div>
                 {onDeleteExisting && (
                   <Button
@@ -139,7 +140,7 @@ export function NotesManagementSection({
                     <span>•</span>
                     <span className="text-green-600 dark:text-green-400">New</span>
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{pending.text}</p>
+                  <p className="text-sm whitespace-pre-wrap">{sanitizeText(pending.text)}</p>
                 </div>
                 <Button
                   type="button"

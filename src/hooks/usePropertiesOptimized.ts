@@ -241,7 +241,7 @@ export function usePropertiesOptimized() {
     queryFn: fetchPropertiesList,
     staleTime: 3 * 60 * 1000, // 3 minutes - data considered fresh (increased from 1 min)
     gcTime: 15 * 60 * 1000, // 15 minutes - keep in cache (increased from 10 min)
-    refetchOnMount: false, // Don't refetch if data is fresh (changed from 'always')
+    refetchOnMount: true, // Refetch if data is stale (ensures new data after invalidation)
     refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
@@ -426,21 +426,41 @@ export function usePropertiesOptimized() {
       return { rollback };
     },
     onSuccess: async (data) => {
-      console.log('✅ [PROPERTY] Creation succeeded, updating cache and refetching...');
+      console.log('✅ [PROPERTY] Creation succeeded, updating cache...');
 
-      // Immediately fetch the latest data for the list
-      const freshListData = await fetchPropertiesList();
+      // Cancel any outgoing refetches to prevent race conditions
+      await queryClient.cancelQueries({ queryKey: propertyKeys.lists() });
 
-      // Update cache immediately with fresh data
-      queryClient.setQueryData(propertyKeys.lists(), freshListData);
+      // Get current cache data
+      const currentData = queryClient.getQueryData<Property[]>(propertyKeys.lists()) || [];
 
-      // Then invalidate to ensure full consistency
-      await queryClient.invalidateQueries({
+      // Remove any temporary/optimistic entries and add the real property
+      const filteredData = currentData.filter(p => !p.property_id.startsWith('temp-'));
+
+      // Create a complete property object with the returned data
+      const newProperty: Property = {
+        ...data,
+        owner: null, // Will be populated on next fetch
+        location: null,
+        images: [],
+        units: [],
+      };
+
+      // Add the new property at the beginning of the list
+      const updatedData = [newProperty, ...filteredData];
+
+      // Update cache with the new data
+      queryClient.setQueryData(propertyKeys.lists(), updatedData);
+
+      console.log('✅ [PROPERTY] Cache updated with new property, count:', updatedData.length);
+
+      // Mark queries as stale but don't refetch immediately
+      // This allows the optimistic update to persist and avoids race conditions
+      // with database replication lag. React Query will refetch when appropriate.
+      queryClient.invalidateQueries({
         queryKey: propertyKeys.lists(),
-        refetchType: 'all'
+        refetchType: 'none' // Don't refetch - the cache already has the new property
       });
-
-      console.log('✅ [PROPERTY] Cache updated with fresh property list');
 
       toast({
         title: "Success",

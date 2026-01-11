@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ExpenseAttachment, ExpenseNote } from '@/lib/schemas';
 import { format, parseISO } from 'date-fns';
+import { sanitizeText } from '@/lib/sanitize';
 import { useExpenseAttachments, useCreateExpenseAttachment, useDeleteExpenseAttachment } from '@/hooks/useExpenseAttachments';
 import { useExpenseNotes, useCreateExpenseNote, useDeleteExpenseNote } from '@/hooks/useExpenseNotes';
 import { useAuth } from '@/contexts/AuthContext';
@@ -175,7 +176,7 @@ export function ExpandedEntryContent({ expenseId, onClose, readOnly = false }: E
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{attachment.file_name}</p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          {attachment.caption && <span>{attachment.caption}</span>}
+                          {attachment.caption && <span>{sanitizeText(attachment.caption)}</span>}
                           {attachment.file_size && <span>{formatFileSize(attachment.file_size)}</span>}
                         </div>
                       </div>
@@ -242,7 +243,7 @@ export function ExpandedEntryContent({ expenseId, onClose, readOnly = false }: E
                           <Clock className="h-3 w-3" />
                           <span>{formatNoteDate(note.created_at)}</span>
                         </div>
-                        <p className="text-sm whitespace-pre-wrap">{note.note_text}</p>
+                        <p className="text-sm whitespace-pre-wrap">{sanitizeText(note.note_text)}</p>
                       </div>
                       {!readOnly && (
                         <Button

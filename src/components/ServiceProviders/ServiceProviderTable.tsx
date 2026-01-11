@@ -503,9 +503,9 @@ export function ServiceProviderTable({
                         variant="outline"
                         size="sm"
                         onClick={() => onEditProvider(provider)}
+                        title="Edit Provider"
                       >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
+                        <Edit className="h-4 w-4" />
                       </Button>
                     )}
 

@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { Upload, X, Loader2, Star, StarOff, Edit, Check, ChevronLeft, ChevronRight, ZoomIn, Download } from "lucide-react";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 interface PropertyImageDialogProps {
   open: boolean;
@@ -348,10 +349,13 @@ export function PropertyImageDialog({ open, onOpenChange, property }: PropertyIm
                     className="cursor-pointer relative"
                     onClick={() => openViewer(index)}
                   >
-                    <img
+                    <OptimizedImage
                       src={image.image_url}
                       alt={image.image_title || "Property image"}
                       className="w-full h-48 object-cover transition-transform group-hover:scale-105"
+                      lazy={true}
+                      placeholder="skeleton"
+                      category="properties"
                     />
                     {/* Zoom icon overlay */}
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
@@ -482,10 +486,13 @@ export function PropertyImageDialog({ open, onOpenChange, property }: PropertyIm
 
               {/* Main image */}
               <div className="flex items-center justify-center w-full h-full p-4">
-                <img
+                <OptimizedImage
                   src={images[currentImageIndex].image_url}
                   alt={images[currentImageIndex].image_title || "Property image"}
                   className="max-w-full max-h-full object-contain"
+                  lazy={false}
+                  placeholder="skeleton"
+                  category="properties"
                 />
               </div>
 
@@ -532,10 +539,13 @@ export function PropertyImageDialog({ open, onOpenChange, property }: PropertyIm
                               : 'border-transparent opacity-50 hover:opacity-100'
                           }`}
                         >
-                          <img
+                          <OptimizedImage
                             src={image.image_url}
                             alt={`Thumbnail ${index + 1}`}
                             className="w-full h-full object-cover rounded"
+                            lazy={true}
+                            placeholder="skeleton"
+                            category="thumbnails"
                           />
                         </button>
                       ))}

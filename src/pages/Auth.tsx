@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
@@ -19,7 +18,6 @@ const loginSchema = z.object({
 export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -40,14 +38,8 @@ export default function Auth() {
       return;
     }
 
-    // Load saved credentials if remember me was checked
-    const savedEmail = localStorage.getItem('rememberedEmail');
-    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
-
-    if (savedEmail && savedRememberMe) {
-      setLoginForm(prev => ({ ...prev, email: savedEmail }));
-      setRememberMe(true);
-    }
+    // Note: We rely on browser autocomplete for email instead of localStorage
+    // to comply with GDPR (no PII stored in localStorage)
   }, [user, profile, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -58,9 +50,7 @@ export default function Auth() {
       setLoading(true);
 
       console.log('🔐 [AUTH] Login attempt:', {
-        email: validatedData.email,
-        timestamp: new Date().toISOString(),
-        rememberMe: rememberMe
+        timestamp: new Date().toISOString()
       });
 
       const { error, data } = await signIn(validatedData.email, validatedData.password);
@@ -68,13 +58,11 @@ export default function Auth() {
       console.log('📊 [AUTH] Login response:', {
         success: !error,
         hasUser: !!data?.user,
-        email: validatedData.email,
         timestamp: new Date().toISOString()
       });
 
       if (error) {
         console.error('❌ [AUTH] Login failed:', {
-          email: validatedData.email,
           error: error.message,
           errorCode: error.code,
           timestamp: new Date().toISOString()
@@ -105,7 +93,6 @@ export default function Auth() {
       // Check if email is verified (Supabase returns user even if not verified)
       if (data?.user && !data.user.email_confirmed_at) {
         console.warn('⚠️ [AUTH] Email not verified:', {
-          email: validatedData.email,
           userId: data.user.id,
           timestamp: new Date().toISOString()
         });
@@ -119,22 +106,10 @@ export default function Auth() {
         return;
       }
 
-      // Save credentials if remember me is checked
-      if (rememberMe) {
-        console.log('💾 [AUTH] Saving credentials for remember me:', {
-          email: validatedData.email,
-          timestamp: new Date().toISOString()
-        });
-        localStorage.setItem('rememberedEmail', validatedData.email);
-        localStorage.setItem('rememberMe', 'true');
-      } else {
-        console.log('🗑️ [AUTH] Clearing remembered credentials');
-        localStorage.removeItem('rememberedEmail');
-        localStorage.removeItem('rememberMe');
-      }
+      // Note: "Remember Me" is handled by browser autocomplete (GDPR compliant)
+      // No PII is stored in localStorage
 
       console.log('✅ [AUTH] Login successful:', {
-        email: validatedData.email,
         userId: data?.user?.id,
         timestamp: new Date().toISOString()
       });
@@ -181,7 +156,6 @@ export default function Auth() {
       setIsResendingEmail(true);
 
       console.log('📧 [AUTH] Resending verification email:', {
-        email: validatedEmail.email,
         timestamp: new Date().toISOString()
       });
 
@@ -192,7 +166,6 @@ export default function Auth() {
 
       if (error) {
         console.error('❌ [AUTH] Resend verification failed:', {
-          email: validatedEmail.email,
           error: error.message,
           timestamp: new Date().toISOString()
         });
@@ -205,7 +178,6 @@ export default function Auth() {
       }
 
       console.log('✅ [AUTH] Verification email resent successfully:', {
-        email: validatedEmail.email,
         timestamp: new Date().toISOString()
       });
 
@@ -251,7 +223,6 @@ export default function Auth() {
       setIsResettingPassword(true);
 
       console.log('🔐 [AUTH] Password reset requested:', {
-        email: validatedEmail.email,
         timestamp: new Date().toISOString()
       });
 
@@ -261,7 +232,6 @@ export default function Auth() {
 
       if (error) {
         console.error('❌ [AUTH] Password reset failed:', {
-          email: validatedEmail.email,
           error: error.message,
           timestamp: new Date().toISOString()
         });
@@ -274,7 +244,6 @@ export default function Auth() {
       }
 
       console.log('✅ [AUTH] Password reset email sent:', {
-        email: validatedEmail.email,
         timestamp: new Date().toISOString()
       });
 
@@ -454,22 +423,7 @@ export default function Auth() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="remember"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                    className="border-white/50 data-[state=checked]:bg-white data-[state=checked]:text-primary"
-                  />
-                  <Label
-                    htmlFor="remember"
-                    className="text-white/80 text-sm font-light cursor-pointer"
-                  >
-                    Remember me
-                  </Label>
-                </div>
-
+              <div className="flex items-center justify-end">
                 <button
                   type="button"
                   className="text-white/70 hover:text-white text-sm underline font-light"

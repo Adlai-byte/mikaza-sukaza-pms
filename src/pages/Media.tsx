@@ -27,6 +27,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Image as ImageIcon,
   Plus,
   RefreshCw,
@@ -56,6 +63,7 @@ import { MediaUploadDialog } from "@/components/media/MediaUploadDialog";
 import { PropertyImageWithDetails, MediaFilters } from "@/lib/schemas";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTranslation } from "react-i18next";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 export default function Media() {
   const { t } = useTranslation();
@@ -67,11 +75,17 @@ export default function Media() {
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [imageToDelete, setImageToDelete] =
     useState<PropertyImageWithDetails | null>(null);
+  const [previewImage, setPreviewImage] = useState<PropertyImageWithDetails | null>(null);
 
   const { properties } = usePropertiesOptimized();
 
-  // Open image directly in new tab
+  // Open image in preview modal (inline view)
   const handleViewImage = (image: PropertyImageWithDetails) => {
+    setPreviewImage(image);
+  };
+
+  // Open image in new tab
+  const handleOpenInNewTab = (image: PropertyImageWithDetails) => {
     if (image.image_url) {
       window.open(image.image_url, '_blank', 'noopener,noreferrer');
     }
@@ -451,17 +465,23 @@ export default function Media() {
 
                   {/* Image */}
                   {viewMode === "grid" ? (
-                    <img
+                    <OptimizedImage
                       src={image.image_url}
                       alt={image.image_title || t("media.actions.untitled")}
                       className="w-full h-full object-cover cursor-pointer"
+                      lazy={true}
+                      placeholder="skeleton"
+                      category="properties"
                       onClick={() => handleViewImage(image)}
                     />
                   ) : (
-                    <img
+                    <OptimizedImage
                       src={image.image_url}
                       alt={image.image_title || t("media.actions.untitled")}
                       className="w-24 h-24 object-cover rounded flex-shrink-0 cursor-pointer"
+                      lazy={true}
+                      placeholder="skeleton"
+                      category="thumbnails"
                       onClick={() => handleViewImage(image)}
                     />
                   )}
@@ -581,6 +601,61 @@ export default function Media() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-2">
+            <DialogTitle className="flex items-center justify-between">
+              <span className="truncate">{previewImage?.caption || previewImage?.image_url?.split('/').pop() || 'Image Preview'}</span>
+              {previewImage?.is_primary && (
+                <Badge className="ml-2 bg-yellow-100 text-yellow-800">
+                  <Star className="h-3 w-3 mr-1" />
+                  Primary
+                </Badge>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {previewImage?.property?.property_name && (
+                <span>{previewImage.property.property_name}</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="relative flex items-center justify-center bg-black/5 min-h-[300px] max-h-[70vh]">
+            {previewImage?.image_url && (
+              <img
+                src={previewImage.image_url}
+                alt={previewImage.caption || 'Preview'}
+                className="max-w-full max-h-[70vh] object-contain"
+              />
+            )}
+          </div>
+          <div className="p-4 pt-2 flex justify-between items-center border-t">
+            <div className="text-sm text-muted-foreground">
+              {previewImage?.created_at && (
+                <span>Uploaded: {new Date(previewImage.created_at).toLocaleDateString()}</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => previewImage && handleOpenInNewTab(previewImage)}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Open in New Tab
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setPreviewImage(null)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

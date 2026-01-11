@@ -149,14 +149,17 @@ export function usePropertyKeySummary(propertyId: string | null) {
       const keyTypes: KeyType[] = ['house_key', 'mailbox_key', 'storage_key', 'remote_control'];
 
       const inventoryMap: PropertyKeySummary['inventory'] = {} as PropertyKeySummary['inventory'];
+      const notesMap: PropertyKeySummary['inventoryNotes'] = {} as PropertyKeySummary['inventoryNotes'];
       let totalKeys = 0;
       let lastUpdated = '';
 
       categories.forEach(category => {
         inventoryMap[category] = {} as { [keyType in KeyType]: number };
+        notesMap[category] = {} as { [keyType in KeyType]: string | null };
         keyTypes.forEach(keyType => {
           const item = (inventory || []).find(i => i.category === category && i.key_type === keyType);
           inventoryMap[category][keyType] = item?.quantity || 0;
+          notesMap[category][keyType] = item?.notes || null;
           totalKeys += item?.quantity || 0;
           if (item?.updated_at && (!lastUpdated || item.updated_at > lastUpdated)) {
             lastUpdated = item.updated_at;
@@ -168,6 +171,7 @@ export function usePropertyKeySummary(propertyId: string | null) {
         property_id: property.property_id,
         property_name: property.property_name,
         inventory: inventoryMap,
+        inventoryNotes: notesMap,
         total_keys: totalKeys,
         last_updated: lastUpdated || new Date().toISOString(),
       } as PropertyKeySummary;
@@ -212,14 +216,17 @@ export function useAllPropertiesKeySummary(searchTerm?: string) {
         const propertyInventory = (allInventory || []).filter(i => i.property_id === property.property_id);
 
         const inventoryMap: PropertyKeySummary['inventory'] = {} as PropertyKeySummary['inventory'];
+        const notesMap: PropertyKeySummary['inventoryNotes'] = {} as PropertyKeySummary['inventoryNotes'];
         let totalKeys = 0;
         let lastUpdated = '';
 
         categories.forEach(category => {
           inventoryMap[category] = {} as { [keyType in KeyType]: number };
+          notesMap[category] = {} as { [keyType in KeyType]: string | null };
           keyTypes.forEach(keyType => {
             const item = propertyInventory.find(i => i.category === category && i.key_type === keyType);
             inventoryMap[category][keyType] = item?.quantity || 0;
+            notesMap[category][keyType] = item?.notes || null;
             totalKeys += item?.quantity || 0;
             if (item?.updated_at && (!lastUpdated || item.updated_at > lastUpdated)) {
               lastUpdated = item.updated_at;
@@ -231,6 +238,7 @@ export function useAllPropertiesKeySummary(searchTerm?: string) {
           property_id: property.property_id,
           property_name: property.property_name,
           inventory: inventoryMap,
+          inventoryNotes: notesMap,
           total_keys: totalKeys,
           last_updated: lastUpdated || new Date().toISOString(),
         };

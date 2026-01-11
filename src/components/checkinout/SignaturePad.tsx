@@ -24,6 +24,7 @@ export function SignaturePad({ onSave, signatureName, onNameChange, disabled = f
   }, [initialSignature]);
 
   const clear = () => {
+    console.log('✍️ [SignaturePad] Clearing signature');
     sigCanvas.current?.clear();
     setIsEmpty(true);
     setCurrentSignature(null);
@@ -33,16 +34,22 @@ export function SignaturePad({ onSave, signatureName, onNameChange, disabled = f
   const save = () => {
     if (sigCanvas.current && !isEmpty) {
       const signatureData = sigCanvas.current.toDataURL('image/png');
+      console.log('✍️ [SignaturePad] Manually saving signature:', signatureData.length, 'chars');
       onSave(signatureData);
     }
   };
 
   const handleEnd = () => {
-    setIsEmpty(sigCanvas.current?.isEmpty() || false);
-    // Auto-save when signature is drawn
-    if (!isEmpty && sigCanvas.current) {
+    const canvasIsEmpty = sigCanvas.current?.isEmpty() || false;
+    setIsEmpty(canvasIsEmpty);
+    console.log('✍️ [SignaturePad] handleEnd called, isEmpty:', canvasIsEmpty);
+    // Auto-save when signature is drawn - use current canvas state, not stale closure
+    if (!canvasIsEmpty && sigCanvas.current) {
       const signatureData = sigCanvas.current.toDataURL('image/png');
+      console.log('✍️ [SignaturePad] Auto-saving signature:', signatureData.length, 'chars');
       onSave(signatureData);
+      // Also update currentSignature to show the captured signature
+      setCurrentSignature(signatureData);
     }
   };
 

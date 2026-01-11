@@ -331,7 +331,7 @@ export function BatchEntryDialog({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || selectedMonths.length === 0}
+              disabled={isSubmitting || selectedMonths.length === 0 || !description.trim() || !amount || parseFloat(amount) <= 0}
             >
               <Upload className="mr-2 h-4 w-4" />
               {isSubmitting

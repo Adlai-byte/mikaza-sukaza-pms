@@ -39,6 +39,7 @@ interface EditQuantityDialogProps {
   category: KeyCategory;
   keyType: KeyType;
   currentQuantity: number;
+  currentNotes?: string | null;
 }
 
 export function EditQuantityDialog({
@@ -49,6 +50,7 @@ export function EditQuantityDialog({
   category,
   keyType,
   currentQuantity,
+  currentNotes,
 }: EditQuantityDialogProps) {
   const { t } = useTranslation();
   const updateInventory = useUpdateKeyInventory();
@@ -71,10 +73,10 @@ export function EditQuantityDialog({
     if (open) {
       reset({
         quantity: currentQuantity,
-        notes: "",
+        notes: currentNotes || "",
       });
     }
-  }, [open, currentQuantity, reset]);
+  }, [open, currentQuantity, currentNotes, reset]);
 
   const onSubmit = async (data: EditFormData) => {
     if (!propertyId) return;

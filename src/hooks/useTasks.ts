@@ -5,6 +5,7 @@ import { Task, TaskInsert, TaskChecklist, TaskChecklistInsert } from '@/lib/sche
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActivityLogs } from '@/hooks/useActivityLogs';
+import { dashboardKeys } from '@/hooks/useDashboardData';
 
 // Query keys
 export const taskKeys = {
@@ -337,6 +338,8 @@ export function useCreateTask() {
     mutationFn: (taskData: TaskInsert) => createTask(taskData, user?.id || ''),
     onSuccess: async (newTask) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists(), refetchType: 'all' });
+      // Invalidate dashboard stats when task is created
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.stats() });
       // Cross-entity: invalidate property detail since tasks relate to properties
       if (newTask.property_id) {
         queryClient.invalidateQueries({ queryKey: ['properties', 'detail', newTask.property_id], refetchType: 'all' });
@@ -507,6 +510,8 @@ export function useUpdateTask() {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists(), refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: taskKeys.detail(variables.taskId), refetchType: 'all' });
+      // Invalidate dashboard stats when task status changes
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.stats() });
       // Cross-entity: jobs list already invalidated in mutationFn when job_id exists
       queryClient.invalidateQueries({ queryKey: ['jobs', 'list'], refetchType: 'all' });
       // Cross-entity: invalidate property detail since tasks relate to properties
@@ -549,6 +554,8 @@ export function useDeleteTask() {
       });
 
       queryClient.invalidateQueries({ queryKey: taskKeys.lists(), refetchType: 'all' });
+      // Invalidate dashboard stats when task is deleted
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.stats() });
       // Cross-entity: invalidate property detail since tasks relate to properties
       if (task?.property_id) {
         queryClient.invalidateQueries({ queryKey: ['properties', 'detail', task.property_id], refetchType: 'all' });

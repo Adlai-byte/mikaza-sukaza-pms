@@ -46,6 +46,17 @@ export default function Profile() {
     email: profile?.email || '',
   });
 
+  // Sync form with profile data when it changes
+  useEffect(() => {
+    if (profile) {
+      setProfileForm({
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        email: profile.email || '',
+      });
+    }
+  }, [profile?.first_name, profile?.last_name, profile?.email]);
+
   // Password form state
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',

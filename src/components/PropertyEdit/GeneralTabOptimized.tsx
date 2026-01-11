@@ -576,6 +576,14 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       window.dispatchEvent(new Event('property-updated'));
       console.log('🔔 [GeneralTab] Dispatched property-updated event');
 
+      // CRITICAL FIX: Invalidate all property list queries (including filtered ones)
+      // This ensures any page using useProperties(filters) will refetch fresh data
+      queryClient.invalidateQueries({
+        queryKey: propertyKeys.lists(),
+        exact: false // Match all queries starting with ['properties', 'list']
+      });
+      console.log('🔄 [GeneralTab] Invalidated all property list queries');
+
       // Clear the flag after a tick to allow useEffect to handle future updates
       setTimeout(() => {
         justSavedRef.current = false;
@@ -604,7 +612,13 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       return data;
     },
     onSuccess: () => {
+      // Invalidate all related queries to ensure units propagate everywhere
       queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] }); // For job property selector
+      queryClient.invalidateQueries({ queryKey: ['issues'] }); // For issue property selector
+      queryClient.invalidateQueries({ queryKey: ['bookings'] }); // For booking unit selector
       toast({
         title: 'Success',
         description: 'Unit created successfully',
@@ -635,7 +649,13 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       return data;
     },
     onSuccess: () => {
+      // Invalidate all related queries to ensure units propagate everywhere
       queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
       toast({
         title: 'Success',
         description: 'Unit updated successfully',
@@ -664,7 +684,13 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate all related queries to ensure units propagate everywhere
       queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
       toast({
         title: 'Success',
         description: 'Unit deleted successfully',

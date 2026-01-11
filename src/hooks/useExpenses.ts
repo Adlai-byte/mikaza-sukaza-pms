@@ -432,19 +432,50 @@ export function useMarkEntryAsDone() {
 
   return useMutation({
     mutationFn: markEntryAsDone,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: expenseKeys.byProperty(data.property_id) });
-      toast({
-        title: 'Success',
-        description: 'Entry marked as done',
+    // Optimistic update for instant UI feedback
+    onMutate: async (expenseId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: expenseKeys.lists() });
+
+      // Snapshot previous values for rollback
+      const previousData = queryClient.getQueriesData({ queryKey: expenseKeys.lists() });
+
+      // Optimistically update all expense lists
+      queryClient.setQueriesData({ queryKey: expenseKeys.lists() }, (old: Expense[] | undefined) => {
+        if (!old) return old;
+        return old.map((expense) =>
+          expense.expense_id === expenseId
+            ? { ...expense, is_paid: true, paid_at: new Date().toISOString() }
+            : expense
+        );
       });
+
+      return { previousData };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        context.previousData.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       toast({
         title: 'Error',
         description: error.message || 'Failed to mark entry as done',
         variant: 'destructive',
+      });
+    },
+    onSettled: (data) => {
+      // Always refetch after mutation to ensure consistency
+      queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
+      if (data?.property_id) {
+        queryClient.invalidateQueries({ queryKey: expenseKeys.byProperty(data.property_id) });
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Entry marked as done',
       });
     },
   });
@@ -479,19 +510,50 @@ export function useApproveEntry() {
 
   return useMutation({
     mutationFn: approveEntry,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: expenseKeys.byProperty(data.property_id) });
-      toast({
-        title: 'Success',
-        description: 'Entry approved for reports',
+    // Optimistic update for instant UI feedback
+    onMutate: async ({ expenseId, approvedBy }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: expenseKeys.lists() });
+
+      // Snapshot previous values for rollback
+      const previousData = queryClient.getQueriesData({ queryKey: expenseKeys.lists() });
+
+      // Optimistically update all expense lists
+      queryClient.setQueriesData({ queryKey: expenseKeys.lists() }, (old: Expense[] | undefined) => {
+        if (!old) return old;
+        return old.map((expense) =>
+          expense.expense_id === expenseId
+            ? { ...expense, is_approved: true, approved_by: approvedBy, approved_at: new Date().toISOString() }
+            : expense
+        );
       });
+
+      return { previousData };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        context.previousData.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       toast({
         title: 'Error',
         description: error.message || 'Failed to approve entry',
         variant: 'destructive',
+      });
+    },
+    onSettled: (data) => {
+      // Always refetch after mutation to ensure consistency
+      queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
+      if (data?.property_id) {
+        queryClient.invalidateQueries({ queryKey: expenseKeys.byProperty(data.property_id) });
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Entry approved for reports',
       });
     },
   });

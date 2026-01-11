@@ -118,11 +118,20 @@ export function LendKeyDialog({
   const onSubmit = async (data: LendKeyFormData) => {
     if (!propertyId) return;
 
-    // Find the selected user's name
+    // Find the selected user's name and type
     const selectedUser = keyHolders.find(u => u.user_id === data.keyHolder);
     const borrowerName = selectedUser
       ? `${selectedUser.first_name} ${selectedUser.last_name}`.trim()
       : 'Unknown';
+
+    // Explicitly validate borrower_type - database constraint only allows 'admin' or 'ops'
+    // Default to 'ops' if user type is not valid (safety fallback)
+    const userType = selectedUser?.user_type;
+    const borrowerType: BorrowerType = (userType === 'admin' || userType === 'ops')
+      ? userType
+      : 'ops';
+
+    console.log('[LendKey] Submitting with borrower_type:', borrowerType, 'from user_type:', userType);
 
     await checkOutKey.mutateAsync({
       propertyId,
@@ -130,7 +139,7 @@ export function LendKeyDialog({
       category: data.category,
       quantity: data.quantity,
       borrowerName,
-      borrowerType: 'employee' as BorrowerType,
+      borrowerType,
       expectedReturnDate: data.dueBack ? format(data.dueBack, 'yyyy-MM-dd') : undefined,
       notes: data.notes,
     });

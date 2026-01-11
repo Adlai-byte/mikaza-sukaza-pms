@@ -212,14 +212,15 @@ export function useCreateGuest() {
       return data as Guest;
     },
     onMutate: async (newGuest) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: guestKeys.lists() });
+      // Cancel any outgoing refetches - use list(undefined) to match useGuests() without filters
+      const listQueryKey = guestKeys.list(undefined);
+      await queryClient.cancelQueries({ queryKey: listQueryKey });
 
       // Snapshot the previous value
-      const previousGuests = queryClient.getQueryData(guestKeys.lists());
+      const previousGuests = queryClient.getQueryData(listQueryKey);
 
       // Optimistically update to the new value
-      queryClient.setQueryData(guestKeys.lists(), (old: Guest[] | undefined) => {
+      queryClient.setQueryData(listQueryKey, (old: Guest[] | undefined) => {
         const optimisticGuest: Guest = {
           ...newGuest,
           guest_id: 'temp-' + Date.now(),
@@ -233,10 +234,21 @@ export function useCreateGuest() {
         return old ? [optimisticGuest, ...old] : [optimisticGuest];
       });
 
-      return { previousGuests };
+      return { previousGuests, listQueryKey };
     },
     onSuccess: (data) => {
-      // Invalidate and refetch
+      // Immediately update cache with real guest data (replace temp guest)
+      // This ensures the dropdown shows the real guest right away
+      const listQueryKey = guestKeys.list(undefined);
+      queryClient.setQueryData(listQueryKey, (old: Guest[] | undefined) => {
+        if (!old) return [data];
+        // Replace the temp guest with the real one, or add if not found
+        const filtered = old.filter(g => !g.guest_id?.startsWith('temp-'));
+        // Add new guest at the beginning (most recent)
+        return [data, ...filtered];
+      });
+
+      // Also invalidate all guest queries for consistency
       queryClient.invalidateQueries({ queryKey: guestKeys.all() });
 
       // Log activity
@@ -252,9 +264,9 @@ export function useCreateGuest() {
       });
     },
     onError: (error: any, newGuest, context) => {
-      // Rollback optimistic update
-      if (context?.previousGuests) {
-        queryClient.setQueryData(guestKeys.lists(), context.previousGuests);
+      // Rollback optimistic update using the same query key
+      if (context?.previousGuests && context?.listQueryKey) {
+        queryClient.setQueryData(context.listQueryKey, context.previousGuests);
       }
 
       console.error('Error creating guest:', error);

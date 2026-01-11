@@ -109,20 +109,16 @@ export function PropertyDetailsDialog({ open, onOpenChange, property }: Property
           <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
             <CardContent className="pt-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {property.num_bedrooms !== undefined && (
-                  <div className="text-center">
-                    <Bed className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <p className="text-2xl font-bold">{property.num_bedrooms}</p>
-                    <p className="text-xs text-muted-foreground">Bedrooms</p>
-                  </div>
-                )}
-                {property.num_bathrooms !== undefined && (
-                  <div className="text-center">
-                    <Bath className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <p className="text-2xl font-bold">{property.num_bathrooms}</p>
-                    <p className="text-xs text-muted-foreground">Bathrooms</p>
-                  </div>
-                )}
+                <div className="text-center">
+                  <Bed className="h-8 w-8 mx-auto mb-2 text-primary" />
+                  <p className="text-2xl font-bold">{property.num_bedrooms ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Bedrooms</p>
+                </div>
+                <div className="text-center">
+                  <Bath className="h-8 w-8 mx-auto mb-2 text-primary" />
+                  <p className="text-2xl font-bold">{property.num_bathrooms ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Bathrooms</p>
+                </div>
                 {property.capacity && (
                   <div className="text-center">
                     <Users className="h-8 w-8 mx-auto mb-2 text-primary" />

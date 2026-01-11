@@ -332,18 +332,53 @@ export function AuthProvider({ children }: AuthProviderProps) {
       timestamp: new Date().toISOString()
     });
 
-    const { error } = await supabase
+    // Update the users table (main source of truth)
+    // Use .select() to verify the update actually affected rows (RLS might silently filter)
+    const { data: updatedData, error: usersError } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (usersError) {
+      console.error('❌ [AuthContext] Users table update failed:', {
+        userId: user.id,
+        error: usersError.message,
+        timestamp: new Date().toISOString()
+      });
+      throw usersError;
+    }
+
+    // Check if update actually worked (RLS might silently filter out the row)
+    if (!updatedData) {
+      console.error('❌ [AuthContext] Profile update returned no data - RLS may have blocked the update:', {
+        userId: user.id,
+        timestamp: new Date().toISOString()
+      });
+      throw new Error('Profile update failed - you may not have permission to update this profile');
+    }
+
+    console.log('✅ [AuthContext] Users table updated:', {
+      userId: user.id,
+      first_name: updatedData.first_name,
+      last_name: updatedData.last_name,
+      timestamp: new Date().toISOString()
+    });
+
+    // Also update the profiles table for auth sync
+    const { error: profilesError } = await supabase
       .from('profiles')
       .update(updates)
       .eq('id', user.id);
 
-    if (error) {
-      console.error('❌ [AuthContext] Profile update failed:', {
+    if (profilesError) {
+      console.warn('⚠️ [AuthContext] Profiles table update failed (non-critical):', {
         userId: user.id,
-        error: error.message,
+        error: profilesError.message,
         timestamp: new Date().toISOString()
       });
-      throw error;
+      // Don't throw - profiles table update is secondary
     }
 
     console.log('✅ [AuthContext] Profile updated successfully:', {

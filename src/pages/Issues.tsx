@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -121,6 +121,17 @@ export default function Issues() {
 
     return { total, open, resolved, totalCost };
   }, [issues]);
+
+  // Keep viewingIssue in sync with the latest data from the issues list
+  // This ensures photos are visible after upload without manually refreshing
+  useEffect(() => {
+    if (viewingIssue && issues.length > 0) {
+      const updatedIssue = issues.find(i => i.issue_id === viewingIssue.issue_id);
+      if (updatedIssue && JSON.stringify(updatedIssue) !== JSON.stringify(viewingIssue)) {
+        setViewingIssue(updatedIssue);
+      }
+    }
+  }, [issues, viewingIssue]);
 
   const handleCreateIssue = () => {
     setEditingIssue(null);

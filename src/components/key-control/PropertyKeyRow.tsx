@@ -19,7 +19,7 @@ interface PropertyKeyRowProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   onLendKey: (propertyId: string, propertyName: string) => void;
-  onEditQuantity: (propertyId: string, propertyName: string, keyType: KeyType, category: KeyCategory, currentQty: number) => void;
+  onEditQuantity: (propertyId: string, propertyName: string, keyType: KeyType, category: KeyCategory, currentQty: number, currentNotes: string | null) => void;
 }
 
 const KEY_TYPES: KeyType[] = ['house_key', 'mailbox_key', 'storage_key', 'remote_control'];
@@ -127,7 +127,8 @@ export function PropertyKeyRow({
                     property.property_name,
                     keyType,
                     categoryWithKeys,
-                    property.inventory[categoryWithKeys]?.[keyType] || 0
+                    property.inventory[categoryWithKeys]?.[keyType] || 0,
+                    property.inventoryNotes?.[categoryWithKeys]?.[keyType] || null
                   );
                 }}
               >

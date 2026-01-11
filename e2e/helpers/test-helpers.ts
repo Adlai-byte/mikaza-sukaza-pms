@@ -59,9 +59,22 @@ export const selectors = {
 /**
  * Wait for page to fully load
  * Uses load state + waits for spinners/loading indicators to disappear
+ * Also waits for authentication check to complete
  */
 export async function waitForPageLoad(page: Page, timeout = 5000) {
   await page.waitForLoadState('domcontentloaded');
+
+  // Wait for authentication check to complete (critical for authenticated routes)
+  const authCheckingIndicator = page.locator('text=Checking authentication');
+  try {
+    // If "Checking authentication..." is visible, wait for it to disappear
+    const isAuthChecking = await authCheckingIndicator.isVisible({ timeout: 500 }).catch(() => false);
+    if (isAuthChecking) {
+      await authCheckingIndicator.waitFor({ state: 'hidden', timeout: 15000 });
+    }
+  } catch {
+    // Auth check already complete or not applicable
+  }
 
   // Wait for any loading spinners to disappear
   const spinner = page.locator('[class*="spinner"], [class*="loading"], [class*="skeleton"]').first();
@@ -99,6 +112,55 @@ export async function login(page: Page, email: string, password: string) {
   await page.fill('input[type="password"]', password);
   await page.click('button[type="submit"]');
   await page.waitForURL('/', { timeout: 15000 });
+}
+
+/**
+ * Wait for authentication to complete
+ * This waits for the auth check to finish and ensures we're on an authenticated page
+ */
+export async function waitForAuth(page: Page, timeout = 20000) {
+  // Wait for "Checking authentication..." to disappear
+  const authCheckingIndicator = page.locator('text=Checking authentication');
+  try {
+    const isAuthChecking = await authCheckingIndicator.isVisible({ timeout: 1000 }).catch(() => false);
+    if (isAuthChecking) {
+      await authCheckingIndicator.waitFor({ state: 'hidden', timeout });
+    }
+  } catch {
+    // Already complete
+  }
+
+  // Check for Access Denied page (indicates auth failure or expired token)
+  const accessDenied = page.locator('text=Access Denied');
+  const isAccessDenied = await accessDenied.isVisible({ timeout: 500 }).catch(() => false);
+
+  if (isAccessDenied) {
+    console.log('[waitForAuth] Access Denied detected - may need to re-authenticate');
+    return { authenticated: false, reason: 'access_denied' };
+  }
+
+  // Check if we're on the auth page (session expired)
+  if (page.url().includes('/auth')) {
+    console.log('[waitForAuth] Redirected to auth page - session may have expired');
+    return { authenticated: false, reason: 'session_expired' };
+  }
+
+  return { authenticated: true };
+}
+
+/**
+ * Ensure authentication is valid, re-authenticate if needed
+ */
+export async function ensureAuthenticated(page: Page, email?: string, password?: string) {
+  const authStatus = await waitForAuth(page);
+
+  if (!authStatus.authenticated && email && password) {
+    console.log('[ensureAuthenticated] Re-authenticating...');
+    await login(page, email, password);
+    return await waitForAuth(page);
+  }
+
+  return authStatus;
 }
 
 /**
@@ -444,6 +506,8 @@ export async function waitForTableData(page: Page, timeout = 10000) {
 export const TestHelpers = {
   selectors,
   waitForPageLoad,
+  waitForAuth,
+  ensureAuthenticated,
   navigateAndVerify,
   login,
   fillField,

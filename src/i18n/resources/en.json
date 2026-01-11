@@ -52,7 +52,13 @@
     "startTask": "Start Task",
     "markComplete": "Mark Complete",
     "clearAllFilters": "Clear all filters",
-    "inProgress": "In Progress"
+    "inProgress": "In Progress",
+    "property": "Property",
+    "selectProperty": "Select a property",
+    "paymentMethod": "Payment Method",
+    "selectMethod": "Select method",
+    "additionalNotes": "Additional notes",
+    "tax": "Tax"
   },
   "sessionTimeout": {
     "title": "Session Expiring Soon",

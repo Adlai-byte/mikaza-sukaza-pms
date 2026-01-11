@@ -39,6 +39,7 @@ import {
   ChevronRight,
   ClipboardList,
   Filter,
+  Pencil,
 } from "lucide-react";
 import { useProviders } from "@/hooks/useProviders";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
@@ -612,7 +613,7 @@ export default function Providers() {
                 {/* Partner Payment Status */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    {t("serviceScheduling.partnerStatus", "Partner Status")}
+                    {t("serviceScheduling.paymentStatus", "Payment Status")}
                   </label>
                   <Select value={partnerStatusFilter} onValueChange={setPartnerStatusFilter}>
                     <SelectTrigger>
@@ -699,7 +700,7 @@ export default function Providers() {
                       <TableHead>{t("serviceScheduling.propertyName", "Property Name")}</TableHead>
                       <TableHead>{t("serviceScheduling.partner", "Partner")}</TableHead>
                       <TableHead>{t("serviceScheduling.categoryService", "Category / Service")}</TableHead>
-                      <TableHead>{t("serviceScheduling.goldPartnerStatus", "Gold Partner Status")}</TableHead>
+                      <TableHead>{t("serviceScheduling.paymentStatus", "Payment Status")}</TableHead>
                       <TableHead>{t("serviceScheduling.serviceStatus", "Service Status")}</TableHead>
                       <TableHead>{t("serviceScheduling.allocation", "Allocation")}</TableHead>
                       <TableHead className="w-[80px]">{t("common.actions", "Actions")}</TableHead>
@@ -745,6 +746,7 @@ export default function Providers() {
                               className="bg-blue-500 text-white hover:bg-blue-600"
                               onClick={() => handleEditScheduledService(service)}
                             >
+                              <Pencil className="h-4 w-4 mr-1" />
                               {t("common.edit", "Edit")}
                             </Button>
                           </TableCell>

@@ -29,9 +29,10 @@ interface GuestDialogProps {
   open: boolean;
   onClose: () => void;
   guestId?: string | null;
+  onSuccess?: (guest: any) => void; // Callback when guest is created/updated
 }
 
-export function GuestDialog({ open, onClose, guestId }: GuestDialogProps) {
+export function GuestDialog({ open, onClose, guestId, onSuccess }: GuestDialogProps) {
   const { toast } = useToast();
   const isEditing = !!guestId;
 
@@ -98,9 +99,11 @@ export function GuestDialog({ open, onClose, guestId }: GuestDialogProps) {
   const onSubmit = async (data: GuestInsert) => {
     try {
       if (isEditing && guestId) {
-        await updateGuest.mutateAsync({ guestId, updates: data });
+        const updatedGuest = await updateGuest.mutateAsync({ guestId, updates: data });
+        onSuccess?.(updatedGuest);
       } else {
-        await createGuest.mutateAsync(data);
+        const newGuest = await createGuest.mutateAsync(data);
+        onSuccess?.(newGuest);
       }
       onClose();
     } catch (error) {

@@ -59,6 +59,7 @@ export default function KeyControl() {
   const [editKeyType, setEditKeyType] = useState<KeyType>("house_key");
   const [editCategory, setEditCategory] = useState<KeyCategory>("office");
   const [editCurrentQty, setEditCurrentQty] = useState(0);
+  const [editCurrentNotes, setEditCurrentNotes] = useState<string | null>(null);
 
   // Data fetching
   const { data: propertySummaries, isLoading, refetch } = useAllPropertiesKeySummary(searchQuery || undefined);
@@ -106,13 +107,15 @@ export default function KeyControl() {
     propertyName: string,
     keyType: KeyType,
     category: KeyCategory,
-    currentQty: number
+    currentQty: number,
+    currentNotes: string | null
   ) => {
     setSelectedPropertyId(propertyId);
     setSelectedPropertyName(propertyName);
     setEditKeyType(keyType);
     setEditCategory(category);
     setEditCurrentQty(currentQty);
+    setEditCurrentNotes(currentNotes);
     setShowEditDialog(true);
   };
 
@@ -309,6 +312,7 @@ export default function KeyControl() {
         keyType={editKeyType}
         category={editCategory}
         currentQuantity={editCurrentQty}
+        currentNotes={editCurrentNotes}
       />
     </div>
   );
