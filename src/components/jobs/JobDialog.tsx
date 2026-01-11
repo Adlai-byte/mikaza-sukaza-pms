@@ -46,7 +46,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { AlertTriangle, CalendarIcon, Loader2 } from 'lucide-react';
+import { AlertTriangle, CalendarIcon, Loader2, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
@@ -57,6 +57,7 @@ import { useTranslation } from 'react-i18next';
 // Job form schema
 const jobFormSchema = z.object({
   property_id: z.string().min(1, 'Property is required'),
+  unit_id: z.string().optional().nullable(),
   title: z.string().min(1, 'Title is required').max(255, 'Title is too long'),
   description: z.string().optional(),
   job_type: z.enum(['general', 'maintenance', 'cleaning', 'inspection', 'check_in', 'check_out', 'repair', 'emergency', 'preventive']),
@@ -109,6 +110,7 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
     resolver: zodResolver(jobFormSchema),
     defaultValues: {
       property_id: '',
+      unit_id: null,
       title: '',
       description: '',
       job_type: 'general',
@@ -122,11 +124,23 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
     },
   });
 
+  // Watch property_id to get selected property's units
+  const watchedPropertyId = form.watch('property_id');
+  const selectedProperty = properties.find(p => p.property_id === watchedPropertyId);
+
+  // Clear unit_id when property changes
+  useEffect(() => {
+    if (watchedPropertyId && !job) {
+      form.setValue('unit_id', null);
+    }
+  }, [watchedPropertyId, form, job]);
+
   // Update form when job prop changes
   useEffect(() => {
     if (job) {
       form.reset({
         property_id: job.property_id || '',
+        unit_id: job.unit_id || null,
         title: job.title || '',
         description: job.description || '',
         job_type: job.job_type || 'general',
@@ -148,6 +162,7 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
     } else {
       form.reset({
         property_id: '',
+        unit_id: null,
         title: '',
         description: '',
         job_type: 'general',
@@ -283,6 +298,46 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                 )}
               />
             </div>
+
+            {/* Unit Selection - Only show if property has units */}
+            {selectedProperty && selectedProperty.units && selectedProperty.units.length > 0 && (
+              <FormField
+                control={form.control}
+                name="unit_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Layers className="h-4 w-4" />
+                      {t('jobDialog.unit', 'Unit (Optional)')}
+                    </FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value === 'entire_property' ? null : value)}
+                      value={field.value || 'entire_property'}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('jobDialog.selectUnit', 'Select unit...')} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="entire_property">
+                          {t('jobDialog.entireProperty', 'Entire Property / Common Areas')}
+                        </SelectItem>
+                        {selectedProperty.units.map((unit) => (
+                          <SelectItem key={unit.unit_id} value={unit.unit_id}>
+                            {unit.unit_name || `Unit ${unit.unit_number}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      {t('jobDialog.unitHint', 'Select a specific unit or leave as "Entire Property" for common areas')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Title */}
             <FormField

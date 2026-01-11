@@ -34,7 +34,9 @@ import {
   MapPin,
   Upload,
   Image as ImageIcon,
+  Layers,
 } from 'lucide-react';
+import { Combobox } from '@/components/ui/combobox';
 import { Issue, IssueInsert } from '@/lib/schemas';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
@@ -78,6 +80,7 @@ export function IssueDialog({
 
   const [formData, setFormData] = useState<IssueInsert>({
     property_id: issue?.property_id || '',
+    unit_id: issue?.unit_id || null,
     title: issue?.title || '',
     description: issue?.description || '',
     category: issue?.category || 'other',
@@ -98,6 +101,7 @@ export function IssueDialog({
     if (open) {
       setFormData({
         property_id: issue?.property_id || '',
+        unit_id: issue?.unit_id || null,
         title: issue?.title || '',
         description: issue?.description || '',
         category: issue?.category || 'other',
@@ -148,7 +152,14 @@ export function IssueDialog({
   };
 
   const handleChange = (field: keyof IssueInsert, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updates: Partial<IssueInsert> = { [field]: value };
+      // Clear unit_id when property changes
+      if (field === 'property_id') {
+        updates.unit_id = null;
+      }
+      return { ...prev, ...updates };
+    });
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -241,6 +252,37 @@ export function IssueDialog({
               </Card>
             )}
           </div>
+
+          {/* Unit Selection - Only show if property has units */}
+          {selectedProperty && selectedProperty.units && selectedProperty.units.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="unit_id" className="flex items-center gap-2">
+                <Layers className="h-4 w-4" />
+                {t('issueDialog.unit', 'Unit (Optional)')}
+              </Label>
+              <Select
+                value={formData.unit_id || 'entire_property'}
+                onValueChange={(value) => handleChange('unit_id', value === 'entire_property' ? null : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('issueDialog.selectUnit', 'Select unit...')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="entire_property">
+                    {t('issueDialog.entireProperty', 'Entire Property / Common Areas')}
+                  </SelectItem>
+                  {selectedProperty.units.map((unit) => (
+                    <SelectItem key={unit.unit_id} value={unit.unit_id}>
+                      {unit.unit_name || `Unit ${unit.unit_number}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t('issueDialog.unitHint', 'Leave as "Entire Property" for issues affecting common areas or the whole building')}
+              </p>
+            </div>
+          )}
 
           {/* Title */}
           <div className="space-y-2">
@@ -372,22 +414,20 @@ export function IssueDialog({
                 <User className="h-4 w-4" />
                 {t('issueDialog.assignToOptional')}
               </Label>
-              <Select
+              <Combobox
+                options={[
+                  { value: 'none', label: t('issueDialog.unassigned', 'Unassigned') },
+                  ...users.map((user) => ({
+                    value: user.user_id,
+                    label: formatUserDisplay(user),
+                  })),
+                ]}
                 value={formData.assigned_to || 'none'}
                 onValueChange={(value) => handleChange('assigned_to', value === 'none' ? null : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('issueDialog.selectUser')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t('issueDialog.unassigned')}</SelectItem>
-                  {users.map((user) => (
-                    <SelectItem key={user.user_id} value={user.user_id}>
-                      {formatUserDisplay(user)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder={t('issueDialog.selectUser', 'Select user...')}
+                searchPlaceholder={t('issueDialog.searchUser', 'Search users...')}
+                emptyText={t('issueDialog.noUserFound', 'No user found.')}
+              />
               {selectedUser && (
                 <Card className="bg-green-50 border-green-200">
                   <CardContent className="p-2">

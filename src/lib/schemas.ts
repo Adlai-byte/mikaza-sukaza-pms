@@ -622,6 +622,7 @@ export interface CustomBookingTask {
 export const issueSchema = z.object({
   issue_id: z.string().uuid().optional(),
   property_id: z.string().uuid("Property is required"),
+  unit_id: z.string().uuid().optional().nullable(),
   title: z.string().min(1, "Issue title is required"),
   description: z.string().optional(),
   category: z.enum(["maintenance", "damage", "repair_needed", "cleaning", "plumbing", "electrical", "appliance", "hvac", "other"]).default("other"),
@@ -651,6 +652,7 @@ export const issuePhotoSchema = z.object({
 // Issue types
 export type Issue = z.infer<typeof issueSchema> & {
   property?: Property;
+  unit?: PropertyUnit;
   reported_user?: User;
   assigned_user?: User;
   photos?: IssuePhoto[];
@@ -737,9 +739,13 @@ export const notificationPreferencesSchema = z.object({
 // Job type forward declaration (will be properly typed when jobs schema is added)
 export type Job = {
   job_id: string;
+  property_id: string;
+  unit_id?: string | null;
   title: string;
   status: string;
   priority: string;
+  property?: Property;
+  unit?: PropertyUnit;
   [key: string]: any;
 };
 
