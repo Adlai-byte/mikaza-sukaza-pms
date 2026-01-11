@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, Loader2, AlertTriangle } from "lucide-react";
+import { Mail, Loader2, AlertTriangle, ShieldAlert } from "lucide-react";
 import { User } from "@/lib/schemas";
 
 interface AdminPasswordResetDialogProps {
@@ -30,7 +30,32 @@ export function AdminPasswordResetDialog({
   const { toast } = useToast();
   const { logActivity } = useActivityLogs();
 
+  // Security check: Prevent resetting admin passwords
+  const isTargetAdmin = user.user_type === 'admin';
+
+  // Close dialog immediately if trying to reset an admin's password
+  useEffect(() => {
+    if (open && isTargetAdmin) {
+      toast({
+        title: "Action Not Allowed",
+        description: "Password reset for admin accounts is not permitted for security reasons.",
+        variant: "destructive",
+      });
+      onOpenChange(false);
+    }
+  }, [open, isTargetAdmin, onOpenChange, toast]);
+
   const handleSendResetEmail = async () => {
+    // Defense-in-depth: Block admin password resets at action level too
+    if (isTargetAdmin) {
+      toast({
+        title: "Security Violation",
+        description: "Cannot reset password for admin accounts.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
