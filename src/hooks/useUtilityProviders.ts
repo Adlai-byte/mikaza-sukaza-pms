@@ -10,16 +10,16 @@ import { PERMISSIONS } from "@/lib/rbac/permissions";
 export const utilityProviderKeys = {
   all: () => ['utility_providers'],
   lists: () => ['utility_providers', 'list'],
-  list: (filters?: Record<string, unknown>) => ['utility_providers', 'list', ...(filters ? [JSON.stringify(filters)] : [])],
+  list: (filters?: { showInactive?: boolean }) => ['utility_providers', 'list', ...(filters ? [JSON.stringify(filters)] : [])],
   details: () => ['utility_providers', 'detail'],
   detail: (id: string) => ['utility_providers', 'detail', id],
 } as const;
 
-// Fetch utility providers list
-const fetchUtilityProviders = async (): Promise<UtilityProvider[]> => {
-  console.log('🔍 [UtilityProviders] Fetching utility providers list...');
+// Fetch utility providers list with optional inactive filter
+const fetchUtilityProviders = async (showInactive: boolean = false): Promise<UtilityProvider[]> => {
+  console.log(`🔍 [UtilityProviders] Fetching utility providers list${showInactive ? ' (including inactive)' : ''}...`);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('utility_providers')
     .select(`
       *,
@@ -29,8 +29,14 @@ const fetchUtilityProviders = async (): Promise<UtilityProvider[]> => {
         last_name,
         email
       )
-    `)
-    .order('provider_name', { ascending: true });
+    `);
+
+  // By default, only show active providers unless showInactive is true
+  if (!showInactive) {
+    query = query.eq('is_active', true);
+  }
+
+  const { data, error } = await query.order('provider_name', { ascending: true });
 
   if (error) {
     console.error('❌ [UtilityProviders] Fetch error:', error);
@@ -68,13 +74,13 @@ const fetchUtilityProviderDetail = async (providerId: string): Promise<UtilityPr
   return data as UtilityProvider;
 };
 
-export function useUtilityProviders() {
+export function useUtilityProviders(showInactive: boolean = false) {
   const { toast } = useToast();
   const { logActivity } = useActivityLogs();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
 
-  // Utility providers query - NO CACHING
+  // Utility providers query
   const {
     data: providers = [],
     isLoading: loading,
@@ -82,8 +88,8 @@ export function useUtilityProviders() {
     error: providersError,
     refetch,
   } = useQuery({
-    queryKey: utilityProviderKeys.lists(),
-    queryFn: fetchUtilityProviders,
+    queryKey: utilityProviderKeys.list({ showInactive }),
+    queryFn: () => fetchUtilityProviders(showInactive),
     // Enable caching - realtime subscriptions will invalidate when data changes
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes

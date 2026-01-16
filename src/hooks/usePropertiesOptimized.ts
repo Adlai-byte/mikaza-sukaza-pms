@@ -7,6 +7,8 @@ import { CACHE_CONFIG } from "@/lib/cache-config";
 import { OptimisticUpdates } from "@/lib/cache-manager-simplified";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
+import { jobKeys } from "@/hooks/useJobs";
+import { issueKeys } from "@/hooks/useIssues";
 import type {
   PropertyLocationInsert,
   PropertyCommunicationInsert,
@@ -462,6 +464,10 @@ export function usePropertiesOptimized() {
         refetchType: 'none' // Don't refetch - the cache already has the new property
       });
 
+      // Invalidate jobs and issues queries so unit selectors update
+      queryClient.invalidateQueries({ queryKey: jobKeys.all() });
+      queryClient.invalidateQueries({ queryKey: issueKeys.all() });
+
       toast({
         title: "Success",
         description: "Property created successfully",
@@ -749,6 +755,10 @@ export function usePropertiesOptimized() {
       ]);
 
       console.log('✅ [PropertyEdit] Cache invalidated and fresh data fetched for property:', propertyId);
+
+      // Invalidate jobs and issues queries so unit selectors update when units change
+      queryClient.invalidateQueries({ queryKey: jobKeys.all() });
+      queryClient.invalidateQueries({ queryKey: issueKeys.all() });
 
       toast({
         title: "Success",

@@ -119,7 +119,7 @@ test.describe('Key Control Module - Key Inventory', () => {
     });
 
     test('KC-013: Should display category columns (Main, Ops, Clean, Spare)', async ({ page }) => {
-      await waitForPageLoad(page, 2000);
+      await waitForPageLoad(page, 4000);
 
       // Check for the new simplified category headers in table
       const tableHeaders = page.locator('th');

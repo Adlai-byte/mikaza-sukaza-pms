@@ -10,15 +10,15 @@ import { PERMISSIONS } from "@/lib/rbac/permissions";
 export const providerKeys = {
   all: () => ['providers'],
   lists: () => ['providers', 'list'],
-  list: (filters?: { category?: 'service' | 'utility' }) =>
+  list: (filters?: { category?: 'service' | 'utility'; showInactive?: boolean }) =>
     ['providers', 'list', ...(filters ? [JSON.stringify(filters)] : [])],
   details: () => ['providers', 'detail'],
   detail: (id: string) => ['providers', 'detail', id],
 } as const;
 
-// Fetch providers list with optional category filter
-const fetchProviders = async (category?: 'service' | 'utility'): Promise<Provider[]> => {
-  console.log(`🔍 [Providers] Fetching providers${category ? ` (category: ${category})` : ''}...`);
+// Fetch providers list with optional category and active filter
+const fetchProviders = async (category?: 'service' | 'utility', showInactive: boolean = false): Promise<Provider[]> => {
+  console.log(`🔍 [Providers] Fetching providers${category ? ` (category: ${category})` : ''}${showInactive ? ' (including inactive)' : ''}...`);
 
   let query = supabase
     .from('providers')
@@ -34,6 +34,11 @@ const fetchProviders = async (category?: 'service' | 'utility'): Promise<Provide
 
   if (category) {
     query = query.eq('category', category);
+  }
+
+  // By default, only show active providers unless showInactive is true
+  if (!showInactive) {
+    query = query.eq('is_active', true);
   }
 
   const { data, error } = await query.order('provider_name', { ascending: true });
@@ -83,13 +88,13 @@ const fetchProviderDetail = async (providerId: string): Promise<Provider> => {
   return data as Provider;
 };
 
-export function useProviders(category?: 'service' | 'utility') {
+export function useProviders(category?: 'service' | 'utility', showInactive: boolean = false) {
   const { toast } = useToast();
   const { logActivity } = useActivityLogs();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
 
-  // Providers query - NO CACHING
+  // Providers query
   const {
     data: providers = [],
     isLoading: loading,
@@ -97,8 +102,8 @@ export function useProviders(category?: 'service' | 'utility') {
     error: providersError,
     refetch,
   } = useQuery({
-    queryKey: providerKeys.list(category ? { category } : undefined),
-    queryFn: () => fetchProviders(category),
+    queryKey: providerKeys.list({ category, showInactive }),
+    queryFn: () => fetchProviders(category, showInactive),
     // Enable caching - realtime subscriptions will invalidate when data changes
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes

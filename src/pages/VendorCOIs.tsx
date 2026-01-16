@@ -226,6 +226,14 @@ export default function VendorCOIs() {
     return differenceInDays(parseISO(validThrough), new Date());
   };
 
+  // Calculate status dynamically based on expiration date
+  const getComputedStatus = (validThrough: string): string => {
+    const daysUntilExpiry = getDaysUntilExpiry(validThrough);
+    if (daysUntilExpiry < 0) return 'expired';
+    if (daysUntilExpiry <= 30) return 'expiring_soon';
+    return 'active';
+  };
+
   if (isLoading && !cois.length) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -547,7 +555,7 @@ export default function VendorCOIs() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>{getStatusBadge(coi.status)}</TableCell>
+                          <TableCell>{getStatusBadge(getComputedStatus(coi.valid_through))}</TableCell>
                           <TableCell>
                             {coi.property?.property_type ? (
                               <span className="text-sm">{coi.property.property_type}</span>

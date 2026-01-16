@@ -312,9 +312,9 @@ export default function Expenses() {
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-hidden">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+          <div className="flex flex-wrap gap-3">
             {/* Search */}
-            <div className="relative sm:col-span-2 lg:col-span-1 xl:col-span-2">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t('expenses.searchVendorPlaceholder')}
@@ -326,7 +326,7 @@ export default function Expenses() {
 
             {/* Property Filter */}
             <Select value={selectedProperty} onValueChange={setSelectedProperty}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder={t('expenses.allProperties')} />
               </SelectTrigger>
               <SelectContent>
@@ -341,7 +341,7 @@ export default function Expenses() {
 
             {/* Category Filter */}
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder={t('expenses.allCategories')} />
               </SelectTrigger>
               <SelectContent>
@@ -356,7 +356,7 @@ export default function Expenses() {
 
             {/* Status Filter */}
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder={t('expenses.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
@@ -374,7 +374,7 @@ export default function Expenses() {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               placeholder="From"
-              className="w-full"
+              className="w-[150px]"
             />
 
             {/* Date To */}
@@ -383,7 +383,7 @@ export default function Expenses() {
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               placeholder="To"
-              className="w-full"
+              className="w-[150px]"
             />
           </div>
         </CardContent>
@@ -537,32 +537,53 @@ export default function Expenses() {
 
               <div className="space-y-2">
                 <Label htmlFor="vendor_name">{t('expenses.vendor')}</Label>
-                <Select
-                  value={form.watch('vendor_name')}
-                  onValueChange={(value) => form.setValue('vendor_name', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('expenses.selectVendor')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {providers?.map((provider) => (
-                      <SelectItem
-                        key={provider.provider_id}
-                        value={provider.provider_name}
+                {(() => {
+                  const currentVendor = form.watch('vendor_name');
+                  const providerNames = providers?.map(p => p.provider_name) || [];
+                  const isKnownProvider = providerNames.includes(currentVendor);
+                  const isCustomVendor = currentVendor && currentVendor !== 'other' && !isKnownProvider;
+
+                  return (
+                    <>
+                      <Select
+                        value={isCustomVendor ? 'other' : currentVendor}
+                        onValueChange={(value) => {
+                          if (value === 'other') {
+                            // Keep current custom value if already custom, else clear for input
+                            if (!isCustomVendor) {
+                              form.setValue('vendor_name', 'other');
+                            }
+                          } else {
+                            form.setValue('vendor_name', value);
+                          }
+                        }}
                       >
-                        {provider.provider_name}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="other">{t('expenses.otherVendor')}</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.watch('vendor_name') === 'other' && (
-                  <Input
-                    placeholder={t('expenses.enterCustomVendor')}
-                    onChange={(e) => form.setValue('vendor_name', e.target.value)}
-                    className="mt-2"
-                  />
-                )}
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('expenses.selectVendor')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {providers?.map((provider) => (
+                            <SelectItem
+                              key={provider.provider_id}
+                              value={provider.provider_name}
+                            >
+                              {provider.provider_name}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="other">{t('expenses.otherVendor')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {(currentVendor === 'other' || isCustomVendor) && (
+                        <Input
+                          placeholder={t('expenses.enterCustomVendor')}
+                          value={isCustomVendor ? currentVendor : ''}
+                          onChange={(e) => form.setValue('vendor_name', e.target.value || 'other')}
+                          className="mt-2"
+                        />
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
 

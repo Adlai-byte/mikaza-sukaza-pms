@@ -25,15 +25,20 @@ test.describe('Reports Module', () => {
   });
 
   test('should have export button', async ({ page }) => {
+    // Wait for page to fully load before checking
+    await page.waitForTimeout(2000);
+
     // Check for Export CSV button in PageHeader action area
     // The button is rendered by PageHeader with Download icon
     const exportText = page.locator('text=Export').first();
     const csvText = page.locator('text=CSV').first();
     const downloadButton = page.locator('button:has(svg)').first();
 
-    const hasExport = await exportText.isVisible().catch(() => false);
-    const hasCSV = await csvText.isVisible().catch(() => false);
-    const hasButton = await downloadButton.isVisible().catch(() => false);
+    const hasExport = await exportText.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasCSV = await csvText.isVisible({ timeout: 1000 }).catch(() => false);
+    const hasButton = await downloadButton.isVisible({ timeout: 1000 }).catch(() => false);
+
+    console.log(`Export visible: ${hasExport}, CSV visible: ${hasCSV}, Button visible: ${hasButton}`);
 
     // At least one of these should be visible
     expect(hasExport || hasCSV || hasButton).toBeTruthy();

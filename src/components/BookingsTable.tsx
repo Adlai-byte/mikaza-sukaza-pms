@@ -504,7 +504,7 @@ export function BookingsTable({
                               size="sm"
                               variant="outline"
                               className="h-7 text-xs border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700"
-                              onClick={() => navigate(`/invoices/${(booking as any).invoice_id}`)}
+                              onClick={() => navigate(`/invoices/${(booking as any).invoice_id}?mode=view`)}
                             >
                               <Eye className="h-3 w-3 mr-1" />
                               View Invoice
@@ -583,7 +583,7 @@ export function BookingsTable({
                                 Generate Invoice
                               </DropdownMenuItem>
                             ) : (
-                              <DropdownMenuItem onClick={() => navigate(`/invoices/${(booking as any).invoice_id}`)}>
+                              <DropdownMenuItem onClick={() => navigate(`/invoices/${(booking as any).invoice_id}?mode=view`)}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Invoice
                               </DropdownMenuItem>
@@ -745,7 +745,7 @@ export function BookingsTable({
                           size="sm"
                           variant="outline"
                           className="w-full border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700"
-                          onClick={() => navigate(`/invoices/${(booking as any).invoice_id}`)}
+                          onClick={() => navigate(`/invoices/${(booking as any).invoice_id}?mode=view`)}
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           View Invoice
@@ -831,7 +831,7 @@ export function BookingsTable({
                               Generate Invoice
                             </DropdownMenuItem>
                           ) : (
-                            <DropdownMenuItem onClick={() => navigate(`/invoices/${(booking as any).invoice_id}`)}>
+                            <DropdownMenuItem onClick={() => navigate(`/invoices/${(booking as any).invoice_id}?mode=view`)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View Invoice
                             </DropdownMenuItem>

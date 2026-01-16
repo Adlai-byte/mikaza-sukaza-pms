@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Plus, RefreshCw, Zap, Power, Wifi, Droplet } from "lucide-react";
 import { useUtilityProviders } from "@/hooks/useUtilityProviders";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
@@ -14,13 +16,16 @@ import { UtilityProviderTable } from "@/components/ServiceProviders/UtilityProvi
 import { UtilityProviderDetailsDialog } from "@/components/ServiceProviders/UtilityProviderDetailsDialog";
 
 export default function UtilityProviders() {
-  const { providers, loading, isFetching, createProvider, updateProvider, deleteProvider, refetch } = useUtilityProviders();
+  const [showInactive, setShowInactive] = useState(false);
+  const { providers, loading, isFetching, createProvider, updateProvider, deleteProvider, refetch } = useUtilityProviders(showInactive);
   const { logActivity } = useActivityLogs();
   const { hasPermission } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProvider, setEditingProvider] = useState<UtilityProvider | null>(null);
   const [detailsProvider, setDetailsProvider] = useState<UtilityProvider | null>(null);
+
+  const isAdmin = hasPermission(PERMISSIONS.UTILITY_PROVIDERS_DELETE); // Admin-level permission
 
   const canCreate = hasPermission(PERMISSIONS.UTILITY_PROVIDERS_CREATE);
   const canEdit = hasPermission(PERMISSIONS.UTILITY_PROVIDERS_EDIT);
@@ -94,6 +99,18 @@ export default function UtilityProviders() {
         icon={Zap}
         actions={
           <>
+            {isAdmin && (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="show-inactive-utility"
+                  checked={showInactive}
+                  onCheckedChange={setShowInactive}
+                />
+                <Label htmlFor="show-inactive-utility" className="text-sm text-muted-foreground">
+                  Show Inactive
+                </Label>
+              </div>
+            )}
             <Button onClick={() => refetch()} variant="outline" disabled={isFetching}>
               <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
               Refresh

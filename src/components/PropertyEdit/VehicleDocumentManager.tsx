@@ -43,6 +43,7 @@ export function VehicleDocumentManager({ vehicleId, readOnly = false }: VehicleD
     documents,
     uploadDocument,
     deleteDocument,
+    getSignedUrl,
     isUploading,
     isDeleting,
   } = useVehicleDocuments(vehicleId);
@@ -194,7 +195,10 @@ export function VehicleDocumentManager({ vehicleId, readOnly = false }: VehicleD
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.open(doc.document_url, '_blank')}
+                      onClick={async () => {
+                        const signedUrl = await getSignedUrl(doc.document_url);
+                        window.open(signedUrl, '_blank');
+                      }}
                       title="Download Document"
                       className="h-8 w-8 p-0"
                     >

@@ -197,21 +197,21 @@ test.describe('Properties - Financial Tab Enhanced Features', () => {
     });
 
     test('PROP-FIN-009: Should pre-fill property in booking dialog', async ({ page }) => {
-      await waitForPageLoad(page, 2000);
+      await waitForPageLoad(page, 4000);
 
       // Navigate to property edit
       const editButton = page.locator('tbody tr').first().locator('button:has-text("Edit"), a:has-text("Edit")').first();
 
-      if (await editButton.isVisible().catch(() => false)) {
+      if (await editButton.isVisible({ timeout: 5000 }).catch(() => false)) {
         await editButton.click();
-        await waitForPageLoad(page, 2000);
+        await waitForPageLoad(page, 4000);
 
         // Click Book Units button
         const bookUnitsButton = page.locator('button:has-text("Book"), button:has-text("Add Booking")').first();
 
-        if (await bookUnitsButton.isVisible().catch(() => false)) {
+        if (await bookUnitsButton.isVisible({ timeout: 5000 }).catch(() => false)) {
           await bookUnitsButton.click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(1000);
 
           // Check if property is pre-filled (should be disabled or show property name)
           const propertyField = page.locator('[name="property"], [role="combobox"]:first-of-type').first();

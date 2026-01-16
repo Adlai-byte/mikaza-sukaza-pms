@@ -427,6 +427,7 @@ export function IssueDialog({
                 placeholder={t('issueDialog.selectUser', 'Select user...')}
                 searchPlaceholder={t('issueDialog.searchUser', 'Search users...')}
                 emptyText={t('issueDialog.noUserFound', 'No user found.')}
+                preserveSearch={true}
               />
               {selectedUser && (
                 <Card className="bg-green-50 border-green-200">

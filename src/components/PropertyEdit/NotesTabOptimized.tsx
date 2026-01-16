@@ -65,13 +65,22 @@ interface NotesTabOptimizedProps {
   propertyId: string;
 }
 
-const fetchNotes = async (propertyId: string): Promise<Note[]> => {
-  const { data, error } = await supabase
+const NOTES_PER_PAGE = 20;
+
+const fetchNotes = async (propertyId: string, limit?: number): Promise<Note[]> => {
+  let query = supabase
     .from('property_notes')
     .select('*')
     .eq('property_id', propertyId)
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false });
+
+  // Apply limit if specified (for pagination)
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
@@ -86,6 +95,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [isUploading, setIsUploading] = useState(false);
+  const [displayLimit, setDisplayLimit] = useState(NOTES_PER_PAGE);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const emptyNote = {
@@ -464,7 +474,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
   };
 
   // Memoize filtered notes to avoid recalculation on every render
-  const filteredNotes = useMemo(() => {
+  const allFilteredNotes = useMemo(() => {
     return notes.filter(note => {
       const matchesSearch = (note.note_title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
                            note.note_content.toLowerCase().includes(searchQuery.toLowerCase());
@@ -472,6 +482,29 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       return matchesSearch && matchesFilter;
     });
   }, [notes, searchQuery, filterType]);
+
+  // Apply display limit for pagination
+  const filteredNotes = useMemo(() => {
+    return allFilteredNotes.slice(0, displayLimit);
+  }, [allFilteredNotes, displayLimit]);
+
+  const hasMoreNotes = allFilteredNotes.length > displayLimit;
+  const remainingNotesCount = allFilteredNotes.length - displayLimit;
+
+  const loadMoreNotes = useCallback(() => {
+    setDisplayLimit(prev => prev + NOTES_PER_PAGE);
+  }, []);
+
+  // Reset display limit when filters change
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    setDisplayLimit(NOTES_PER_PAGE);
+  }, []);
+
+  const handleFilterChange = useCallback((value: string) => {
+    setFilterType(value);
+    setDisplayLimit(NOTES_PER_PAGE);
+  }, []);
 
   // Memoize pinned and regular notes separation
   const { pinnedNotes, regularNotes } = useMemo(() => ({
@@ -629,13 +662,13 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
               <Input
                 placeholder="Search notes..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
               />
             </div>
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Select value={filterType} onValueChange={setFilterType}>
+              <Select value={filterType} onValueChange={handleFilterChange}>
                 <SelectTrigger className="w-48 pl-10">
                   <SelectValue />
                 </SelectTrigger>
@@ -1076,6 +1109,26 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Load More Button */}
+          {hasMoreNotes && (
+            <div className="mt-6 text-center">
+              <Button
+                variant="outline"
+                onClick={loadMoreNotes}
+                className="min-w-[200px]"
+              >
+                Load More ({remainingNotesCount} remaining)
+              </Button>
+            </div>
+          )}
+
+          {/* Notes count indicator */}
+          {filteredNotes.length > 0 && (
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              Showing {filteredNotes.length} of {allFilteredNotes.length} notes
             </div>
           )}
         </CardContent>

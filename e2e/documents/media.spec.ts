@@ -24,13 +24,15 @@ test.describe('Media Module Tests', () => {
   });
 
   test('MEDIA-003: Should display images or empty state', async ({ page }) => {
-    await waitForPageLoad(page, 2000);
+    await waitForPageLoad(page, 4000);
 
-    const hasImages = await page.locator('img').first().isVisible().catch(() => false);
-    const hasTotal = await page.locator('text=Total, text=Images, text=total').first().isVisible().catch(() => false);
+    const hasImages = await page.locator('img').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTotal = await page.locator('text=Total').first().isVisible({ timeout: 2000 }).catch(() => false);
+    const hasImagesText = await page.locator('text=Images').first().isVisible({ timeout: 2000 }).catch(() => false);
+    const hasNoData = await page.locator('text=No media').first().isVisible({ timeout: 2000 }).catch(() => false);
 
-    console.log(`Total images visible: ${hasImages || hasTotal}`);
-    expect(hasImages || hasTotal).toBeTruthy();
+    console.log(`Images: ${hasImages}, Total: ${hasTotal}, Images text: ${hasImagesText}, No data: ${hasNoData}`);
+    expect(hasImages || hasTotal || hasImagesText || hasNoData).toBeTruthy();
   });
 
   test('MEDIA-004: Should have property filter', async ({ page }) => {

@@ -650,6 +650,7 @@ function ComposeDialog({ open, onOpenChange, replyTo, users, usersLoading, onSen
                 searchPlaceholder={t('internalMessages.searchRecipient', 'Search recipients...')}
                 emptyText={t('internalMessages.noRecipientFound', 'No recipient found.')}
                 clearable
+                preserveSearch={true}
               />
             )}
           </div>

@@ -53,7 +53,7 @@ test.describe('Properties Module - Critical Path Tests', () => {
   });
 
   test('PROP-003: Should filter by status', async ({ page }) => {
-    await waitForPageLoad(page, 2000);
+    await waitForPageLoad(page, 3000);
 
     // PropertyTableOptimized has multiple filters - look for one with Status/Active/Inactive
     // The status filter should have options like "All Status", "Active", "Inactive"
@@ -68,7 +68,8 @@ test.describe('Properties Module - Critical Path Tests', () => {
       const combobox = comboboxes.nth(i);
       if (await combobox.isVisible().catch(() => false)) {
         await combobox.click();
-        await page.waitForTimeout(300);
+        // Wait longer for dropdown to render (Firefox needs more time)
+        await page.waitForTimeout(500);
 
         // Check for status-related options
         const hasActiveOption = await page.locator('[role="option"]:has-text("Active")').isVisible().catch(() => false);
@@ -82,15 +83,17 @@ test.describe('Properties Module - Critical Path Tests', () => {
           const activeOption = page.locator('[role="option"]:has-text("Active")');
           if (await activeOption.isVisible().catch(() => false)) {
             await activeOption.click();
+            await page.waitForTimeout(300);
           } else {
             // Click first option to close dropdown
             await page.locator('[role="option"]').first().click().catch(() => {});
+            await page.waitForTimeout(300);
           }
           break;
         } else if (hasAnyOption) {
           // Close this dropdown and try next
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(200);
+          await page.waitForTimeout(300);
         }
       }
     }
