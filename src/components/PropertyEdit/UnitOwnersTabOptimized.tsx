@@ -148,14 +148,27 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
   // Add owner mutation
   const addOwnerMutation = useMutation({
     mutationFn: async (ownerData: typeof emptyOwner) => {
+      // Validate required fields
+      if (!ownerData.first_name?.trim()) {
+        throw new Error('First name is required');
+      }
+      if (!ownerData.last_name?.trim()) {
+        throw new Error('Last name is required');
+      }
+      if (!ownerData.email?.trim()) {
+        throw new Error('Email is required');
+      }
+
       // Explicitly construct the insert object to ensure user_type is set
-      // This prevents any undefined properties from being included
+      // Note: user_type MUST be 'customer' - ensure DB constraint allows this value
+      // If you get "null value in column user_type" error, run the migration:
+      // supabase/migrations/20260117_ensure_customer_user_type.sql
       const dataToInsert = {
-        first_name: ownerData.first_name,
-        last_name: ownerData.last_name,
-        email: ownerData.email,
+        first_name: ownerData.first_name.trim(),
+        last_name: ownerData.last_name.trim(),
+        email: ownerData.email.trim().toLowerCase(),
         password: ownerData.password || `Owner${Date.now()}!`, // Default password
-        user_type: 'customer' as const, // Required field - owners are customers
+        user_type: 'customer', // Required - owners are customers (ensure DB allows this!)
         date_of_birth: ownerData.date_of_birth || null,
         cellphone_primary: ownerData.cellphone_primary || null,
         cellphone_usa: ownerData.cellphone_usa || null,
@@ -164,7 +177,8 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
         is_active: true, // New users should be active
       };
 
-      console.log('[UnitOwners] Creating owner with data:', dataToInsert);
+      console.log('[UnitOwners] Creating owner with data:', JSON.stringify(dataToInsert, null, 2));
+      console.log('[UnitOwners] user_type value:', dataToInsert.user_type, 'type:', typeof dataToInsert.user_type);
 
       const { data, error } = await supabase
         .from('users')
@@ -174,6 +188,13 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
 
       if (error) {
         console.error('[UnitOwners] Error creating owner:', error);
+        // Provide more helpful error message for constraint violations
+        if (error.message?.includes('user_type') || error.code === '23502') {
+          throw new Error(
+            'Database constraint error: The "customer" user type may not be allowed. ' +
+            'Please ensure the database migration has been applied.'
+          );
+        }
         throw error;
       }
       return data;
