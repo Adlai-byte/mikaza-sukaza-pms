@@ -166,6 +166,7 @@ export async function createTasksFromBooking(
 export function useBookingTasks(bookingId: string | null) {
   return useQuery({
     queryKey: bookingTaskKeys.booking(bookingId || ''),
+    staleTime: 0, // Always refetch when invalidated - operational data
     queryFn: async () => {
       if (!bookingId) return [];
 

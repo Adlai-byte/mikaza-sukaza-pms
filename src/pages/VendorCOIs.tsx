@@ -288,69 +288,77 @@ export default function VendorCOIs() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">{t('vendorCOIs.stats.activeCOIs')}</p>
-                  <h3 className="text-3xl font-bold text-green-900 mt-1">
-                    {statsLoading ? '...' : stats?.active_cois || 0}
-                  </h3>
-                  <p className="text-xs text-green-600 mt-1">{t('vendorCOIs.stats.currentValid')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                  <CheckCircle2 className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('vendorCOIs.stats.activeCOIs')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">
+                      {statsLoading ? '...' : stats?.active_cois || 0}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">{t('vendorCOIs.stats.currentValid')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-yellow-50 to-yellow-100">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-yellow-700">{t('vendorCOIs.stats.expiringSoon')}</p>
-                  <h3 className="text-3xl font-bold text-yellow-900 mt-1">
-                    {statsLoading ? '...' : stats?.expiring_soon || 0}
-                  </h3>
-                  <p className="text-xs text-yellow-600 mt-1">{t('vendorCOIs.stats.within30Days')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('vendorCOIs.stats.expiringSoon')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">
+                      {statsLoading ? '...' : stats?.expiring_soon || 0}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">{t('vendorCOIs.stats.within30Days')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-700">{t('vendorCOIs.stats.expired')}</p>
-                  <h3 className="text-3xl font-bold text-red-900 mt-1">
-                    {statsLoading ? '...' : stats?.expired_cois || 0}
-                  </h3>
-                  <p className="text-xs text-red-600 mt-1">{t('vendorCOIs.stats.requiresRenewal')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <XCircle className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                  <XCircle className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('vendorCOIs.stats.expired')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">
+                      {statsLoading ? '...' : stats?.expired_cois || 0}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">{t('vendorCOIs.stats.requiresRenewal')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">{t('vendorCOIs.stats.vendorsCovered')}</p>
-                  <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                    {statsLoading ? '...' : stats?.vendors_with_cois || 0}
-                  </h3>
-                  <p className="text-xs text-blue-600 mt-1">{t('vendorCOIs.stats.withInsurance')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('vendorCOIs.stats.vendorsCovered')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">
+                      {statsLoading ? '...' : stats?.vendors_with_cois || 0}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">{t('vendorCOIs.stats.withInsurance')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>

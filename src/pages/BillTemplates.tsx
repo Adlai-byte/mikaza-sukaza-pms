@@ -379,61 +379,69 @@ export default function BillTemplates() {
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">Total Templates</p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
-                <p className="text-xs text-blue-600 mt-1">All templates</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <FileText className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <FileText className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Total Templates</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.total}</h3>
+                  <span className="text-xs text-muted-foreground">All templates</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">Active</p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">{stats.active}</h3>
-                <p className="text-xs text-green-600 mt-1">Ready to use</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Eye className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <Eye className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Active</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.active}</h3>
+                  <span className="text-xs text-muted-foreground">Ready to use</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">Global</p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">{stats.global}</h3>
-                <p className="text-xs text-purple-600 mt-1">All properties</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Globe className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <Globe className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Global</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.global}</h3>
+                  <span className="text-xs text-muted-foreground">All properties</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-orange-700">Property-Specific</p>
-                <h3 className="text-3xl font-bold text-orange-900 mt-1">{stats.property}</h3>
-                <p className="text-xs text-orange-600 mt-1">Assigned templates</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Home className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                <Home className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Property-Specific</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.property}</h3>
+                  <span className="text-xs text-muted-foreground">Assigned templates</span>
+                </div>
               </div>
             </div>
           </CardContent>

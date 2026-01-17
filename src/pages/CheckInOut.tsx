@@ -227,77 +227,69 @@ export default function CheckInOut() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">{t('checkInOut.stats.totalRecords')}</p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">
-                  {records.length}
-                </h3>
-                <p className="text-xs text-purple-600 mt-1">
-                  {t('checkInOut.stats.allRecords')}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <FileText className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <FileText className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('checkInOut.stats.totalRecords')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{records.length}</h3>
+                  <span className="text-xs text-muted-foreground">{t('checkInOut.stats.allRecords')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">{t('checkInOut.stats.checkIns')}</p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  {records.filter(r => r.record_type === 'check_in').length}
-                </h3>
-                <p className="text-xs text-green-600 mt-1">
-                  {records.filter(r => r.record_type === 'check_in' && r.status === 'completed').length} {t('checkInOut.stats.checkInsCompleted')}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <LogIn className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <LogIn className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('checkInOut.stats.checkIns')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{records.filter(r => r.record_type === 'check_in').length}</h3>
+                  <span className="text-xs text-muted-foreground">{records.filter(r => r.record_type === 'check_in' && r.status === 'completed').length} {t('checkInOut.stats.checkInsCompleted')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">{t('checkInOut.stats.checkOuts')}</p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                  {records.filter(r => r.record_type === 'check_out').length}
-                </h3>
-                <p className="text-xs text-blue-600 mt-1">
-                  {records.filter(r => r.record_type === 'check_out' && r.status === 'completed').length} {t('checkInOut.stats.checkOutsCompleted')}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <LogOut className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <LogOut className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('checkInOut.stats.checkOuts')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{records.filter(r => r.record_type === 'check_out').length}</h3>
+                  <span className="text-xs text-muted-foreground">{records.filter(r => r.record_type === 'check_out' && r.status === 'completed').length} {t('checkInOut.stats.checkOutsCompleted')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-amber-50 to-amber-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-amber-700">{t('checkInOut.stats.completed')}</p>
-                <h3 className="text-3xl font-bold text-amber-900 mt-1">
-                  {records.filter(r => r.status === 'completed').length}
-                </h3>
-                <p className="text-xs text-amber-600 mt-1">
-                  {records.filter(r => r.status === 'draft').length} {t('checkInOut.stats.pending')}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('checkInOut.stats.completed')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{records.filter(r => r.status === 'completed').length}</h3>
+                  <span className="text-xs text-muted-foreground">{records.filter(r => r.status === 'draft').length} {t('checkInOut.stats.pending')}</span>
+                </div>
               </div>
             </div>
           </CardContent>

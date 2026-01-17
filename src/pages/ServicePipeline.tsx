@@ -401,83 +401,91 @@ export default function ServicePipeline() {
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">
                   Total Pipeline Value
                 </p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                  {formatCurrency(pipelineStats.totalValue)}
-                </h3>
-                <p className="text-xs text-blue-600 mt-1">{jobs.length} jobs</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-white" />
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {formatCurrency(pipelineStats.totalValue)}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{jobs.length} jobs</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-orange-700">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Clock className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">
                   Pending Value
                 </p>
-                <h3 className="text-3xl font-bold text-orange-900 mt-1">
-                  {formatCurrency(pipelineStats.pendingValue)}
-                </h3>
-                <p className="text-xs text-orange-600 mt-1">
-                  {jobsByStatus.pending.length} jobs
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                <Clock className="h-6 w-6 text-white" />
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {formatCurrency(pipelineStats.pendingValue)}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    {jobsByStatus.pending.length} jobs
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">
                   In Progress
                 </p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">
-                  {formatCurrency(pipelineStats.inProgressValue)}
-                </h3>
-                <p className="text-xs text-purple-600 mt-1">
-                  {jobsByStatus.in_progress.length} jobs
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-white" />
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {formatCurrency(pipelineStats.inProgressValue)}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    {jobsByStatus.in_progress.length} jobs
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">
                   Completed Value
                 </p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  {formatCurrency(pipelineStats.completedValue)}
-                </h3>
-                <p className="text-xs text-green-600 mt-1">
-                  {jobsByStatus.completed.length} jobs
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-white" />
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {formatCurrency(pipelineStats.completedValue)}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    {jobsByStatus.completed.length} jobs
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>

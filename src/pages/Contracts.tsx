@@ -159,52 +159,52 @@ export default function Contracts() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <FileText className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">
                   {contractTypeFilter === "all" ? t('contracts.stats.totalContracts') : t('contracts.stats.filteredContracts')}
                 </p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                  {filteredContracts.length}
-                </h3>
-              </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <FileText className="h-6 w-6 text-white" />
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{filteredContracts.length}</h3>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">{t('contracts.stats.activeContracts')}</p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  {activeContracts}
-                </h3>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <FileText className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <FileText className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('contracts.stats.activeContracts')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{activeContracts}</h3>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-orange-700">{t('contracts.stats.expiringSoon')}</p>
-                <h3 className="text-3xl font-bold text-orange-900 mt-1">
-                  {expiringContracts}
-                </h3>
-                <p className="text-xs text-orange-600 mt-1">{t('contracts.stats.next30Days')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <FileText className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                <FileText className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('contracts.stats.expiringSoon')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{expiringContracts}</h3>
+                  <span className="text-xs text-muted-foreground">{t('contracts.stats.next30Days')}</span>
+                </div>
               </div>
             </div>
           </CardContent>

@@ -22,6 +22,7 @@ interface User {
 interface EmployeeDocumentTreeProps {
   documents: DocumentSummary[];
   users: User[];
+  onViewDocument: (document: DocumentSummary) => void;
   onDownloadDocument: (document: DocumentSummary) => void;
   onDeleteDocument?: (documentId: string) => void;
   canDelete?: boolean;
@@ -47,18 +48,12 @@ const formatFileSize = (bytes: number): string => {
 export function EmployeeDocumentTree({
   documents,
   users,
+  onViewDocument,
   onDownloadDocument,
   onDeleteDocument,
   canDelete = false,
 }: EmployeeDocumentTreeProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-
-  // Open document directly in new tab
-  const openDocumentInNewTab = (doc: DocumentSummary) => {
-    if (doc.file_url) {
-      window.open(doc.file_url, '_blank', 'noopener,noreferrer');
-    }
-  };
 
   // Build tree structure
   const tree = useMemo(() => {
@@ -262,7 +257,7 @@ export function EmployeeDocumentTree({
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0"
-                  onClick={() => openDocumentInNewTab(doc)}
+                  onClick={() => onViewDocument(doc)}
                 >
                   <Eye className="h-4 w-4 text-green-600" />
                 </Button>

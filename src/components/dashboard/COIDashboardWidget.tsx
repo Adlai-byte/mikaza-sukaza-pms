@@ -61,20 +61,22 @@ export function COIDashboardWidget() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Active COIs */}
           <Card
-            className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+            className="cursor-pointer transition-colors hover:bg-accent/50"
             onClick={() => navigate('/vendor-cois?status=active')}
           >
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">Active COIs</p>
-                  <h3 className="text-3xl font-bold text-green-900 mt-1">
-                    {isLoading ? '...' : stats?.active_cois || 0}
-                  </h3>
-                  <p className="text-xs text-green-600 mt-1">Current & valid</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                  <CheckCircle2 className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">Active COIs</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">
+                      {isLoading ? '...' : stats?.active_cois || 0}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">Current & valid</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -82,20 +84,22 @@ export function COIDashboardWidget() {
 
           {/* Expiring Soon */}
           <Card
-            className="border-0 shadow-md bg-gradient-to-br from-yellow-50 to-yellow-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+            className="cursor-pointer transition-colors hover:bg-accent/50"
             onClick={() => navigate('/vendor-cois?status=expiring_soon')}
           >
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-yellow-700">Expiring Soon</p>
-                  <h3 className="text-3xl font-bold text-yellow-900 mt-1">
-                    {isLoading ? '...' : stats?.expiring_soon || 0}
-                  </h3>
-                  <p className="text-xs text-yellow-600 mt-1">Within 30 days</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">Expiring Soon</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">
+                      {isLoading ? '...' : stats?.expiring_soon || 0}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">Within 30 days</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -103,20 +107,22 @@ export function COIDashboardWidget() {
 
           {/* Expired COIs */}
           <Card
-            className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+            className="cursor-pointer transition-colors hover:bg-accent/50"
             onClick={() => navigate('/vendor-cois?status=expired')}
           >
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-700">Expired</p>
-                  <h3 className="text-3xl font-bold text-red-900 mt-1">
-                    {isLoading ? '...' : stats?.expired_cois || 0}
-                  </h3>
-                  <p className="text-xs text-red-600 mt-1">Requires renewal</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <XCircle className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                  <XCircle className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">Expired</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">
+                      {isLoading ? '...' : stats?.expired_cois || 0}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">Requires renewal</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -124,20 +130,22 @@ export function COIDashboardWidget() {
 
           {/* Vendors with COIs */}
           <Card
-            className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+            className="cursor-pointer transition-colors hover:bg-accent/50"
             onClick={() => navigate('/vendor-cois')}
           >
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">Vendors Covered</p>
-                  <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                    {isLoading ? '...' : stats?.vendors_with_cois || 0}
-                  </h3>
-                  <p className="text-xs text-blue-600 mt-1">With insurance</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">Vendors Covered</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">
+                      {isLoading ? '...' : stats?.vendors_with_cois || 0}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">With insurance</span>
+                  </div>
                 </div>
               </div>
             </CardContent>

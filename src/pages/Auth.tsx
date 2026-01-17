@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -31,6 +32,12 @@ export default function Auth() {
   });
   const [isResendingEmail, setIsResendingEmail] = useState(false);
 
+  // Inline validation states
+  const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' });
+  const [fieldTouched, setFieldTouched] = useState({ email: false, password: false });
+  const [formShake, setFormShake] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     // Redirect to dashboard when authenticated
     if (user || profile) {
@@ -41,6 +48,46 @@ export default function Auth() {
     // Note: We rely on browser autocomplete for email instead of localStorage
     // to comply with GDPR (no PII stored in localStorage)
   }, [user, profile, navigate]);
+
+  // Auto-focus email field on mount
+  useEffect(() => {
+    if (!isForgotPassword) {
+      emailInputRef.current?.focus();
+    }
+  }, [isForgotPassword]);
+
+  // Validate individual field on blur
+  const validateField = (field: 'email' | 'password') => {
+    const emailSchema = z.string().email("Please enter a valid email address");
+    const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
+
+    try {
+      if (field === 'email') {
+        emailSchema.parse(loginForm.email);
+        setFieldErrors(prev => ({ ...prev, email: '' }));
+      } else {
+        passwordSchema.parse(loginForm.password);
+        setFieldErrors(prev => ({ ...prev, password: '' }));
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setFieldErrors(prev => ({ ...prev, [field]: error.errors[0].message }));
+      }
+    }
+  };
+
+  const handleBlur = (field: 'email' | 'password') => {
+    setFieldTouched(prev => ({ ...prev, [field]: true }));
+    if (loginForm[field]) {
+      validateField(field);
+    }
+  };
+
+  // Trigger form shake animation
+  const triggerFormShake = () => {
+    setFormShake(true);
+    setTimeout(() => setFormShake(false), 500);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +114,8 @@ export default function Auth() {
           errorCode: error.code,
           timestamp: new Date().toISOString()
         });
+
+        triggerFormShake();
 
         if (error.message.includes("Invalid login credentials")) {
           toast({
@@ -121,6 +170,7 @@ export default function Auth() {
 
       // Navigation will be handled by useEffect
     } catch (error) {
+      triggerFormShake();
       if (error instanceof z.ZodError) {
         toast({
           title: "Validation Error",
@@ -303,17 +353,12 @@ export default function Auth() {
       <div className="relative z-10 w-full max-w-md">
         {/* Enhanced Brand Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-6">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl flex items-center justify-center mr-4 shadow-lg">
-              <User className="text-white w-8 h-8" />
-            </div>
-            <h1 className="text-4xl font-light text-white tracking-wide">Casa & Concierge</h1>
-          </div>
+          <h1 className="text-4xl font-light text-white tracking-wide mb-2">Casa & Concierge</h1>
           <p className="text-white/80 text-sm font-light">Property Management System</p>
         </div>
 
         {/* Enhanced Login Form */}
-        <Card className="bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl">
+        <Card className="animate-slide-up-fade bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl">
           <CardHeader className="text-center pb-6 pt-8">
             <h2 className="text-2xl font-light text-white mb-2">
               {isForgotPassword ? "Reset Password" : "Welcome Back"}
@@ -349,10 +394,19 @@ export default function Auth() {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-accent to-accent-hover hover:from-accent-hover hover:to-accent text-accent-foreground font-medium text-base border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                  className="w-full h-12 bg-gradient-to-r from-accent to-accent-hover hover:from-accent-hover hover:to-accent text-accent-foreground font-medium text-base border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] group"
                   disabled={isResettingPassword}
                 >
-                  {isResettingPassword ? "Sending..." : "Send Reset Link"}
+                  {isResettingPassword ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Sending...
+                    </span>
+                  ) : (
+                    <span className="group-hover:scale-105 transition-transform inline-block">
+                      Send Reset Link
+                    </span>
+                  )}
                 </Button>
 
                 <div className="text-center">
@@ -369,7 +423,12 @@ export default function Auth() {
                 </div>
               </form>
             ) : (
-              <form onSubmit={handleLogin} className="space-y-6">
+              <form onSubmit={handleLogin} className={cn("space-y-6", formShake && "animate-shake")}>
+              {/* Live region for screen readers */}
+              <div role="status" aria-live="polite" className="sr-only">
+                {loading ? "Signing in, please wait" : ""}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white/90 font-light text-sm">
                   Email Address
@@ -377,17 +436,28 @@ export default function Auth() {
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input
+                    ref={emailInputRef}
                     id="email"
                     name="email"
                     type="email"
                     value={loginForm.email}
                     onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                    className="bg-white/95 border-0 text-gray-900 placeholder:text-gray-400 h-12 pl-10 focus:bg-white transition-all"
+                    onBlur={() => handleBlur('email')}
+                    className={cn(
+                      "bg-white/95 border-0 text-gray-900 placeholder:text-gray-400 h-12 pl-10 focus:bg-white focus:ring-2 focus:ring-white/30 transition-all",
+                      fieldTouched.email && fieldErrors.email && "ring-2 ring-red-400"
+                    )}
                     placeholder="Enter your email"
                     autoComplete="email"
+                    aria-label="Email address"
+                    aria-describedby={fieldErrors.email ? "email-error" : undefined}
+                    aria-invalid={!!fieldErrors.email}
                     required
                   />
                 </div>
+                {fieldTouched.email && fieldErrors.email && (
+                  <p id="email-error" className="text-red-300 text-xs mt-1">{fieldErrors.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -402,9 +472,16 @@ export default function Auth() {
                     type={showPassword ? "text" : "password"}
                     value={loginForm.password}
                     onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                    className="bg-white/95 border-0 text-gray-900 placeholder:text-gray-400 h-12 pl-10 pr-12 focus:bg-white transition-all"
+                    onBlur={() => handleBlur('password')}
+                    className={cn(
+                      "bg-white/95 border-0 text-gray-900 placeholder:text-gray-400 h-12 pl-10 pr-12 focus:bg-white focus:ring-2 focus:ring-white/30 transition-all",
+                      fieldTouched.password && fieldErrors.password && "ring-2 ring-red-400"
+                    )}
                     placeholder="Enter your password"
                     autoComplete="current-password"
+                    aria-label="Password"
+                    aria-describedby={fieldErrors.password ? "password-error" : undefined}
+                    aria-invalid={!!fieldErrors.password}
                     required
                   />
                   <Button
@@ -413,6 +490,7 @@ export default function Auth() {
                     size="sm"
                     className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100 text-gray-400 hover:text-gray-600"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -421,6 +499,9 @@ export default function Auth() {
                     )}
                   </Button>
                 </div>
+                {fieldTouched.password && fieldErrors.password && (
+                  <p id="password-error" className="text-red-300 text-xs mt-1">{fieldErrors.password}</p>
+                )}
               </div>
 
               <div className="flex items-center justify-end">
@@ -435,10 +516,19 @@ export default function Auth() {
 
               <Button
                 type="submit"
-                className="w-full h-12 bg-gradient-to-r from-accent to-accent-hover hover:from-accent-hover hover:to-accent text-accent-foreground font-medium text-base border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                className="w-full h-12 bg-gradient-to-r from-accent to-accent-hover hover:from-accent-hover hover:to-accent text-accent-foreground font-medium text-base border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] group"
                 disabled={loading}
               >
-                {loading ? "Signing In..." : "Sign In"}
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Signing In...
+                  </span>
+                ) : (
+                  <span className="group-hover:scale-105 transition-transform inline-block">
+                    Sign In
+                  </span>
+                )}
               </Button>
 
               <div className="text-center mt-4">

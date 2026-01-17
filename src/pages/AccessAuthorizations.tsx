@@ -274,58 +274,66 @@ export default function AccessAuthorizations() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">{t('accessDocuments.stats.total', 'Total Documents')}</p>
-                  <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('accessDocuments.stats.total', 'Total Documents')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.total}</h3>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">{t('accessDocuments.stats.active', 'Active')}</p>
-                  <h3 className="text-3xl font-bold text-green-900 mt-1">{stats.active}</h3>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                  <CheckCircle2 className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('accessDocuments.stats.active', 'Active')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.active}</h3>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-yellow-50 to-yellow-100">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-yellow-700">{t('accessDocuments.stats.expiringSoon', 'Expiring Soon')}</p>
-                  <h3 className="text-3xl font-bold text-yellow-900 mt-1">{stats.expiringSoon}</h3>
-                  <p className="text-xs text-yellow-600 mt-1">{t('accessDocuments.stats.next30Days', 'Next 30 days')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('accessDocuments.stats.expiringSoon', 'Expiring Soon')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.expiringSoon}</h3>
+                    <span className="text-xs text-muted-foreground">{t('accessDocuments.stats.next30Days', 'Next 30 days')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-700">{t('accessDocuments.stats.expired', 'Expired')}</p>
-                  <h3 className="text-3xl font-bold text-red-900 mt-1">{stats.expired}</h3>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('accessDocuments.stats.expired', 'Expired')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.expired}</h3>
+                  </div>
                 </div>
               </div>
             </CardContent>

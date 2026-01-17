@@ -264,61 +264,69 @@ export default function Issues() {
 
         {/* Statistics Dashboard */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">{t('issues.stats.totalIssues')}</p>
-                  <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
-                  <p className="text-xs text-blue-600 mt-1">{t('issues.stats.totalIssuesDesc')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('issues.stats.totalIssues')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.total}</h3>
+                    <span className="text-xs text-muted-foreground">{t('issues.stats.totalIssuesDesc')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-700">{t('issues.stats.openIssues')}</p>
-                  <h3 className="text-3xl font-bold text-red-900 mt-1">{stats.open}</h3>
-                  <p className="text-xs text-red-600 mt-1">{t('issues.stats.openIssuesDesc')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <XCircle className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                  <XCircle className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('issues.stats.openIssues')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.open}</h3>
+                    <span className="text-xs text-muted-foreground">{t('issues.stats.openIssuesDesc')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">{t('issues.stats.resolved')}</p>
-                  <h3 className="text-3xl font-bold text-green-900 mt-1">{stats.resolved}</h3>
-                  <p className="text-xs text-green-600 mt-1">{t('issues.stats.resolvedDesc')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('issues.stats.resolved')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.resolved}</h3>
+                    <span className="text-xs text-muted-foreground">{t('issues.stats.resolvedDesc')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-700">{t('issues.stats.totalCost')}</p>
-                  <h3 className="text-3xl font-bold text-purple-900 mt-1">${stats.totalCost.toFixed(2)}</h3>
-                  <p className="text-xs text-purple-600 mt-1">{t('issues.stats.totalCostDesc')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('issues.stats.totalCost')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">${stats.totalCost.toFixed(2)}</h3>
+                    <span className="text-xs text-muted-foreground">{t('issues.stats.totalCostDesc')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>

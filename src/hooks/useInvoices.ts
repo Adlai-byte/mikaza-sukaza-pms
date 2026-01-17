@@ -217,6 +217,22 @@ const sendInvoiceEmail = async (params: SendInvoiceEmailParams): Promise<void> =
     ccEmailsCount: params.ccEmails?.length || 0,
   });
 
+  // Client-side email validation for better UX
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!params.recipientEmail || !emailRegex.test(params.recipientEmail)) {
+    console.error('❌ [sendInvoiceEmail] Invalid email format:', params.recipientEmail);
+    throw new Error('Please enter a valid email address');
+  }
+
+  // Validate CC emails if provided
+  if (params.ccEmails && params.ccEmails.length > 0) {
+    const invalidCcEmails = params.ccEmails.filter(email => !emailRegex.test(email));
+    if (invalidCcEmails.length > 0) {
+      console.error('❌ [sendInvoiceEmail] Invalid CC email format:', invalidCcEmails);
+      throw new Error(`Invalid CC email address: ${invalidCcEmails.join(', ')}`);
+    }
+  }
+
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
@@ -239,12 +255,30 @@ const sendInvoiceEmail = async (params: SendInvoiceEmailParams): Promise<void> =
 
   if (response.error) {
     console.error('❌ [sendInvoiceEmail] Edge function error:', response.error);
+    // Try to extract detailed error from response data
+    const errorData = response.data;
+    if (errorData?.troubleshooting) {
+      throw new Error(`${errorData.error || 'Failed to send email'}: ${errorData.troubleshooting}`);
+    }
     throw new Error(response.error.message || 'Failed to send email');
   }
 
   if (!response.data?.success) {
     console.error('❌ [sendInvoiceEmail] Email send failed:', response.data);
-    throw new Error(response.data?.error || 'Failed to send email');
+    // Extract detailed error message with troubleshooting info
+    const errorMessage = response.data?.error || 'Failed to send email';
+    const troubleshooting = response.data?.troubleshooting;
+    const details = response.data?.details;
+
+    let fullMessage = errorMessage;
+    if (details && details !== errorMessage) {
+      fullMessage += `. ${details}`;
+    }
+    if (troubleshooting) {
+      fullMessage += ` ${troubleshooting}`;
+    }
+
+    throw new Error(fullMessage);
   }
 
   console.log('✅ [sendInvoiceEmail] Email sent successfully!');

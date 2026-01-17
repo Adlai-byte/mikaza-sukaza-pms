@@ -89,6 +89,7 @@ export default function PasswordVault() {
   // Dialog states
   const [masterPasswordDialogOpen, setMasterPasswordDialogOpen] = useState(false);
   const [masterPasswordMode, setMasterPasswordMode] = useState<"unlock" | "setup">("unlock");
+  const [userDismissedDialog, setUserDismissedDialog] = useState(false); // Track if user manually closed the dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [logsDialogOpen, setLogsDialogOpen] = useState(false);
@@ -119,9 +120,9 @@ export default function PasswordVault() {
 
   // Check vault status on mount - only auto-open dialog once
   useEffect(() => {
-    // Only proceed if not loading, no error, and dialog is not already open
+    // Only proceed if not loading, no error, dialog is not already open, and user hasn't dismissed it
     // This prevents race conditions from re-opening the dialog
-    if (!masterLoading && !masterError && !masterPasswordDialogOpen) {
+    if (!masterLoading && !masterError && !masterPasswordDialogOpen && !userDismissedDialog) {
       if (!hasMasterPassword) {
         setMasterPasswordMode("setup");
         setMasterPasswordDialogOpen(true);
@@ -130,7 +131,16 @@ export default function PasswordVault() {
         setMasterPasswordDialogOpen(true);
       }
     }
-  }, [masterLoading, masterError, hasMasterPassword, masterPasswordDialogOpen]);
+  }, [masterLoading, masterError, hasMasterPassword, masterPasswordDialogOpen, userDismissedDialog]);
+
+  // Handler for master password dialog close
+  const handleMasterPasswordDialogChange = (open: boolean) => {
+    setMasterPasswordDialogOpen(open);
+    // If user is closing the dialog (not opening it), mark as dismissed
+    if (!open) {
+      setUserDismissedDialog(true);
+    }
+  };
 
   // Filter entries
   const filteredEntries = entries.filter((entry) => {
@@ -153,6 +163,8 @@ export default function PasswordVault() {
     } else {
       setMasterPasswordMode("unlock");
     }
+    // Reset the dismissed flag since user is explicitly requesting to unlock
+    setUserDismissedDialog(false);
     setMasterPasswordDialogOpen(true);
   };
 
@@ -364,73 +376,73 @@ export default function PasswordVault() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">
                   {t("passwordVault.stats.total", "Total Entries")}
                 </p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">
+                <h3 className="text-2xl font-semibold">
                   {statsLoading ? "..." : stats?.total_entries || 0}
                 </h3>
               </div>
-              <div className="h-12 w-12 rounded-full bg-blue-200 flex items-center justify-center">
-                <ShieldCheck className="h-6 w-6 text-blue-700" />
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Key className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">
                   {t("passwordVault.stats.propertyCodes", "Property Codes")}
                 </p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
+                <h3 className="text-2xl font-semibold">
                   {statsLoading ? "..." : stats?.property_codes || 0}
                 </h3>
               </div>
-              <div className="h-12 w-12 rounded-full bg-green-200 flex items-center justify-center">
-                <Key className="h-6 w-6 text-green-700" />
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Globe className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">
                   {t("passwordVault.stats.serviceAccounts", "Service Accounts")}
                 </p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">
+                <h3 className="text-2xl font-semibold">
                   {statsLoading ? "..." : stats?.service_accounts || 0}
                 </h3>
               </div>
-              <div className="h-12 w-12 rounded-full bg-purple-200 flex items-center justify-center">
-                <Globe className="h-6 w-6 text-purple-700" />
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-orange-700">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Server className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">
                   {t("passwordVault.stats.internalSystems", "Internal Systems")}
                 </p>
-                <h3 className="text-3xl font-bold text-orange-900 mt-1">
+                <h3 className="text-2xl font-semibold">
                   {statsLoading ? "..." : stats?.internal_systems || 0}
                 </h3>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-orange-200 flex items-center justify-center">
-                <Server className="h-6 w-6 text-orange-700" />
               </div>
             </div>
           </CardContent>
@@ -605,7 +617,7 @@ export default function PasswordVault() {
       {/* Dialogs */}
       <MasterPasswordDialog
         open={masterPasswordDialogOpen}
-        onOpenChange={setMasterPasswordDialogOpen}
+        onOpenChange={handleMasterPasswordDialogChange}
         mode={masterPasswordMode}
         onUnlock={unlock}
         onSetup={setupMasterPassword}

@@ -273,17 +273,39 @@ serve(async (req) => {
         statusText: resendResponse.statusText,
         responseData: resendData,
         recipientEmail,
-        invoiceNumber: invoice.invoice_number
+        invoiceNumber: invoice.invoice_number,
+        fromEmail: fromEmail,
       });
+
+      // Provide user-friendly error messages based on status code
+      let userMessage = 'Failed to send email';
+      let troubleshooting = '';
+
+      if (resendResponse.status === 403) {
+        userMessage = 'Email service permission denied';
+        troubleshooting = 'The FROM_EMAIL domain may not be verified in Resend. Please verify the domain at https://resend.com/domains or use onboarding@resend.dev for testing.';
+      } else if (resendResponse.status === 401) {
+        userMessage = 'Email service authentication failed';
+        troubleshooting = 'The RESEND_API_KEY may be invalid or expired. Please check your API key at https://resend.com/api-keys';
+      } else if (resendResponse.status === 422) {
+        userMessage = 'Invalid email data';
+        troubleshooting = 'Please check the recipient email address and email content.';
+      } else if (resendResponse.status === 429) {
+        userMessage = 'Too many email requests';
+        troubleshooting = 'Rate limit exceeded. Please wait a moment and try again.';
+      }
+
       return new Response(
         JSON.stringify({
-          error: 'Failed to send email',
-          details: resendData.message || resendData.error || 'Error from Resend API',
+          error: userMessage,
+          details: resendData.message || resendData.error || resendData.name || 'Error from Resend API',
+          troubleshooting: troubleshooting,
+          resendStatusCode: resendResponse.status,
           resendError: resendData,
-          statusCode: resendResponse.status,
+          fromEmail: fromEmail,
           recipientEmail: recipientEmail
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: resendResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

@@ -254,61 +254,69 @@ export default function Todos() {
 
         {/* Statistics Dashboard */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">{t('todos.activeTasks')}</p>
-                  <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
-                  <p className="text-xs text-blue-600 mt-1">{t('todos.pendingProgress')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <CheckSquare className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <CheckSquare className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('todos.activeTasks')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.total}</h3>
+                    <span className="text-xs text-muted-foreground">{t('todos.pendingProgress')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-700">{t('todos.overdueCount')}</p>
-                  <h3 className="text-3xl font-bold text-red-900 mt-1">{stats.overdue}</h3>
-                  <p className="text-xs text-red-600 mt-1">{t('todos.requiresAttention')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('todos.overdueCount')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.overdue}</h3>
+                    <span className="text-xs text-muted-foreground">{t('todos.requiresAttention')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-yellow-50 to-yellow-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-yellow-700">{t('todos.pendingTasks')}</p>
-                  <h3 className="text-3xl font-bold text-yellow-900 mt-1">{stats.pending}</h3>
-                  <p className="text-xs text-yellow-600 mt-1">{t('todos.waitingToStart')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('todos.pendingTasks')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.pending}</h3>
+                    <span className="text-xs text-muted-foreground">{t('todos.waitingToStart')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-700">{t('todos.inProgressTasks')}</p>
-                  <h3 className="text-3xl font-bold text-purple-900 mt-1">{stats.inProgress}</h3>
-                  <p className="text-xs text-purple-600 mt-1">{t('todos.currentlyActive')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('todos.inProgressTasks')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.inProgress}</h3>
+                    <span className="text-xs text-muted-foreground">{t('todos.currentlyActive')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>

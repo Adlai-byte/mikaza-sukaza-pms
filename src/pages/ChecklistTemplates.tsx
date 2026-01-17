@@ -168,77 +168,69 @@ export default function ChecklistTemplates() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-indigo-50 to-indigo-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-indigo-700">{t('checklistTemplates.statsCards.totalTemplates')}</p>
-                <h3 className="text-3xl font-bold text-indigo-900 mt-1">
-                  {templates.length}
-                </h3>
-                <p className="text-xs text-indigo-600 mt-1">
-                  {t('checklistTemplates.reusableChecklists')}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <ClipboardList className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center">
-                <ClipboardList className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('checklistTemplates.statsCards.totalTemplates')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{templates.length}</h3>
+                  <span className="text-xs text-muted-foreground">{t('checklistTemplates.reusableChecklists')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">{t('checklistTemplates.statsCards.checkInTemplates')}</p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  {templates.filter(t => t.template_type === 'check_in').length}
-                </h3>
-                <p className="text-xs text-green-600 mt-1">
-                  {templates.filter(t => t.template_type === 'check_in' && t.is_active).length} {t('checklistTemplates.active')}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <LogIn className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <LogIn className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('checklistTemplates.statsCards.checkInTemplates')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{templates.filter(t => t.template_type === 'check_in').length}</h3>
+                  <span className="text-xs text-muted-foreground">{templates.filter(t => t.template_type === 'check_in' && t.is_active).length} {t('checklistTemplates.active')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">{t('checklistTemplates.statsCards.checkOutTemplates')}</p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                  {templates.filter(t => t.template_type === 'check_out').length}
-                </h3>
-                <p className="text-xs text-blue-600 mt-1">
-                  {templates.filter(t => t.template_type === 'check_out' && t.is_active).length} {t('checklistTemplates.active')}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <LogOut className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <LogOut className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('checklistTemplates.statsCards.checkOutTemplates')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{templates.filter(t => t.template_type === 'check_out').length}</h3>
+                  <span className="text-xs text-muted-foreground">{templates.filter(t => t.template_type === 'check_out' && t.is_active).length} {t('checklistTemplates.active')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-teal-50 to-teal-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-teal-700">{t('checklistTemplates.statsCards.activeTemplates')}</p>
-                <h3 className="text-3xl font-bold text-teal-900 mt-1">
-                  {templates.filter(t => t.is_active).length}
-                </h3>
-                <p className="text-xs text-teal-600 mt-1">
-                  {templates.filter(t => !t.is_active).length} {t('checklistTemplates.inactive')}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <CheckSquare className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center">
-                <CheckSquare className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('checklistTemplates.statsCards.activeTemplates')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{templates.filter(t => t.is_active).length}</h3>
+                  <span className="text-xs text-muted-foreground">{templates.filter(t => !t.is_active).length} {t('checklistTemplates.inactive')}</span>
+                </div>
               </div>
             </div>
           </CardContent>

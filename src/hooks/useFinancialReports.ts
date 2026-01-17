@@ -75,6 +75,17 @@ export interface OwnerStatementData {
       amount: number;
     }>;
   };
+  // Credit entries (income/refunds that offset expenses)
+  credits: {
+    total: number;
+    by_credit: Array<{
+      date: string;
+      vendor: string;
+      category: string;
+      description: string;
+      amount: number;
+    }>;
+  };
   net_income: number;
 }
 
@@ -120,7 +131,7 @@ const fetchOwnerStatement = async (
   const totalRevenue = revenueByInvoice.reduce((sum, inv) => sum + inv.amount, 0);
 
   // Fetch expenses - only DEBIT entries count as expenses
-  // Credit entries are income, owner_payment entries are payouts to owners
+  // Credit entries are income/refunds, owner_payment entries are payouts to owners
   const { data: expenses, error: expensesError } = await supabase
     .from('expenses')
     .select('expense_date, vendor_name, category, description, amount, tax_amount, entry_type')
@@ -131,6 +142,18 @@ const fetchOwnerStatement = async (
     .order('expense_date', { ascending: true });
 
   if (expensesError) throw expensesError;
+
+  // Fetch credit entries (income/refunds that offset expenses)
+  const { data: credits, error: creditsError } = await supabase
+    .from('expenses')
+    .select('expense_date, vendor_name, category, description, amount, tax_amount, entry_type')
+    .eq('property_id', propertyId)
+    .eq('entry_type', 'credit') // Credit entries reduce net expenses
+    .gte('expense_date', periodStart)
+    .lte('expense_date', periodEnd)
+    .order('expense_date', { ascending: true });
+
+  if (creditsError) throw creditsError;
 
   // Group expenses by category
   const expensesByCategory: Record<string, { amount: number; count: number }> = {};
@@ -159,6 +182,20 @@ const fetchOwnerStatement = async (
   }));
 
   const totalExpenses = expensesList.reduce((sum, exp) => sum + exp.amount, 0);
+
+  // Process credit entries (income/refunds)
+  const creditsList = (credits || []).map(credit => {
+    const totalAmount = credit.amount + (credit.tax_amount || 0);
+    return {
+      date: credit.expense_date,
+      vendor: credit.vendor_name || 'Unknown',
+      category: credit.category,
+      description: credit.description,
+      amount: totalAmount,
+    };
+  });
+
+  const totalCredits = creditsList.reduce((sum, credit) => sum + credit.amount, 0);
 
   // Fetch unit-level revenue allocations for entire-property bookings
   let unitAllocations: OwnerStatementData['unit_allocations'] = undefined;
@@ -295,7 +332,12 @@ const fetchOwnerStatement = async (
       by_category: expensesByCategoryArray,
       by_expense: expensesList,
     },
-    net_income: totalRevenue - totalExpenses,
+    credits: {
+      total: totalCredits,
+      by_credit: creditsList,
+    },
+    // Net income = Revenue - Expenses + Credits (credits offset expenses)
+    net_income: totalRevenue - totalExpenses + totalCredits,
   };
 };
 

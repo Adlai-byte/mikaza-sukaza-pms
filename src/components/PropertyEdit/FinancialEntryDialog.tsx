@@ -177,8 +177,22 @@ export function FinancialEntryDialog({
       newErrors.date = t('validation.required', 'This field is required');
     }
 
+    // Validate scheduled entries require at least one month
+    if (isScheduled && scheduledMonths.length === 0) {
+      newErrors.scheduledMonths = t('validation.selectAtLeastOneMonth', 'Please select at least one month for scheduled entries');
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Check if form is valid for button disabled state
+  const isFormValid = (): boolean => {
+    if (!description.trim()) return false;
+    if (!amount || parseFloat(amount) <= 0) return false;
+    if (!expenseDate) return false;
+    if (isScheduled && scheduledMonths.length === 0) return false;
+    return true;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -370,8 +384,8 @@ export function FinancialEntryDialog({
               </div>
 
               <div className="space-y-2">
-                <Label>{t('common.months', 'Months')}</Label>
-                <div className="grid grid-cols-4 gap-2">
+                <Label>{t('common.months', 'Months')} *</Label>
+                <div className={`grid grid-cols-4 gap-2 ${errors.scheduledMonths ? 'ring-2 ring-red-500 ring-offset-2 rounded-lg p-1' : ''}`}>
                   {MONTHS.map((month) => (
                     <div
                       key={month.value}
@@ -380,12 +394,18 @@ export function FinancialEntryDialog({
                           ? 'bg-primary text-primary-foreground border-primary'
                           : 'bg-background border-input hover:bg-accent'
                       }`}
-                      onClick={() => toggleMonth(month.value)}
+                      onClick={() => {
+                        toggleMonth(month.value);
+                        if (errors.scheduledMonths) setErrors(prev => ({ ...prev, scheduledMonths: '' }));
+                      }}
                     >
                       <span className="text-sm font-medium">{month.label}</span>
                     </div>
                   ))}
                 </div>
+                {errors.scheduledMonths && (
+                  <p className="text-sm text-red-500">{errors.scheduledMonths}</p>
+                )}
               </div>
             </div>
           )}
@@ -426,7 +446,7 @@ export function FinancialEntryDialog({
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || !description.trim() || !amount || parseFloat(amount) <= 0 || !expenseDate}
+            disabled={isSubmitting || !isFormValid()}
           >
             <Save className="mr-2 h-4 w-4" />
             {isSubmitting

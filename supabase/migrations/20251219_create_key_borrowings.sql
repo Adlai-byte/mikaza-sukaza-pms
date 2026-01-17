@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS key_borrowings (
     -- Borrower information
     borrower_name TEXT NOT NULL,
     borrower_contact TEXT,
-    borrower_type TEXT NOT NULL CHECK (borrower_type IN ('employee', 'guest', 'contractor', 'owner', 'other')),
+    borrower_type TEXT NOT NULL CHECK (borrower_type IN ('admin', 'ops')),
 
     -- Timestamps
     checked_out_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -134,5 +134,5 @@ $$ LANGUAGE plpgsql;
 -- Add comments for documentation
 COMMENT ON TABLE key_borrowings IS 'Tracks key check-outs and returns with borrower information';
 COMMENT ON COLUMN key_borrowings.category IS 'The category from which the key was borrowed (deducted)';
-COMMENT ON COLUMN key_borrowings.borrower_type IS 'employee, guest, contractor, owner, or other';
+COMMENT ON COLUMN key_borrowings.borrower_type IS 'admin or ops - the type of staff borrowing the key';
 COMMENT ON COLUMN key_borrowings.status IS 'borrowed = currently out, returned = checked back in, overdue = past expected return date';

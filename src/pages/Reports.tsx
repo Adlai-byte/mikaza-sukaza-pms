@@ -943,62 +943,62 @@ export default function Reports() {
           {reportType === 'properties' && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-violet-700">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <Home className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">
                           {t('reports.totalProperties', 'Total Properties')}
                         </p>
-                        <div className="text-2xl font-bold text-violet-900">{propertiesReport.total}</div>
-                      </div>
-                      <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
-                        <Home className="h-5 w-5 text-white" />
+                        <div className="text-2xl font-semibold">{propertiesReport.total}</div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-lime-700">{t('reports.activeProperties', 'Active')}</p>
-                        <div className="text-2xl font-bold text-lime-900">{propertiesReport.active}</div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <TrendingUp className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="h-5 w-5 text-white" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">{t('reports.activeProperties', 'Active')}</p>
+                        <div className="text-2xl font-semibold">{propertiesReport.active}</div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-100 to-violet-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-violet-700">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">
                           {t('reports.inactiveProperties', 'Inactive')}
                         </p>
-                        <div className="text-2xl font-bold text-violet-900">{propertiesReport.inactive}</div>
-                      </div>
-                      <div className="w-10 h-10 bg-violet-400 rounded-lg flex items-center justify-center">
-                        <AlertCircle className="h-5 w-5 text-white" />
+                        <div className="text-2xl font-semibold">{propertiesReport.inactive}</div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-violet-700">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">
                           {t('reports.propertyTypes', 'Property Types')}
                         </p>
-                        <div className="text-2xl font-bold text-violet-900">
+                        <div className="text-2xl font-semibold">
                           {Object.keys(propertiesReport.byType).length}
                         </div>
-                      </div>
-                      <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
-                        <FileSpreadsheet className="h-5 w-5 text-white" />
                       </div>
                     </div>
                   </CardContent>
@@ -1122,86 +1122,69 @@ export default function Reports() {
           {reportType === 'financial' && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-lime-700">{t('reports.totalIncome', 'Total Income')}</p>
-                        <div className="text-2xl font-bold text-lime-900">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">{t('reports.totalIncome', 'Total Income')}</p>
+                        <div className="text-2xl font-semibold">
                           {formatCurrency(financialReport.totalIncome)}
                         </div>
                       </div>
-                      <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="h-5 w-5 text-white" />
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-violet-700">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">
                           {t('reports.totalExpenses', 'Total Expenses')}
                         </p>
-                        <div className="text-2xl font-bold text-violet-900">
+                        <div className="text-2xl font-semibold">
                           {formatCurrency(financialReport.totalExpenses)}
                         </div>
                       </div>
-                      <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
-                        <AlertCircle className="h-5 w-5 text-white" />
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card
-                  className={cn(
-                    'border-0 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]',
-                    financialReport.netProfit >= 0
-                      ? 'bg-gradient-to-br from-lime-100 to-lime-200'
-                      : 'bg-gradient-to-br from-red-50 to-red-100'
-                  )}
-                >
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p
-                          className={cn(
-                            'text-sm font-medium',
-                            financialReport.netProfit >= 0 ? 'text-lime-700' : 'text-red-700'
-                          )}
-                        >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <DollarSign className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">
                           {t('reports.netProfit', 'Net Profit')}
                         </p>
                         <div
                           className={cn(
-                            'text-2xl font-bold',
-                            financialReport.netProfit >= 0 ? 'text-lime-900' : 'text-red-900'
+                            'text-2xl font-semibold',
+                            financialReport.netProfit >= 0 ? 'text-green-600' : 'text-red-600'
                           )}
                         >
                           {formatCurrency(financialReport.netProfit)}
                         </div>
                       </div>
-                      <div
-                        className={cn(
-                          'w-10 h-10 rounded-lg flex items-center justify-center',
-                          financialReport.netProfit >= 0 ? 'bg-lime-600' : 'bg-red-500'
-                        )}
-                      >
-                        <DollarSign className="h-5 w-5 text-white" />
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-violet-700">{t('reports.invoices', 'Invoices')}</p>
-                        <div className="text-2xl font-bold text-violet-900">{financialReport.invoiceCount}</div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
-                        <FileText className="h-5 w-5 text-white" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">{t('reports.invoices', 'Invoices')}</p>
+                        <div className="text-2xl font-semibold">{financialReport.invoiceCount}</div>
                       </div>
                     </div>
                   </CardContent>
@@ -1259,62 +1242,62 @@ export default function Reports() {
           {reportType === 'occupancy' && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-violet-700">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <BarChart3 className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">
                           {t('reports.occupancyRate', 'Occupancy Rate')}
                         </p>
-                        <div className="text-2xl font-bold text-violet-900">{occupancyReport.occupancyRate}%</div>
-                      </div>
-                      <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
-                        <BarChart3 className="h-5 w-5 text-white" />
+                        <div className="text-2xl font-semibold">{occupancyReport.occupancyRate}%</div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-lime-700">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <DollarSign className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">
                           {t('reports.avgDailyRate', 'Avg. Daily Rate')}
                         </p>
-                        <div className="text-2xl font-bold text-lime-900">
+                        <div className="text-2xl font-semibold">
                           {formatCurrency(occupancyReport.avgDailyRate)}
                         </div>
                       </div>
-                      <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
-                        <DollarSign className="h-5 w-5 text-white" />
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-100 to-violet-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-violet-700">{t('reports.revPAR', 'RevPAR')}</p>
-                        <div className="text-2xl font-bold text-violet-900">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">{t('reports.revPAR', 'RevPAR')}</p>
+                        <div className="text-2xl font-semibold">
                           {formatCurrency(occupancyReport.revPAR)}
                         </div>
                       </div>
-                      <div className="w-10 h-10 bg-violet-600 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="h-5 w-5 text-white" />
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-violet-700">{t('reports.bookedDays', 'Booked Days')}</p>
-                        <div className="text-2xl font-bold text-violet-900">{occupancyReport.bookedDays}</div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <Calendar className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-white" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">{t('reports.bookedDays', 'Booked Days')}</p>
+                        <div className="text-2xl font-semibold">{occupancyReport.bookedDays}</div>
                       </div>
                     </div>
                   </CardContent>
@@ -1361,45 +1344,45 @@ export default function Reports() {
               ) : (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-violet-700">{t('reports.totalClients', 'Total Clients')}</p>
-                            <div className="text-2xl font-bold text-violet-900">{currentBalanceData?.length || 0}</div>
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <Users className="h-5 w-5 text-muted-foreground" />
                           </div>
-                          <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
-                            <Users className="h-5 w-5 text-white" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.totalClients', 'Total Clients')}</p>
+                            <div className="text-2xl font-semibold">{currentBalanceData?.length || 0}</div>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-lime-700">{t('reports.totalInvoiced', 'Total Invoiced')}</p>
-                            <div className="text-2xl font-bold text-lime-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <Receipt className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.totalInvoiced', 'Total Invoiced')}</p>
+                            <div className="text-2xl font-semibold">
                               {formatCurrency((currentBalanceData || []).reduce((sum, d) => sum + d.total_invoiced, 0))}
                             </div>
                           </div>
-                          <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
-                            <Receipt className="h-5 w-5 text-white" />
-                          </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-orange-700">{t('reports.totalBalanceDue', 'Balance Due')}</p>
-                            <div className="text-2xl font-bold text-orange-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <Wallet className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.totalBalanceDue', 'Balance Due')}</p>
+                            <div className="text-2xl font-semibold">
                               {formatCurrency((currentBalanceData || []).reduce((sum, d) => sum + d.balance_due, 0))}
                             </div>
-                          </div>
-                          <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                            <Wallet className="h-5 w-5 text-white" />
                           </div>
                         </div>
                       </CardContent>
@@ -1459,60 +1442,60 @@ export default function Reports() {
               ) : (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-violet-700">{t('reports.totalEntries', 'Total Entries')}</p>
-                            <div className="text-2xl font-bold text-violet-900">{financialEntriesData?.length || 0}</div>
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <Receipt className="h-5 w-5 text-muted-foreground" />
                           </div>
-                          <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
-                            <Receipt className="h-5 w-5 text-white" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.totalEntries', 'Total Entries')}</p>
+                            <div className="text-2xl font-semibold">{financialEntriesData?.length || 0}</div>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-red-700">{t('reports.totalDebits', 'Total Debits')}</p>
-                            <div className="text-2xl font-bold text-red-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <TrendingUp className="h-5 w-5 text-muted-foreground rotate-180" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.totalDebits', 'Total Debits')}</p>
+                            <div className="text-2xl font-semibold text-red-600">
                               {formatCurrency((financialEntriesData || []).filter(e => e.entry_type === 'debit').reduce((sum, e) => sum + e.amount, 0))}
                             </div>
                           </div>
-                          <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-                            <TrendingUp className="h-5 w-5 text-white rotate-180" />
-                          </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-lime-700">{t('reports.totalCredits', 'Total Credits')}</p>
-                            <div className="text-2xl font-bold text-lime-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.totalCredits', 'Total Credits')}</p>
+                            <div className="text-2xl font-semibold text-green-600">
                               {formatCurrency((financialEntriesData || []).filter(e => e.entry_type === 'credit').reduce((sum, e) => sum + e.amount, 0))}
                             </div>
                           </div>
-                          <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
-                            <TrendingUp className="h-5 w-5 text-white" />
-                          </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-violet-700">{t('reports.runningBalance', 'Running Balance')}</p>
-                            <div className="text-2xl font-bold text-violet-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <Wallet className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.runningBalance', 'Running Balance')}</p>
+                            <div className="text-2xl font-semibold">
                               {formatCurrency((financialEntriesData || []).slice(-1)[0]?.running_balance || 0)}
                             </div>
-                          </div>
-                          <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
-                            <Wallet className="h-5 w-5 text-white" />
                           </div>
                         </div>
                       </CardContent>
@@ -1638,45 +1621,45 @@ export default function Reports() {
               ) : (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-lime-700">{t('reports.activeClientsCount', 'Active Clients')}</p>
-                            <div className="text-2xl font-bold text-lime-900">{activeClientsData?.length || 0}</div>
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <UserCheck className="h-5 w-5 text-muted-foreground" />
                           </div>
-                          <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
-                            <UserCheck className="h-5 w-5 text-white" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.activeClientsCount', 'Active Clients')}</p>
+                            <div className="text-2xl font-semibold">{activeClientsData?.length || 0}</div>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-violet-700">{t('reports.totalBookingsCount', 'Total Bookings')}</p>
-                            <div className="text-2xl font-bold text-violet-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <Calendar className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.totalBookingsCount', 'Total Bookings')}</p>
+                            <div className="text-2xl font-semibold">
                               {(activeClientsData || []).reduce((sum, c) => sum + c.total_bookings, 0)}
                             </div>
                           </div>
-                          <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
-                            <Calendar className="h-5 w-5 text-white" />
-                          </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-violet-700">{t('reports.totalSpent', 'Total Spent')}</p>
-                            <div className="text-2xl font-bold text-violet-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <DollarSign className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.totalSpent', 'Total Spent')}</p>
+                            <div className="text-2xl font-semibold">
                               {formatCurrency((activeClientsData || []).reduce((sum, c) => sum + c.total_spent, 0))}
                             </div>
-                          </div>
-                          <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
-                            <DollarSign className="h-5 w-5 text-white" />
                           </div>
                         </div>
                       </CardContent>
@@ -1736,32 +1719,32 @@ export default function Reports() {
               ) : (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-orange-700">{t('reports.inactiveClientsCount', 'Inactive Clients')}</p>
-                            <div className="text-2xl font-bold text-orange-900">{inactiveClientsData?.length || 0}</div>
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <UserX className="h-5 w-5 text-muted-foreground" />
                           </div>
-                          <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                            <UserX className="h-5 w-5 text-white" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.inactiveClientsCount', 'Inactive Clients')}</p>
+                            <div className="text-2xl font-semibold">{inactiveClientsData?.length || 0}</div>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-violet-700">{t('reports.avgDaysInactive', 'Avg. Days Inactive')}</p>
-                            <div className="text-2xl font-bold text-violet-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <Calendar className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.avgDaysInactive', 'Avg. Days Inactive')}</p>
+                            <div className="text-2xl font-semibold">
                               {inactiveClientsData && inactiveClientsData.length > 0
                                 ? Math.round(inactiveClientsData.reduce((sum, c) => sum + c.days_since_last_booking, 0) / inactiveClientsData.length)
                                 : 0}
                             </div>
-                          </div>
-                          <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
-                            <Calendar className="h-5 w-5 text-white" />
                           </div>
                         </div>
                       </CardContent>
@@ -1824,62 +1807,62 @@ export default function Reports() {
               ) : (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-violet-700">{t('reports.totalBookings', 'Total Bookings')}</p>
-                            <div className="text-2xl font-bold text-violet-900">{bookingsEnhancedData?.length || 0}</div>
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <Calendar className="h-5 w-5 text-muted-foreground" />
                           </div>
-                          <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
-                            <Calendar className="h-5 w-5 text-white" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.totalBookings', 'Total Bookings')}</p>
+                            <div className="text-2xl font-semibold">{bookingsEnhancedData?.length || 0}</div>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-lime-700">{t('reports.totalAmount', 'Total Amount')}</p>
-                            <div className="text-2xl font-bold text-lime-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <DollarSign className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.totalAmount', 'Total Amount')}</p>
+                            <div className="text-2xl font-semibold">
                               {formatCurrency((bookingsEnhancedData || []).reduce((sum, b) => sum + b.total_price, 0))}
                             </div>
-                          </div>
-                          <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
-                            <DollarSign className="h-5 w-5 text-white" />
                           </div>
                         </div>
                       </CardContent>
                     </Card>
                     {withFinancial && (
                       <>
-                        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100">
+                        <Card className="transition-colors hover:bg-accent/50">
                           <CardContent className="pt-6">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-green-700">{t('reports.totalPaid', 'Total Paid')}</p>
-                                <div className="text-2xl font-bold text-green-900">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                                <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-muted-foreground">{t('reports.totalPaid', 'Total Paid')}</p>
+                                <div className="text-2xl font-semibold text-green-600">
                                   {formatCurrency((bookingsEnhancedData || []).reduce((sum, b) => sum + (b.invoice_paid || 0), 0))}
                                 </div>
-                              </div>
-                              <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                                <TrendingUp className="h-5 w-5 text-white" />
                               </div>
                             </div>
                           </CardContent>
                         </Card>
-                        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100">
+                        <Card className="transition-colors hover:bg-accent/50">
                           <CardContent className="pt-6">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-orange-700">{t('reports.totalBalance', 'Total Balance')}</p>
-                                <div className="text-2xl font-bold text-orange-900">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                                <Wallet className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-muted-foreground">{t('reports.totalBalance', 'Total Balance')}</p>
+                                <div className="text-2xl font-semibold">
                                   {formatCurrency((bookingsEnhancedData || []).reduce((sum, b) => sum + (b.invoice_balance || 0), 0))}
                                 </div>
-                              </div>
-                              <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                                <Wallet className="h-5 w-5 text-white" />
                               </div>
                             </div>
                           </CardContent>
@@ -1887,17 +1870,17 @@ export default function Reports() {
                       </>
                     )}
                     {showTaxDetails && (
-                      <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50">
+                      <Card className="transition-colors hover:bg-accent/50">
                         <CardContent className="pt-6">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-violet-700">{t('reports.totalTax', 'Total Tax')}</p>
-                              <div className="text-2xl font-bold text-violet-900">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                              <Receipt className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-muted-foreground">{t('reports.totalTax', 'Total Tax')}</p>
+                              <div className="text-2xl font-semibold">
                                 {formatCurrency((bookingsEnhancedData || []).reduce((sum, b) => sum + (b.tax_amount || 0), 0))}
                               </div>
-                            </div>
-                            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
-                              <Receipt className="h-5 w-5 text-white" />
                             </div>
                           </div>
                         </CardContent>
@@ -1992,47 +1975,47 @@ export default function Reports() {
               ) : (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-lime-700">{t('reports.bookingRevenue', 'Booking Revenue')}</p>
-                            <div className="text-2xl font-bold text-lime-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <Calendar className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.bookingRevenue', 'Booking Revenue')}</p>
+                            <div className="text-2xl font-semibold">
                               {formatCurrency(rentalRevenueData?.totalBookingRevenue || 0)}
                             </div>
                           </div>
-                          <div className="w-10 h-10 bg-lime-500 rounded-lg flex items-center justify-center">
-                            <Calendar className="h-5 w-5 text-white" />
-                          </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-violet-700">{t('reports.invoiceRevenue', 'Invoice Revenue')}</p>
-                            <div className="text-2xl font-bold text-violet-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <Receipt className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.invoiceRevenue', 'Invoice Revenue')}</p>
+                            <div className="text-2xl font-semibold">
                               {formatCurrency(rentalRevenueData?.invoiceRevenue || 0)}
                             </div>
                           </div>
-                          <div className="w-10 h-10 bg-violet-500 rounded-lg flex items-center justify-center">
-                            <Receipt className="h-5 w-5 text-white" />
-                          </div>
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50">
+                    <Card className="transition-colors hover:bg-accent/50">
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-violet-700">{t('reports.grandTotal', 'Grand Total')}</p>
-                            <div className="text-2xl font-bold text-violet-900">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <DollarSign className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground">{t('reports.grandTotal', 'Grand Total')}</p>
+                            <div className="text-2xl font-semibold">
                               {formatCurrency((rentalRevenueData?.totalBookingRevenue || 0) + (rentalRevenueData?.invoiceRevenue || 0))}
                             </div>
-                          </div>
-                          <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
-                            <DollarSign className="h-5 w-5 text-white" />
                           </div>
                         </div>
                       </CardContent>

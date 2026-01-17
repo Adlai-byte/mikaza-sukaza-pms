@@ -223,112 +223,99 @@ export default function OwnerStatement() {
           </Card>
 
           {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <div className={cn(
+            "grid gap-4",
+            statement.credits?.total > 0 ? "md:grid-cols-4" : "md:grid-cols-3"
+          )}>
+            <Card className="transition-colors hover:bg-accent/50">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-green-700">
-                      Total Revenue
-                    </p>
-                    <h3 className="text-3xl font-bold text-green-900 mt-1">
-                      $
-                      {statement.revenue.total.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </h3>
-                    <p className="text-xs text-green-600 mt-1">
-                      {statement.revenue.by_invoice.length} invoice(s)
-                    </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-white" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">Total Revenue</p>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-2xl font-semibold">
+                        ${statement.revenue.total.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">{statement.revenue.by_invoice.length} invoice(s)</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <Card className="transition-colors hover:bg-accent/50">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-red-700">
-                      Total Expenses
-                    </p>
-                    <h3 className="text-3xl font-bold text-red-900 mt-1">
-                      $
-                      {statement.expenses.total.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </h3>
-                    <p className="text-xs text-red-600 mt-1">
-                      {statement.expenses.by_expense.length} expense(s)
-                    </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                    <TrendingDown className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                    <TrendingDown className="h-6 w-6 text-white" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">Total Expenses</p>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-2xl font-semibold">
+                        ${statement.expenses.total.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">{statement.expenses.by_expense.length} expense(s)</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card
-              className={cn(
-                "border-0 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]",
-                statement.net_income >= 0
-                  ? "bg-gradient-to-br from-emerald-50 to-emerald-100"
-                  : "bg-gradient-to-br from-orange-50 to-orange-100",
-              )}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p
-                      className={cn(
-                        "text-sm font-medium",
-                        statement.net_income >= 0
-                          ? "text-emerald-700"
-                          : "text-orange-700",
-                      )}
-                    >
-                      Net Income
-                    </p>
-                    <h3
-                      className={cn(
-                        "text-3xl font-bold mt-1",
-                        statement.net_income >= 0
-                          ? "text-emerald-900"
-                          : "text-orange-900",
-                      )}
-                    >
-                      {statement.net_income >= 0 ? "+" : ""}$
-                      {statement.net_income.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </h3>
-                    <p
-                      className={cn(
-                        "text-xs mt-1",
-                        statement.net_income >= 0
-                          ? "text-emerald-600"
-                          : "text-orange-600",
-                      )}
-                    >
-                      {statement.net_income >= 0 ? "Profit" : "Loss"}
-                    </p>
+            {/* Credits Card - only show if there are credits */}
+            {statement.credits?.total > 0 && (
+              <Card className="transition-colors hover:bg-accent/50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-muted-foreground">Credits/Refunds</p>
+                      <div className="flex items-baseline gap-2">
+                        <h3 className="text-2xl font-semibold text-green-600">
+                          +${statement.credits.total.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </h3>
+                        <span className="text-xs text-muted-foreground">{statement.credits.by_credit.length} credit(s)</span>
+                      </div>
+                    </div>
                   </div>
-                  <div
-                    className={cn(
-                      "w-12 h-12 rounded-lg flex items-center justify-center",
-                      statement.net_income >= 0
-                        ? "bg-emerald-500"
-                        : "bg-orange-500",
-                    )}
-                  >
-                    <DollarSign className="h-6 w-6 text-white" />
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="transition-colors hover:bg-accent/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">Net Income</p>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className={cn(
+                        "text-2xl font-semibold",
+                        statement.net_income >= 0 ? "text-green-600" : "text-red-600"
+                      )}>
+                        {statement.net_income >= 0 ? "+" : ""}${statement.net_income.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">{statement.net_income >= 0 ? "Profit" : "Loss"}</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -616,6 +603,64 @@ export default function OwnerStatement() {
             </CardContent>
           </Card>
 
+          {/* Credits Details - only show if there are credits */}
+          {statement.credits?.by_credit && statement.credits.by_credit.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Credits / Refunds Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Vendor</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {statement.credits.by_credit.map((credit, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          {format(new Date(credit.date), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell>{credit.vendor}</TableCell>
+                        <TableCell className="capitalize">
+                          {credit.category.replace(/_/g, " ")}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {credit.description}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-green-600">
+                          +$
+                          {credit.amount.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/50 font-medium">
+                      <TableCell colSpan={4} className="text-right">
+                        Total Credits
+                      </TableCell>
+                      <TableCell className="text-right text-green-600">
+                        +$
+                        {statement.credits.total.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Summary Footer */}
           <Card className="border-2">
             <CardContent className="pt-6">
@@ -638,6 +683,18 @@ export default function OwnerStatement() {
                     })}
                   </span>
                 </div>
+                {/* Credits line - only show if there are credits */}
+                {statement.credits?.total > 0 && (
+                  <div className="flex items-center justify-between text-lg">
+                    <span className="font-medium">Credits / Refunds:</span>
+                    <span className="font-bold text-green-600">
+                      +$
+                      {statement.credits.total.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex items-center justify-between text-2xl">
                   <span className="font-bold">Net Income:</span>

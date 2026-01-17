@@ -96,51 +96,51 @@ export default function ServiceDocuments() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-emerald-50 to-emerald-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-emerald-700">{t('serviceDocuments.stats.totalDocuments')}</p>
-                <h3 className="text-3xl font-bold text-emerald-900 mt-1">
-                  {serviceDocs.length}
-                </h3>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Wrench className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
-                <Wrench className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('serviceDocuments.stats.totalDocuments')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{serviceDocs.length}</h3>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-teal-50 to-teal-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-teal-700">{t('serviceDocuments.stats.recentUploads')}</p>
-                <h3 className="text-3xl font-bold text-teal-900 mt-1">
-                  {recentDocs}
-                </h3>
-                <p className="text-xs text-teal-600 mt-1">{t('serviceDocuments.stats.last30Days')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <FileCheck className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center">
-                <FileCheck className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('serviceDocuments.stats.recentUploads')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{recentDocs}</h3>
+                  <span className="text-xs text-muted-foreground">{t('serviceDocuments.stats.last30Days')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-cyan-50 to-cyan-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-cyan-700">{t('serviceDocuments.stats.categories')}</p>
-                <h3 className="text-3xl font-bold text-cyan-900 mt-1">
-                  {new Set(serviceDocs.flatMap(d => d.tags || [])).size}
-                </h3>
-                <p className="text-xs text-cyan-600 mt-1">{t('serviceDocuments.stats.documentTypes')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <FileCheck className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-cyan-500 rounded-lg flex items-center justify-center">
-                <FileCheck className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('serviceDocuments.stats.categories')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{new Set(serviceDocs.flatMap(d => d.tags || [])).size}</h3>
+                  <span className="text-xs text-muted-foreground">{t('serviceDocuments.stats.documentTypes')}</span>
+                </div>
               </div>
             </div>
           </CardContent>

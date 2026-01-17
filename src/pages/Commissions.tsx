@@ -223,100 +223,92 @@ export default function Commissions() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
             {summaryLoading ? (
               <Skeleton className="h-16 w-full" />
             ) : (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">
                     {t('commissions.stats.totalCommissions', 'Total Commissions')}
                   </p>
-                  <h3 className="text-2xl font-bold text-blue-900 mt-1">
-                    {formatCurrency(summary?.total_commissions || 0)}
-                  </h3>
-                  <p className="text-xs text-blue-600 mt-1">
-                    {summary?.commission_count || 0} {t('commissions.stats.invoices', 'invoices')}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-white" />
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{formatCurrency(summary?.total_commissions || 0)}</h3>
+                    <span className="text-xs text-muted-foreground">{summary?.commission_count || 0} {t('commissions.stats.invoices', 'invoices')}</span>
+                  </div>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
             {summaryLoading ? (
               <Skeleton className="h-16 w-full" />
             ) : (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">
                     {t('commissions.stats.paidCommissions', 'Paid (Collected)')}
                   </p>
-                  <h3 className="text-2xl font-bold text-green-900 mt-1">
-                    {formatCurrency(summary?.paid_commissions || 0)}
-                  </h3>
-                  <p className="text-xs text-green-600 mt-1">
-                    {summary?.paid_count || 0} {t('commissions.stats.paidInvoices', 'paid invoices')}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-white" />
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{formatCurrency(summary?.paid_commissions || 0)}</h3>
+                    <span className="text-xs text-muted-foreground">{summary?.paid_count || 0} {t('commissions.stats.paidInvoices', 'paid invoices')}</span>
+                  </div>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-yellow-50 to-yellow-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
             {summaryLoading ? (
               <Skeleton className="h-16 w-full" />
             ) : (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-yellow-700">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">
                     {t('commissions.stats.pendingCommissions', 'Pending (Unpaid)')}
                   </p>
-                  <h3 className="text-2xl font-bold text-yellow-900 mt-1">
-                    {formatCurrency(summary?.pending_commissions || 0)}
-                  </h3>
-                  <p className="text-xs text-yellow-600 mt-1">
-                    {summary?.pending_count || 0} {t('commissions.stats.pendingInvoices', 'pending invoices')}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-white" />
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{formatCurrency(summary?.pending_commissions || 0)}</h3>
+                    <span className="text-xs text-muted-foreground">{summary?.pending_count || 0} {t('commissions.stats.pendingInvoices', 'pending invoices')}</span>
+                  </div>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
             {summaryLoading ? (
               <Skeleton className="h-16 w-full" />
             ) : (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-700">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">
                     {t('commissions.stats.averageCommission', 'Average Commission')}
                   </p>
-                  <h3 className="text-2xl font-bold text-purple-900 mt-1">
-                    {formatCurrency(summary?.average_commission || 0)}
-                  </h3>
-                  <p className="text-xs text-purple-600 mt-1">
-                    {t('commissions.stats.perInvoice', 'per invoice')}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-white" />
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{formatCurrency(summary?.average_commission || 0)}</h3>
+                    <span className="text-xs text-muted-foreground">{t('commissions.stats.perInvoice', 'per invoice')}</span>
+                  </div>
                 </div>
               </div>
             )}

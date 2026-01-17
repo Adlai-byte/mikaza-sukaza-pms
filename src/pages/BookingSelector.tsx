@@ -293,25 +293,27 @@ export default function BookingSelector() {
 
       {/* Footer Stats */}
       {filteredBookings.length > 0 && (
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">Total Bookings Found</p>
-                <h3 className="text-2xl font-bold text-purple-900 mt-1">
-                  {filteredBookings.length}
-                </h3>
+            <div className="flex items-center gap-6">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-purple-700">Combined Value</p>
-                <h3 className="text-2xl font-bold text-purple-900 mt-1">
-                  ${filteredBookings
-                    .reduce((sum, b) => sum + (b.total_amount || 0), 0)
-                    .toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h3>
-              </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-white" />
+              <div className="flex-1 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Bookings Found</p>
+                  <h3 className="text-2xl font-semibold">
+                    {filteredBookings.length}
+                  </h3>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Combined Value</p>
+                  <h3 className="text-2xl font-semibold">
+                    ${filteredBookings
+                      .reduce((sum, b) => sum + (b.total_amount || 0), 0)
+                      .toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </h3>
+                </div>
               </div>
             </div>
           </CardContent>

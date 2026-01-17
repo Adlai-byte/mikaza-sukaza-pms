@@ -22,7 +22,7 @@ export default function EmployeeDocuments() {
   const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
   const { hasPermission } = usePermissions();
   const { t } = useTranslation();
-  const { downloadDocument } = useDocumentDownload();
+  const { downloadDocument, viewDocument } = useDocumentDownload();
 
   // Fetch employee documents
   const {
@@ -46,6 +46,10 @@ export default function EmployeeDocuments() {
 
   // Permission checks
   const canManage = hasPermission(PERMISSIONS.DOCUMENTS_EMPLOYEE_MANAGE);
+
+  const handleViewDocument = (document: DocumentSummary) => {
+    viewDocument(document);
+  };
 
   const handleDownloadDocument = (document: DocumentSummary) => {
     downloadDocument(document);
@@ -89,35 +93,35 @@ export default function EmployeeDocuments() {
 
       {/* Stats Card */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">{t('employeeDocuments.stats.totalDocuments')}</p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">
-                  {employeeDocs.length}
-                </h3>
-                <p className="text-xs text-purple-600 mt-1">{t('employeeDocuments.stats.employeeFiles')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Users className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <Users className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('employeeDocuments.stats.totalDocuments')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{employeeDocs.length}</h3>
+                  <span className="text-xs text-muted-foreground">{t('employeeDocuments.stats.employeeFiles')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-indigo-50 to-indigo-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-indigo-700">{t('employeeDocuments.stats.documentTypes')}</p>
-                <h3 className="text-3xl font-bold text-indigo-900 mt-1">
-                  {new Set(employeeDocs.map(d => d.tags || []).flat()).size}
-                </h3>
-                <p className="text-xs text-indigo-600 mt-1">{t('employeeDocuments.stats.categories')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Shield className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center">
-                <Shield className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('employeeDocuments.stats.documentTypes')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{new Set(employeeDocs.map(d => d.tags || []).flat()).size}</h3>
+                  <span className="text-xs text-muted-foreground">{t('employeeDocuments.stats.categories')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -182,6 +186,7 @@ export default function EmployeeDocuments() {
               <EmployeeDocumentTree
                 documents={employeeDocs}
                 users={users}
+                onViewDocument={handleViewDocument}
                 onDownloadDocument={handleDownloadDocument}
                 onDeleteDocument={canManage ? deleteDocument : undefined}
                 canDelete={canManage}

@@ -161,69 +161,77 @@ export default function Invoices() {
         }
       />
 
-      {/* Stats Cards - Violet & Lime Green Theme */}
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-violet-700">{t('invoices.totalInvoices')}</p>
-                <h3 className="text-3xl font-bold text-violet-900 mt-1">{stats.total}</h3>
-                <p className="text-xs text-violet-600 mt-1">{t('invoices.allTime')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <FileText className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-violet-500 rounded-lg flex items-center justify-center">
-                <FileText className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('invoices.totalInvoices')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.total}</h3>
+                  <span className="text-xs text-muted-foreground">{t('invoices.allTime')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-violet-100 to-violet-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-violet-700">{t('invoices.totalAmount')}</p>
-                <h3 className="text-3xl font-bold text-violet-900 mt-1">
-                  ${stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h3>
-                <p className="text-xs text-violet-600 mt-1">{t('invoices.combinedTotal')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-violet-600 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('invoices.totalAmount')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    ${stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{t('invoices.combinedTotal')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-lime-50 to-lime-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-lime-700">{t('invoices.paidInvoices')}</p>
-                <h3 className="text-3xl font-bold text-lime-900 mt-1">
-                  ${stats.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h3>
-                <p className="text-xs text-lime-600 mt-1">{t('invoices.paidInvoicesDesc', { count: stats.paid })}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-lime-500 rounded-lg flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('invoices.paidInvoices')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    ${stats.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{t('invoices.paidInvoicesDesc', { count: stats.paid })}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-lime-50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-violet-700">{t('invoices.outstanding')}</p>
-                <h3 className="text-3xl font-bold text-violet-900 mt-1">
-                  ${stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h3>
-                <p className="text-xs text-violet-600 mt-1">{t('invoices.pendingPayment')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Clock className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-lime-500 rounded-lg flex items-center justify-center">
-                <Clock className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('invoices.outstanding')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    ${stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{t('invoices.pendingPayment')}</span>
+                </div>
               </div>
             </div>
           </CardContent>

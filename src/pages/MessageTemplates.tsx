@@ -66,34 +66,34 @@ export default function MessageTemplates() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-violet-700">{t('messageTemplates.stats.totalTemplates')}</p>
-                <h3 className="text-3xl font-bold text-violet-900 mt-1">
-                  {templates.length}
-                </h3>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-violet-500 rounded-lg flex items-center justify-center">
-                <MessageSquare className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('messageTemplates.stats.totalTemplates')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{templates.length}</h3>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-fuchsia-50 to-fuchsia-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-fuchsia-700">{t('messageTemplates.stats.templateTypes')}</p>
-                <h3 className="text-3xl font-bold text-fuchsia-900 mt-1">
-                  {new Set(templates.flatMap(d => d.tags || [])).size}
-                </h3>
-                <p className="text-xs text-fuchsia-600 mt-1">{t('messageTemplates.stats.categories')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Mail className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-fuchsia-500 rounded-lg flex items-center justify-center">
-                <Mail className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('messageTemplates.stats.templateTypes')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{new Set(templates.flatMap(d => d.tags || [])).size}</h3>
+                  <span className="text-xs text-muted-foreground">{t('messageTemplates.stats.categories')}</span>
+                </div>
               </div>
             </div>
           </CardContent>

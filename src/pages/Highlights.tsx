@@ -177,164 +177,126 @@ export default function Highlights() {
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Month Revenue */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">
-                  Month Revenue
-                </p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  {formatCurrency(kpis.monthRevenue || 0)}
-                </h3>
-                <div
-                  className={`flex items-center gap-1 text-xs mt-1 ${getTrendColor(kpis.monthRevenueChange || 0)}`}
-                >
-                  {getTrendIcon(kpis.monthRevenueChange || 0)}
-                  <span>
-                    {(kpis.monthRevenueChange || 0) > 0 ? "+" : ""}
-                    {(kpis.monthRevenueChange || 0).toFixed(1)}% from last month
-                  </span>
-                </div>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Month Revenue</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{formatCurrency(kpis.monthRevenue || 0)}</h3>
+                </div>
+                <div className={`flex items-center gap-1 text-xs mt-1 ${getTrendColor(kpis.monthRevenueChange || 0)}`}>
+                  {getTrendIcon(kpis.monthRevenueChange || 0)}
+                  <span>{(kpis.monthRevenueChange || 0) > 0 ? "+" : ""}{(kpis.monthRevenueChange || 0).toFixed(1)}% from last month</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Accounts Receivable Aging */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-blue-700">A/R Aging</p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                  {formatCurrency(kpis.arAging?.total || 0)}
-                </h3>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Clock className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">A/R Aging</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{formatCurrency(kpis.arAging?.total || 0)}</h3>
+                </div>
                 <div className="space-y-1 mt-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-blue-600">Current:</span>
-                    <span className="font-medium text-blue-700">
-                      {formatCurrency(kpis.arAging?.current || 0)}
-                    </span>
+                    <span className="text-muted-foreground">Current:</span>
+                    <span className="font-medium">{formatCurrency(kpis.arAging?.current || 0)}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-blue-600">30-60-90+:</span>
-                    <span className="font-medium text-blue-700">
-                      {formatCurrency(
-                        (kpis.arAging?.days30 || 0) +
-                          (kpis.arAging?.days60 || 0) +
-                          (kpis.arAging?.days90 || 0),
-                      )}
-                    </span>
+                    <span className="text-muted-foreground">30-60-90+:</span>
+                    <span className="font-medium">{formatCurrency((kpis.arAging?.days30 || 0) + (kpis.arAging?.days60 || 0) + (kpis.arAging?.days90 || 0))}</span>
                   </div>
                 </div>
-              </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <Clock className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Delinquencies */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-red-700">
-                  Delinquencies
-                </p>
-                <h3 className="text-3xl font-bold text-red-900 mt-1">
-                  {kpis.delinquencies?.count || 0}
-                </h3>
-                <p className="text-xs text-red-600 mt-1">
-                  {formatCurrency(kpis.delinquencies?.amount || 0)} outstanding
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                <AlertCircle className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Delinquencies</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{kpis.delinquencies?.count || 0}</h3>
+                  <span className="text-xs text-muted-foreground">{formatCurrency(kpis.delinquencies?.amount || 0)} outstanding</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Commissions Due */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">
-                  Commissions Due
-                </p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">
-                  {formatCurrency(kpis.commissionsDue?.amount || 0)}
-                </h3>
-                <p className="text-xs text-purple-600 mt-1">
-                  {kpis.commissionsDue?.count || 0} commission
-                  {(kpis.commissionsDue?.count || 0) !== 1 ? "s" : ""} pending
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Commissions Due</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{formatCurrency(kpis.commissionsDue?.amount || 0)}</h3>
+                  <span className="text-xs text-muted-foreground">{kpis.commissionsDue?.count || 0} commission{(kpis.commissionsDue?.count || 0) !== 1 ? "s" : ""} pending</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Month Costs */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100 hover:shadow-lg transition-all duration-300">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-orange-700">
-                  Month Costs
-                </p>
-                <h3 className="text-3xl font-bold text-orange-900 mt-1">
-                  {formatCurrency(kpis.monthCosts || 0)}
-                </h3>
-                <div
-                  className={`flex items-center gap-1 text-xs mt-1 ${getTrendColor(-(kpis.monthCostsChange || 0))}`}
-                >
-                  {getTrendIcon(kpis.monthCostsChange || 0)}
-                  <span>
-                    {(kpis.monthCostsChange || 0) > 0 ? "+" : ""}
-                    {(kpis.monthCostsChange || 0).toFixed(1)}% from last month
-                  </span>
-                </div>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <TrendingDown className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                <TrendingDown className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Month Costs</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{formatCurrency(kpis.monthCosts || 0)}</h3>
+                </div>
+                <div className={`flex items-center gap-1 text-xs mt-1 ${getTrendColor(-(kpis.monthCostsChange || 0))}`}>
+                  {getTrendIcon(kpis.monthCostsChange || 0)}
+                  <span>{(kpis.monthCostsChange || 0) > 0 ? "+" : ""}{(kpis.monthCostsChange || 0).toFixed(1)}% from last month</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Margin Per Job */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-emerald-50 to-emerald-100 hover:shadow-lg transition-all duration-300">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-emerald-700">
-                  Avg. Margin
-                </p>
-                <h3 className="text-3xl font-bold text-emerald-900 mt-1">
-                  {(kpis.marginPerJob || 0).toFixed(1)}%
-                </h3>
-                <div
-                  className={`flex items-center gap-1 text-xs mt-1 ${getTrendColor(kpis.marginPerJobChange || 0)}`}
-                >
-                  {getTrendIcon(kpis.marginPerJobChange || 0)}
-                  <span>
-                    {(kpis.marginPerJobChange || 0) > 0 ? "+" : ""}
-                    {(kpis.marginPerJobChange || 0).toFixed(1)}% from last month
-                  </span>
-                </div>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
-                <BarChart3 className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Avg. Margin</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{(kpis.marginPerJob || 0).toFixed(1)}%</h3>
+                </div>
+                <div className={`flex items-center gap-1 text-xs mt-1 ${getTrendColor(kpis.marginPerJobChange || 0)}`}>
+                  {getTrendIcon(kpis.marginPerJobChange || 0)}
+                  <span>{(kpis.marginPerJobChange || 0) > 0 ? "+" : ""}{(kpis.marginPerJobChange || 0).toFixed(1)}% from last month</span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -545,7 +507,7 @@ export default function Highlights() {
       </div>
 
       {/* Financial Health Insights */}
-      <Card className="border-0 shadow-md bg-gradient-to-br from-slate-50 to-slate-100">
+      <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" />

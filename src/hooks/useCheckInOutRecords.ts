@@ -8,6 +8,7 @@ import { generateAndUploadCheckInOutPDF } from '@/lib/check-in-out-pdf';
 export function useCheckInOutRecords(filters?: CheckInOutFilters) {
   return useQuery({
     queryKey: ['check_in_out_records', filters],
+    staleTime: 0, // Always refetch when invalidated - operational data
     queryFn: async () => {
       // Build select with optional deletedBy relation for deleted records
       const selectFields = filters?.include_deleted
@@ -78,6 +79,7 @@ export function useCheckInOutRecords(filters?: CheckInOutFilters) {
 export function useCheckInOutRecord(recordId: string | null) {
   return useQuery({
     queryKey: ['check_in_out_record', recordId],
+    staleTime: 0, // Always refetch when invalidated - operational data
     queryFn: async () => {
       if (!recordId) return null;
 

@@ -197,83 +197,71 @@ export default function Media() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">
-                  {t("media.stats.totalImages")}
-                </p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                  {stats.total}
-                </h3>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <ImageIcon className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <ImageIcon className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t("media.stats.totalImages")}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.total}</h3>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-yellow-50 to-yellow-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-yellow-700">
-                  {t("media.stats.primaryImages")}
-                </p>
-                <h3 className="text-3xl font-bold text-yellow-900 mt-1">
-                  {stats.primary}
-                </h3>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Star className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
-                <Star className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t("media.stats.primaryImages")}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.primary}</h3>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">
-                  {t("media.stats.properties")}
-                </p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  {stats.properties}
-                </h3>
-                <p className="text-xs text-green-600 mt-1">
-                  {t("media.stats.withMedia")}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <ImageIcon className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <ImageIcon className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t("media.stats.properties")}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.properties}</h3>
+                  <span className="text-xs text-muted-foreground">{t("media.stats.withMedia")}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">
-                  {t("media.stats.storageUsed")}
-                </p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">
-                  {storageLoading
-                    ? "..."
-                    : formatBytes(storageStats?.totalSize || 0)}
-                </h3>
-                <p className="text-xs text-purple-600 mt-1">
-                  {storageLoading
-                    ? "Loading..."
-                    : `${storageStats?.fileCount || 0} files`}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <HardDrive className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <HardDrive className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t("media.stats.storageUsed")}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {storageLoading ? "..." : formatBytes(storageStats?.totalSize || 0)}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    {storageLoading ? "Loading..." : `${storageStats?.fileCount || 0} files`}
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>

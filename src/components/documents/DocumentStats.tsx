@@ -57,86 +57,84 @@ export function DocumentStats({ category }: DocumentStatsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {/* Total Documents */}
-      <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+      <Card className="transition-colors hover:bg-accent/50">
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-blue-700">Total Documents</p>
-              <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                {displayStats.total_documents}
-              </h3>
-              {categoryStats && (
-                <p className="text-xs text-blue-600 mt-1">
-                  {categoryStats.current_versions} current versions
-                </p>
-              )}
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+              <FileText className="h-5 w-5 text-muted-foreground" />
             </div>
-            <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-              <FileText className="h-6 w-6 text-white" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-muted-foreground">Total Documents</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-2xl font-semibold">{displayStats.total_documents}</h3>
+                {categoryStats && (
+                  <span className="text-xs text-muted-foreground">
+                    {categoryStats.current_versions} current versions
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Active Documents */}
-      <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+      <Card className="transition-colors hover:bg-accent/50">
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-green-700">Active Documents</p>
-              <h3 className="text-3xl font-bold text-green-900 mt-1">
-                {displayStats.active_documents}
-              </h3>
-              {categoryStats && (
-                <p className="text-xs text-green-600 mt-1">
-                  {categoryStats.total_documents - categoryStats.active_documents} inactive
-                </p>
-              )}
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+              <Archive className="h-5 w-5 text-muted-foreground" />
             </div>
-            <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-              <Archive className="h-6 w-6 text-white" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-muted-foreground">Active Documents</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-2xl font-semibold">{displayStats.active_documents}</h3>
+                {categoryStats && (
+                  <span className="text-xs text-muted-foreground">
+                    {categoryStats.total_documents - categoryStats.active_documents} inactive
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Expiring Soon */}
-      <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+      <Card className="transition-colors hover:bg-accent/50">
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-orange-700">Expiring Soon</p>
-              <h3 className="text-3xl font-bold text-orange-900 mt-1">
-                {displayStats.expiring_soon}
-              </h3>
-              <p className="text-xs text-orange-600 mt-1">
-                Within 30 days
-              </p>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-muted-foreground" />
             </div>
-            <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="h-6 w-6 text-white" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-muted-foreground">Expiring Soon</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-2xl font-semibold">{displayStats.expiring_soon}</h3>
+                <span className="text-xs text-muted-foreground">Within 30 days</span>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Storage Used */}
-      <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+      <Card className="transition-colors hover:bg-accent/50">
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-purple-700">Storage Used</p>
-              <h3 className="text-3xl font-bold text-purple-900 mt-1">
-                {formatBytes(displayStats.total_storage_bytes)}
-              </h3>
-              {categoryStats && categoryStats.total_documents > 0 && (
-                <p className="text-xs text-purple-600 mt-1">
-                  {formatBytes(categoryStats.avg_file_size_bytes)} avg
-                </p>
-              )}
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+              <HardDrive className="h-5 w-5 text-muted-foreground" />
             </div>
-            <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-              <HardDrive className="h-6 w-6 text-white" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-muted-foreground">Storage Used</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-2xl font-semibold">{formatBytes(displayStats.total_storage_bytes)}</h3>
+                {categoryStats && categoryStats.total_documents > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {formatBytes(categoryStats.avg_file_size_bytes)} avg
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

@@ -738,7 +738,14 @@ export async function generateAndUploadCheckInOutPDF(
   const fileName = `check-in-out-${data.record.record_id}-${Date.now()}.pdf`;
   const filePath = `check-in-out/reports/${fileName}`;
 
-  const { error: uploadError } = await supabase.storage
+  console.log('📤 Uploading PDF to storage...', {
+    bucket: 'property-documents',
+    filePath,
+    blobSize: blob.size,
+    blobType: blob.type
+  });
+
+  const { data: uploadData, error: uploadError } = await supabase.storage
     .from('property-documents')
     .upload(filePath, blob, {
       contentType: 'application/pdf',
@@ -746,8 +753,27 @@ export async function generateAndUploadCheckInOutPDF(
     });
 
   if (uploadError) {
-    console.error('PDF upload error:', uploadError);
+    console.error('❌ PDF upload error:', uploadError);
     throw new Error(`Failed to upload PDF: ${uploadError.message}`);
+  }
+
+  console.log('✅ PDF uploaded successfully:', uploadData);
+
+  // Verify the file exists by listing it
+  const { data: listData, error: listError } = await supabase.storage
+    .from('property-documents')
+    .list('check-in-out/reports', {
+      search: fileName,
+      limit: 1
+    });
+
+  if (listError) {
+    console.warn('⚠️ Could not verify file exists:', listError);
+  } else if (!listData || listData.length === 0) {
+    console.error('❌ File not found after upload! Path:', filePath);
+    throw new Error('PDF upload succeeded but file not found in storage');
+  } else {
+    console.log('✅ File verified in storage:', listData[0]);
   }
 
   // Generate a signed URL for long-term access (7 days)
@@ -757,9 +783,11 @@ export async function generateAndUploadCheckInOutPDF(
     .createSignedUrl(filePath, 604800); // 7 days (STORAGE_URL_EXPIRATION.PDF_RECORD)
 
   if (signedUrlError) {
-    console.error('Error creating signed URL:', signedUrlError);
+    console.error('❌ Error creating signed URL:', signedUrlError);
     throw new Error(`Failed to create signed URL: ${signedUrlError.message}`);
   }
+
+  console.log('✅ Signed URL created:', signedUrlData.signedUrl.substring(0, 100) + '...');
 
   return signedUrlData.signedUrl;
 }

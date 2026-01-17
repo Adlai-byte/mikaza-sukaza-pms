@@ -236,67 +236,75 @@ export default function Expenses() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">{t('expenses.totalExpenses')}</p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
-                <p className="text-xs text-blue-600 mt-1">{t('expenses.allTime')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Receipt className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <Receipt className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('expenses.totalExpenses')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.total}</h3>
+                  <span className="text-xs text-muted-foreground">{t('expenses.allTime')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">{t('expenses.totalAmount')}</p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">
-                  ${stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h3>
-                <p className="text-xs text-purple-600 mt-1">{t('expenses.combinedTotal')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Receipt className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <Receipt className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('expenses.totalAmount')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    ${stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{t('expenses.combinedTotal')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">{t('expenses.paid')}</p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  ${stats.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h3>
-                <p className="text-xs text-green-600 mt-1">{t('expenses.paidExpenses', { count: stats.paid })}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('expenses.paid')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    ${stats.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{t('expenses.paidExpenses', { count: stats.paid })}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-amber-50 to-amber-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-amber-700">{t('expenses.outstanding')}</p>
-                <h3 className="text-3xl font-bold text-amber-900 mt-1">
-                  ${stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h3>
-                <p className="text-xs text-amber-600 mt-1">{t('expenses.pendingPayment')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Clock className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
-                <Clock className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('expenses.outstanding')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    ${stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{t('expenses.pendingPayment')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -311,10 +319,10 @@ export default function Expenses() {
             {t('expenses.filters')}
           </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-hidden">
-          <div className="flex flex-wrap gap-3">
+        <CardContent className="overflow-hidden">
+          <div className="flex flex-wrap gap-3 max-w-full">
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <div className="relative flex-1 min-w-[180px] max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t('expenses.searchVendorPlaceholder')}
@@ -326,7 +334,7 @@ export default function Expenses() {
 
             {/* Property Filter */}
             <Select value={selectedProperty} onValueChange={setSelectedProperty}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder={t('expenses.allProperties')} />
               </SelectTrigger>
               <SelectContent>
@@ -341,7 +349,7 @@ export default function Expenses() {
 
             {/* Category Filter */}
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder={t('expenses.allCategories')} />
               </SelectTrigger>
               <SelectContent>
@@ -356,7 +364,7 @@ export default function Expenses() {
 
             {/* Status Filter */}
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder={t('expenses.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
@@ -374,7 +382,7 @@ export default function Expenses() {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               placeholder="From"
-              className="w-[150px]"
+              className="w-full sm:w-[140px]"
             />
 
             {/* Date To */}
@@ -383,7 +391,7 @@ export default function Expenses() {
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               placeholder="To"
-              className="w-[150px]"
+              className="w-full sm:w-[140px]"
             />
           </div>
         </CardContent>

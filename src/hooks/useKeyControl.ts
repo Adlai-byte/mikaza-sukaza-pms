@@ -39,6 +39,7 @@ export const keyControlKeys = {
 export function useKeyInventory(filters?: KeyInventoryFilters) {
   return useQuery({
     queryKey: keyControlKeys.inventoryList(filters),
+    staleTime: 0, // Always refetch when invalidated - operational data
     queryFn: async () => {
       let query = supabase
         .from('key_inventory')
@@ -74,6 +75,7 @@ export function useKeyInventory(filters?: KeyInventoryFilters) {
 export function useKeyTransactions(filters?: KeyTransactionFilters) {
   return useQuery({
     queryKey: keyControlKeys.transactionList(filters),
+    staleTime: 0, // Always refetch when invalidated - operational data
     queryFn: async () => {
       let query = supabase
         .from('key_transactions')
@@ -126,6 +128,7 @@ export function useKeyTransactions(filters?: KeyTransactionFilters) {
 export function usePropertyKeySummary(propertyId: string | null) {
   return useQuery({
     queryKey: keyControlKeys.propertySummary(propertyId || undefined),
+    staleTime: 0, // Always refetch when invalidated - operational data
     queryFn: async () => {
       if (!propertyId) return null;
 
@@ -186,6 +189,7 @@ export function usePropertyKeySummary(propertyId: string | null) {
 export function useAllPropertiesKeySummary(searchTerm?: string) {
   return useQuery({
     queryKey: [...keyControlKeys.allPropertiesSummary(), searchTerm],
+    staleTime: 0, // Always refetch when invalidated - operational data
     queryFn: async () => {
       // Fetch all properties
       let propertiesQuery = supabase
@@ -586,6 +590,7 @@ export function useBulkUpdateInventory() {
 export function useKeyBorrowings(filters?: KeyBorrowingFilters) {
   return useQuery({
     queryKey: keyControlKeys.borrowingList(filters),
+    staleTime: 0, // Always refetch when invalidated - operational data
     queryFn: async () => {
       let query = supabase
         .from('key_borrowings')
@@ -641,6 +646,7 @@ export function useKeyBorrowings(filters?: KeyBorrowingFilters) {
 export function useOutstandingBorrowings(propertyId?: string) {
   return useQuery({
     queryKey: [...keyControlKeys.outstandingBorrowings(), propertyId],
+    staleTime: 0, // Always refetch when invalidated - operational data
     queryFn: async () => {
       let query = supabase
         .from('key_borrowings')
@@ -898,6 +904,7 @@ export function useCheckInKey() {
 export function useBorrowingStats() {
   return useQuery({
     queryKey: [...keyControlKeys.borrowings(), 'stats'],
+    staleTime: 0, // Always refetch when invalidated - operational data
     queryFn: async () => {
       const { data: borrowings, error } = await supabase
         .from('key_borrowings')
