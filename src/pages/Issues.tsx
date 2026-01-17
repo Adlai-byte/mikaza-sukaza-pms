@@ -87,7 +87,9 @@ export default function Issues() {
     return baseFilters;
   }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery, user?.id]);
 
-  const { issues, loading, isFetching, refetch } = useIssues(filters);
+  // Only fetch issues when user is authenticated - prevents race condition
+  // where query runs before user.id is available from AuthContext
+  const { issues, loading, isFetching, refetch } = useIssues(filters, { enabled: !!user?.id });
   const createIssue = useCreateIssue();
   const updateIssue = useUpdateIssue();
   const deleteIssue = useDeleteIssue();

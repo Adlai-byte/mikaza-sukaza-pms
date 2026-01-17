@@ -89,7 +89,9 @@ export default function Todos() {
     return baseFilters;
   }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, searchQuery, showOverdue, user]);
 
-  const { tasks, loading, isFetching, refetch } = useTasks(filters);
+  // Only fetch tasks when user is authenticated - prevents race condition
+  // where query runs before user.id is available from AuthContext
+  const { tasks, loading, isFetching, refetch } = useTasks(filters, { enabled: !!user?.id });
 
   // Debug logging for tasks
   React.useEffect(() => {

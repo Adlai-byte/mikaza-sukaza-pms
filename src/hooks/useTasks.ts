@@ -243,8 +243,13 @@ const deleteChecklistItem = async (itemId: string): Promise<{ itemId: string; it
   return { itemId, item };
 };
 
+// Hook options interface
+interface UseTasksOptions {
+  enabled?: boolean;
+}
+
 // Hooks
-export function useTasks(filters?: TaskFilters) {
+export function useTasks(filters?: TaskFilters, options?: UseTasksOptions) {
   const { data: tasks = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: taskKeys.list(filters),
     queryFn: () => fetchTasks(filters),
@@ -253,6 +258,8 @@ export function useTasks(filters?: TaskFilters) {
     gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+    // Only run query when enabled (default: true for backward compatibility)
+    enabled: options?.enabled ?? true,
   });
 
   // Real-time subscription

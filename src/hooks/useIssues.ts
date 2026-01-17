@@ -262,12 +262,19 @@ const deletePhoto = async (photoId: string, photoUrl: string): Promise<void> => 
   if (error) throw error;
 };
 
+// Hook options interface
+interface UseIssuesOptions {
+  enabled?: boolean;
+}
+
 // Hooks
-export function useIssues(filters?: IssueFilters) {
-  const { data: issues = [], isLoading, error, refetch } = useQuery({
+export function useIssues(filters?: IssueFilters, options?: UseIssuesOptions) {
+  const { data: issues = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: issueKeys.list(filters),
     queryFn: () => fetchIssues(filters),
     staleTime: 30 * 1000, // 30 seconds
+    // Only run query when enabled (default: true for backward compatibility)
+    enabled: options?.enabled ?? true,
   });
 
   // Real-time subscription
@@ -310,6 +317,7 @@ export function useIssues(filters?: IssueFilters) {
   return {
     issues,
     loading: isLoading,
+    isFetching,
     error,
     refetch,
   };
