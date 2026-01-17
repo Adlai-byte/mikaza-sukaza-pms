@@ -50,7 +50,7 @@ const OwnerStatement = lazy(() => import("./pages/OwnerStatement"));
 const BillTemplates = lazy(() => import("./pages/BillTemplates"));
 const FinancialDashboard = lazy(() => import("./pages/FinancialDashboard"));
 const ServicePipeline = lazy(() => import("./pages/ServicePipeline"));
-const Commissions = lazy(() => import("./pages/Commissions"));
+// const Commissions = lazy(() => import("./pages/Commissions")); // Hidden - not needed for now
 const Highlights = lazy(() => import("./pages/Highlights"));
 
 // Documents
@@ -582,7 +582,7 @@ const App = () => (
                   }
                 />
 
-                {/* Commissions - Finance team can access */}
+                {/* Commissions - Hidden, not needed for now
                 <Route
                   path="/commissions"
                   element={
@@ -591,6 +591,7 @@ const App = () => (
                     </RBACProtectedRoute>
                   }
                 />
+                */}
 
                 {/* Automation - Report Schedules */}
                 <Route

@@ -391,14 +391,15 @@ export const QUICK_ACTIONS: QuickAction[] = [
     icon: Image,
     permission: PERMISSIONS.MEDIA_VIEW,
   },
-  {
-    id: 'commissions',
-    title: 'Commissions',
-    keywords: ['commissions', 'earnings', 'payouts', 'commission'],
-    route: '/commissions',
-    icon: Percent,
-    permission: PERMISSIONS.FINANCE_VIEW,
-  },
+  // Hidden - not needed for now
+  // {
+  //   id: 'commissions',
+  //   title: 'Commissions',
+  //   keywords: ['commissions', 'earnings', 'payouts', 'commission'],
+  //   route: '/commissions',
+  //   icon: Percent,
+  //   permission: PERMISSIONS.FINANCE_VIEW,
+  // },
   {
     id: 'highlights',
     title: 'Highlights',

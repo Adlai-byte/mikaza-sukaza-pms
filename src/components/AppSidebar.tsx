@@ -110,7 +110,7 @@ const financeMenuItems = [
   // Daily/Weekly Financial Operations
   { titleKey: "sidebar.invoices", url: "/invoices", icon: Receipt, permission: PERMISSIONS.FINANCE_VIEW },
   { titleKey: "sidebar.expenses", url: "/expenses", icon: DollarSign, permission: PERMISSIONS.FINANCE_VIEW },
-  { titleKey: "sidebar.commissions", url: "/commissions", icon: Percent, permission: PERMISSIONS.FINANCE_VIEW },
+  // { titleKey: "sidebar.commissions", url: "/commissions", icon: Percent, permission: PERMISSIONS.FINANCE_VIEW }, // Hidden - not needed for now
   { titleKey: "sidebar.billTemplates", url: "/bill-templates", icon: LayoutGrid, permission: PERMISSIONS.FINANCE_VIEW },
 
   // Periodic Reports & Analysis
