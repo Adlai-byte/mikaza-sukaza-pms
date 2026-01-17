@@ -171,7 +171,7 @@ export function DocumentUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[550px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{t('dialogs.documentUpload.title')} {DOCUMENT_CATEGORIES[category]}</DialogTitle>
           <DialogDescription>

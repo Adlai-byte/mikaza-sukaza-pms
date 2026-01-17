@@ -74,6 +74,7 @@ export function UtilityProviderForm({
       address_city: "",
       address_state: "",
       address_zip: "",
+      license_number: "",
     },
   });
 
@@ -98,6 +99,7 @@ export function UtilityProviderForm({
         address_city: provider?.address_city || "",
         address_state: provider?.address_state || "",
         address_zip: provider?.address_zip || "",
+        license_number: provider?.license_number || "",
       };
 
       form.reset(formData);
@@ -327,6 +329,31 @@ export function UtilityProviderForm({
                   )}
                 />
               </div>
+            </div>
+
+            {/* Business Account Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Business Account Information</h3>
+              <p className="text-sm text-muted-foreground">
+                Property-specific account details (account numbers, billing names, login credentials) are managed when assigning this utility to a property in the Property &gt; Providers section.
+              </p>
+
+              <FormField
+                control={form.control}
+                name="license_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Utility Account / License Number</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="General account or license number" />
+                    </FormControl>
+                    <FormDescription>
+                      Default account number for this utility provider
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Office Address (Optional) */}

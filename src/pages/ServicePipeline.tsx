@@ -87,10 +87,8 @@ export default function ServicePipeline() {
 
   // Calculate pipeline statistics
   const pipelineStats: PipelineStats = useMemo(() => {
-    // Assuming job types have associated estimated costs
-    const getJobValue = (job: any) => {
-      // This would ideally come from a cost field in the database
-      // For now, using a simplified estimation based on job type and priority
+    // Helper function for calculating estimated job values
+    const calcJobValue = (job: any) => {
       const baseValues: Record<string, number> = {
         maintenance: 500,
         cleaning: 200,
@@ -114,21 +112,21 @@ export default function ServicePipeline() {
       return base * multiplier;
     };
 
-    const totalValue = jobs.reduce((sum, job) => sum + getJobValue(job), 0);
+    const totalValue = jobs.reduce((sum, job) => sum + calcJobValue(job), 0);
     const pendingJobs = jobs.filter((j) => j.status === "pending");
     const inProgressJobs = jobs.filter((j) => j.status === "in_progress");
     const completedJobs = jobs.filter((j) => j.status === "completed");
 
     const pendingValue = pendingJobs.reduce(
-      (sum, job) => sum + getJobValue(job),
+      (sum, job) => sum + calcJobValue(job),
       0,
     );
     const inProgressValue = inProgressJobs.reduce(
-      (sum, job) => sum + getJobValue(job),
+      (sum, job) => sum + calcJobValue(job),
       0,
     );
     const completedValue = completedJobs.reduce(
-      (sum, job) => sum + getJobValue(job),
+      (sum, job) => sum + calcJobValue(job),
       0,
     );
 
@@ -206,25 +204,50 @@ export default function ServicePipeline() {
     }
   };
 
+  // Helper function to calculate job value (also used in export)
+  const getJobValue = (job: any) => {
+    const baseValues: Record<string, number> = {
+      maintenance: 500,
+      cleaning: 200,
+      inspection: 150,
+      repair: 800,
+      emergency: 1200,
+      installation: 1500,
+      other: 300,
+    };
+
+    const priorityMultiplier: Record<string, number> = {
+      urgent: 1.5,
+      high: 1.3,
+      medium: 1.0,
+      low: 0.8,
+    };
+
+    const base = baseValues[job.job_type?.toLowerCase()] || 300;
+    const multiplier = priorityMultiplier[job.priority?.toLowerCase()] || 1.0;
+
+    return base * multiplier;
+  };
+
   const handleExport = () => {
-    // Create CSV content
+    // Create CSV content with job value column
     const headers = [
-      "Job ID",
       "Title",
       "Property",
       "Status",
       "Priority",
       "Type",
+      "Estimated Value",
       "Due Date",
       "Assigned To",
     ];
     const rows = jobs.map((job) => [
-      job.job_id,
       job.title,
       job.property?.property_name || "N/A",
       job.status,
       job.priority,
       job.job_type,
+      `$${getJobValue(job).toFixed(0)}`,
       job.due_date ? format(parseISO(job.due_date), "yyyy-MM-dd") : "N/A",
       job.assigned_user
         ? `${job.assigned_user.first_name} ${job.assigned_user.last_name}`

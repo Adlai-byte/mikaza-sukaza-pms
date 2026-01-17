@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertTriangle,
@@ -378,19 +379,22 @@ export default function Issues() {
               {/* Assignee Filter */}
               <div className="space-y-2">
                 <Label htmlFor="assignee">{t('issues.filters.assignedTo')}</Label>
-                <Select value={assignedFilter || "default"} onValueChange={(value) => setAssignedFilter(value === "default" ? '' : value)}>
-                  <SelectTrigger id="assignee">
-                    <SelectValue placeholder={t('issues.filters.myIssues')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">{t('issues.filters.myIssues')}</SelectItem>
-                    {users.map(u => (
-                      <SelectItem key={u.user_id} value={u.user_id}>
-                        {formatUserDisplay(u)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Combobox
+                  options={[
+                    { value: 'default', label: t('issues.filters.myIssues') },
+                    ...users.map(u => ({
+                      value: u.user_id,
+                      label: formatUserDisplay(u),
+                    })),
+                  ]}
+                  value={assignedFilter || 'default'}
+                  onValueChange={(value) => setAssignedFilter(value === 'default' ? '' : value)}
+                  placeholder={t('issues.filters.myIssues')}
+                  searchPlaceholder={t('issues.filters.searchUser', 'Search user...')}
+                  emptyText={t('issues.filters.noUserFound', 'No user found.')}
+                  preserveSearch={true}
+                  clearable
+                />
               </div>
             </div>
 

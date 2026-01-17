@@ -521,21 +521,20 @@ export default function Media() {
                           <Download className="h-4 w-4 mr-1" />
                           Download
                         </Button>
-                        {!image.is_primary && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() =>
-                              handleSetPrimary(
-                                image.image_id,
-                                image.property_id,
-                              )
-                            }
-                            disabled={setPrimaryMutation.isPending}
-                          >
-                            <Star className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant={image.is_primary ? "default" : "secondary"}
+                          size="sm"
+                          onClick={() =>
+                            handleSetPrimary(
+                              image.image_id,
+                              image.property_id,
+                            )
+                          }
+                          disabled={setPrimaryMutation.isPending}
+                          title={image.is_primary ? "Remove primary status" : "Set as primary"}
+                        >
+                          <Star className={`h-4 w-4 ${image.is_primary ? "fill-current" : ""}`} />
+                        </Button>
                         <Button
                           variant="destructive"
                           size="sm"

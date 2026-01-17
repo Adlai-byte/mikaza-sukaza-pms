@@ -319,8 +319,8 @@ export default function Expenses() {
             {t('expenses.filters')}
           </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-hidden">
-          <div className="flex flex-wrap gap-3 max-w-full">
+        <CardContent className="overflow-x-auto">
+          <div className="flex flex-wrap gap-3 min-w-0">
             {/* Search */}
             <div className="relative flex-1 min-w-[180px] max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -334,7 +334,7 @@ export default function Expenses() {
 
             {/* Property Filter */}
             <Select value={selectedProperty} onValueChange={setSelectedProperty}>
-              <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectTrigger className="w-[160px] flex-shrink-0">
                 <SelectValue placeholder={t('expenses.allProperties')} />
               </SelectTrigger>
               <SelectContent>
@@ -349,7 +349,7 @@ export default function Expenses() {
 
             {/* Category Filter */}
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectTrigger className="w-[160px] flex-shrink-0">
                 <SelectValue placeholder={t('expenses.allCategories')} />
               </SelectTrigger>
               <SelectContent>
@@ -364,7 +364,7 @@ export default function Expenses() {
 
             {/* Status Filter */}
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectTrigger className="w-[160px] flex-shrink-0">
                 <SelectValue placeholder={t('expenses.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
@@ -382,7 +382,7 @@ export default function Expenses() {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               placeholder="From"
-              className="w-full sm:w-[140px]"
+              className="w-[140px] flex-shrink-0"
             />
 
             {/* Date To */}
@@ -391,7 +391,7 @@ export default function Expenses() {
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               placeholder="To"
-              className="w-full sm:w-[140px]"
+              className="w-[140px] flex-shrink-0"
             />
           </div>
         </CardContent>
@@ -550,17 +550,16 @@ export default function Expenses() {
                   const providerNames = providers?.map(p => p.provider_name) || [];
                   const isKnownProvider = providerNames.includes(currentVendor);
                   const isCustomVendor = currentVendor && currentVendor !== 'other' && !isKnownProvider;
+                  const showCustomInput = currentVendor === 'other' || isCustomVendor;
 
                   return (
                     <>
                       <Select
-                        value={isCustomVendor ? 'other' : currentVendor}
+                        value={isCustomVendor ? 'other' : (currentVendor || '')}
                         onValueChange={(value) => {
                           if (value === 'other') {
-                            // Keep current custom value if already custom, else clear for input
-                            if (!isCustomVendor) {
-                              form.setValue('vendor_name', 'other');
-                            }
+                            // Set to empty string to allow typing fresh custom vendor
+                            form.setValue('vendor_name', '');
                           } else {
                             form.setValue('vendor_name', value);
                           }
@@ -581,12 +580,13 @@ export default function Expenses() {
                           <SelectItem value="other">{t('expenses.otherVendor')}</SelectItem>
                         </SelectContent>
                       </Select>
-                      {(currentVendor === 'other' || isCustomVendor) && (
+                      {showCustomInput && (
                         <Input
                           placeholder={t('expenses.enterCustomVendor')}
-                          value={isCustomVendor ? currentVendor : ''}
-                          onChange={(e) => form.setValue('vendor_name', e.target.value || 'other')}
+                          value={currentVendor === 'other' ? '' : currentVendor}
+                          onChange={(e) => form.setValue('vendor_name', e.target.value)}
                           className="mt-2"
+                          autoFocus
                         />
                       )}
                     </>

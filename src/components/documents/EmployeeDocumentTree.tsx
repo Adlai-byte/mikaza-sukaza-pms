@@ -225,15 +225,20 @@ export function EmployeeDocumentTree({
         <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="truncate text-sm">{node.name}</span>
             {doc.expiring_soon && (
               <Badge variant="destructive" className="text-xs">
                 Expiring Soon
               </Badge>
             )}
+            {doc.property_name && (
+              <Badge variant="outline" className="text-xs">
+                {doc.property_name}
+              </Badge>
+            )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
             <span>{formatFileSize(doc.file_size)}</span>
             <span>•</span>
             <span>
@@ -243,6 +248,12 @@ export function EmployeeDocumentTree({
               <>
                 <span>•</span>
                 <span>by {doc.uploaded_by_name}</span>
+              </>
+            )}
+            {doc.tags && doc.tags.length > 0 && (
+              <>
+                <span>•</span>
+                <span className="text-primary">{doc.tags.join(', ')}</span>
               </>
             )}
           </div>

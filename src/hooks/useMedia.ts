@@ -194,28 +194,48 @@ const deleteMedia = async (imageId: string): Promise<void> => {
   console.log('✅ [Media] Delete complete');
 };
 
-// Set primary image
+// Toggle primary image status
 const setPrimaryImage = async (propertyId: string, imageId: string): Promise<void> => {
-  console.log('⭐ [Media] Setting primary image:', imageId, 'for property:', propertyId);
+  console.log('⭐ [Media] Toggling primary image:', imageId, 'for property:', propertyId);
 
-  // 1. Unset all current primary images for this property
-  await supabase
+  // First check if this image is already primary
+  const { data: currentImage } = await supabase
     .from('property_images')
-    .update({ is_primary: false })
-    .eq('property_id', propertyId);
+    .select('is_primary')
+    .eq('image_id', imageId)
+    .single();
 
-  // 2. Set new primary image
-  const { error } = await supabase
-    .from('property_images')
-    .update({ is_primary: true })
-    .eq('image_id', imageId);
+  if (currentImage?.is_primary) {
+    // If already primary, just unset it (no primary image for this property)
+    const { error } = await supabase
+      .from('property_images')
+      .update({ is_primary: false })
+      .eq('image_id', imageId);
 
-  if (error) {
-    console.error('❌ [Media] Set primary error:', error);
-    throw error;
+    if (error) {
+      console.error('❌ [Media] Unset primary error:', error);
+      throw error;
+    }
+    console.log('✅ [Media] Primary image unset');
+  } else {
+    // 1. Unset all current primary images for this property
+    await supabase
+      .from('property_images')
+      .update({ is_primary: false })
+      .eq('property_id', propertyId);
+
+    // 2. Set new primary image
+    const { error } = await supabase
+      .from('property_images')
+      .update({ is_primary: true })
+      .eq('image_id', imageId);
+
+    if (error) {
+      console.error('❌ [Media] Set primary error:', error);
+      throw error;
+    }
+    console.log('✅ [Media] Primary image set');
   }
-
-  console.log('✅ [Media] Primary image set');
 };
 
 // Hook: Fetch media list

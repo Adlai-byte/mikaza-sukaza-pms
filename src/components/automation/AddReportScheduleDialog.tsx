@@ -150,8 +150,20 @@ export function AddReportScheduleDialog({
     }
   };
 
-  // Handle form submission
+  // Handle form submission - auto-add email if typed but not added
   const onSubmit = (data: ReportScheduleInsert) => {
+    // Auto-add any pending email in the input field
+    const pendingEmail = emailInput.trim();
+    if (pendingEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailRegex.test(pendingEmail)) {
+        const currentEmails = data.recipient_emails || [];
+        if (!currentEmails.includes(pendingEmail)) {
+          data.recipient_emails = [...currentEmails, pendingEmail];
+        }
+      }
+    }
+
     if (isEditing && schedule) {
       updateSchedule.mutate(
         { scheduleId: schedule.schedule_id, updates: data },
