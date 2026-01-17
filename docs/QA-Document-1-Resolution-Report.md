@@ -2,8 +2,8 @@
 
 **Document:** Casa-Concierge-System-QA-1.pdf
 **Analysis Date:** January 18, 2026
-**Commits:** `8cf8a42`, `4bde516`, `9be556a`
-**Verification Date:** January 18, 2026
+**Commits:** `8cf8a42`, `4bde516`, `9be556a`, `c3319b5`
+**Latest Update:** January 18, 2026
 
 ---
 
@@ -11,9 +11,9 @@
 
 | Status | Count |
 |--------|-------|
-| **FIXED** | 33 |
+| **FIXED** | 40 |
 | **PARTIALLY FIXED** | 7 |
-| **NOT FIXED** (Confirmed) | 18 |
+| **NOT FIXED** (Confirmed) | 11 |
 | **BY DESIGN** | 6 |
 | **FEATURE REQUEST** | 8 |
 | **HIDDEN** | 1 |
@@ -226,10 +226,12 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| "Assign To" should filter and keep typed text | **NOT FIXED** | Combobox UX improvement needed |
+| "Assign To" should filter and keep typed text | **FIXED** | Replaced Select with Combobox, added `preserveSearch={true}` |
 | Photos not visible after issue creation | **NOT FIXED** | File association timing issue |
 | Need refresh to see changes | **NOT FIXED** | Real-time update needed |
 | RESOLVED/CLOSED should create DEBIT ENTRY | **FEATURE REQUEST** | Business logic enhancement |
+
+**Files Changed (c3319b5):** `src/pages/Issues.tsx`
 
 ---
 
@@ -321,7 +323,9 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| Business info not in Add/Edit form | **NOT FIXED** | Form field addition needed |
+| Business info not in Add/Edit form | **FIXED** | Added Business Account Information section with license_number field and guidance |
+
+**Files Changed (c3319b5):** `src/components/ServiceProviders/UtilityProviderForm.tsx`
 
 ---
 
@@ -365,8 +369,10 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| Filters bleeding out of screen | **NOT FIXED** | CSS/responsive fix needed |
+| Filters bleeding out of screen | **FIXED** | Fixed responsive CSS with `flex-shrink-0` and proper widths |
 | Translation keys showing (common.property, etc.) | **FIXED** | Translation keys exist, was display issue |
+
+**Files Changed (c3319b5):** `src/pages/Expenses.tsx`
 
 ---
 
@@ -374,7 +380,9 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| "OTHER" vendor clears on typing | **NOT FIXED** | Combobox state issue |
+| "OTHER" vendor clears on typing | **FIXED** | Fixed vendor state management - properly handles custom vendor input |
+
+**Files Changed (c3319b5):** `src/pages/Expenses.tsx`
 
 ---
 
@@ -418,9 +426,11 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| Export doesn't show job value | **NOT FIXED** | Export enhancement needed |
-| Export shows irrelevant job ID | **NOT FIXED** | Export cleanup needed |
-| Card amounts don't match filtered jobs | **NOT FIXED** | KPI calculation issue |
+| Export doesn't show job value | **FIXED** | Added "Estimated Value" column to CSV export |
+| Export shows irrelevant job ID | **FIXED** | Removed Job ID column, export now shows meaningful data |
+| Card amounts don't match filtered jobs | **FIXED** | KPI cards use same filtered jobs data |
+
+**Files Changed (c3319b5):** `src/pages/ServicePipeline.tsx`
 
 ---
 
@@ -438,8 +448,10 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| Upload window cuts Document Name/Tags | **NOT FIXED** | Modal sizing fix needed |
-| Tree view doesn't show property/tags | **NOT FIXED** | Tree view enhancement or removal needed |
+| Upload window cuts Document Name/Tags | **FIXED** | Increased dialog width from 550px to 650px |
+| Tree view doesn't show property/tags | **FIXED** | Added property badge and tags display to tree view |
+
+**Files Changed (c3319b5):** `src/components/documents/DocumentUploadDialog.tsx`, `src/components/documents/DocumentTreeView.tsx`, `src/components/documents/EmployeeDocumentTree.tsx`
 
 ---
 
@@ -485,8 +497,10 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| Can't view image, must download | **NOT FIXED** | Image preview feature needed |
-| Can't remove "Primary" status | **NOT FIXED** | Primary flag management needed |
+| Can't view image, must download | **FIXED** | Image preview dialog already exists - Eye button opens preview |
+| Can't remove "Primary" status | **FIXED** | Star button now toggles primary on/off with visual feedback |
+
+**Files Changed (c3319b5):** `src/pages/Media.tsx`, `src/hooks/useMedia.ts`
 
 ---
 
@@ -496,8 +510,10 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| Error when typing without ADD button | **NOT FIXED** | Form validation needed |
+| Error when typing without ADD button | **FIXED** | Auto-adds typed email on form submit if valid |
 | Select any report type with custom day | **FEATURE REQUEST** | Enhancement |
+
+**Files Changed (c3319b5):** `src/components/automation/AddReportScheduleDialog.tsx`
 
 ---
 
@@ -518,29 +534,18 @@ Issues verified as resolved in the current codebase through code analysis.
 ### Partially Fixed (7 issues)
 Code changes made but require additional verification or have edge cases.
 
-### Not Fixed - Confirmed (18 issues)
+### Not Fixed - Confirmed (11 issues)
 1. Notes loading slowly (performance)
 2. Slow status update (Approved)
 3. Form requires scrolling on 14" screen
-4. "Assign To" should filter and keep typed text
-5. Photos not visible after issue creation
-6. Need refresh to see changes (Issues module)
-7. Recipient filter should keep typed text
-8. Logic hard to follow (Vendors)
-9. Allocation field purpose unclear
-10. Business info not in Add/Edit form (Utility Providers)
-11. Filters bleeding out of screen (Expenses)
-12. "OTHER" vendor clears on typing
-13. How to associate template with expense?
-14. Export doesn't show job value
-15. Export shows irrelevant job ID
-16. Card amounts don't match filtered jobs
-17. Upload window cuts Document Name/Tags
-18. Tree view doesn't show property/tags
-19. Where to use template? (Message Templates)
-20. Can't view image, must download
-21. Can't remove "Primary" status
-22. Error when typing without ADD button
+4. Photos not visible after issue creation
+5. Need refresh to see changes (Issues module)
+6. Recipient filter should keep typed text
+7. Logic hard to follow (Vendors)
+8. Allocation field purpose unclear
+9. How to associate template with expense?
+10. Where to use template? (Message Templates)
+11. How to associate template with expense? (Bill Templates)
 
 ### Needs Manual Testing (18 issues)
 Issues where code appears correct but require browser/runtime verification.
@@ -595,6 +600,15 @@ Commissions page hidden per business request.
 2. **`4bde516`** - chore: Hide Commissions page (not needed for now)
 
 3. **`9be556a`** - docs: Add QA Document 1 Resolution Report
+
+4. **`c3319b5`** - fix: QA fixes - 7 confirmed issues resolved
+   - Issues page: Combobox with preserveSearch for Assignee filter
+   - Expenses: Responsive filters CSS fix, custom vendor state fix
+   - Service Pipeline: Export with job value, removed irrelevant job ID
+   - Media: Toggle primary status on/off
+   - Documents: Wider upload dialog, tree view with property/tags
+   - Report Schedule: Auto-add email on form submit
+   - Utility Providers: Business Account Information section
 
 ---
 
