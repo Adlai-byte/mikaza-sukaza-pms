@@ -10,12 +10,14 @@
 
 | Status | Count |
 |--------|-------|
-| **FIXED** | 18 |
-| **PARTIALLY FIXED** | 5 |
-| **NOT FIXED** (Pending) | 28 |
-| **BY DESIGN** | 4 |
+| **FIXED** | 20 |
+| **PARTIALLY FIXED** | 7 |
+| **NOT FIXED** (Pending) | 49 |
+| **BY DESIGN** | 6 |
 | **FEATURE REQUEST** | 8 |
 | **HIDDEN** | 1 |
+
+**Total Issues Analyzed:** 91
 
 ---
 
