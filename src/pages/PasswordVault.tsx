@@ -48,7 +48,10 @@ import {
   ShieldCheck,
   Building2,
   AlertTriangle,
+  ShieldOff,
 } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PERMISSIONS } from "@/lib/rbac/permissions";
 import {
   usePasswordVault,
   usePasswordVaultStats,
@@ -73,6 +76,10 @@ import { useToast } from "@/hooks/use-toast";
 export default function PasswordVault() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { hasPermission, isLoading: permissionsLoading } = usePermissions();
+
+  // Check if user has access to password vault (admin only)
+  const canViewPasswords = hasPermission(PERMISSIONS.PASSWORDS_VIEW);
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
@@ -240,6 +247,43 @@ export default function PasswordVault() {
   };
 
   const vaultIsUnlocked = isVaultUnlocked();
+
+  // Show loading state while checking permissions
+  if (permissionsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Show access denied for non-admin users
+  if (!canViewPasswords) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={t("passwordVault.title", "Password Vault")}
+          subtitle={t("passwordVault.subtitle", "Securely store and manage passwords and access codes")}
+          icon={KeyRound}
+        />
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
+              <ShieldOff className="h-8 w-8 text-red-600" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-red-800">
+                {t("passwordVault.accessDenied", "Access Denied")}
+              </h3>
+              <p className="text-sm text-red-600 mt-1 max-w-md">
+                {t("passwordVault.accessDeniedDescription", "The Password Vault is restricted to administrators only. Contact your system administrator if you need access to passwords or access codes.")}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
