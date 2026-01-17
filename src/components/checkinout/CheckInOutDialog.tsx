@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -129,6 +129,9 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
   const [uploadingFile, setUploadingFile] = useState(false);
   const [signatureResetKey, setSignatureResetKey] = useState(0);
 
+  // Track which record we've loaded to avoid resetting photos/documents on parent re-renders
+  const loadedRecordIdRef = useRef<string | null>(null);
+
   const createMutation = useCreateCheckInOutRecord();
   const updateMutation = useUpdateCheckInOutRecord();
 
@@ -183,6 +186,8 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
   // Reset form when opening for a NEW record (no existing record)
   useEffect(() => {
     if (open && !record) {
+      // Clear loaded record tracking
+      loadedRecordIdRef.current = null;
       // Reset form to default values
       reset({
         record_type: 'check_in',
@@ -206,9 +211,19 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
     }
   }, [open, record, reset, user?.id]);
 
-  // Load record data when editing
+  // Clear loaded record ref when dialog closes
+  useEffect(() => {
+    if (!open) {
+      loadedRecordIdRef.current = null;
+    }
+  }, [open]);
+
+  // Load record data when editing - only reset photos/docs if loading a DIFFERENT record
   useEffect(() => {
     if (record) {
+      const isNewRecordLoad = loadedRecordIdRef.current !== record.record_id;
+
+      // Always update form fields
       setValue('property_id', record.property_id);
       setValue('booking_id', record.booking_id || '');
       setValue('record_type', record.record_type);
@@ -219,11 +234,16 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
       setValue('template_id', record.template_id || '');
       setValue('notes', record.notes || '');
 
-      setChecklistResponses(record.checklist_responses as ChecklistResponse[] || []);
-      setPhotos(record.photos as Attachment[] || []);
-      setDocuments(record.documents as Attachment[] || []);
-      setSignatureData(record.signature_data || '');
-      setSignatureName(record.signature_name || '');
+      // Only reset photos/documents when loading a DIFFERENT record
+      // This prevents losing locally added photos/documents on parent re-renders
+      if (isNewRecordLoad) {
+        setChecklistResponses(record.checklist_responses as ChecklistResponse[] || []);
+        setPhotos(record.photos as Attachment[] || []);
+        setDocuments(record.documents as Attachment[] || []);
+        setSignatureData(record.signature_data || '');
+        setSignatureName(record.signature_name || '');
+        loadedRecordIdRef.current = record.record_id;
+      }
     }
   }, [record, setValue]);
 
@@ -241,7 +261,7 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
       const filePath = `check-in-out/${type}s/${fileName}`;
 
       const { error: uploadError, data } = await supabase.storage
-        .from('documents')
+        .from('property-documents')
         .upload(filePath, file);
 
       if (uploadError) {
@@ -252,7 +272,7 @@ export function CheckInOutDialog({ open, onClose, record, viewMode = false }: Ch
       console.log(`✅ [CheckInOut] Upload successful:`, filePath);
 
       const { data: { publicUrl } } = supabase.storage
-        .from('documents')
+        .from('property-documents')
         .getPublicUrl(filePath);
 
       console.log(`🔗 [CheckInOut] Public URL:`, publicUrl);

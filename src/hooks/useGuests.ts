@@ -212,44 +212,51 @@ export function useCreateGuest() {
       return data as Guest;
     },
     onMutate: async (newGuest) => {
-      // Cancel any outgoing refetches - use list(undefined) to match useGuests() without filters
-      const listQueryKey = guestKeys.list(undefined);
-      await queryClient.cancelQueries({ queryKey: listQueryKey });
+      // Cancel any outgoing refetches for ALL list queries
+      await queryClient.cancelQueries({ queryKey: guestKeys.lists() });
 
-      // Snapshot the previous value
-      const previousGuests = queryClient.getQueryData(listQueryKey);
+      // Snapshot all list queries for potential rollback
+      const allQueries = queryClient.getQueryCache().findAll({ queryKey: guestKeys.lists() });
+      const previousQueriesData = new Map(
+        allQueries.map((query) => [query.queryKey, queryClient.getQueryData(query.queryKey)])
+      );
 
-      // Optimistically update to the new value
-      queryClient.setQueryData(listQueryKey, (old: Guest[] | undefined) => {
-        const optimisticGuest: Guest = {
-          ...newGuest,
-          guest_id: 'temp-' + Date.now(),
-          total_bookings: 0,
-          total_spent: 0,
-          is_verified: false,
-          marketing_opt_in: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        return old ? [optimisticGuest, ...old] : [optimisticGuest];
+      // Optimistically update ALL list queries
+      const optimisticGuest: Guest = {
+        ...newGuest,
+        guest_id: 'temp-' + Date.now(),
+        total_bookings: 0,
+        total_spent: 0,
+        is_verified: false,
+        marketing_opt_in: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      allQueries.forEach((query) => {
+        queryClient.setQueryData(query.queryKey, (old: Guest[] | undefined) => {
+          return old ? [optimisticGuest, ...old] : [optimisticGuest];
+        });
       });
 
-      return { previousGuests, listQueryKey };
+      return { previousQueriesData };
     },
     onSuccess: (data) => {
-      // Immediately update cache with real guest data (replace temp guest)
-      // This ensures the dropdown shows the real guest right away
-      const listQueryKey = guestKeys.list(undefined);
-      queryClient.setQueryData(listQueryKey, (old: Guest[] | undefined) => {
-        if (!old) return [data];
-        // Replace the temp guest with the real one, or add if not found
-        const filtered = old.filter(g => !g.guest_id?.startsWith('temp-'));
-        // Add new guest at the beginning (most recent)
-        return [data, ...filtered];
+      // Immediately update ALL list query caches with real guest data
+      // This ensures the guest shows up regardless of what filters are active
+      const allQueries = queryClient.getQueryCache().findAll({ queryKey: guestKeys.lists() });
+      allQueries.forEach((query) => {
+        queryClient.setQueryData(query.queryKey, (old: Guest[] | undefined) => {
+          if (!old) return [data];
+          // Replace the temp guest with the real one, or add if not found
+          const filtered = old.filter(g => !g.guest_id?.startsWith('temp-'));
+          // Add new guest at the beginning (most recent)
+          return [data, ...filtered];
+        });
       });
 
-      // Also invalidate all guest queries for consistency
-      queryClient.invalidateQueries({ queryKey: guestKeys.all() });
+      // Also invalidate all guest queries for consistency (forces refetch on next focus)
+      queryClient.invalidateQueries({ queryKey: guestKeys.all(), refetchType: 'all' });
 
       // Log activity
       logActivity('guest_created', {
@@ -264,9 +271,11 @@ export function useCreateGuest() {
       });
     },
     onError: (error: any, newGuest, context) => {
-      // Rollback optimistic update using the same query key
-      if (context?.previousGuests && context?.listQueryKey) {
-        queryClient.setQueryData(context.listQueryKey, context.previousGuests);
+      // Rollback ALL optimistic updates
+      if (context?.previousQueriesData) {
+        context.previousQueriesData.forEach((data, queryKey) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
 
       console.error('Error creating guest:', error);
