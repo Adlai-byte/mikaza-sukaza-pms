@@ -96,6 +96,13 @@ export function CheckOutKeyDialog({
     const user = borrowerUsers.find((u) => u.user_id === values.borrower_user_id);
     if (!user) return;
 
+    // Explicitly validate borrower_type - database constraint only allows 'admin' or 'ops'
+    // Default to 'ops' if user type is not valid (safety fallback)
+    const userType = user.user_type;
+    const borrowerType: BorrowerType = (userType === 'admin' || userType === 'ops')
+      ? userType
+      : 'ops';
+
     await checkOutKey.mutateAsync({
       propertyId: property.property_id,
       keyType: values.key_type as KeyType,
@@ -103,7 +110,7 @@ export function CheckOutKeyDialog({
       quantity: values.quantity,
       borrowerName: `${user.first_name} ${user.last_name}`.trim(),
       borrowerContact: user.email || user.phone || undefined,
-      borrowerType: user.user_type as BorrowerType,
+      borrowerType,
       expectedReturnDate: values.expected_return_date || undefined,
       notes: values.notes,
     });

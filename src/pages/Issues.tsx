@@ -113,7 +113,8 @@ export default function Issues() {
   // Calculate statistics
   const stats = useMemo(() => {
     const total = issues.length;
-    const open = issues.filter(i => i.status === 'open').length;
+    // Count 'open' + 'in_progress' as "open" issues (consistent with Dashboard KPIs)
+    const open = issues.filter(i => i.status === 'open' || i.status === 'in_progress').length;
     const resolved = issues.filter(i => i.status === 'resolved' || i.status === 'closed').length;
     const totalCost = issues
       .filter(i => i.actual_cost !== null)

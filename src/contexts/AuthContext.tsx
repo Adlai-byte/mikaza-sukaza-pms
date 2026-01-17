@@ -386,8 +386,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
       timestamp: new Date().toISOString()
     });
 
-    // Refresh profile data
-    await fetchProfile(user.id);
+    // Update profile state directly with the returned data for immediate UI update
+    // This is more reliable than re-fetching as it avoids race conditions
+    setProfile((prevProfile) => {
+      if (!prevProfile) return prevProfile;
+      return {
+        ...prevProfile,
+        ...updatedData,
+        // Ensure required Profile fields are preserved
+        id: prevProfile.id,
+        user_id: prevProfile.user_id,
+      };
+    });
+
+    console.log('✅ [AuthContext] Profile state updated with new data:', {
+      userId: user.id,
+      first_name: updatedData.first_name,
+      last_name: updatedData.last_name,
+      timestamp: new Date().toISOString()
+    });
   };
 
   const value = {

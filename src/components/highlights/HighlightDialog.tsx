@@ -71,10 +71,10 @@ export function HighlightDialog({ open, onOpenChange, highlight, propertyId }: H
           title: highlight.title,
           description: highlight.description || '',
           icon_name: highlight.icon_name || '',
-          highlight_type: highlight.highlight_type,
+          highlight_type: highlight.highlight_type || 'feature',
           photos: highlight.photos || [],
-          display_order: highlight.display_order,
-          is_active: highlight.is_active,
+          display_order: highlight.display_order ?? 0,
+          is_active: highlight.is_active ?? true,
         });
       } else {
         form.reset({
@@ -147,9 +147,12 @@ export function HighlightDialog({ open, onOpenChange, highlight, propertyId }: H
                     </FormControl>
                     <SelectContent>
                       {properties
-                        .filter((property) => property.property_id) // Filter out properties without valid IDs
+                        .filter((property) =>
+                          typeof property.property_id === 'string' &&
+                          property.property_id.length > 0
+                        ) // Filter out properties without valid non-empty string IDs
                         .map((property) => (
-                          <SelectItem key={property.property_id} value={property.property_id}>
+                          <SelectItem key={property.property_id} value={property.property_id!}>
                             {property.property_name || 'Unnamed Property'}
                           </SelectItem>
                         ))}
@@ -211,7 +214,7 @@ export function HighlightDialog({ open, onOpenChange, highlight, propertyId }: H
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t('dialogs.highlight.fields.type')} *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || 'feature'}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder={t('dialogs.highlight.fields.selectType')} />
