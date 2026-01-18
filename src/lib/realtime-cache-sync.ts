@@ -65,6 +65,24 @@ export class RealtimeCacheSync {
       // Subscribe to service providers changes
       await this.subscribeToProviders();
 
+      // Subscribe to guests changes
+      await this.subscribeToGuests();
+
+      // Subscribe to jobs changes
+      await this.subscribeToJobs();
+
+      // Subscribe to messages changes
+      await this.subscribeToMessages();
+
+      // Subscribe to checklist templates changes
+      await this.subscribeToChecklistTemplates();
+
+      // Subscribe to password vault changes
+      await this.subscribeToPasswordVault();
+
+      // Subscribe to activity logs changes
+      await this.subscribeToActivityLogs();
+
       console.log('✅ Realtime cache sync initialized');
     } catch (error) {
       console.error('❌ Failed to initialize realtime sync:', error);
@@ -745,6 +763,240 @@ export class RealtimeCacheSync {
   }
 
   /**
+   * Subscribe to guests table changes
+   */
+  private async subscribeToGuests() {
+    const channel = supabase
+      .channel('guests-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'guests',
+        },
+        (payload) => {
+          console.log('🔄 Guests table changed:', payload.eventType);
+
+          // Invalidate guests queries
+          this.queryClient.invalidateQueries({ queryKey: ['guests'] });
+
+          // If specific guest changed, invalidate their detail
+          if (payload.new && 'guest_id' in payload.new) {
+            const guestId = (payload.new as any).guest_id;
+            this.queryClient.invalidateQueries({
+              queryKey: ['guests', 'detail', guestId],
+            });
+          }
+
+          // Also invalidate bookings as they reference guests
+          this.queryClient.invalidateQueries({ queryKey: ['bookings'] });
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('guests', channel);
+  }
+
+  /**
+   * Subscribe to jobs table changes
+   */
+  private async subscribeToJobs() {
+    const channel = supabase
+      .channel('jobs-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'jobs',
+        },
+        (payload) => {
+          console.log('🔄 Jobs table changed:', payload.eventType);
+
+          // Invalidate jobs queries
+          this.queryClient.invalidateQueries({ queryKey: ['jobs'] });
+          this.queryClient.invalidateQueries({ queryKey: ['jobs-history'] });
+
+          // Invalidate dashboard data
+          this.queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+
+          // Invalidate property-specific queries
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as any).property_id;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['jobs', 'byProperty', propertyId],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('jobs', channel);
+  }
+
+  /**
+   * Subscribe to messages table changes
+   */
+  private async subscribeToMessages() {
+    const channel = supabase
+      .channel('messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          console.log('🔄 Messages table changed:', payload.eventType);
+
+          // Invalidate messages queries
+          this.queryClient.invalidateQueries({ queryKey: ['messages'] });
+          this.queryClient.invalidateQueries({ queryKey: ['conversations'] });
+          this.queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
+
+          // Invalidate specific conversation if available
+          if (payload.new && 'conversation_id' in payload.new) {
+            const conversationId = (payload.new as any).conversation_id;
+            if (conversationId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['messages', conversationId],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('messages', channel);
+  }
+
+  /**
+   * Subscribe to checklist templates table changes
+   */
+  private async subscribeToChecklistTemplates() {
+    const channel = supabase
+      .channel('checklist-templates-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'checklist_templates',
+        },
+        (payload) => {
+          console.log('🔄 Checklist templates changed:', payload.eventType);
+
+          // Invalidate checklist template queries
+          this.queryClient.invalidateQueries({ queryKey: ['checklist-templates'] });
+          this.queryClient.invalidateQueries({ queryKey: ['checklist_templates'] });
+
+          // If specific template changed, invalidate its detail
+          if (payload.new && 'template_id' in payload.new) {
+            const templateId = (payload.new as any).template_id;
+            this.queryClient.invalidateQueries({
+              queryKey: ['checklist-templates', templateId],
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('checklist_templates', channel);
+  }
+
+  /**
+   * Subscribe to password vault table changes
+   */
+  private async subscribeToPasswordVault() {
+    // Password vault entries
+    const vaultChannel = supabase
+      .channel('password-vault-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'password_vault',
+        },
+        (payload) => {
+          console.log('🔄 Password vault changed:', payload.eventType);
+
+          // Invalidate password vault queries
+          this.queryClient.invalidateQueries({ queryKey: ['password-vault'] });
+          this.queryClient.invalidateQueries({ queryKey: ['password_vault'] });
+
+          // Invalidate property-specific queries
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as any).property_id;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['password-vault', propertyId],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('password_vault', vaultChannel);
+
+    // Password vault master (for master password)
+    const masterChannel = supabase
+      .channel('password-vault-master-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'password_vault_master',
+        },
+        (payload) => {
+          console.log('🔄 Password vault master changed:', payload.eventType);
+
+          // Invalidate vault master queries
+          this.queryClient.invalidateQueries({ queryKey: ['password-vault-master'] });
+          this.queryClient.invalidateQueries({ queryKey: ['vault-status'] });
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('password_vault_master', masterChannel);
+  }
+
+  /**
+   * Subscribe to activity logs table changes
+   */
+  private async subscribeToActivityLogs() {
+    const channel = supabase
+      .channel('activity-logs-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'activity_logs',
+        },
+        (payload) => {
+          console.log('🔄 Activity logs changed:', payload.eventType);
+
+          // Invalidate activity logs queries
+          this.queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
+          this.queryClient.invalidateQueries({ queryKey: ['activity_logs'] });
+
+          // Invalidate dashboard data (recent activity)
+          this.queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('activity_logs', channel);
+  }
+
+  /**
    * Subscribe to a custom table
    */
   async subscribeToTable(
@@ -823,7 +1075,7 @@ export class RealtimeCacheSync {
    * Manually trigger cache invalidation for a specific change type
    */
   async invalidateForChange(
-    changeType: 'property' | 'booking' | 'user' | 'financial' | 'static' | 'expense' | 'invoice' | 'highlight' | 'unit' | 'issue' | 'task' | 'keyControl' | 'checkInOut' | 'provider'
+    changeType: 'property' | 'booking' | 'user' | 'financial' | 'static' | 'expense' | 'invoice' | 'highlight' | 'unit' | 'issue' | 'task' | 'keyControl' | 'checkInOut' | 'provider' | 'guest' | 'job' | 'message' | 'checklistTemplate' | 'passwordVault' | 'activityLog'
   ) {
     const invalidationMap: Record<string, string[][]> = {
       property: [
@@ -904,6 +1156,35 @@ export class RealtimeCacheSync {
         ['providers'],
         ['service-providers'],
         ['property-providers'],
+      ],
+      guest: [
+        ['guests'],
+        ['bookings'],
+      ],
+      job: [
+        ['jobs'],
+        ['jobs-history'],
+        ['dashboard'],
+      ],
+      message: [
+        ['messages'],
+        ['conversations'],
+        ['unread-messages'],
+      ],
+      checklistTemplate: [
+        ['checklist-templates'],
+        ['checklist_templates'],
+      ],
+      passwordVault: [
+        ['password-vault'],
+        ['password_vault'],
+        ['password-vault-master'],
+        ['vault-status'],
+      ],
+      activityLog: [
+        ['activity-logs'],
+        ['activity_logs'],
+        ['dashboard'],
       ],
     };
 
