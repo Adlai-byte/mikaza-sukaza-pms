@@ -105,6 +105,7 @@
     "checkInOut": "Check-In / Check-Out",
     "checklistTemplates": "Modelos de Checklist",
     "vendors": "Fornecedores",
+    "vendorDirectory": "Diretório de Fornecedores",
     "serviceScheduling": "Agendamento de Serviços",
     "userManagement": "Gestão de Usuários",
     "passwordVault": "Cofre de Senhas",
@@ -1095,6 +1096,36 @@
       "serviceProviders": "Prestadores de Serviço",
       "utilityProviders": "Fornecedores de Utilidades"
     }
+  },
+  "vendorDirectory": {
+    "title": "Diretório de Fornecedores",
+    "subtitle": "Gerenciar prestadores de serviços e empresas de utilidades",
+    "addContractor": "Adicionar Prestador",
+    "addUtility": "Adicionar Empresa de Utilidades",
+    "tabs": {
+      "contractors": "Prestadores de Serviço",
+      "utilities": "Empresas de Utilidades"
+    }
+  },
+  "serviceScheduling": {
+    "title": "Agendamento de Serviços",
+    "subtitle": "Agendar e gerenciar serviços de manutenção de propriedades",
+    "scheduleService": "Agendar Serviço",
+    "filters": "Filtros",
+    "propertyName": "Nome da Propriedade",
+    "service": "Serviço",
+    "serviceStatus": "Status do Serviço",
+    "paymentStatus": "Status do Pagamento",
+    "vendorAssignment": "Atribuição de Fornecedor",
+    "startDate": "Data de Início",
+    "endDate": "Data de Término",
+    "startDateTime": "Data e Hora de Início",
+    "partner": "Parceiro",
+    "categoryService": "Categoria / Serviço",
+    "allocation": "Alocação",
+    "showingRecords": "Mostrando registros {{from}} a {{to}} de {{total}}",
+    "noServicesFound": "Nenhum serviço encontrado. Clique em 'Agendar Serviço' para criar um.",
+    "services": "Serviços"
   },
   "utilityProviders": {
     "title": "Fornecedores de Utilidades",

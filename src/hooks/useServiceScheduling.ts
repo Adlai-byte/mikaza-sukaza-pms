@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +26,33 @@ export const serviceSchedulingKeys = {
   recurrenceRules: () => [...serviceSchedulingKeys.all, 'recurrence-rules'] as const,
   recurrenceRule: (id: string) => [...serviceSchedulingKeys.recurrenceRules(), id] as const,
 };
+
+// Realtime subscription for automatic updates
+export function useServiceSchedulingRealtime() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('service-scheduling-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'scheduled_services',
+        },
+        () => {
+          // Invalidate all service scheduling queries when data changes
+          queryClient.invalidateQueries({ queryKey: serviceSchedulingKeys.all });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+}
 
 // Fetch scheduled services with filters
 export function useScheduledServices(filters: ScheduledServiceFilters = {}) {

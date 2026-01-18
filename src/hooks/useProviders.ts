@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Provider, ProviderInsert } from "@/lib/schemas";
@@ -15,6 +16,33 @@ export const providerKeys = {
   details: () => ['providers', 'detail'],
   detail: (id: string) => ['providers', 'detail', id],
 } as const;
+
+// Realtime subscription for automatic updates
+export function useProvidersRealtime() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('providers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'providers',
+        },
+        () => {
+          // Invalidate all provider queries when data changes
+          queryClient.invalidateQueries({ queryKey: providerKeys.all() });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+}
 
 // Fetch providers list with optional category and active filter
 const fetchProviders = async (category?: 'service' | 'utility', showInactive: boolean = false): Promise<Provider[]> => {

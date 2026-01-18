@@ -106,6 +106,7 @@
     "checkInOut": "Check-In / Check-Out",
     "checklistTemplates": "Checklist Templates",
     "vendors": "Vendors",
+    "vendorDirectory": "Vendor Directory",
     "serviceScheduling": "Service Scheduling",
     "userManagement": "User Management",
     "passwordVault": "Password Vault",
@@ -1127,6 +1128,36 @@
       "serviceProviders": "Service Providers",
       "utilityProviders": "Utility Providers"
     }
+  },
+  "vendorDirectory": {
+    "title": "Vendor Directory",
+    "subtitle": "Manage service contractors and utility companies",
+    "addContractor": "Add Contractor",
+    "addUtility": "Add Utility Company",
+    "tabs": {
+      "contractors": "Service Contractors",
+      "utilities": "Utility Companies"
+    }
+  },
+  "serviceScheduling": {
+    "title": "Service Scheduling",
+    "subtitle": "Schedule and manage property maintenance services",
+    "scheduleService": "Schedule Service",
+    "filters": "Filters",
+    "propertyName": "Property Name",
+    "service": "Service",
+    "serviceStatus": "Service Status",
+    "paymentStatus": "Payment Status",
+    "vendorAssignment": "Vendor Assignment",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "startDateTime": "Start Date and Time",
+    "partner": "Partner",
+    "categoryService": "Category / Service",
+    "allocation": "Allocation",
+    "showingRecords": "Showing records {{from}} to {{to}} of {{total}}",
+    "noServicesFound": "No services found. Click 'Schedule Service' to create one.",
+    "services": "Services"
   },
   "utilityProviders": {
     "title": "Utility Providers",

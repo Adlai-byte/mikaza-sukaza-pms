@@ -40,6 +40,7 @@ import {
   UserCog,
   Search,
   Clock,
+  ClipboardList,
 } from "lucide-react";
 
 import {
@@ -82,7 +83,8 @@ const mainMenuItems = [
   { titleKey: "sidebar.messages", url: "/messages", icon: Mail, permission: PERMISSIONS.MESSAGES_VIEW },
   { titleKey: "sidebar.checkInOut", url: "/check-in-out", icon: LogIn, permission: PERMISSIONS.PROPERTIES_VIEW },
   { titleKey: "sidebar.checklistTemplates", url: "/checklist-templates", icon: CheckSquare, permission: PERMISSIONS.PROPERTIES_VIEW },
-  { titleKey: "sidebar.vendors", url: "/vendors", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+  { titleKey: "sidebar.serviceScheduling", url: "/service-scheduling", icon: ClipboardList, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+  { titleKey: "sidebar.vendorDirectory", url: "/vendors", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
 
   // Admin & System (Low Frequency)
   { titleKey: "sidebar.userManagement", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },

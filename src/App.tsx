@@ -40,6 +40,7 @@ const ChecklistTemplates = lazy(() => import("./pages/ChecklistTemplates"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const GuestManagement = lazy(() => import("./pages/GuestManagement"));
 const Providers = lazy(() => import("./pages/Providers"));
+const ServiceScheduling = lazy(() => import("./pages/ServiceScheduling"));
 
 // Finance
 const Invoices = lazy(() => import("./pages/Invoices"));
@@ -261,32 +262,20 @@ const App = () => (
                     </RBACProtectedRoute>
                   }
                 />
-                {/* Legacy redirect for /providers */}
-                <Route path="/providers" element={<Navigate to="/vendors" replace />} />
-
-                {/* Service Scheduling - Redirect to unified Vendors page */}
+                {/* Service Scheduling - Schedule and manage property maintenance services */}
                 <Route
                   path="/service-scheduling"
-                  element={<Navigate to="/vendors" replace />}
-                />
-
-                {/* Legacy Routes - Keep for backward compatibility, redirect to unified page */}
-                <Route
-                  path="/service-providers"
                   element={
                     <RBACProtectedRoute permission={PERMISSIONS.SERVICE_PROVIDERS_VIEW}>
-                      <Providers />
+                      <ServiceScheduling />
                     </RBACProtectedRoute>
                   }
                 />
-                <Route
-                  path="/utility-providers"
-                  element={
-                    <RBACProtectedRoute permission={PERMISSIONS.UTILITY_PROVIDERS_VIEW}>
-                      <Providers />
-                    </RBACProtectedRoute>
-                  }
-                />
+
+                {/* Legacy Routes - Redirect to unified pages for backward compatibility */}
+                <Route path="/providers" element={<Navigate to="/vendors" replace />} />
+                <Route path="/service-providers" element={<Navigate to="/vendors" replace />} />
+                <Route path="/utility-providers" element={<Navigate to="/vendors" replace />} />
 
                 {/* Properties - Both Admin and Ops can access */}
                 <Route
