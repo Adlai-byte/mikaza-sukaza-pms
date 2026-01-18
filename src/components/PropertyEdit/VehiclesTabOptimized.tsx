@@ -172,11 +172,11 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
 
       if (error) throw error;
 
+      const vehicleId = data.vehicle_id;
+      let uploadedPhotoCount = 0;
+
       // Step 2: Upload photos if any were selected
       if (selectedPhotos.length > 0) {
-        const vehicleId = data.vehicle_id;
-        let uploadedCount = 0;
-
         for (let i = 0; i < selectedPhotos.length; i++) {
           const file = selectedPhotos[i];
 
@@ -211,22 +211,18 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
               }]);
 
             if (dbError) throw dbError;
-            uploadedCount++;
+            uploadedPhotoCount++;
           } catch (photoError) {
             console.error(`Failed to upload photo ${i + 1}:`, photoError);
             // Continue uploading other photos even if one fails
           }
         }
-
-        // Add info about uploaded photos to response
-        return { ...data, uploadedPhotoCount: uploadedCount };
       }
 
-      // Step 3: Upload insurance photo if selected
+      // Step 3: Upload insurance photo/document if selected (runs regardless of regular photos)
       if (insurancePhoto) {
-        const vehicleId = data.vehicle_id;
         try {
-          const fileExt = insurancePhoto.name.split('.').pop();
+          const fileExt = insurancePhoto.name.split('.').pop()?.toLowerCase() || 'jpg';
           const fileName = `${vehicleId}/insurance_${Date.now()}.${fileExt}`;
           const filePath = `vehicles/${fileName}`;
 
@@ -252,18 +248,18 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
 
           if (updateError) throw updateError;
 
-          console.log('✅ Insurance photo uploaded successfully');
+          console.log('✅ Insurance document uploaded successfully:', publicUrl);
         } catch (error) {
-          console.error('❌ Error uploading insurance photo:', error);
+          console.error('❌ Error uploading insurance document:', error);
           toast({
             title: 'Warning',
-            description: 'Vehicle created but insurance photo upload failed',
+            description: 'Vehicle created but insurance document upload failed',
             variant: 'destructive'
           });
         }
       }
 
-      return data;
+      return { ...data, uploadedPhotoCount };
     },
     onSuccess: async (data) => {
       // Force immediate refetch with active queries
@@ -1169,7 +1165,8 @@ export function VehiclesTabOptimized({ propertyId }: VehiclesTabOptimizedProps) 
                       rel="noopener noreferrer"
                       className="block rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-colors overflow-hidden group"
                     >
-                      {viewingVehicle.insurance_document_url.toLowerCase().endsWith('.pdf') ? (
+                      {/* Check if URL contains .pdf (handles query params like ?token=xxx) */}
+                      {/\.pdf($|\?)/i.test(viewingVehicle.insurance_document_url) ? (
                         // PDF Preview
                         <div className="flex items-center gap-3 p-4 bg-gray-50 group-hover:bg-blue-50 transition-colors">
                           <FileText className="h-10 w-10 text-red-600" />
