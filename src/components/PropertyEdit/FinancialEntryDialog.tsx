@@ -268,7 +268,7 @@ export function FinancialEntryDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-3 pr-2">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-2">
           <div className="space-y-2">
             <Label htmlFor="description">{t('common.description', 'Description')} *</Label>
             <Input
@@ -287,7 +287,7 @@ export function FinancialEntryDialog({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="amount">{t('common.amount', 'Amount')} *</Label>
               <div className="relative">

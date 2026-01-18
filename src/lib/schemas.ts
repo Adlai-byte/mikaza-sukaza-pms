@@ -2429,10 +2429,10 @@ export const PARTNER_PAYMENT_STATUS_CONFIG: Record<PartnerPaymentStatus, { label
   overdue: { label: 'Overdue', color: '#EF4444', bgColor: '#FEE2E2' },
 };
 
-// Allocation Status display config
+// Allocation Status display config (tracks vendor assignment status for scheduled services)
 export const ALLOCATION_STATUS_CONFIG: Record<AllocationStatus, { label: string; color: string; bgColor: string }> = {
-  unassigned: { label: 'Assign', color: '#6B7280', bgColor: '#F3F4F6' },
-  assigned: { label: 'Assigned', color: '#F59E0B', bgColor: '#FEF3C7' },
+  unassigned: { label: 'Unassigned', color: '#6B7280', bgColor: '#F3F4F6' },
+  assigned: { label: 'Pending Response', color: '#F59E0B', bgColor: '#FEF3C7' },
   accepted: { label: 'Accepted', color: '#10B981', bgColor: '#D1FAE5' },
   declined: { label: 'Declined', color: '#EF4444', bgColor: '#FEE2E2' },
   reassigned: { label: 'Reassigned', color: '#8B5CF6', bgColor: '#EDE9FE' },

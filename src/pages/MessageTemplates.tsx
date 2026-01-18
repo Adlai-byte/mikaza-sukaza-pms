@@ -120,13 +120,24 @@ export default function MessageTemplates() {
                 {t('messageTemplates.noTemplatesDescription')}
               </p>
               {canManage && (
-                <Button
-                  className="bg-gradient-primary hover:bg-gradient-secondary"
-                  onClick={() => setUploadDialogOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t('messageTemplates.uploadTemplate')}
-                </Button>
+                <>
+                  <Button
+                    className="bg-gradient-primary hover:bg-gradient-secondary mb-6"
+                    onClick={() => setUploadDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t('messageTemplates.uploadTemplate')}
+                  </Button>
+                  <div className="bg-muted/50 rounded-lg p-4 max-w-lg mx-auto text-left">
+                    <h4 className="font-medium mb-2 text-sm">How Message Templates Work:</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1.5">
+                      <li>1. Upload document templates (Word, PDF, etc.) for common communications</li>
+                      <li>2. Add <strong>tags</strong> to categorize templates (e.g., "Welcome", "Check-out", "Maintenance")</li>
+                      <li>3. Templates can be downloaded and customized before sending to guests</li>
+                      <li>4. Use templates from the <strong>Messages</strong> page when composing new messages</li>
+                    </ul>
+                  </div>
+                </>
               )}
             </div>
           ) : (

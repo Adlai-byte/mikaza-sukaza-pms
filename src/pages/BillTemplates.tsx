@@ -530,10 +530,21 @@ export default function BillTemplates() {
                   : 'Create your first bill template to speed up invoice creation'}
               </p>
               {!templateSearchQuery && templateFilter === 'all' && (
-                <Button onClick={handleCreateNew} size="lg">
-                  <Plus className="h-5 w-5 mr-2" />
-                  Create First Template
-                </Button>
+                <>
+                  <Button onClick={handleCreateNew} size="lg" className="mb-6">
+                    <Plus className="h-5 w-5 mr-2" />
+                    Create First Template
+                  </Button>
+                  <div className="bg-muted/50 rounded-lg p-4 max-w-lg text-left">
+                    <h4 className="font-medium mb-2 text-sm">How Bill Templates Work:</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1.5">
+                      <li>1. Create a template with predefined line items and amounts</li>
+                      <li>2. Choose <strong>Global</strong> templates for all properties, or <strong>Property-specific</strong> for certain properties</li>
+                      <li>3. When generating invoices, select a template to auto-populate line items</li>
+                      <li>4. Use <strong>Assign to Properties</strong> to link global templates to specific properties</li>
+                    </ul>
+                  </div>
+                </>
               )}
             </div>
           ) : (

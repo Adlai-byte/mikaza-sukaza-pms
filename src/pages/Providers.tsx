@@ -630,10 +630,10 @@ export default function Providers() {
                   </Select>
                 </div>
 
-                {/* Allocation Status */}
+                {/* Vendor Assignment Status */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    {t("serviceScheduling.allocation", "Allocation")}
+                  <label className="text-sm font-medium" title="Filter by vendor assignment status">
+                    {t("serviceScheduling.vendorAssignment", "Vendor Assignment")}
                   </label>
                   <Select value={allocationFilter} onValueChange={setAllocationFilter}>
                     <SelectTrigger>

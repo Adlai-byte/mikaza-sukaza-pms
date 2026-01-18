@@ -189,7 +189,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
         expenseId: entry.expense_id,
         approvedBy: user.id,
       });
-      refetch();
+      // No need for refetch() - mutation already handles cache invalidation
     } catch (error) {
       // Error handled by mutation
     }
@@ -236,7 +236,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
 
       setShowEntryDialog(false);
       setEditingEntry(null);
-      refetch();
+      // No need for refetch() - mutations already handle cache invalidation
     } catch (error) {
       // Error handled by mutation
     }
@@ -251,7 +251,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
         });
       }
       setShowBatchDialog(false);
-      refetch();
+      // No need for refetch() - mutations already handle cache invalidation
     } catch (error) {
       // Error handled by mutation
     }
@@ -262,7 +262,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
     try {
       await deleteExpense.mutateAsync(entryToDelete.expense_id);
       setEntryToDelete(null);
-      refetch();
+      // No need for refetch() - mutation already handles cache invalidation
     } catch (error) {
       // Error handled by mutation
     }
@@ -272,7 +272,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
     if (!entry.expense_id) return;
     try {
       await markAsDone.mutateAsync(entry.expense_id);
-      refetch();
+      // No need for refetch() - mutation already handles cache invalidation
     } catch (error) {
       // Error handled by mutation
     }

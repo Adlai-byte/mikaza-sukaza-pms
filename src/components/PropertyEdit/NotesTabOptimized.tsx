@@ -113,7 +113,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
     queryKey: ['property-notes', propertyId],
     queryFn: () => fetchNotes(propertyId),
     enabled: !!propertyId,
-    staleTime: 5 * 60 * 1000, // 5 minutes - reduce refetch frequency
+    staleTime: 10 * 60 * 1000, // 10 minutes - reduce refetch frequency
     gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
   });
 

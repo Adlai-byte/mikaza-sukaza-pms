@@ -305,6 +305,8 @@ export function useIssues(filters?: IssueFilters, options?: UseIssuesOptions) {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
+          // Also invalidate detail queries so photos show immediately after upload
+          queryClient.invalidateQueries({ queryKey: issueKeys.details() });
         }
       )
       .subscribe();
