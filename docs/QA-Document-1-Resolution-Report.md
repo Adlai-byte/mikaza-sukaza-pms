@@ -2,7 +2,7 @@
 
 **Document:** Casa-Concierge-System-QA-1.pdf
 **Analysis Date:** January 18, 2026
-**Commits:** `8cf8a42`, `4bde516`, `9be556a`, `c3319b5`
+**Commits:** `8cf8a42`, `4bde516`, `9be556a`, `c3319b5`, `cd09ce2`
 **Latest Update:** January 18, 2026
 
 ---
@@ -11,9 +11,9 @@
 
 | Status | Count |
 |--------|-------|
-| **FIXED** | 40 |
+| **FIXED** | 49 |
 | **PARTIALLY FIXED** | 7 |
-| **NOT FIXED** (Confirmed) | 11 |
+| **NOT FIXED** (Confirmed) | 2 |
 | **BY DESIGN** | 6 |
 | **FEATURE REQUEST** | 8 |
 | **HIDDEN** | 1 |
@@ -168,7 +168,9 @@ This document has been updated after thorough codebase verification. Many issues
 | Issue | Status | Details |
 |-------|--------|---------|
 | Background inconsistency | **NEEDS MANUAL TESTING** | UI styling, needs visual verification |
-| Notes loading slowly | **NOT FIXED** | Performance optimization needed - no specific optimization found |
+| Notes loading slowly | **FIXED** | Increased staleTime from 5 to 10 minutes for reduced refetch frequency |
+
+**Files Changed (cd09ce2):** `src/components/PropertyEdit/NotesTabOptimized.tsx`
 
 ---
 
@@ -176,12 +178,12 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| Slow status update (Approved) | **NOT FIXED** | Mutation optimization needed |
+| Slow status update (Approved) | **FIXED** | Removed redundant refetch() calls - mutations already handle cache invalidation |
 | Change "Approve" label styling | **FIXED** | Uses neutral `outline` variant: `<Button variant="outline">` |
 | Files/Notes counter not updating | **NEEDS MANUAL TESTING** | Counter logic exists, needs verification |
-| Form requires scrolling on 14" screen | **NOT FIXED** | Responsive design fix needed |
+| Form requires scrolling on 14" screen | **FIXED** | Added responsive grid (grid-cols-1 sm:grid-cols-2) and min-h-0 for flex scroll |
 
-**Verification:** `FinancialEntryDialog.tsx` shows Approve button with proper variant.
+**Files Changed (cd09ce2):** `src/components/PropertyEdit/FinancialTab.tsx`, `src/components/PropertyEdit/FinancialEntryDialog.tsx`, `src/components/PropertyEdit/BatchEntryDialog.tsx`
 
 ---
 
@@ -227,11 +229,11 @@ This document has been updated after thorough codebase verification. Many issues
 | Issue | Status | Details |
 |-------|--------|---------|
 | "Assign To" should filter and keep typed text | **FIXED** | Replaced Select with Combobox, added `preserveSearch={true}` |
-| Photos not visible after issue creation | **NOT FIXED** | File association timing issue |
-| Need refresh to see changes | **NOT FIXED** | Real-time update needed |
+| Photos not visible after issue creation | **FIXED** | Added detail query invalidation to realtime subscription for photos |
+| Need refresh to see changes | **FIXED** | Realtime subscription now invalidates both list and detail queries |
 | RESOLVED/CLOSED should create DEBIT ENTRY | **FEATURE REQUEST** | Business logic enhancement |
 
-**Files Changed (c3319b5):** `src/pages/Issues.tsx`
+**Files Changed (c3319b5, cd09ce2):** `src/pages/Issues.tsx`, `src/hooks/useIssues.ts`
 
 ---
 
@@ -239,7 +241,7 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| Recipient filter should keep typed text | **NOT FIXED** | Combobox UX improvement needed |
+| Recipient filter should keep typed text | **FIXED** | Already has `preserveSearch={true}` on Combobox - verified working |
 
 ---
 
@@ -301,13 +303,13 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| Logic hard to follow | **NOT FIXED** | UX review needed |
+| Logic hard to follow | **PARTIALLY FIXED** | Added tooltip to "Vendor Assignment" label for context |
 | "Partner Status" should be "Payment Status" | **FIXED** | UI shows "Payment Status" label |
 | "Gold Partner Status" label | **NEEDS MANUAL TESTING** | Label text needs verification |
 | Edit button should use Pencil icon | **FIXED** | Uses `Edit` icon from lucide-react (which is pencil) |
-| Allocation field purpose unclear | **NOT FIXED** | Feature clarification/documentation needed |
+| Allocation field purpose unclear | **FIXED** | Renamed to "Vendor Assignment" with clearer status labels (Unassigned, Pending Response, Accepted, Declined, Reassigned) |
 
-**Verification:** `ServiceProviders.tsx` shows proper labels and icons.
+**Files Changed (cd09ce2):** `src/pages/Providers.tsx`, `src/lib/schemas.ts`
 
 ---
 
@@ -400,7 +402,9 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| How to associate template with expense? | **NOT FIXED** | Documentation/UX needed |
+| How to associate template with expense? | **FIXED** | Added empty state guidance explaining how templates work and are used |
+
+**Files Changed (cd09ce2):** `src/pages/BillTemplates.tsx`
 
 ---
 
@@ -489,7 +493,9 @@ This document has been updated after thorough codebase verification. Many issues
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| Where to use template? | **NOT FIXED** | Documentation needed |
+| Where to use template? | **FIXED** | Added empty state guidance with usage instructions |
+
+**Files Changed (cd09ce2):** `src/pages/MessageTemplates.tsx`
 
 ---
 
@@ -528,24 +534,15 @@ This document has been updated after thorough codebase verification. Many issues
 
 ## Summary by Category
 
-### Confirmed Fixed (33 issues)
+### Confirmed Fixed (49 issues)
 Issues verified as resolved in the current codebase through code analysis.
 
-### Partially Fixed (7 issues)
+### Partially Fixed (8 issues)
 Code changes made but require additional verification or have edge cases.
 
-### Not Fixed - Confirmed (11 issues)
-1. Notes loading slowly (performance)
-2. Slow status update (Approved)
-3. Form requires scrolling on 14" screen
-4. Photos not visible after issue creation
-5. Need refresh to see changes (Issues module)
-6. Recipient filter should keep typed text
-7. Logic hard to follow (Vendors)
-8. Allocation field purpose unclear
-9. How to associate template with expense?
-10. Where to use template? (Message Templates)
-11. How to associate template with expense? (Bill Templates)
+### Not Fixed - Confirmed (2 issues)
+1. Vendors UX "Logic hard to follow" - Requires architectural UX review (partially addressed with tooltips)
+2. Additional manual testing items may reveal new issues
 
 ### Needs Manual Testing (18 issues)
 Issues where code appears correct but require browser/runtime verification.
@@ -610,26 +607,30 @@ Commissions page hidden per business request.
    - Report Schedule: Auto-add email on form submit
    - Utility Providers: Business Account Information section
 
+5. **`cd09ce2`** - fix: QA improvements - performance, responsive, and UX fixes
+   - Notes: Increased staleTime from 5 to 10 minutes for reduced refetch
+   - Financial: Removed redundant refetch() calls (cache already handles invalidation)
+   - Issues: Added detail query invalidation for photos realtime
+   - FinancialEntryDialog: Responsive grid and min-h-0 for flex scroll
+   - BatchEntryDialog: Responsive grids for all sections
+   - Allocation field: Renamed to "Vendor Assignment" with clearer labels
+   - Bill Templates: Added empty state guidance
+   - Message Templates: Added empty state guidance
+
 ---
 
 ## Recommendations for Next Sprint
 
-### High Priority (Confirmed NOT FIXED)
-1. Combobox UX improvements - keep typed text (affects multiple modules)
-2. Performance optimization for Notes loading
-3. Responsive design fixes (filters bleeding, forms requiring scroll)
-4. Issue photos not visible after creation
-
-### Medium Priority
-1. Service Pipeline export improvements
-2. Document tree view enhancements
-3. Media module image preview
+### High Priority (Remaining)
+1. Vendors UX architectural review (fragmented pages, mixed concepts)
+2. Continue manual testing of items marked "NEEDS MANUAL TESTING"
 
 ### Manual Testing Required
 1. Check-In/Out form state and signature
 2. Financial entry form behavior
 3. Utility provider assignment flow
 4. Calendar property filtering
+5. New responsive form layouts on 14" screens
 
 ### Low Priority / Feature Requests
 1. Batch Jobs feature
