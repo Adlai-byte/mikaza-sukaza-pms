@@ -44,6 +44,7 @@ import {
   Check,
   CheckCircle,
   AlertCircle,
+  HelpCircle,
   Download,
   Paperclip,
   ExternalLink,
@@ -616,12 +617,12 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="h-7 text-xs"
+                              className="h-7 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300"
                               onClick={() => handleApproveEntry(entry)}
                               disabled={approveEntry.isPending}
                               title="Approve entry for reports"
                             >
-                              <Check className="h-3 w-3 mr-1" />
+                              <HelpCircle className="h-3 w-3 mr-1" />
                               Approve
                             </Button>
                           )}

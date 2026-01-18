@@ -267,8 +267,8 @@ export function FinancialEntryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {getIcon()}
             {getDialogTitle()}
@@ -280,7 +280,7 @@ export function FinancialEntryDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-2">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-2 pb-2">
           <div className="space-y-2">
             <Label htmlFor="description">{t('common.description', 'Description')} *</Label>
             <Input
@@ -378,11 +378,11 @@ export function FinancialEntryDialog({
           </div>
 
           {isScheduled && (
-            <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+            <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
               <div className="space-y-2">
                 <Label htmlFor="scheduledDay">{t('financialEntries.dayOfMonth', 'Day of Month')}</Label>
                 <Select value={scheduledDay} onValueChange={setScheduledDay}>
-                  <SelectTrigger className="w-[120px]">
+                  <SelectTrigger className="w-[100px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -397,11 +397,11 @@ export function FinancialEntryDialog({
 
               <div className="space-y-2">
                 <Label>{t('common.months', 'Months')} *</Label>
-                <div className={`grid grid-cols-4 gap-2 ${errors.scheduledMonths ? 'ring-2 ring-red-500 ring-offset-2 rounded-lg p-1' : ''}`}>
+                <div className={`grid grid-cols-6 sm:grid-cols-4 gap-1.5 ${errors.scheduledMonths ? 'ring-2 ring-red-500 ring-offset-2 rounded-lg p-1' : ''}`}>
                   {MONTHS.map((month) => (
                     <div
                       key={month.value}
-                      className={`flex items-center justify-center p-2 rounded cursor-pointer border transition-colors ${
+                      className={`flex items-center justify-center p-1.5 rounded cursor-pointer border transition-colors ${
                         scheduledMonths.includes(month.value)
                           ? 'bg-primary text-primary-foreground border-primary'
                           : 'bg-background border-input hover:bg-accent'
@@ -411,7 +411,7 @@ export function FinancialEntryDialog({
                         if (errors.scheduledMonths) setErrors(prev => ({ ...prev, scheduledMonths: '' }));
                       }}
                     >
-                      <span className="text-sm font-medium">{month.label}</span>
+                      <span className="text-xs sm:text-sm font-medium">{month.label}</span>
                     </div>
                   ))}
                 </div>
@@ -445,12 +445,13 @@ export function FinancialEntryDialog({
           />
         </form>
 
-        <DialogFooter className="gap-2 pt-4 border-t">
+        <DialogFooter className="flex-shrink-0 flex-col-reverse sm:flex-row gap-2 pt-3 border-t">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
+            className="w-full sm:w-auto"
           >
             <X className="mr-2 h-4 w-4" />
             {t('common.cancel', 'Cancel')}
@@ -459,6 +460,7 @@ export function FinancialEntryDialog({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting || !isFormValid()}
+            className="w-full sm:w-auto"
           >
             <Save className="mr-2 h-4 w-4" />
             {isSubmitting
