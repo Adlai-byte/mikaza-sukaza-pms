@@ -471,8 +471,8 @@ export function usePropertiesOptimized() {
       });
 
       // Invalidate jobs and issues queries so unit selectors update
-      queryClient.invalidateQueries({ queryKey: jobKeys.all() });
-      queryClient.invalidateQueries({ queryKey: issueKeys.all() });
+      queryClient.invalidateQueries({ queryKey: jobKeys.all });
+      queryClient.invalidateQueries({ queryKey: issueKeys.all });
 
       toast({
         title: "Success",
@@ -767,8 +767,8 @@ export function usePropertiesOptimized() {
       console.log('✅ [PropertyEdit] Cache invalidated and fresh data fetched for property:', propertyId);
 
       // Invalidate jobs and issues queries so unit selectors update when units change
-      queryClient.invalidateQueries({ queryKey: jobKeys.all() });
-      queryClient.invalidateQueries({ queryKey: issueKeys.all() });
+      queryClient.invalidateQueries({ queryKey: jobKeys.all });
+      queryClient.invalidateQueries({ queryKey: issueKeys.all });
 
       toast({
         title: "Success",
