@@ -104,6 +104,9 @@ export class RealtimeCacheSync {
       // Subscribe to access documents changes (Documents Group)
       await this.subscribeToAccessDocuments();
 
+      // Subscribe to units table changes
+      await this.subscribeToUnits();
+
       console.log('✅ Realtime cache sync initialized');
     } catch (error) {
       console.error('❌ Failed to initialize realtime sync:', error);
@@ -527,52 +530,6 @@ export class RealtimeCacheSync {
       .subscribe();
 
     this.subscriptions.set('property_highlights', channel);
-  }
-
-  /**
-   * Subscribe to units table changes
-   */
-  private async subscribeToUnits() {
-    const channel = supabase
-      .channel('units-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'units',
-        },
-        (payload) => {
-          console.log('🔄 Units table changed:', payload.eventType);
-
-          // Invalidate all unit queries
-          this.queryClient.invalidateQueries({ queryKey: ['units'] });
-
-          // Invalidate property-specific queries
-          if (payload.new && 'property_id' in payload.new) {
-            const propertyId = (payload.new as Record<string, unknown>).property_id as string;
-            if (propertyId) {
-              this.queryClient.invalidateQueries({
-                queryKey: ['properties', 'detail', propertyId],
-              });
-            }
-          }
-          if (payload.old && 'property_id' in payload.old) {
-            const propertyId = (payload.old as Record<string, unknown>).property_id as string;
-            if (propertyId) {
-              this.queryClient.invalidateQueries({
-                queryKey: ['properties', 'detail', propertyId],
-              });
-            }
-          }
-
-          // Also invalidate properties list (unit count may have changed)
-          this.queryClient.invalidateQueries({ queryKey: ['properties', 'list'] });
-        }
-      )
-      .subscribe();
-
-    this.subscriptions.set('units', channel);
   }
 
   /**
@@ -1284,6 +1241,51 @@ export class RealtimeCacheSync {
   }
 
   /**
+   * Subscribe to units table changes
+   */
+  private async subscribeToUnits() {
+    const channel = supabase
+      .channel('units-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'units',
+        },
+        (payload) => {
+          console.log('🔄 Units table changed:', payload.eventType);
+
+          // Invalidate units queries
+          this.queryClient.invalidateQueries({ queryKey: ['units'] });
+
+          // Invalidate properties queries (units are nested in properties)
+          this.queryClient.invalidateQueries({ queryKey: ['properties'] });
+
+          // Invalidate property detail if we know which property
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as any).property_id;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['properties', 'detail', propertyId],
+              });
+            }
+          }
+
+          // Invalidate jobs and issues (they can be assigned to units)
+          this.queryClient.invalidateQueries({ queryKey: ['jobs'] });
+          this.queryClient.invalidateQueries({ queryKey: ['issues'] });
+
+          // Invalidate bookings (bookings can be for specific units)
+          this.queryClient.invalidateQueries({ queryKey: ['bookings'] });
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('units', channel);
+  }
+
+  /**
    * Subscribe to a custom table
    */
   async subscribeToTable(
@@ -1362,7 +1364,7 @@ export class RealtimeCacheSync {
    * Manually trigger cache invalidation for a specific change type
    */
   async invalidateForChange(
-    changeType: 'property' | 'booking' | 'user' | 'financial' | 'static' | 'expense' | 'invoice' | 'highlight' | 'unit' | 'issue' | 'task' | 'keyControl' | 'checkInOut' | 'provider' | 'guest' | 'job' | 'message' | 'checklistTemplate' | 'passwordVault' | 'activityLog' | 'billTemplate' | 'reportSchedule' | 'document' | 'vendorCOI' | 'buildingCOI' | 'documentApproval' | 'accessDocument'
+    changeType: 'property' | 'booking' | 'user' | 'financial' | 'static' | 'expense' | 'invoice' | 'highlight' | 'unit' | 'issue' | 'task' | 'keyControl' | 'checkInOut' | 'provider' | 'guest' | 'job' | 'message' | 'checklistTemplate' | 'passwordVault' | 'activityLog' | 'billTemplate' | 'reportSchedule' | 'document' | 'vendorCOI' | 'buildingCOI' | 'documentApproval' | 'accessDocument' | 'units'
   ) {
     const invalidationMap: Record<string, string[][]> = {
       property: [
@@ -1504,6 +1506,14 @@ export class RealtimeCacheSync {
       ],
       accessDocument: [
         ['access-documents'],
+      ],
+      units: [
+        ['units'],
+        ['properties'],
+        ['properties', 'list'],
+        ['jobs'],
+        ['issues'],
+        ['bookings'],
       ],
     };
 

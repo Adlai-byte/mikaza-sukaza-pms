@@ -273,7 +273,7 @@ export function IssueDialog({
                   </SelectItem>
                   {selectedProperty.units.map((unit) => (
                     <SelectItem key={unit.unit_id} value={unit.unit_id}>
-                      {unit.unit_name || `Unit ${unit.unit_number}`}
+                      {unit.property_name || `Unit ${unit.license_number || unit.unit_id?.slice(0, 8)}`}
                     </SelectItem>
                   ))}
                 </SelectContent>

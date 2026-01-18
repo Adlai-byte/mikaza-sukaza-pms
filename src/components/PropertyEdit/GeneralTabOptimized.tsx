@@ -720,7 +720,8 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     onSuccess: () => {
       // Invalidate all related queries to ensure units propagate everywhere
       queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
-      queryClient.invalidateQueries({ queryKey: propertyKeys.all });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.all() });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
       queryClient.invalidateQueries({ queryKey: ['units'] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] }); // For job property selector
       queryClient.invalidateQueries({ queryKey: ['issues'] }); // For issue property selector
@@ -757,7 +758,8 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     onSuccess: () => {
       // Invalidate all related queries to ensure units propagate everywhere
       queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
-      queryClient.invalidateQueries({ queryKey: propertyKeys.all });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.all() });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
       queryClient.invalidateQueries({ queryKey: ['units'] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['issues'] });
@@ -792,7 +794,8 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     onSuccess: () => {
       // Invalidate all related queries to ensure units propagate everywhere
       queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
-      queryClient.invalidateQueries({ queryKey: propertyKeys.all });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.all() });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
       queryClient.invalidateQueries({ queryKey: ['units'] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['issues'] });
