@@ -5,15 +5,22 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 
 // Types
+export type ScheduleFrequency = 'weekly' | 'monthly' | 'annual';
+
 export interface ReportSchedule {
   schedule_id: string;
   schedule_name: string;
   report_type: ReportType;
-  day_of_week: number; // 0=Sunday, 5=Friday, 6=Saturday
+  schedule_frequency: ScheduleFrequency;
+  day_of_week: number | null; // 0=Sunday, 5=Friday, 6=Saturday (for weekly)
+  day_of_month: number | null; // 1-31 (for monthly/annual)
+  month_of_year: number | null; // 1-12 (for annual)
   hour_of_day: number; // 0-23
   minute_of_hour: number; // 0-59
   timezone: string;
   recipient_emails: string[];
+  date_range_start: string | null; // ISO date
+  date_range_end: string | null; // ISO date
   report_filters: Record<string, unknown>;
   is_enabled: boolean;
   created_by: string | null;
@@ -33,14 +40,25 @@ export interface ReportSchedule {
 export interface ReportScheduleInsert {
   schedule_name: string;
   report_type: ReportType;
-  day_of_week: number;
+  schedule_frequency?: ScheduleFrequency;
+  day_of_week?: number | null;
+  day_of_month?: number | null;
+  month_of_year?: number | null;
   hour_of_day: number;
   minute_of_hour?: number;
   timezone?: string;
   recipient_emails: string[];
+  date_range_start?: string | null;
+  date_range_end?: string | null;
   report_filters?: Record<string, unknown>;
   is_enabled?: boolean;
 }
+
+export const SCHEDULE_FREQUENCIES: Record<ScheduleFrequency, string> = {
+  weekly: 'Weekly',
+  monthly: 'Monthly',
+  annual: 'Annual',
+};
 
 export interface ReportEmailHistory {
   history_id: string;

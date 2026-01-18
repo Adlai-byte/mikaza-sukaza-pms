@@ -60,6 +60,7 @@ import {
 } from 'lucide-react';
 import { useUnitSettings, getEffectiveUnitSettings } from '@/hooks/useUnitSettings';
 import { TabLoadingSpinner } from './PropertyEditSkeleton';
+import { UnitAmenitiesRulesSection } from './UnitAmenitiesRulesSection';
 import { LocationMap } from '@/components/ui/location-map-new';
 import { Property, PropertyLocation, PropertyCommunication, PropertyAccess, PropertyExtras } from '@/lib/schemas';
 
@@ -1887,6 +1888,15 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
                               </div>
                             </div>
                           </div>
+                        </div>
+
+                        {/* Amenities & Rules Section */}
+                        <div className="border-t pt-4">
+                          <UnitAmenitiesRulesSection
+                            unitId={unit.unit_id}
+                            propertyAmenities={property.amenities}
+                            propertyRules={property.rules}
+                          />
                         </div>
 
                         {/* Save Button */}

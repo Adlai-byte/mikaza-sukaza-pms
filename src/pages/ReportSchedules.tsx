@@ -51,8 +51,10 @@ import {
   useSendReportNow,
   REPORT_TYPES,
   DAYS_OF_WEEK,
+  SCHEDULE_FREQUENCIES,
   ReportSchedule,
 } from '@/hooks/useReportSchedules';
+import { MONTHS_OF_YEAR } from '@/lib/schemas';
 import { AddReportScheduleDialog } from '@/components/automation/AddReportScheduleDialog';
 import { ReportScheduleHistoryDialog } from '@/components/automation/ReportScheduleHistoryDialog';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -77,14 +79,29 @@ export default function ReportSchedules() {
   const toggleSchedule = useToggleReportSchedule();
   const sendReportNow = useSendReportNow();
 
-  // Format time for display
+  // Format time for display based on frequency
   const formatScheduleTime = (schedule: ReportSchedule) => {
-    const day = DAYS_OF_WEEK.find((d) => d.value === schedule.day_of_week)?.label || 'Unknown';
-    const hour = schedule.hour_of_day.toString().padStart(2, '0');
     const minute = schedule.minute_of_hour.toString().padStart(2, '0');
     const period = schedule.hour_of_day >= 12 ? 'PM' : 'AM';
     const hour12 = schedule.hour_of_day % 12 || 12;
-    return `${day} at ${hour12}:${minute} ${period}`;
+    const timeStr = `${hour12}:${minute} ${period}`;
+
+    const frequency = schedule.schedule_frequency || 'weekly';
+
+    if (frequency === 'weekly') {
+      const day = DAYS_OF_WEEK.find((d) => d.value === schedule.day_of_week)?.label || 'Unknown';
+      return `Weekly on ${day} at ${timeStr}`;
+    } else if (frequency === 'monthly') {
+      const dayOfMonth = schedule.day_of_month || 1;
+      const suffix = dayOfMonth === 1 ? 'st' : dayOfMonth === 2 ? 'nd' : dayOfMonth === 3 ? 'rd' : 'th';
+      return `Monthly on the ${dayOfMonth}${suffix} at ${timeStr}`;
+    } else if (frequency === 'annual') {
+      const month = MONTHS_OF_YEAR.find((m) => m.value === schedule.month_of_year)?.label || 'January';
+      const dayOfMonth = schedule.day_of_month || 1;
+      return `Annual on ${month} ${dayOfMonth} at ${timeStr}`;
+    }
+
+    return `${timeStr}`;
   };
 
   // Handle toggle
@@ -123,7 +140,7 @@ export default function ReportSchedules() {
             {t('automation.reportSchedules', 'Report Schedules')}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {t('automation.reportSchedulesDescription', 'Schedule automated report emails to be sent weekly')}
+            {t('automation.reportSchedulesDescription', 'Schedule automated report emails to be sent weekly, monthly, or annually')}
           </p>
         </div>
         <div className="flex gap-2">

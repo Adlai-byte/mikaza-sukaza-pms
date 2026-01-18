@@ -37,11 +37,14 @@ import {
   useUpdateReportSchedule,
   REPORT_TYPES,
   DAYS_OF_WEEK,
+  SCHEDULE_FREQUENCIES,
   ReportSchedule,
   ReportScheduleInsert,
   ReportType,
+  ScheduleFrequency,
 } from '@/hooks/useReportSchedules';
-import { reportScheduleSchema, COMMON_TIMEZONES } from '@/lib/schemas';
+import { reportScheduleSchema, COMMON_TIMEZONES, MONTHS_OF_YEAR } from '@/lib/schemas';
+import { useToast } from '@/hooks/use-toast';
 
 interface AddReportScheduleDialogProps {
   open: boolean;
@@ -59,6 +62,7 @@ export function AddReportScheduleDialog({
 
   const createSchedule = useCreateReportSchedule();
   const updateSchedule = useUpdateReportSchedule();
+  const { toast } = useToast();
 
   // Email input state
   const [emailInput, setEmailInput] = useState('');
@@ -69,15 +73,23 @@ export function AddReportScheduleDialog({
     defaultValues: {
       schedule_name: '',
       report_type: 'current_balance',
+      schedule_frequency: 'weekly',
       day_of_week: 5, // Friday
+      day_of_month: 1,
+      month_of_year: 1,
       hour_of_day: 19, // 7 PM
       minute_of_hour: 0,
       timezone: 'America/New_York',
       recipient_emails: [],
+      date_range_start: null,
+      date_range_end: null,
       is_enabled: true,
       report_filters: {},
     },
   });
+
+  // Watch schedule frequency to show/hide relevant fields
+  const scheduleFrequency = form.watch('schedule_frequency');
 
   // Reset form when dialog opens/closes or schedule changes
   useEffect(() => {
@@ -85,11 +97,16 @@ export function AddReportScheduleDialog({
       form.reset({
         schedule_name: schedule.schedule_name,
         report_type: schedule.report_type,
+        schedule_frequency: schedule.schedule_frequency || 'weekly',
         day_of_week: schedule.day_of_week,
+        day_of_month: schedule.day_of_month || 1,
+        month_of_year: schedule.month_of_year || 1,
         hour_of_day: schedule.hour_of_day,
         minute_of_hour: schedule.minute_of_hour,
         timezone: schedule.timezone,
         recipient_emails: schedule.recipient_emails,
+        date_range_start: schedule.date_range_start,
+        date_range_end: schedule.date_range_end,
         is_enabled: schedule.is_enabled,
         report_filters: schedule.report_filters,
       });
@@ -97,11 +114,16 @@ export function AddReportScheduleDialog({
       form.reset({
         schedule_name: '',
         report_type: 'current_balance',
+        schedule_frequency: 'weekly',
         day_of_week: 5,
+        day_of_month: 1,
+        month_of_year: 1,
         hour_of_day: 19,
         minute_of_hour: 0,
         timezone: 'America/New_York',
         recipient_emails: [],
+        date_range_start: null,
+        date_range_end: null,
         is_enabled: true,
         report_filters: {},
       });
@@ -161,7 +183,29 @@ export function AddReportScheduleDialog({
         if (!currentEmails.includes(pendingEmail)) {
           data.recipient_emails = [...currentEmails, pendingEmail];
         }
+      } else if (pendingEmail) {
+        // Invalid email format - show error
+        setEmailError(t('validation.invalidEmail', 'Invalid email address'));
+        return;
       }
+    }
+
+    // Validate at least one recipient after auto-add
+    if (!data.recipient_emails || data.recipient_emails.length === 0) {
+      setEmailError(t('validation.recipientRequired', 'At least one recipient is required'));
+      return;
+    }
+
+    // Clear fields that don't apply to the selected frequency
+    const frequency = data.schedule_frequency || 'weekly';
+    if (frequency === 'weekly') {
+      data.day_of_month = null;
+      data.month_of_year = null;
+    } else if (frequency === 'monthly') {
+      data.day_of_week = null;
+      data.month_of_year = null;
+    } else if (frequency === 'annual') {
+      data.day_of_week = null;
     }
 
     if (isEditing && schedule) {
@@ -254,36 +298,134 @@ export function AddReportScheduleDialog({
               )}
             />
 
-            {/* Schedule Time */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="day_of_week"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('automation.dayOfWeek', 'Day of Week')}</FormLabel>
-                    <Select
-                      onValueChange={(v) => field.onChange(parseInt(v))}
-                      value={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t('automation.selectDay', 'Select day')} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {DAYS_OF_WEEK.map((day) => (
-                          <SelectItem key={day.value} value={day.value.toString()}>
-                            {day.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Schedule Frequency */}
+            <FormField
+              control={form.control}
+              name="schedule_frequency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('automation.frequency', 'Frequency')}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || 'weekly'}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('automation.selectFrequency', 'Select frequency')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(SCHEDULE_FREQUENCIES).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {t('automation.frequencyDescription', 'How often to send this report')}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
+            {/* Schedule Day Selection - Dynamic based on frequency */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Day of Week - for Weekly */}
+              {scheduleFrequency === 'weekly' && (
+                <FormField
+                  control={form.control}
+                  name="day_of_week"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('automation.dayOfWeek', 'Day of Week')}</FormLabel>
+                      <Select
+                        onValueChange={(v) => field.onChange(parseInt(v))}
+                        value={field.value?.toString() || '5'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('automation.selectDay', 'Select day')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {DAYS_OF_WEEK.map((day) => (
+                            <SelectItem key={day.value} value={day.value.toString()}>
+                              {day.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Month of Year - for Annual */}
+              {scheduleFrequency === 'annual' && (
+                <FormField
+                  control={form.control}
+                  name="month_of_year"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('automation.monthOfYear', 'Month')}</FormLabel>
+                      <Select
+                        onValueChange={(v) => field.onChange(parseInt(v))}
+                        value={field.value?.toString() || '1'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('automation.selectMonth', 'Select month')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {MONTHS_OF_YEAR.map((month) => (
+                            <SelectItem key={month.value} value={month.value.toString()}>
+                              {month.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Day of Month - for Monthly and Annual */}
+              {(scheduleFrequency === 'monthly' || scheduleFrequency === 'annual') && (
+                <FormField
+                  control={form.control}
+                  name="day_of_month"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('automation.dayOfMonth', 'Day of Month')}</FormLabel>
+                      <Select
+                        onValueChange={(v) => field.onChange(parseInt(v))}
+                        value={field.value?.toString() || '1'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('automation.selectDayOfMonth', 'Select day')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                            <SelectItem key={day} value={day.toString()}>
+                              {day}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {t('automation.dayOfMonthNote', 'If day exceeds month length, last day of month will be used')}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Time of Day */}
               <FormField
                 control={form.control}
                 name="hour_of_day"
@@ -311,6 +453,50 @@ export function AddReportScheduleDialog({
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Date Range for Report Data */}
+            <div className="space-y-2">
+              <FormLabel>{t('automation.dateRange', 'Report Date Range')}</FormLabel>
+              <FormDescription>
+                {t('automation.dateRangeDescription', 'Filter report data to a specific date range (optional)')}
+              </FormDescription>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="date_range_start"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-muted-foreground">{t('automation.startDate', 'Start Date')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="date_range_end"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-muted-foreground">{t('automation.endDate', 'End Date')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             {/* Timezone */}

@@ -267,3 +267,147 @@ export function useDuplicateChecklistTemplate() {
     },
   });
 }
+
+export interface BulkDuplicateChecklistTemplateInput {
+  templateId: string;
+  targetPropertyIds: string[];
+  nameSuffix?: string; // Optional suffix/prefix for template names
+}
+
+export interface BulkDuplicateResult {
+  successCount: number;
+  failedCount: number;
+  createdTemplates: Array<{ property_id: string; template_id: string; template_name: string }>;
+  errors: Array<{ property_id: string; error: string }>;
+}
+
+/**
+ * Hook to duplicate a checklist template to multiple properties at once
+ * Useful when 100+ units have similar requirements
+ */
+export function useBulkDuplicateChecklistTemplate() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { logActivity } = useActivityLogs();
+
+  return useMutation({
+    mutationFn: async ({ templateId, targetPropertyIds, nameSuffix }: BulkDuplicateChecklistTemplateInput): Promise<BulkDuplicateResult> => {
+      // Fetch the original template
+      const { data: originalTemplate, error: fetchError } = await supabase
+        .from('checklist_templates')
+        .select('*')
+        .eq('template_id', templateId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!originalTemplate) throw new Error('Template not found');
+
+      const result: BulkDuplicateResult = {
+        successCount: 0,
+        failedCount: 0,
+        createdTemplates: [],
+        errors: [],
+      };
+
+      // Prepare inserts for all target properties
+      const inserts = targetPropertyIds.map(propertyId => ({
+        property_id: propertyId,
+        template_name: nameSuffix
+          ? `${originalTemplate.template_name} ${nameSuffix}`
+          : originalTemplate.template_name,
+        template_type: originalTemplate.template_type,
+        description: originalTemplate.description,
+        checklist_items: originalTemplate.checklist_items,
+        is_active: originalTemplate.is_active,
+      }));
+
+      // Batch insert all templates at once for better performance
+      const { data: insertedTemplates, error: insertError } = await supabase
+        .from('checklist_templates')
+        .insert(inserts)
+        .select('template_id, property_id, template_name');
+
+      if (insertError) {
+        // If batch insert fails, try individual inserts to capture partial success
+        for (const insert of inserts) {
+          try {
+            const { data, error } = await supabase
+              .from('checklist_templates')
+              .insert(insert)
+              .select('template_id, property_id, template_name')
+              .single();
+
+            if (error) {
+              result.failedCount++;
+              result.errors.push({
+                property_id: insert.property_id,
+                error: error.message,
+              });
+            } else if (data) {
+              result.successCount++;
+              result.createdTemplates.push({
+                property_id: data.property_id,
+                template_id: data.template_id,
+                template_name: data.template_name,
+              });
+            }
+          } catch (err) {
+            result.failedCount++;
+            result.errors.push({
+              property_id: insert.property_id,
+              error: err instanceof Error ? err.message : 'Unknown error',
+            });
+          }
+        }
+      } else if (insertedTemplates) {
+        // Batch insert succeeded
+        result.successCount = insertedTemplates.length;
+        result.createdTemplates = insertedTemplates.map(t => ({
+          property_id: t.property_id,
+          template_id: t.template_id,
+          template_name: t.template_name,
+        }));
+      }
+
+      return { ...result, originalTemplate } as BulkDuplicateResult & { originalTemplate: typeof originalTemplate };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['checklist_templates'] });
+
+      // Log activity for the bulk operation
+      logActivity('checklist_templates_bulk_duplicated', {
+        success_count: result.successCount,
+        failed_count: result.failedCount,
+        target_property_count: result.successCount + result.failedCount,
+        created_template_ids: result.createdTemplates.map(t => t.template_id),
+      });
+
+      if (result.failedCount === 0) {
+        toast({
+          title: 'Templates created',
+          description: `Successfully created ${result.successCount} template${result.successCount !== 1 ? 's' : ''}.`,
+        });
+      } else if (result.successCount > 0) {
+        toast({
+          title: 'Partially completed',
+          description: `Created ${result.successCount} template${result.successCount !== 1 ? 's' : ''}, ${result.failedCount} failed.`,
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Failed',
+          description: 'Failed to create templates. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error) => {
+      console.error('Error bulk duplicating checklist templates:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to duplicate templates. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+}

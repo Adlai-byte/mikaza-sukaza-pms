@@ -194,8 +194,8 @@ const deleteMedia = async (imageId: string): Promise<void> => {
   console.log('✅ [Media] Delete complete');
 };
 
-// Toggle primary image status
-const setPrimaryImage = async (propertyId: string, imageId: string): Promise<void> => {
+// Toggle primary image status - returns true if set as primary, false if unset
+const setPrimaryImage = async (propertyId: string, imageId: string): Promise<boolean> => {
   console.log('⭐ [Media] Toggling primary image:', imageId, 'for property:', propertyId);
 
   // First check if this image is already primary
@@ -217,6 +217,7 @@ const setPrimaryImage = async (propertyId: string, imageId: string): Promise<voi
       throw error;
     }
     console.log('✅ [Media] Primary image unset');
+    return false; // Was unset
   } else {
     // 1. Unset all current primary images for this property
     await supabase
@@ -235,6 +236,7 @@ const setPrimaryImage = async (propertyId: string, imageId: string): Promise<voi
       throw error;
     }
     console.log('✅ [Media] Primary image set');
+    return true; // Was set
   }
 };
 
@@ -342,18 +344,22 @@ export function useSetPrimaryImage() {
   return useMutation({
     mutationFn: ({ propertyId, imageId }: { propertyId: string; imageId: string }) =>
       setPrimaryImage(propertyId, imageId),
-    onSuccess: () => {
+    onSuccess: (wasSet) => {
       queryClient.invalidateQueries({ queryKey: mediaKeys.lists() });
+      // Also invalidate property queries since primary image affects property display
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
       toast({
         title: "Success",
-        description: "Primary image set successfully",
+        description: wasSet
+          ? "Primary image set successfully"
+          : "Primary status removed from image",
       });
     },
     onError: (error) => {
       console.error('Set primary image error:', error);
       toast({
         title: "Error",
-        description: "Failed to set primary image. Please try again.",
+        description: "Failed to update primary image. Please try again.",
         variant: "destructive",
       });
     },

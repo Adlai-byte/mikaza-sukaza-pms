@@ -4,7 +4,7 @@ import { useIntersectionObserver } from '@/lib/performance-utils';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 
-interface OptimizedImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src'> {
+interface OptimizedImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src' | 'onClick'> {
   src: string;
   alt: string;
   width?: number;
@@ -19,6 +19,7 @@ interface OptimizedImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElem
   fallbackSrc?: string;
   onLoad?: (src: string) => void;
   onError?: (error: Error) => void;
+  onClick?: (e: React.MouseEvent) => void;
   className?: string;
 }
 
@@ -37,6 +38,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   fallbackSrc,
   onLoad,
   onError,
+  onClick,
   className,
   ...props
 }) => {
@@ -180,9 +182,11 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
       <div
         className={cn(
           'w-full h-full flex items-center justify-center bg-gray-100 text-gray-500',
+          onClick ? 'cursor-pointer' : '',
           className
         )}
         style={{ width, height }}
+        onClick={onClick}
       >
         <div className="text-center">
           <div className="text-2xl mb-2">📷</div>
@@ -197,8 +201,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     return (
       <div
         ref={imgRef}
-        className={cn('w-full h-full', className)}
+        className={cn('w-full h-full', onClick ? 'cursor-pointer' : '', className)}
         style={{ width, height }}
+        onClick={onClick}
       >
         {renderPlaceholder()}
       </div>
@@ -215,8 +220,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     return (
       <div
         ref={imgRef}
-        className={cn('w-full h-full', className)}
+        className={cn('w-full h-full', onClick ? 'cursor-pointer' : '', className)}
         style={{ width, height }}
+        onClick={onClick}
       >
         {renderPlaceholder()}
       </div>
@@ -225,7 +231,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
   // Render image
   return (
-    <div className="relative w-full h-full">
+    <div className={cn('relative w-full h-full', onClick ? 'cursor-pointer' : '')} onClick={onClick}>
       {/* Main image */}
       <img
         ref={imgRef}

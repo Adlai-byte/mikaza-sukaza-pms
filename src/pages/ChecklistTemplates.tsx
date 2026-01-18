@@ -21,7 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChecklistTemplateDialog } from '@/components/checkinout/ChecklistTemplateDialog';
-import { useChecklistTemplates, useDeleteChecklistTemplate, useDuplicateChecklistTemplate } from '@/hooks/useChecklistTemplates';
+import { useChecklistTemplates, useDeleteChecklistTemplate, useDuplicateChecklistTemplate, useBulkDuplicateChecklistTemplate } from '@/hooks/useChecklistTemplates';
 import { useProperties } from '@/hooks/useProperties';
 import { ChecklistTemplate } from '@/lib/schemas';
 import {
@@ -48,6 +48,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { StatusBadge } from '@/components/StatusBadge';
 import {
@@ -74,7 +77,10 @@ export default function ChecklistTemplates() {
     open: boolean;
     template: ChecklistTemplate | null;
     newName: string;
-  }>({ open: false, template: null, newName: '' });
+    mode: 'single' | 'bulk';
+    selectedPropertyIds: string[];
+    nameSuffix: string;
+  }>({ open: false, template: null, newName: '', mode: 'single', selectedPropertyIds: [], nameSuffix: '' });
 
   const { properties = [] } = useProperties();
 
@@ -85,8 +91,11 @@ export default function ChecklistTemplates() {
   }), [propertyFilter, typeFilter, activeFilter]);
 
   const { data: templates = [], isLoading, isFetching, refetch } = useChecklistTemplates(filters);
+  // Fetch ALL templates for KPIs (unfiltered)
+  const { data: allTemplates = [] } = useChecklistTemplates({});
   const deleteMutation = useDeleteChecklistTemplate();
   const duplicateMutation = useDuplicateChecklistTemplate();
+  const bulkDuplicateMutation = useBulkDuplicateChecklistTemplate();
 
   const filteredTemplates = useMemo(() => {
     if (!searchQuery) return templates;
@@ -128,11 +137,16 @@ export default function ChecklistTemplates() {
       open: true,
       template,
       newName: `${template.template_name} (Copy)`,
+      mode: 'single',
+      selectedPropertyIds: [],
+      nameSuffix: '',
     });
   };
 
   const confirmDuplicate = () => {
-    if (duplicateDialog.template) {
+    if (!duplicateDialog.template) return;
+
+    if (duplicateDialog.mode === 'single') {
       const trimmedName = duplicateDialog.newName.trim();
       duplicateMutation.mutate(
         {
@@ -141,11 +155,47 @@ export default function ChecklistTemplates() {
         },
         {
           onSuccess: () => {
-            setDuplicateDialog({ open: false, template: null, newName: '' });
+            setDuplicateDialog({ open: false, template: null, newName: '', mode: 'single', selectedPropertyIds: [], nameSuffix: '' });
+          },
+        }
+      );
+    } else {
+      // Bulk mode
+      if (duplicateDialog.selectedPropertyIds.length === 0) return;
+
+      bulkDuplicateMutation.mutate(
+        {
+          templateId: duplicateDialog.template.template_id,
+          targetPropertyIds: duplicateDialog.selectedPropertyIds,
+          nameSuffix: duplicateDialog.nameSuffix.trim() || undefined,
+        },
+        {
+          onSuccess: () => {
+            setDuplicateDialog({ open: false, template: null, newName: '', mode: 'single', selectedPropertyIds: [], nameSuffix: '' });
           },
         }
       );
     }
+  };
+
+  const togglePropertySelection = (propertyId: string) => {
+    setDuplicateDialog(prev => {
+      const isSelected = prev.selectedPropertyIds.includes(propertyId);
+      return {
+        ...prev,
+        selectedPropertyIds: isSelected
+          ? prev.selectedPropertyIds.filter(id => id !== propertyId)
+          : [...prev.selectedPropertyIds, propertyId],
+      };
+    });
+  };
+
+  const selectAllProperties = () => {
+    const allPropertyIds = properties.map(p => p.property_id).filter(Boolean) as string[];
+    setDuplicateDialog(prev => ({
+      ...prev,
+      selectedPropertyIds: prev.selectedPropertyIds.length === allPropertyIds.length ? [] : allPropertyIds,
+    }));
   };
 
   const getTypeIcon = (type: string) => {
@@ -207,7 +257,7 @@ export default function ChecklistTemplates() {
         }
       />
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Use allTemplates for consistent KPIs regardless of filters */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
@@ -218,7 +268,7 @@ export default function ChecklistTemplates() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground">{t('checklistTemplates.statsCards.totalTemplates')}</p>
                 <div className="flex items-baseline gap-2">
-                  <h3 className="text-2xl font-semibold">{templates.length}</h3>
+                  <h3 className="text-2xl font-semibold">{allTemplates.length}</h3>
                   <span className="text-xs text-muted-foreground">{t('checklistTemplates.reusableChecklists')}</span>
                 </div>
               </div>
@@ -235,8 +285,8 @@ export default function ChecklistTemplates() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground">{t('checklistTemplates.statsCards.checkInTemplates')}</p>
                 <div className="flex items-baseline gap-2">
-                  <h3 className="text-2xl font-semibold">{templates.filter(t => t.template_type === 'check_in').length}</h3>
-                  <span className="text-xs text-muted-foreground">{templates.filter(t => t.template_type === 'check_in' && t.is_active).length} {t('checklistTemplates.active')}</span>
+                  <h3 className="text-2xl font-semibold">{allTemplates.filter(t => t.template_type === 'check_in').length}</h3>
+                  <span className="text-xs text-muted-foreground">{allTemplates.filter(t => t.template_type === 'check_in' && t.is_active).length} {t('checklistTemplates.active')}</span>
                 </div>
               </div>
             </div>
@@ -252,8 +302,8 @@ export default function ChecklistTemplates() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground">{t('checklistTemplates.statsCards.checkOutTemplates')}</p>
                 <div className="flex items-baseline gap-2">
-                  <h3 className="text-2xl font-semibold">{templates.filter(t => t.template_type === 'check_out').length}</h3>
-                  <span className="text-xs text-muted-foreground">{templates.filter(t => t.template_type === 'check_out' && t.is_active).length} {t('checklistTemplates.active')}</span>
+                  <h3 className="text-2xl font-semibold">{allTemplates.filter(t => t.template_type === 'check_out').length}</h3>
+                  <span className="text-xs text-muted-foreground">{allTemplates.filter(t => t.template_type === 'check_out' && t.is_active).length} {t('checklistTemplates.active')}</span>
                 </div>
               </div>
             </div>
@@ -269,8 +319,8 @@ export default function ChecklistTemplates() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground">{t('checklistTemplates.statsCards.activeTemplates')}</p>
                 <div className="flex items-baseline gap-2">
-                  <h3 className="text-2xl font-semibold">{templates.filter(t => t.is_active).length}</h3>
-                  <span className="text-xs text-muted-foreground">{templates.filter(t => !t.is_active).length} {t('checklistTemplates.inactive')}</span>
+                  <h3 className="text-2xl font-semibold">{allTemplates.filter(t => t.is_active).length}</h3>
+                  <span className="text-xs text-muted-foreground">{allTemplates.filter(t => !t.is_active).length} {t('checklistTemplates.inactive')}</span>
                 </div>
               </div>
             </div>
@@ -475,55 +525,127 @@ export default function ChecklistTemplates() {
         open={duplicateDialog.open}
         onOpenChange={(open) => {
           if (!open) {
-            setDuplicateDialog({ open: false, template: null, newName: '' });
+            setDuplicateDialog({ open: false, template: null, newName: '', mode: 'single', selectedPropertyIds: [], nameSuffix: '' });
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{t('checklistTemplates.duplicateDialog.title')}</DialogTitle>
+            <DialogTitle>{t('checklistTemplates.duplicateDialog.title', 'Duplicate Template')}</DialogTitle>
             <DialogDescription>
-              {t('checklistTemplates.duplicateDialog.description')}
+              {t('checklistTemplates.duplicateDialog.description', 'Create a copy of this template')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="newTemplateName">{t('checklistTemplates.duplicateDialog.newName')}</Label>
-              <Input
-                id="newTemplateName"
-                value={duplicateDialog.newName}
-                onChange={(e) =>
-                  setDuplicateDialog((prev) => ({ ...prev, newName: e.target.value }))
-                }
-                placeholder={t('checklistTemplates.duplicateDialog.namePlaceholder')}
-              />
+
+          {duplicateDialog.template && (
+            <div className="text-sm text-muted-foreground border-b pb-3 mb-3">
+              <p>
+                {t('checklistTemplates.duplicateDialog.originalTemplate', 'Original')}: <strong>{duplicateDialog.template.template_name}</strong>
+              </p>
+              <p>
+                {t('checklistTemplates.duplicateDialog.itemCount', {
+                  count: (duplicateDialog.template.checklist_items as any[])?.length || 0,
+                  defaultValue: `${(duplicateDialog.template.checklist_items as any[])?.length || 0} checklist items`,
+                })}
+              </p>
             </div>
-            {duplicateDialog.template && (
-              <div className="text-sm text-muted-foreground">
-                <p>
-                  {t('checklistTemplates.duplicateDialog.originalTemplate')}: <strong>{duplicateDialog.template.template_name}</strong>
-                </p>
-                <p>
-                  {t('checklistTemplates.duplicateDialog.itemCount', {
-                    count: (duplicateDialog.template.checklist_items as any[])?.length || 0,
-                  })}
+          )}
+
+          <Tabs value={duplicateDialog.mode} onValueChange={(v) => setDuplicateDialog(prev => ({ ...prev, mode: v as 'single' | 'bulk' }))}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="single">{t('checklistTemplates.duplicateDialog.singleCopy', 'Single Copy')}</TabsTrigger>
+              <TabsTrigger value="bulk">{t('checklistTemplates.duplicateDialog.bulkCopy', 'Bulk Copy')}</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="single" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="newTemplateName">{t('checklistTemplates.duplicateDialog.newName', 'New Template Name')}</Label>
+                <Input
+                  id="newTemplateName"
+                  value={duplicateDialog.newName}
+                  onChange={(e) =>
+                    setDuplicateDialog((prev) => ({ ...prev, newName: e.target.value }))
+                  }
+                  placeholder={t('checklistTemplates.duplicateDialog.namePlaceholder', 'Enter template name')}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="bulk" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>{t('checklistTemplates.duplicateDialog.selectProperties', 'Select Properties')}</Label>
+                  <Button variant="ghost" size="sm" onClick={selectAllProperties} className="h-7 text-xs">
+                    {duplicateDialog.selectedPropertyIds.length === properties.length ? 'Deselect All' : 'Select All'}
+                  </Button>
+                </div>
+                <ScrollArea className="h-48 border rounded-md p-2">
+                  <div className="space-y-2">
+                    {properties.map((property) => (
+                      <div key={property.property_id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`prop-${property.property_id}`}
+                          checked={duplicateDialog.selectedPropertyIds.includes(property.property_id)}
+                          onCheckedChange={() => togglePropertySelection(property.property_id)}
+                        />
+                        <Label
+                          htmlFor={`prop-${property.property_id}`}
+                          className="text-sm cursor-pointer flex-1 truncate"
+                          title={property.property_name}
+                        >
+                          {property.property_name}
+                        </Label>
+                      </div>
+                    ))}
+                    {properties.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No properties available</p>
+                    )}
+                  </div>
+                </ScrollArea>
+                <p className="text-xs text-muted-foreground">
+                  {duplicateDialog.selectedPropertyIds.length} of {properties.length} properties selected
                 </p>
               </div>
-            )}
-          </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nameSuffix">{t('checklistTemplates.duplicateDialog.nameSuffix', 'Name Suffix (optional)')}</Label>
+                <Input
+                  id="nameSuffix"
+                  value={duplicateDialog.nameSuffix}
+                  onChange={(e) =>
+                    setDuplicateDialog((prev) => ({ ...prev, nameSuffix: e.target.value }))
+                  }
+                  placeholder={t('checklistTemplates.duplicateDialog.nameSuffixPlaceholder', 'e.g., - 2024')}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('checklistTemplates.duplicateDialog.nameSuffixHint', 'Templates will be named: "{originalName} {suffix}"')}
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
+
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDuplicateDialog({ open: false, template: null, newName: '' })}
+              onClick={() => setDuplicateDialog({ open: false, template: null, newName: '', mode: 'single', selectedPropertyIds: [], nameSuffix: '' })}
             >
               {t('common.cancel')}
             </Button>
             <Button
               onClick={confirmDuplicate}
-              disabled={duplicateMutation.isPending}
+              disabled={
+                duplicateMutation.isPending ||
+                bulkDuplicateMutation.isPending ||
+                (duplicateDialog.mode === 'bulk' && duplicateDialog.selectedPropertyIds.length === 0)
+              }
               className="bg-gradient-primary hover:bg-gradient-secondary"
             >
-              {duplicateMutation.isPending ? t('common.duplicating') : t('common.duplicate')}
+              {(duplicateMutation.isPending || bulkDuplicateMutation.isPending)
+                ? t('common.duplicating', 'Duplicating...')
+                : duplicateDialog.mode === 'bulk'
+                  ? t('checklistTemplates.duplicateDialog.createTemplates', `Create ${duplicateDialog.selectedPropertyIds.length} Template${duplicateDialog.selectedPropertyIds.length !== 1 ? 's' : ''}`)
+                  : t('common.duplicate', 'Duplicate')
+              }
             </Button>
           </DialogFooter>
         </DialogContent>

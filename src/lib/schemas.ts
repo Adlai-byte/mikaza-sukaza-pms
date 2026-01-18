@@ -301,6 +301,8 @@ export type Unit = {
   owner?: User; // Joined owner data
   communication?: UnitCommunication | null; // Per-unit WiFi settings
   access?: UnitAccess | null; // Per-unit access codes
+  amenities?: Amenity[]; // Per-unit amenities (inherits from property if empty)
+  rules?: Rule[]; // Per-unit rules (inherits from property if empty)
   created_at?: string;
   updated_at?: string;
 };
@@ -336,6 +338,20 @@ export type Amenity = {
 export type Rule = {
   rule_id?: string;
   rule_name: string;
+  created_at?: string;
+};
+
+// Unit-specific amenity assignment
+export type UnitAmenity = {
+  unit_id: string;
+  amenity_id: string;
+  created_at?: string;
+};
+
+// Unit-specific rule assignment
+export type UnitRule = {
+  unit_id: string;
+  rule_id: string;
   created_at?: string;
 };
 
@@ -2605,15 +2621,45 @@ export const DAYS_OF_WEEK = [
   { value: 6, label: 'Saturday' },
 ] as const;
 
+// Schedule frequency enum
+export const scheduleFrequencyEnum = z.enum(['weekly', 'monthly', 'annual']);
+export type ScheduleFrequency = z.infer<typeof scheduleFrequencyEnum>;
+
+export const SCHEDULE_FREQUENCIES = {
+  weekly: 'Weekly',
+  monthly: 'Monthly',
+  annual: 'Annual',
+} as const;
+
+export const MONTHS_OF_YEAR = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+] as const;
+
 // Report Schedule Schema
 export const reportScheduleSchema = z.object({
   schedule_name: z.string().min(1, "Schedule name is required").max(200),
   report_type: reportTypeEnum,
-  day_of_week: z.number().int().min(0).max(6), // 0=Sunday, 6=Saturday
+  schedule_frequency: scheduleFrequencyEnum.default('weekly'),
+  day_of_week: z.number().int().min(0).max(6).optional().nullable(), // 0=Sunday, 6=Saturday (for weekly)
+  day_of_month: z.number().int().min(1).max(31).optional().nullable(), // 1-31 (for monthly/annual)
+  month_of_year: z.number().int().min(1).max(12).optional().nullable(), // 1-12 (for annual)
   hour_of_day: z.number().int().min(0).max(23),
   minute_of_hour: z.number().int().min(0).max(59).default(0),
   timezone: z.string().default('America/New_York'),
-  recipient_emails: z.array(z.string().email("Invalid email address")).min(1, "At least one recipient is required"),
+  recipient_emails: z.array(z.string().email("Invalid email address")), // Validation done in form submit
+  date_range_start: z.string().optional().nullable(), // ISO date string
+  date_range_end: z.string().optional().nullable(), // ISO date string
   report_filters: z.record(z.any()).optional().default({}),
   is_enabled: z.boolean().default(true),
 });
