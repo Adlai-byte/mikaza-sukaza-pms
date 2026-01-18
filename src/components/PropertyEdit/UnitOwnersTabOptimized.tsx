@@ -76,9 +76,12 @@ const unitOwnersKeys = {
   all: (propertyId: string) => ['unitOwners', propertyId] as const,
 };
 
-// Fetch unit owners
+// Fetch unit owners - includes property owner and all unit owners
 const fetchUnitOwners = async (propertyId: string): Promise<UnitOwner[]> => {
-  // Get the property to find the owner
+  const owners: UnitOwner[] = [];
+  const ownerIds = new Set<string>();
+
+  // Get the property to find the main owner
   const { data: property, error: propertyError } = await supabase
     .from('properties')
     .select('owner_id')
@@ -87,17 +90,40 @@ const fetchUnitOwners = async (propertyId: string): Promise<UnitOwner[]> => {
 
   if (propertyError) throw propertyError;
 
-  // Get the owner details
+  // Add property owner if exists
   if (property.owner_id) {
+    ownerIds.add(property.owner_id);
+  }
+
+  // Get all units for this property and their owners
+  const { data: units, error: unitsError } = await supabase
+    .from('units')
+    .select('owner_id')
+    .eq('property_id', propertyId)
+    .not('owner_id', 'is', null);
+
+  if (!unitsError && units) {
+    units.forEach(unit => {
+      if (unit.owner_id) {
+        ownerIds.add(unit.owner_id);
+      }
+    });
+  }
+
+  // Fetch all owner details
+  if (ownerIds.size > 0) {
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('user_id', property.owner_id);
+      .in('user_id', Array.from(ownerIds));
 
     if (userError) throw userError;
 
-    // Mark the main owner as primary
-    return (userData || []).map(user => ({ ...user, is_primary: true }));
+    // Mark the property owner as primary
+    return (userData || []).map(user => ({
+      ...user,
+      is_primary: user.user_id === property.owner_id,
+    }));
   }
 
   return [];
@@ -200,10 +226,11 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
       return data;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: unitOwnersKeys.all(propertyId),
-        refetchType: 'all',
-      });
+      // Invalidate all related queries
+      await queryClient.invalidateQueries({ queryKey: unitOwnersKeys.all(propertyId) });
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+      await queryClient.invalidateQueries({ queryKey: ['properties', 'detail', propertyId] });
+      await queryClient.invalidateQueries({ queryKey: ['properties'] });
       toast({
         title: 'Success',
         description: 'Owner added successfully',
@@ -233,10 +260,11 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
       return data;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: unitOwnersKeys.all(propertyId),
-        refetchType: 'all',
-      });
+      // Invalidate all related queries
+      await queryClient.invalidateQueries({ queryKey: unitOwnersKeys.all(propertyId) });
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+      await queryClient.invalidateQueries({ queryKey: ['properties', 'detail', propertyId] });
+      await queryClient.invalidateQueries({ queryKey: ['properties'] });
       toast({
         title: 'Success',
         description: 'Owner updated successfully',
@@ -264,10 +292,12 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
       return ownerId;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: unitOwnersKeys.all(propertyId),
-        refetchType: 'all',
-      });
+      // Invalidate all related queries
+      await queryClient.invalidateQueries({ queryKey: unitOwnersKeys.all(propertyId) });
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+      await queryClient.invalidateQueries({ queryKey: ['properties', 'detail', propertyId] });
+      await queryClient.invalidateQueries({ queryKey: ['properties'] });
+      await queryClient.invalidateQueries({ queryKey: ['units'] });
       toast({
         title: 'Success',
         description: 'Owner removed successfully',

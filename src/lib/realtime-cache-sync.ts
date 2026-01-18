@@ -240,6 +240,7 @@ export class RealtimeCacheSync {
 
           // Invalidate users list
           this.queryClient.invalidateQueries({ queryKey: ['users', 'list'] });
+          this.queryClient.invalidateQueries({ queryKey: ['users'] });
 
           // If specific user changed, invalidate their detail
           if (payload.new && 'user_id' in payload.new) {
@@ -251,6 +252,13 @@ export class RealtimeCacheSync {
 
           // Properties list might have owner info
           this.queryClient.invalidateQueries({ queryKey: ['properties', 'list'] });
+          this.queryClient.invalidateQueries({ queryKey: ['properties'] });
+
+          // Invalidate unit owners queries (used in Property tabs)
+          this.queryClient.invalidateQueries({ queryKey: ['unitOwners'] });
+
+          // Invalidate guests queries (guests are also users)
+          this.queryClient.invalidateQueries({ queryKey: ['guests'] });
         }
       )
       .subscribe();
@@ -355,6 +363,99 @@ export class RealtimeCacheSync {
       )
       .subscribe();
     this.subscriptions.set('property_rules', rulesChannel);
+
+    // Property Communication
+    const communicationChannel = supabase
+      .channel('property-communication-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'property_communication',
+        },
+        (payload) => {
+          console.log('🔄 Property communication changed:', payload.eventType);
+
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as Record<string, unknown>).property_id as string;
+            this.queryClient.invalidateQueries({
+              queryKey: ['properties', 'detail', propertyId],
+            });
+          }
+          if (payload.old && 'property_id' in payload.old) {
+            const propertyId = (payload.old as Record<string, unknown>).property_id as string;
+            this.queryClient.invalidateQueries({
+              queryKey: ['properties', 'detail', propertyId],
+            });
+          }
+          this.queryClient.invalidateQueries({ queryKey: ['properties'] });
+        }
+      )
+      .subscribe();
+    this.subscriptions.set('property_communication', communicationChannel);
+
+    // Property Location
+    const locationChannel = supabase
+      .channel('property-location-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'property_location',
+        },
+        (payload) => {
+          console.log('🔄 Property location changed:', payload.eventType);
+
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as Record<string, unknown>).property_id as string;
+            this.queryClient.invalidateQueries({
+              queryKey: ['properties', 'detail', propertyId],
+            });
+          }
+          if (payload.old && 'property_id' in payload.old) {
+            const propertyId = (payload.old as Record<string, unknown>).property_id as string;
+            this.queryClient.invalidateQueries({
+              queryKey: ['properties', 'detail', propertyId],
+            });
+          }
+          this.queryClient.invalidateQueries({ queryKey: ['properties'] });
+        }
+      )
+      .subscribe();
+    this.subscriptions.set('property_location', locationChannel);
+
+    // Property Access
+    const accessChannel = supabase
+      .channel('property-access-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'property_access',
+        },
+        (payload) => {
+          console.log('🔄 Property access changed:', payload.eventType);
+
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as Record<string, unknown>).property_id as string;
+            this.queryClient.invalidateQueries({
+              queryKey: ['properties', 'detail', propertyId],
+            });
+          }
+          if (payload.old && 'property_id' in payload.old) {
+            const propertyId = (payload.old as Record<string, unknown>).property_id as string;
+            this.queryClient.invalidateQueries({
+              queryKey: ['properties', 'detail', propertyId],
+            });
+          }
+          this.queryClient.invalidateQueries({ queryKey: ['properties'] });
+        }
+      )
+      .subscribe();
+    this.subscriptions.set('property_access', accessChannel);
 
     // Amenities master table
     const amenitiesMasterChannel = supabase
@@ -1283,6 +1384,56 @@ export class RealtimeCacheSync {
       .subscribe();
 
     this.subscriptions.set('units', channel);
+
+    // Subscribe to unit_communication changes
+    const unitCommChannel = supabase
+      .channel('unit-communication-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'unit_communication',
+        },
+        (payload) => {
+          console.log('🔄 Unit communication changed:', payload.eventType);
+          this.queryClient.invalidateQueries({ queryKey: ['units'] });
+          this.queryClient.invalidateQueries({ queryKey: ['properties'] });
+          if (payload.new && 'unit_id' in payload.new) {
+            const unitId = (payload.new as any).unit_id;
+            if (unitId) {
+              this.queryClient.invalidateQueries({ queryKey: ['unit-communication', unitId] });
+            }
+          }
+        }
+      )
+      .subscribe();
+    this.subscriptions.set('unit_communication', unitCommChannel);
+
+    // Subscribe to unit_access changes
+    const unitAccessChannel = supabase
+      .channel('unit-access-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'unit_access',
+        },
+        (payload) => {
+          console.log('🔄 Unit access changed:', payload.eventType);
+          this.queryClient.invalidateQueries({ queryKey: ['units'] });
+          this.queryClient.invalidateQueries({ queryKey: ['properties'] });
+          if (payload.new && 'unit_id' in payload.new) {
+            const unitId = (payload.new as any).unit_id;
+            if (unitId) {
+              this.queryClient.invalidateQueries({ queryKey: ['unit-access', unitId] });
+            }
+          }
+        }
+      )
+      .subscribe();
+    this.subscriptions.set('unit_access', unitAccessChannel);
   }
 
   /**
