@@ -21,7 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChecklistTemplateDialog } from '@/components/checkinout/ChecklistTemplateDialog';
-import { useChecklistTemplates, useDeleteChecklistTemplate } from '@/hooks/useChecklistTemplates';
+import { useChecklistTemplates, useDeleteChecklistTemplate, useDuplicateChecklistTemplate } from '@/hooks/useChecklistTemplates';
 import { useProperties } from '@/hooks/useProperties';
 import { ChecklistTemplate } from '@/lib/schemas';
 import {
@@ -37,7 +37,17 @@ import {
   ClipboardList,
   ListChecks,
   RefreshCw,
+  Copy,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { StatusBadge } from '@/components/StatusBadge';
 import {
@@ -60,6 +70,11 @@ export default function ChecklistTemplates() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplate | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
+  const [duplicateDialog, setDuplicateDialog] = useState<{
+    open: boolean;
+    template: ChecklistTemplate | null;
+    newName: string;
+  }>({ open: false, template: null, newName: '' });
 
   const { properties = [] } = useProperties();
 
@@ -71,6 +86,7 @@ export default function ChecklistTemplates() {
 
   const { data: templates = [], isLoading, isFetching, refetch } = useChecklistTemplates(filters);
   const deleteMutation = useDeleteChecklistTemplate();
+  const duplicateMutation = useDuplicateChecklistTemplate();
 
   const filteredTemplates = useMemo(() => {
     if (!searchQuery) return templates;
@@ -104,6 +120,31 @@ export default function ChecklistTemplates() {
           setTemplateToDelete(null);
         },
       });
+    }
+  };
+
+  const handleDuplicate = (template: ChecklistTemplate) => {
+    setDuplicateDialog({
+      open: true,
+      template,
+      newName: `${template.template_name} (Copy)`,
+    });
+  };
+
+  const confirmDuplicate = () => {
+    if (duplicateDialog.template) {
+      const trimmedName = duplicateDialog.newName.trim();
+      duplicateMutation.mutate(
+        {
+          templateId: duplicateDialog.template.template_id,
+          newName: trimmedName || undefined,
+        },
+        {
+          onSuccess: () => {
+            setDuplicateDialog({ open: false, template: null, newName: '' });
+          },
+        }
+      );
     }
   };
 
@@ -367,7 +408,16 @@ export default function ChecklistTemplates() {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => handleDuplicate(template)}
+                          title={t('checklistTemplates.actions.duplicate')}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleEdit(template)}
+                          title={t('common.edit')}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -375,6 +425,7 @@ export default function ChecklistTemplates() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleDelete(template.template_id)}
+                          title={t('common.delete')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -418,6 +469,65 @@ export default function ChecklistTemplates() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Duplicate Dialog */}
+      <Dialog
+        open={duplicateDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDuplicateDialog({ open: false, template: null, newName: '' });
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('checklistTemplates.duplicateDialog.title')}</DialogTitle>
+            <DialogDescription>
+              {t('checklistTemplates.duplicateDialog.description')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newTemplateName">{t('checklistTemplates.duplicateDialog.newName')}</Label>
+              <Input
+                id="newTemplateName"
+                value={duplicateDialog.newName}
+                onChange={(e) =>
+                  setDuplicateDialog((prev) => ({ ...prev, newName: e.target.value }))
+                }
+                placeholder={t('checklistTemplates.duplicateDialog.namePlaceholder')}
+              />
+            </div>
+            {duplicateDialog.template && (
+              <div className="text-sm text-muted-foreground">
+                <p>
+                  {t('checklistTemplates.duplicateDialog.originalTemplate')}: <strong>{duplicateDialog.template.template_name}</strong>
+                </p>
+                <p>
+                  {t('checklistTemplates.duplicateDialog.itemCount', {
+                    count: (duplicateDialog.template.checklist_items as any[])?.length || 0,
+                  })}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDuplicateDialog({ open: false, template: null, newName: '' })}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={confirmDuplicate}
+              disabled={duplicateMutation.isPending}
+              className="bg-gradient-primary hover:bg-gradient-secondary"
+            >
+              {duplicateMutation.isPending ? t('common.duplicating') : t('common.duplicate')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

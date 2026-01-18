@@ -58,7 +58,9 @@
     "paymentMethod": "Payment Method",
     "selectMethod": "Select method",
     "additionalNotes": "Additional notes",
-    "tax": "Tax"
+    "tax": "Tax",
+    "duplicate": "Duplicate",
+    "duplicating": "Duplicating..."
   },
   "sessionTimeout": {
     "title": "Session Expiring Soon",
@@ -1236,6 +1238,17 @@
     "status": {
       "active": "Active",
       "inactive": "Inactive"
+    },
+    "duplicateDialog": {
+      "title": "Duplicate Template",
+      "description": "Create a copy of this checklist template with a new name.",
+      "newName": "New Template Name",
+      "namePlaceholder": "Enter name for the duplicate template",
+      "originalTemplate": "Original Template",
+      "itemCount": "{{count}} items will be copied"
+    },
+    "actions": {
+      "duplicate": "Duplicate"
     }
   },
   "issues": {

@@ -58,7 +58,9 @@
     "paymentMethod": "Forma de Pagamento",
     "selectMethod": "Selecionar método",
     "additionalNotes": "Notas adicionais",
-    "tax": "Imposto"
+    "tax": "Imposto",
+    "duplicate": "Duplicar",
+    "duplicating": "Duplicando..."
   },
   "sessionTimeout": {
     "title": "Sessão Expirando",
@@ -1204,6 +1206,17 @@
     "status": {
       "active": "Ativo",
       "inactive": "Inativo"
+    },
+    "duplicateDialog": {
+      "title": "Duplicar Modelo",
+      "description": "Crie uma cópia deste modelo de checklist com um novo nome.",
+      "newName": "Nome do Novo Modelo",
+      "namePlaceholder": "Digite o nome para o modelo duplicado",
+      "originalTemplate": "Modelo Original",
+      "itemCount": "{{count}} itens serão copiados"
+    },
+    "actions": {
+      "duplicate": "Duplicar"
     }
   },
   "issues": {

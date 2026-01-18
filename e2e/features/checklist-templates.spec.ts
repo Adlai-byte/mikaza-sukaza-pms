@@ -190,4 +190,130 @@ test.describe('Checklist Templates Module Tests', () => {
       console.log(`Search value: ${value}`);
     }
   });
+
+  test('CHK-016: Should have duplicate/clone action button', async ({ page }) => {
+    await waitForPageLoad(page, 2000);
+
+    // Look for Copy icon button (duplicate action)
+    const copyButton = page.locator('button').filter({ has: page.locator('svg.lucide-copy') }).first();
+    const hasCopyButton = await copyButton.isVisible().catch(() => false);
+
+    console.log(`Duplicate/Clone action button: ${hasCopyButton}`);
+    // The button should exist if there are templates in the table
+    const hasTable = await page.locator('table tbody tr').first().isVisible().catch(() => false);
+    if (hasTable) {
+      expect(hasCopyButton).toBeTruthy();
+    }
+  });
+
+  test('CHK-017: Should open duplicate dialog when clicking clone button', async ({ page }) => {
+    await waitForPageLoad(page, 2000);
+
+    // Check if there are templates in the table
+    const templateRow = page.locator('table tbody tr').first();
+    const hasTemplates = await templateRow.isVisible().catch(() => false);
+
+    if (hasTemplates) {
+      // Click the copy button on the first row
+      const copyButton = templateRow.locator('button').filter({ has: page.locator('svg.lucide-copy') }).first();
+      const hasCopyButton = await copyButton.isVisible().catch(() => false);
+
+      if (hasCopyButton) {
+        await copyButton.click();
+        await page.waitForTimeout(500);
+
+        // Should show duplicate dialog
+        const dialog = page.locator('[role="dialog"]');
+        const hasDialog = await dialog.isVisible({ timeout: 5000 }).catch(() => false);
+
+        console.log(`Duplicate dialog opened: ${hasDialog}`);
+        expect(hasDialog).toBeTruthy();
+
+        // Dialog should have the template name input field
+        if (hasDialog) {
+          const nameInput = dialog.locator('input');
+          const hasNameInput = await nameInput.isVisible().catch(() => false);
+          console.log(`Name input in dialog: ${hasNameInput}`);
+          expect(hasNameInput).toBeTruthy();
+
+          // Close the dialog
+          await page.keyboard.press('Escape');
+        }
+      }
+    } else {
+      console.log('No templates available to test duplicate');
+    }
+  });
+
+  test('CHK-018: Should pre-populate name with "(Copy)" suffix in duplicate dialog', async ({ page }) => {
+    await waitForPageLoad(page, 2000);
+
+    // Check if there are templates in the table
+    const templateRow = page.locator('table tbody tr').first();
+    const hasTemplates = await templateRow.isVisible().catch(() => false);
+
+    if (hasTemplates) {
+      // Click the copy button on the first row
+      const copyButton = templateRow.locator('button').filter({ has: page.locator('svg.lucide-copy') }).first();
+      const hasCopyButton = await copyButton.isVisible().catch(() => false);
+
+      if (hasCopyButton) {
+        await copyButton.click();
+        await page.waitForTimeout(500);
+
+        const dialog = page.locator('[role="dialog"]');
+        const hasDialog = await dialog.isVisible({ timeout: 5000 }).catch(() => false);
+
+        if (hasDialog) {
+          const nameInput = dialog.locator('input');
+          const inputValue = await nameInput.inputValue().catch(() => '');
+
+          console.log(`Pre-populated name: ${inputValue}`);
+          // The input should contain "(Copy)" suffix
+          expect(inputValue.toLowerCase()).toContain('copy');
+
+          // Close the dialog
+          await page.keyboard.press('Escape');
+        }
+      }
+    } else {
+      console.log('No templates available to test duplicate');
+    }
+  });
+
+  test('CHK-019: Should have duplicate button in dialog footer', async ({ page }) => {
+    await waitForPageLoad(page, 2000);
+
+    // Check if there are templates in the table
+    const templateRow = page.locator('table tbody tr').first();
+    const hasTemplates = await templateRow.isVisible().catch(() => false);
+
+    if (hasTemplates) {
+      // Click the copy button on the first row
+      const copyButton = templateRow.locator('button').filter({ has: page.locator('svg.lucide-copy') }).first();
+      const hasCopyButton = await copyButton.isVisible().catch(() => false);
+
+      if (hasCopyButton) {
+        await copyButton.click();
+        await page.waitForTimeout(500);
+
+        const dialog = page.locator('[role="dialog"]');
+        const hasDialog = await dialog.isVisible({ timeout: 5000 }).catch(() => false);
+
+        if (hasDialog) {
+          // Look for duplicate/confirm button in the dialog
+          const duplicateBtn = dialog.locator('button:has-text("Duplicate"), button:has-text("Clone"), button:has-text("Copy")').first();
+          const hasDuplicateBtn = await duplicateBtn.isVisible().catch(() => false);
+
+          console.log(`Duplicate button in dialog: ${hasDuplicateBtn}`);
+          expect(hasDuplicateBtn).toBeTruthy();
+
+          // Close the dialog
+          await page.keyboard.press('Escape');
+        }
+      }
+    } else {
+      console.log('No templates available to test duplicate');
+    }
+  });
 });

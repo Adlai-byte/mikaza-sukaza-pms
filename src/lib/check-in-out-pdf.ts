@@ -4,11 +4,29 @@ import { format } from 'date-fns';
 import { getLogoForPDF, BRANDING, PDF_COLORS } from './logo-utils';
 
 /**
+ * Access information for the PDF
+ */
+export interface AccessInfo {
+  wifi_name?: string | null;
+  wifi_password?: string | null;
+  phone_number?: string | null;
+  gate_code?: string | null;
+  door_lock_password?: string | null;
+  alarm_passcode?: string | null;
+  /** 'unit' if using unit-specific settings, 'property' if inherited from property */
+  source?: 'unit' | 'property';
+  /** Unit name if a specific unit is booked */
+  unit_name?: string | null;
+}
+
+/**
  * PDF generation data interface
  */
 export interface PDFData {
   record: CheckInOutRecord;
   checklistItems?: ChecklistItem[];
+  /** Access information (WiFi, door codes) - unit-specific or property-level */
+  accessInfo?: AccessInfo;
 }
 
 /**
@@ -25,6 +43,7 @@ export class CheckInOutPDFGenerator {
   private primaryColor: [number, number, number] = PDF_COLORS.PRIMARY;
   private secondaryColor: [number, number, number] = PDF_COLORS.MUTED;
   private logoBase64: string = '';
+  private accessInfo?: AccessInfo;
 
   constructor() {
     this.doc = new jsPDF({
@@ -50,9 +69,12 @@ export class CheckInOutPDFGenerator {
   /**
    * Main method to generate the complete PDF
    */
-  async generatePDF(record: CheckInOutRecord): Promise<Blob> {
+  async generatePDF(record: CheckInOutRecord, accessInfo?: AccessInfo): Promise<Blob> {
     try {
       console.log('Starting PDF generation for record:', record.record_id);
+
+      // Store access info for use in sections
+      this.accessInfo = accessInfo;
 
       // Load logo for branding
       await this.loadLogo();
@@ -69,6 +91,12 @@ export class CheckInOutPDFGenerator {
       // Resident Information
       this.addResidentInfo(record);
       console.log('✓ Resident info added');
+
+      // Access Information (WiFi, door codes, etc.)
+      if (this.accessInfo && this.hasAccessInfo()) {
+        this.addAccessInfoSection();
+        console.log('✓ Access info added');
+      }
 
       // Checklist Section
       if (record.checklist_responses && record.checklist_responses.length > 0) {
@@ -123,8 +151,8 @@ export class CheckInOutPDFGenerator {
   /**
    * Download the PDF directly
    */
-  async downloadPDF(record: CheckInOutRecord, filename?: string): Promise<void> {
-    await this.generatePDF(record);
+  async downloadPDF(record: CheckInOutRecord, filename?: string, accessInfo?: AccessInfo): Promise<void> {
+    await this.generatePDF(record, accessInfo);
 
     const defaultFilename = filename ||
       `Check-${record.record_type === 'check_in' ? 'In' : 'Out'}_${record.property?.property_name}_${format(new Date(record.record_date), 'yyyy-MM-dd')}.pdf`;
@@ -282,6 +310,120 @@ export class CheckInOutPDFGenerator {
       this.currentY += 20;
     } catch (error) {
       console.error('Error in addResidentInfo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if there's any access information to display
+   */
+  private hasAccessInfo(): boolean {
+    if (!this.accessInfo) return false;
+    return !!(
+      this.accessInfo.wifi_name ||
+      this.accessInfo.wifi_password ||
+      this.accessInfo.gate_code ||
+      this.accessInfo.door_lock_password ||
+      this.accessInfo.alarm_passcode ||
+      this.accessInfo.phone_number
+    );
+  }
+
+  /**
+   * Add access information section (WiFi, door codes, etc.)
+   */
+  private addAccessInfoSection(): void {
+    try {
+      if (!this.accessInfo) return;
+
+      this.checkPageBreak(55);
+
+      // Section header with unit indicator if applicable
+      const sectionTitle = this.accessInfo.unit_name
+        ? `Access Information (${this.accessInfo.unit_name})`
+        : 'Access Information';
+      this.addSectionHeader(sectionTitle);
+
+      // Box for access info
+      const boxHeight = 45;
+      this.doc.setFillColor(245, 245, 245);
+      this.doc.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, boxHeight, 'F');
+
+      this.doc.setFontSize(10);
+      this.doc.setTextColor(0, 0, 0);
+
+      let infoY = this.currentY + 7;
+      const colWidth = (this.pageWidth - 2 * this.margin - 10) / 2;
+      const leftCol = this.margin + 5;
+      const rightCol = this.margin + 5 + colWidth + 5;
+
+      // WiFi Section
+      if (this.accessInfo.wifi_name || this.accessInfo.wifi_password) {
+        this.doc.setFont('helvetica', 'bold');
+        this.doc.setTextColor(...this.primaryColor);
+        this.doc.text('WiFi', leftCol, infoY);
+        this.doc.setTextColor(0, 0, 0);
+        infoY += this.lineHeight;
+
+        if (this.accessInfo.wifi_name) {
+          this.doc.setFont('helvetica', 'normal');
+          this.doc.text(`Network: ${String(this.accessInfo.wifi_name)}`, leftCol + 5, infoY);
+          infoY += this.lineHeight - 1;
+        }
+        if (this.accessInfo.wifi_password) {
+          this.doc.text(`Password: ${String(this.accessInfo.wifi_password)}`, leftCol + 5, infoY);
+          infoY += this.lineHeight - 1;
+        }
+        infoY += 3;
+      }
+
+      // Access Codes Section
+      let rightY = this.currentY + 7;
+      const hasAccessCodes = this.accessInfo.gate_code || this.accessInfo.door_lock_password || this.accessInfo.alarm_passcode;
+      if (hasAccessCodes) {
+        this.doc.setFont('helvetica', 'bold');
+        this.doc.setTextColor(...this.primaryColor);
+        this.doc.text('Access Codes', rightCol, rightY);
+        this.doc.setTextColor(0, 0, 0);
+        rightY += this.lineHeight;
+
+        if (this.accessInfo.gate_code) {
+          this.doc.setFont('helvetica', 'normal');
+          this.doc.text(`Gate Code: ${String(this.accessInfo.gate_code)}`, rightCol + 5, rightY);
+          rightY += this.lineHeight - 1;
+        }
+        if (this.accessInfo.door_lock_password) {
+          this.doc.text(`Door Lock: ${String(this.accessInfo.door_lock_password)}`, rightCol + 5, rightY);
+          rightY += this.lineHeight - 1;
+        }
+        if (this.accessInfo.alarm_passcode) {
+          this.doc.text(`Alarm: ${String(this.accessInfo.alarm_passcode)}`, rightCol + 5, rightY);
+          rightY += this.lineHeight - 1;
+        }
+      }
+
+      // Contact phone
+      if (this.accessInfo.phone_number) {
+        const phoneY = Math.max(infoY, rightY) + 2;
+        this.doc.setFont('helvetica', 'bold');
+        this.doc.text('Contact:', leftCol, phoneY);
+        this.doc.setFont('helvetica', 'normal');
+        this.doc.text(String(this.accessInfo.phone_number), leftCol + 20, phoneY);
+      }
+
+      // Source indicator (unit-specific or property-level)
+      if (this.accessInfo.source) {
+        this.doc.setFontSize(8);
+        this.doc.setTextColor(...this.secondaryColor);
+        const sourceText = this.accessInfo.source === 'unit'
+          ? 'Unit-specific credentials'
+          : 'Property-level credentials';
+        this.doc.text(sourceText, this.pageWidth - this.margin - 5, this.currentY + boxHeight - 3, { align: 'right' });
+      }
+
+      this.currentY += boxHeight + 5;
+    } catch (error) {
+      console.error('Error in addAccessInfoSection:', error);
       throw error;
     }
   }
@@ -722,7 +864,7 @@ export class CheckInOutPDFGenerator {
  */
 export async function generateCheckInOutPDF(data: PDFData): Promise<Blob> {
   const generator = new CheckInOutPDFGenerator();
-  return generator.generatePDF(data.record);
+  return generator.generatePDF(data.record, data.accessInfo);
 }
 
 /**
@@ -795,7 +937,7 @@ export async function generateAndUploadCheckInOutPDF(
 /**
  * Convenience function to generate and download PDF directly
  */
-export async function downloadCheckInOutPDF(record: CheckInOutRecord, filename?: string): Promise<void> {
+export async function downloadCheckInOutPDF(record: CheckInOutRecord, filename?: string, accessInfo?: AccessInfo): Promise<void> {
   const generator = new CheckInOutPDFGenerator();
-  await generator.downloadPDF(record, filename);
+  await generator.downloadPDF(record, filename, accessInfo);
 }

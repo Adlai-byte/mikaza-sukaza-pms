@@ -198,3 +198,72 @@ export function useDeleteChecklistTemplate() {
     },
   });
 }
+
+export interface DuplicateChecklistTemplateInput {
+  templateId: string;
+  newName?: string;
+}
+
+export function useDuplicateChecklistTemplate() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { logActivity } = useActivityLogs();
+
+  return useMutation({
+    mutationFn: async ({ templateId, newName }: DuplicateChecklistTemplateInput) => {
+      // Fetch the original template
+      const { data: originalTemplate, error: fetchError } = await supabase
+        .from('checklist_templates')
+        .select('*')
+        .eq('template_id', templateId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!originalTemplate) throw new Error('Template not found');
+
+      // Create a new template with copied data
+      const newTemplateName = newName || `${originalTemplate.template_name} (Copy)`;
+
+      const { data: newTemplate, error: insertError } = await supabase
+        .from('checklist_templates')
+        .insert({
+          property_id: originalTemplate.property_id,
+          template_name: newTemplateName,
+          template_type: originalTemplate.template_type,
+          description: originalTemplate.description,
+          checklist_items: originalTemplate.checklist_items,
+          is_active: originalTemplate.is_active,
+          // created_by will be set by RLS/trigger or can be explicitly set
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      return { newTemplate, originalTemplate };
+    },
+    onSuccess: ({ newTemplate, originalTemplate }) => {
+      queryClient.invalidateQueries({ queryKey: ['checklist_templates'] });
+
+      logActivity('checklist_template_duplicated', {
+        original_template_id: originalTemplate.template_id,
+        original_template_name: originalTemplate.template_name,
+        new_template_id: newTemplate.template_id,
+        new_template_name: newTemplate.template_name,
+        template_type: newTemplate.template_type,
+      });
+
+      toast({
+        title: 'Template duplicated',
+        description: `"${newTemplate.template_name}" has been created successfully.`,
+      });
+    },
+    onError: (error) => {
+      console.error('Error duplicating checklist template:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to duplicate checklist template. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+}

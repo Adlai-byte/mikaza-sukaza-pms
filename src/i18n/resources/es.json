@@ -58,7 +58,9 @@
     "paymentMethod": "Método de Pago",
     "selectMethod": "Seleccionar método",
     "additionalNotes": "Notas adicionales",
-    "tax": "Impuesto"
+    "tax": "Impuesto",
+    "duplicate": "Duplicar",
+    "duplicating": "Duplicando..."
   },
   "sessionTimeout": {
     "title": "Sesión Expirando",
@@ -1204,6 +1206,17 @@
     "status": {
       "active": "Activo",
       "inactive": "Inactivo"
+    },
+    "duplicateDialog": {
+      "title": "Duplicar Plantilla",
+      "description": "Crea una copia de esta plantilla de checklist con un nuevo nombre.",
+      "newName": "Nombre de Nueva Plantilla",
+      "namePlaceholder": "Ingrese el nombre para la plantilla duplicada",
+      "originalTemplate": "Plantilla Original",
+      "itemCount": "{{count}} elementos serán copiados"
+    },
+    "actions": {
+      "duplicate": "Duplicar"
     }
   },
   "issues": {

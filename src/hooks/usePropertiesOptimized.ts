@@ -71,6 +71,8 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
         owner_id,
         num_bedrooms,
         num_bathrooms,
+        capacity,
+        max_capacity,
         owner:users!units_owner_id_fkey(
           user_id,
           first_name,
@@ -124,7 +126,11 @@ const fetchPropertyDetail = async (propertyId: string): Promise<Property> => {
       communication:property_communication(*),
       access:property_access(*),
       extras:property_extras(*),
-      units(*),
+      units(
+        *,
+        communication:unit_communication(*),
+        access:unit_access(*)
+      ),
       images:property_images(*),
       amenities:property_amenities(
         amenities(*)
@@ -566,7 +572,11 @@ export function usePropertiesOptimized() {
           communication:property_communication(*),
           access:property_access(*),
           extras:property_extras(*),
-          units(*),
+          units(
+            *,
+            communication:unit_communication(*),
+            access:unit_access(*)
+          ),
           images:property_images(*),
           amenities:property_amenities(
             amenities(*)

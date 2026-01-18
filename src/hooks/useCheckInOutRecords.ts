@@ -3,7 +3,79 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CheckInOutRecord, CheckInOutRecordInsert, CheckInOutFilters } from '@/lib/schemas';
 import { useActivityLogs } from '@/hooks/useActivityLogs';
-import { generateAndUploadCheckInOutPDF } from '@/lib/check-in-out-pdf';
+import { generateAndUploadCheckInOutPDF, AccessInfo } from '@/lib/check-in-out-pdf';
+
+/**
+ * Fetch access information for a check-in/out record
+ * Uses unit-specific credentials if available, falls back to property-level
+ */
+async function fetchAccessInfo(propertyId: string, bookingId?: string | null): Promise<AccessInfo | undefined> {
+  try {
+    // First check if booking has a unit
+    let unitId: string | null = null;
+    let unitName: string | null = null;
+
+    if (bookingId) {
+      const { data: booking } = await supabase
+        .from('property_bookings')
+        .select('unit_id, unit:units(unit_id, property_name)')
+        .eq('booking_id', bookingId)
+        .single();
+
+      if (booking?.unit_id) {
+        unitId = booking.unit_id;
+        unitName = (booking.unit as any)?.property_name || null;
+      }
+    }
+
+    // If booking has a unit, try to get unit-specific credentials first
+    if (unitId) {
+      const [{ data: unitComm }, { data: unitAccess }] = await Promise.all([
+        supabase.from('unit_communication').select('*').eq('unit_id', unitId).maybeSingle(),
+        supabase.from('unit_access').select('*').eq('unit_id', unitId).maybeSingle(),
+      ]);
+
+      // Get property-level for fallback
+      const [{ data: propComm }, { data: propAccess }] = await Promise.all([
+        supabase.from('property_communication').select('*').eq('property_id', propertyId).maybeSingle(),
+        supabase.from('property_access').select('*').eq('property_id', propertyId).maybeSingle(),
+      ]);
+
+      // Merge unit and property credentials (unit takes precedence)
+      return {
+        wifi_name: unitComm?.wifi_name ?? propComm?.wifi_name,
+        wifi_password: unitComm?.wifi_password ?? propComm?.wifi_password,
+        phone_number: unitComm?.phone_number ?? propComm?.phone_number,
+        gate_code: unitAccess?.gate_code ?? propAccess?.gate_code,
+        door_lock_password: unitAccess?.door_lock_password ?? propAccess?.door_lock_password,
+        alarm_passcode: unitAccess?.alarm_passcode ?? propAccess?.alarm_passcode,
+        source: unitComm || unitAccess ? 'unit' : 'property',
+        unit_name: unitName,
+      };
+    }
+
+    // No unit - use property-level credentials
+    const [{ data: propComm }, { data: propAccess }] = await Promise.all([
+      supabase.from('property_communication').select('*').eq('property_id', propertyId).maybeSingle(),
+      supabase.from('property_access').select('*').eq('property_id', propertyId).maybeSingle(),
+    ]);
+
+    if (!propComm && !propAccess) return undefined;
+
+    return {
+      wifi_name: propComm?.wifi_name,
+      wifi_password: propComm?.wifi_password,
+      phone_number: propComm?.phone_number,
+      gate_code: propAccess?.gate_code,
+      door_lock_password: propAccess?.door_lock_password,
+      alarm_passcode: propAccess?.alarm_passcode,
+      source: 'property',
+    };
+  } catch (error) {
+    console.error('Error fetching access info for PDF:', error);
+    return undefined;
+  }
+}
 
 export function useCheckInOutRecords(filters?: CheckInOutFilters) {
   return useQuery({
@@ -411,12 +483,15 @@ export function useCompleteCheckInOutRecord() {
 
       if (fetchError) throw fetchError;
 
+      // Fetch access information (WiFi, door codes) for the PDF
+      const accessInfo = await fetchAccessInfo(record.property_id, record.booking_id);
+
       // Generate and upload PDF
       let pdfUrl = null;
       try {
         const checklistItems = record.template?.checklist_items || [];
         pdfUrl = await generateAndUploadCheckInOutPDF(
-          { record, checklistItems },
+          { record, checklistItems, accessInfo },
           supabase
         );
         console.log('✅ PDF generated and uploaded:', pdfUrl);
@@ -489,10 +564,13 @@ export function useGenerateCheckInOutPDF() {
 
       if (fetchError) throw fetchError;
 
+      // Fetch access information (WiFi, door codes) for the PDF
+      const accessInfo = await fetchAccessInfo(record.property_id, record.booking_id);
+
       // Generate and upload PDF
       const checklistItems = record.template?.checklist_items || [];
       const pdfUrl = await generateAndUploadCheckInOutPDF(
-        { record, checklistItems },
+        { record, checklistItems, accessInfo },
         supabase
       );
 

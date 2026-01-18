@@ -296,7 +296,33 @@ export type Unit = {
   owner_id?: string | null; // Optional unit-specific owner (inherits from property if null)
   num_bedrooms?: number | null; // Number of bedrooms in this unit
   num_bathrooms?: number | null; // Number of bathrooms (supports half baths like 1.5)
+  capacity?: number | null; // Guest capacity for this unit (inherits from property if null)
+  max_capacity?: number | null; // Max guest capacity (inherits from property if null)
   owner?: User; // Joined owner data
+  communication?: UnitCommunication | null; // Per-unit WiFi settings
+  access?: UnitAccess | null; // Per-unit access codes
+  created_at?: string;
+  updated_at?: string;
+};
+
+// Per-unit communication settings (WiFi, phone)
+export type UnitCommunication = {
+  comm_id?: string;
+  unit_id: string;
+  phone_number?: string | null;
+  wifi_name?: string | null;
+  wifi_password?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+// Per-unit access settings (door codes, alarm)
+export type UnitAccess = {
+  access_id?: string;
+  unit_id: string;
+  gate_code?: string | null;
+  door_lock_password?: string | null;
+  alarm_passcode?: string | null;
   created_at?: string;
   updated_at?: string;
 };
