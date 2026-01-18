@@ -107,6 +107,9 @@ export class RealtimeCacheSync {
       // Subscribe to units table changes
       await this.subscribeToUnits();
 
+      // Subscribe to property providers unified changes (Providers Tab)
+      await this.subscribeToPropertyProviders();
+
       console.log('✅ Realtime cache sync initialized');
     } catch (error) {
       console.error('❌ Failed to initialize realtime sync:', error);
@@ -1434,6 +1437,68 @@ export class RealtimeCacheSync {
       )
       .subscribe();
     this.subscriptions.set('unit_access', unitAccessChannel);
+  }
+
+  /**
+   * Subscribe to property providers unified table changes (for Providers Tab auto-refresh)
+   */
+  private async subscribeToPropertyProviders() {
+    const channel = supabase
+      .channel('property-providers-unified-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'property_providers_unified',
+        },
+        (payload) => {
+          console.log('🔄 Property providers unified changed:', payload.eventType);
+
+          // Invalidate property_providers queries (this is the key query used by usePropertyProviders)
+          this.queryClient.invalidateQueries({ queryKey: ['property_providers'] });
+
+          // Also invalidate available providers list
+          this.queryClient.invalidateQueries({ queryKey: ['available_providers'] });
+
+          // Invalidate property-specific queries
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as any).property_id;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['property_providers', propertyId],
+              });
+              this.queryClient.invalidateQueries({
+                queryKey: ['property_providers', propertyId, 'utility'],
+              });
+              this.queryClient.invalidateQueries({
+                queryKey: ['property_providers', propertyId, 'service'],
+              });
+              // Also invalidate property detail
+              this.queryClient.invalidateQueries({
+                queryKey: ['properties', 'detail', propertyId],
+              });
+            }
+          }
+          if (payload.old && 'property_id' in payload.old) {
+            const propertyId = (payload.old as any).property_id;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['property_providers', propertyId],
+              });
+              this.queryClient.invalidateQueries({
+                queryKey: ['property_providers', propertyId, 'utility'],
+              });
+              this.queryClient.invalidateQueries({
+                queryKey: ['property_providers', propertyId, 'service'],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('property_providers_unified', channel);
   }
 
   /**

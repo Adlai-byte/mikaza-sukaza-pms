@@ -208,15 +208,15 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
         providerId: selectedUtilityProviderId,
       });
 
-      // Force refetch both tables to ensure UI updates
-      await Promise.all([refetchUtilities(), refetchServices()]);
+      // Close dialog first, then reset state
+      // The mutation's onSuccess already invalidates cache with refetchType: 'all'
+      // which triggers automatic refetch. Realtime subscription also provides auto-refresh.
+      setShowUtilityAssignDialog(false);
+      setSelectedUtilityProviderId('');
+      setUtilityDialogSearch('');
     } catch (error) {
       console.error('Error assigning utility provider:', error);
     }
-
-    setShowUtilityAssignDialog(false);
-    setSelectedUtilityProviderId('');
-    setUtilityDialogSearch('');
   };
 
   const handleAssignProvider = async () => {
@@ -235,16 +235,16 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
         isPreferredForProperty: isPreferredForProperty,
       });
 
-      // Force refetch both tables to ensure UI updates
-      await Promise.all([refetchUtilities(), refetchServices()]);
+      // Close dialog first, then reset state
+      // The mutation's onSuccess already invalidates cache with refetchType: 'all'
+      // which triggers automatic refetch. Realtime subscription also provides auto-refresh.
+      setShowAssignDialog(false);
+      setSelectedProviderId('');
+      setIsPreferredForProperty(false);
+      setServiceDialogSearch('');
     } catch (error) {
       console.error('Error assigning service provider:', error);
     }
-
-    setShowAssignDialog(false);
-    setSelectedProviderId('');
-    setIsPreferredForProperty(false);
-    setServiceDialogSearch('');
   };
 
   const handleCloseUtilityDialog = (open: boolean) => {
@@ -274,13 +274,13 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
         await unassignProvider(providerToUnassign.id);
       }
 
-      // Force refetch both tables to ensure UI updates
-      await Promise.all([refetchUtilities(), refetchServices()]);
+      // The mutation's onSuccess already invalidates cache with refetchType: 'all'
+      // Realtime subscription also provides auto-refresh.
+      setProviderToUnassign(null);
     } catch (error) {
       console.error('Error unassigning provider:', error);
+      setProviderToUnassign(null);
     }
-
-    setProviderToUnassign(null);
   };
 
   // Handle utility assignment edit
@@ -307,7 +307,8 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
         observations: editingUtilityAssignment.observations,
       });
 
-      await Promise.all([refetchUtilities(), refetchServices()]);
+      // The mutation's onSuccess already invalidates cache with refetchType: 'all'
+      // Realtime subscription also provides auto-refresh.
       setEditingUtilityAssignment(null);
     } catch (error) {
       console.error('Error updating utility assignment:', error);
@@ -338,7 +339,8 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
         assignmentNotes: editingServiceAssignment.assignmentNotes,
       });
 
-      await Promise.all([refetchUtilities(), refetchServices()]);
+      // The mutation's onSuccess already invalidates cache with refetchType: 'all'
+      // Realtime subscription also provides auto-refresh.
       setEditingServiceAssignment(null);
     } catch (error) {
       console.error('Error updating service assignment:', error);
@@ -371,7 +373,7 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
         {/* UTILITY PROVIDERS TAB */}
         <TabsContent value="utilities" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
+            <div className="flex-1 min-w-0">
               <h3 className="text-lg font-semibold">Utility Providers</h3>
               <p className="text-sm text-muted-foreground">
                 Assign utility providers from the global directory to this property
@@ -379,7 +381,7 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
             </div>
             <Dialog open={showUtilityAssignDialog} onOpenChange={handleCloseUtilityDialog}>
               <DialogTrigger asChild>
-                <Button disabled={isAssigningUtility}>
+                <Button disabled={isAssigningUtility} className="flex-shrink-0 whitespace-nowrap">
                   <Plus className="mr-2 h-4 w-4" />
                   Assign Utility
                 </Button>
@@ -607,7 +609,7 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
         {/* SERVICE CONTRACTORS TAB */}
         <TabsContent value="contractors" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
+            <div className="flex-1 min-w-0">
               <h3 className="text-lg font-semibold">Service Contractors</h3>
               <p className="text-sm text-muted-foreground">
                 Assign service providers from the global directory to this property
@@ -615,7 +617,7 @@ export function ProvidersTabOptimized({ propertyId }: ProvidersTabProps) {
             </div>
             <Dialog open={showAssignDialog} onOpenChange={handleCloseServiceDialog}>
               <DialogTrigger asChild>
-                <Button disabled={isAssigning}>
+                <Button disabled={isAssigning} className="flex-shrink-0 whitespace-nowrap">
                   <Plus className="mr-2 h-4 w-4" />
                   Assign Contractor
                 </Button>
