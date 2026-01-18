@@ -89,6 +89,21 @@ export class RealtimeCacheSync {
       // Subscribe to report email schedules changes (Automation Group)
       await this.subscribeToReportSchedules();
 
+      // Subscribe to documents changes (Documents Group)
+      await this.subscribeToDocuments();
+
+      // Subscribe to vendor COIs changes (Documents Group)
+      await this.subscribeToVendorCOIs();
+
+      // Subscribe to building COIs changes (Documents Group)
+      await this.subscribeToBuildingCOIs();
+
+      // Subscribe to document approvals changes (Documents Group)
+      await this.subscribeToDocumentApprovals();
+
+      // Subscribe to access documents changes (Documents Group)
+      await this.subscribeToAccessDocuments();
+
       console.log('✅ Realtime cache sync initialized');
     } catch (error) {
       console.error('❌ Failed to initialize realtime sync:', error);
@@ -1075,6 +1090,200 @@ export class RealtimeCacheSync {
   }
 
   /**
+   * Subscribe to documents table changes (Documents Group)
+   */
+  private async subscribeToDocuments() {
+    const channel = supabase
+      .channel('documents-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'documents',
+        },
+        (payload) => {
+          console.log('🔄 Documents table changed:', payload.eventType);
+
+          // Invalidate document queries
+          this.queryClient.invalidateQueries({ queryKey: ['documents'] });
+
+          // If specific document changed, invalidate its detail
+          if (payload.new && 'document_id' in payload.new) {
+            const documentId = (payload.new as any).document_id;
+            this.queryClient.invalidateQueries({
+              queryKey: ['documents', 'detail', documentId],
+            });
+          }
+
+          // Invalidate property-specific queries
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as any).property_id;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['documents', 'property', propertyId],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('documents', channel);
+  }
+
+  /**
+   * Subscribe to vendor COIs table changes (Documents Group)
+   */
+  private async subscribeToVendorCOIs() {
+    const channel = supabase
+      .channel('vendor-cois-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'vendor_cois',
+        },
+        (payload) => {
+          console.log('🔄 Vendor COIs changed:', payload.eventType);
+
+          // Invalidate vendor COI queries
+          this.queryClient.invalidateQueries({ queryKey: ['vendor-cois'] });
+          this.queryClient.invalidateQueries({ queryKey: ['coi-dashboard-stats'] });
+          this.queryClient.invalidateQueries({ queryKey: ['expiring-cois'] });
+
+          // Also invalidate provider queries since COIs relate to providers
+          this.queryClient.invalidateQueries({ queryKey: ['providers'] });
+
+          // Invalidate vendor-specific queries
+          if (payload.new && 'vendor_id' in payload.new) {
+            const vendorId = (payload.new as any).vendor_id;
+            if (vendorId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['vendor-coi-validation', vendorId],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('vendor_cois', channel);
+  }
+
+  /**
+   * Subscribe to building COIs table changes (Documents Group)
+   */
+  private async subscribeToBuildingCOIs() {
+    const channel = supabase
+      .channel('building-cois-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'building_cois',
+        },
+        (payload) => {
+          console.log('🔄 Building COIs changed:', payload.eventType);
+
+          // Invalidate building COI queries
+          this.queryClient.invalidateQueries({ queryKey: ['building-cois'] });
+
+          // Invalidate property-specific queries
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as any).property_id;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['building-coi-by-property', propertyId],
+              });
+              this.queryClient.invalidateQueries({
+                queryKey: ['validate-vendor-building'],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('building_cois', channel);
+  }
+
+  /**
+   * Subscribe to document approvals table changes (Documents Group)
+   */
+  private async subscribeToDocumentApprovals() {
+    const channel = supabase
+      .channel('document-approvals-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'document_approvals',
+        },
+        (payload) => {
+          console.log('🔄 Document approvals changed:', payload.eventType);
+
+          // Invalidate document approval queries
+          this.queryClient.invalidateQueries({ queryKey: ['document_approvals'] });
+
+          // Invalidate dashboard notifications
+          this.queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('document_approvals', channel);
+  }
+
+  /**
+   * Subscribe to access documents table changes (Documents Group)
+   */
+  private async subscribeToAccessDocuments() {
+    const channel = supabase
+      .channel('access-documents-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'access_documents',
+        },
+        (payload) => {
+          console.log('🔄 Access documents changed:', payload.eventType);
+
+          // Invalidate access document queries
+          this.queryClient.invalidateQueries({ queryKey: ['access-documents'] });
+
+          // Invalidate property-specific queries
+          if (payload.new && 'property_id' in payload.new) {
+            const propertyId = (payload.new as any).property_id;
+            if (propertyId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['access-documents', 'property', propertyId],
+              });
+            }
+          }
+
+          // Invalidate vendor-specific queries
+          if (payload.new && 'vendor_id' in payload.new) {
+            const vendorId = (payload.new as any).vendor_id;
+            if (vendorId) {
+              this.queryClient.invalidateQueries({
+                queryKey: ['access-documents', 'vendor', vendorId],
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('access_documents', channel);
+  }
+
+  /**
    * Subscribe to a custom table
    */
   async subscribeToTable(
@@ -1153,7 +1362,7 @@ export class RealtimeCacheSync {
    * Manually trigger cache invalidation for a specific change type
    */
   async invalidateForChange(
-    changeType: 'property' | 'booking' | 'user' | 'financial' | 'static' | 'expense' | 'invoice' | 'highlight' | 'unit' | 'issue' | 'task' | 'keyControl' | 'checkInOut' | 'provider' | 'guest' | 'job' | 'message' | 'checklistTemplate' | 'passwordVault' | 'activityLog' | 'billTemplate' | 'reportSchedule'
+    changeType: 'property' | 'booking' | 'user' | 'financial' | 'static' | 'expense' | 'invoice' | 'highlight' | 'unit' | 'issue' | 'task' | 'keyControl' | 'checkInOut' | 'provider' | 'guest' | 'job' | 'message' | 'checklistTemplate' | 'passwordVault' | 'activityLog' | 'billTemplate' | 'reportSchedule' | 'document' | 'vendorCOI' | 'buildingCOI' | 'documentApproval' | 'accessDocument'
   ) {
     const invalidationMap: Record<string, string[][]> = {
       property: [
@@ -1273,6 +1482,28 @@ export class RealtimeCacheSync {
         ['report-schedules'],
         ['report_email_schedules'],
         ['email-schedules'],
+      ],
+      document: [
+        ['documents'],
+        ['documents', 'list'],
+        ['documents', 'stats'],
+      ],
+      vendorCOI: [
+        ['vendor-cois'],
+        ['coi-dashboard-stats'],
+        ['expiring-cois'],
+        ['providers'],
+      ],
+      buildingCOI: [
+        ['building-cois'],
+        ['validate-vendor-building'],
+      ],
+      documentApproval: [
+        ['document_approvals'],
+        ['dashboard'],
+      ],
+      accessDocument: [
+        ['access-documents'],
       ],
     };
 
