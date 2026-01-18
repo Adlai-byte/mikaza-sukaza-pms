@@ -83,6 +83,12 @@ export class RealtimeCacheSync {
       // Subscribe to activity logs changes
       await this.subscribeToActivityLogs();
 
+      // Subscribe to bill templates changes (Finance Group)
+      await this.subscribeToBillTemplates();
+
+      // Subscribe to report email schedules changes (Automation Group)
+      await this.subscribeToReportSchedules();
+
       console.log('✅ Realtime cache sync initialized');
     } catch (error) {
       console.error('❌ Failed to initialize realtime sync:', error);
@@ -997,6 +1003,78 @@ export class RealtimeCacheSync {
   }
 
   /**
+   * Subscribe to bill templates table changes (Finance Group)
+   */
+  private async subscribeToBillTemplates() {
+    const channel = supabase
+      .channel('bill-templates-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bill_templates',
+        },
+        (payload) => {
+          console.log('🔄 Bill templates changed:', payload.eventType);
+
+          // Invalidate bill template queries
+          this.queryClient.invalidateQueries({ queryKey: ['bill-templates'] });
+          this.queryClient.invalidateQueries({ queryKey: ['bill_templates'] });
+
+          // If specific template changed, invalidate its detail
+          if (payload.new && 'template_id' in payload.new) {
+            const templateId = (payload.new as any).template_id;
+            this.queryClient.invalidateQueries({
+              queryKey: ['bill-templates', templateId],
+            });
+          }
+
+          // Invalidate financial summary as bill templates affect billing
+          this.queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('bill_templates', channel);
+  }
+
+  /**
+   * Subscribe to report email schedules table changes (Automation Group)
+   */
+  private async subscribeToReportSchedules() {
+    const channel = supabase
+      .channel('report-schedules-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'report_email_schedules',
+        },
+        (payload) => {
+          console.log('🔄 Report email schedules changed:', payload.eventType);
+
+          // Invalidate report schedule queries
+          this.queryClient.invalidateQueries({ queryKey: ['report-schedules'] });
+          this.queryClient.invalidateQueries({ queryKey: ['report_email_schedules'] });
+          this.queryClient.invalidateQueries({ queryKey: ['email-schedules'] });
+
+          // If specific schedule changed, invalidate its detail
+          if (payload.new && 'schedule_id' in payload.new) {
+            const scheduleId = (payload.new as any).schedule_id;
+            this.queryClient.invalidateQueries({
+              queryKey: ['report-schedules', scheduleId],
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    this.subscriptions.set('report_email_schedules', channel);
+  }
+
+  /**
    * Subscribe to a custom table
    */
   async subscribeToTable(
@@ -1075,7 +1153,7 @@ export class RealtimeCacheSync {
    * Manually trigger cache invalidation for a specific change type
    */
   async invalidateForChange(
-    changeType: 'property' | 'booking' | 'user' | 'financial' | 'static' | 'expense' | 'invoice' | 'highlight' | 'unit' | 'issue' | 'task' | 'keyControl' | 'checkInOut' | 'provider' | 'guest' | 'job' | 'message' | 'checklistTemplate' | 'passwordVault' | 'activityLog'
+    changeType: 'property' | 'booking' | 'user' | 'financial' | 'static' | 'expense' | 'invoice' | 'highlight' | 'unit' | 'issue' | 'task' | 'keyControl' | 'checkInOut' | 'provider' | 'guest' | 'job' | 'message' | 'checklistTemplate' | 'passwordVault' | 'activityLog' | 'billTemplate' | 'reportSchedule'
   ) {
     const invalidationMap: Record<string, string[][]> = {
       property: [
@@ -1185,6 +1263,16 @@ export class RealtimeCacheSync {
         ['activity-logs'],
         ['activity_logs'],
         ['dashboard'],
+      ],
+      billTemplate: [
+        ['bill-templates'],
+        ['bill_templates'],
+        ['financial-summary'],
+      ],
+      reportSchedule: [
+        ['report-schedules'],
+        ['report_email_schedules'],
+        ['email-schedules'],
       ],
     };
 
