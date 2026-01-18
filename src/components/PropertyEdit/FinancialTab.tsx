@@ -37,7 +37,6 @@ import {
   Plus,
   Minus,
   Users,
-  Layers,
   RefreshCw,
   Edit,
   Trash2,
@@ -70,7 +69,6 @@ import { useExpenseAttachments, useDeleteExpenseAttachment } from '@/hooks/useEx
 import { useDeleteExpenseNote } from '@/hooks/useExpenseNotes';
 import { Expense, ExpenseInsert } from '@/lib/schemas';
 import { FinancialEntryDialog } from './FinancialEntryDialog';
-import { BatchEntryDialog } from './BatchEntryDialog';
 import { ExpandedEntryContent } from './ExpandedEntryContent';
 import { PendingAttachment } from './AttachmentUploadSection';
 import { PendingNote } from './NotesManagementSection';
@@ -106,7 +104,6 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
 
   // Dialog states
   const [showEntryDialog, setShowEntryDialog] = useState(false);
-  const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [entryType, setEntryType] = useState<'credit' | 'debit' | 'owner_payment' | 'service_cost'>('debit');
   const [editingEntry, setEditingEntry] = useState<Expense | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<Expense | null>(null);
@@ -243,21 +240,6 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
     }
   };
 
-  const handleBatchSubmit = async (entries: ExpenseInsert[]) => {
-    try {
-      for (const entry of entries) {
-        await createExpense.mutateAsync({
-          ...entry,
-          property_id: propertyId,
-        });
-      }
-      setShowBatchDialog(false);
-      // No need for refetch() - mutations already handle cache invalidation
-    } catch (error) {
-      // Error handled by mutation
-    }
-  };
-
   const handleDeleteEntry = async () => {
     if (!entryToDelete?.expense_id) return;
     try {
@@ -352,14 +334,6 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
             >
               <Users className="mr-2 h-4 w-4" />
               Owner Payment
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowBatchDialog(true)}
-            >
-              <Layers className="mr-2 h-4 w-4" />
-              Batch Entry
             </Button>
           </div>
         </CardContent>
@@ -718,15 +692,6 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
         onDeleteAttachment={(attachmentId) => deleteAttachment.mutate(attachmentId)}
         onDeleteNote={(noteId) => deleteNote.mutate(noteId)}
         isSubmitting={createExpense.isPending || updateExpense.isPending}
-      />
-
-      {/* Batch Entry Dialog */}
-      <BatchEntryDialog
-        open={showBatchDialog}
-        onOpenChange={setShowBatchDialog}
-        onSubmit={handleBatchSubmit}
-        propertyId={propertyId}
-        isSubmitting={createExpense.isPending}
       />
 
       {/* Delete Confirmation Dialog */}
