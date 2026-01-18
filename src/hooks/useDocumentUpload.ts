@@ -398,35 +398,29 @@ export function useBulkDocumentUpload() {
 
     const results = [];
 
+    // Process files sequentially using async/await to avoid race conditions
     for (const file of files) {
-      try {
-        setBulkProgress(prev => prev ? { ...prev, current: file.name } : null);
+      setBulkProgress(prev => prev ? { ...prev, current: file.name } : null);
 
+      try {
         const documentData = getDocumentData(file);
-        await new Promise((resolve, reject) => {
-          uploadFile(
-            { file, documentData },
-            {
-              onSuccess: () => {
-                setBulkProgress(prev => prev ? {
-                  ...prev,
-                  completed: prev.completed + 1,
-                } : null);
-                resolve(true);
-              },
-              onError: (error) => {
-                setBulkProgress(prev => prev ? {
-                  ...prev,
-                  failed: prev.failed + 1,
-                } : null);
-                reject(error);
-              },
-            }
-          );
-        });
+        // Use await directly instead of wrapping in Promise with callbacks
+        await uploadFile({ file, documentData });
+
+        // Update progress after successful upload
+        setBulkProgress(prev => prev ? {
+          ...prev,
+          completed: prev.completed + 1,
+        } : null);
 
         results.push({ file: file.name, success: true });
       } catch (error) {
+        // Update progress after failed upload
+        setBulkProgress(prev => prev ? {
+          ...prev,
+          failed: prev.failed + 1,
+        } : null);
+
         results.push({
           file: file.name,
           success: false,

@@ -91,6 +91,18 @@ export function FinancialEntryDialog({
     ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
     : user?.email?.split('@')[0] || 'Unknown';
 
+  // Cleanup Blob URLs when dialog closes to prevent memory leaks
+  useEffect(() => {
+    if (!open) {
+      // Revoke all pending attachment preview URLs when dialog closes
+      pendingAttachments.forEach(attachment => {
+        if (attachment.preview) {
+          URL.revokeObjectURL(attachment.preview);
+        }
+      });
+    }
+  }, [open]); // Only run when open state changes
+
   // Reset form when dialog opens/closes or editing entry changes
   useEffect(() => {
     if (open) {
