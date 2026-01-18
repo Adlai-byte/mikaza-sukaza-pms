@@ -316,7 +316,8 @@ export function useDeleteMedia() {
   return useMutation({
     mutationFn: (imageId: string) => deleteMedia(imageId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: mediaKeys.lists() });
+      // Invalidate all media queries to ensure UI updates
+      queryClient.invalidateQueries({ queryKey: mediaKeys.all() });
       toast({
         title: "Success",
         description: "Image deleted successfully",

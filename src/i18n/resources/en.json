@@ -2372,7 +2372,7 @@
     },
     "deleteDialog": {
       "title": "Delete Image?",
-      "description": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+      "description": "Are you sure you want to delete \"{{title}}\"? This action cannot be undone.",
       "cancel": "Cancel",
       "delete": "Delete"
     }

@@ -2340,7 +2340,7 @@
     },
     "deleteDialog": {
       "title": "¿Eliminar Imagen?",
-      "description": "¿Estás seguro de que deseas eliminar \"{title}\"? Esta acción no se puede deshacer.",
+      "description": "¿Estás seguro de que deseas eliminar \"{{title}}\"? Esta acción no se puede deshacer.",
       "cancel": "Cancelar",
       "delete": "Eliminar"
     }
