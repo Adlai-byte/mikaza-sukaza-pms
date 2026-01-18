@@ -34,6 +34,8 @@ interface NotesManagementSectionProps {
   onAddNote: (text: string) => void;
   onRemovePending: (id: string) => void;
   onDeleteExisting?: (noteId: string) => void;
+  // Callback to notify parent about unsaved note text
+  onUnsavedNoteChange?: (hasUnsavedNote: boolean) => void;
   // State
   disabled?: boolean;
 }
@@ -45,15 +47,31 @@ export function NotesManagementSection({
   onAddNote,
   onRemovePending,
   onDeleteExisting,
+  onUnsavedNoteChange,
   disabled = false,
 }: NotesManagementSectionProps) {
   const { t } = useTranslation();
   const [newNoteText, setNewNoteText] = useState('');
 
+  // Notify parent when unsaved note text changes
+  const handleNoteTextChange = (text: string) => {
+    setNewNoteText(text);
+    if (onUnsavedNoteChange) {
+      onUnsavedNoteChange(text.trim().length > 0);
+    }
+  };
+
+  // Track if there's unsaved note text
+  const hasUnsavedNote = newNoteText.trim().length > 0;
+
   const handleAddNote = () => {
     if (newNoteText.trim()) {
       onAddNote(newNoteText.trim());
       setNewNoteText('');
+      // Notify parent that unsaved note is now cleared
+      if (onUnsavedNoteChange) {
+        onUnsavedNoteChange(false);
+      }
     }
   };
 
@@ -164,22 +182,28 @@ export function NotesManagementSection({
           type="text"
           placeholder={t('financialEntries.addNoteHint', 'Add a note...')}
           value={newNoteText}
-          onChange={(e) => setNewNoteText(e.target.value)}
+          onChange={(e) => handleNoteTextChange(e.target.value)}
           onKeyDown={handleKeyDown}
           className="flex-1"
           disabled={disabled}
         />
         <Button
           type="button"
-          variant="outline"
+          variant={hasUnsavedNote ? "destructive" : "outline"}
           size="sm"
           onClick={handleAddNote}
           disabled={disabled || !newNoteText.trim()}
+          className={hasUnsavedNote ? "bg-red-500 hover:bg-red-600 text-white border-red-500" : ""}
         >
           <Plus className="h-4 w-4 mr-1" />
           {t('common.add', 'Add')}
         </Button>
       </div>
+      {hasUnsavedNote && (
+        <p className="text-xs text-red-500 font-medium">
+          {t('financialEntries.unsavedNote', 'Click "+ Add" to save this note before submitting')}
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">
         {t('financialEntries.noteAsUser', 'Note will be added as {{name}}', { name: currentUserName })}
       </p>

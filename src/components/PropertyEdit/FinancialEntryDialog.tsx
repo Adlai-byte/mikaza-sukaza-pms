@@ -86,6 +86,9 @@ export function FinancialEntryDialog({
   // Validation errors state
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Track if there's unsaved note text
+  const [hasUnsavedNote, setHasUnsavedNote] = useState(false);
+
   // Get current user display name
   const currentUserName = user?.user_metadata?.first_name && user?.user_metadata?.last_name
     ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
@@ -124,12 +127,26 @@ export function FinancialEntryDialog({
         setScheduledMonths([]);
         setCategory('other');
       }
-      // Always reset pending items and errors
+      // Always reset pending items, errors, and unsaved note state
       setPendingAttachments([]);
       setPendingNotes([]);
       setErrors({});
+      setHasUnsavedNote(false);
     }
   }, [open, editingEntry]);
+
+  // Also reset when dialog closes to ensure clean state for next open
+  useEffect(() => {
+    if (!open) {
+      // Small delay to ensure cleanup happens after dialog animation
+      const timer = setTimeout(() => {
+        setPendingAttachments([]);
+        setPendingNotes([]);
+        setHasUnsavedNote(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
 
   // Attachment handlers
   const handleAddFiles = useCallback((files: File[]) => {
@@ -204,6 +221,8 @@ export function FinancialEntryDialog({
     if (!amount || parseFloat(amount) <= 0) return false;
     if (!expenseDate) return false;
     if (isScheduled && scheduledMonths.length === 0) return false;
+    // Don't allow submit if there's unsaved note text - user must click "+ Add" first
+    if (hasUnsavedNote) return false;
     return true;
   };
 
@@ -280,7 +299,7 @@ export function FinancialEntryDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-2 pb-2">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto space-y-3 px-1 pb-2">
           <div className="space-y-2">
             <Label htmlFor="description">{t('common.description', 'Description')} *</Label>
             <Input
@@ -441,6 +460,7 @@ export function FinancialEntryDialog({
             onAddNote={handleAddNote}
             onRemovePending={handleRemovePendingNote}
             onDeleteExisting={onDeleteNote}
+            onUnsavedNoteChange={setHasUnsavedNote}
             disabled={isSubmitting}
           />
         </form>
