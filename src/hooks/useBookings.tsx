@@ -15,7 +15,8 @@ import {
 } from "@/lib/notifications/booking-notifications";
 import { createInvoiceFromBooking } from "@/hooks/useInvoices";
 import { shouldCreateAllocation } from "@/hooks/useBookingRevenueAllocation";
-import { createTasksFromBooking, bookingTaskKeys } from "@/hooks/useBookingTasks";
+import { createJobsFromBooking, bookingTaskKeys } from "@/hooks/useBookingTasks";
+import { jobKeys } from "@/hooks/useJobs";
 import { taskKeys } from "@/hooks/useTasks";
 
 // Extended booking insert with job configs for auto-generation
@@ -436,11 +437,11 @@ export function useBookings() {
           const customTasks = context?.customTasks || [];
 
           if (enabledJobs.length > 0 || customTasks.length > 0) {
-            console.log('📋 Creating tasks for booking:', data.booking_id, {
+            console.log('📋 Creating jobs for booking:', data.booking_id, {
               enabledJobs: enabledJobs.length,
               customTasks: customTasks.length
             });
-            const tasks = await createTasksFromBooking(
+            const jobs = await createJobsFromBooking(
               data.booking_id!,
               data.property_id,
               data.check_in_date,
@@ -450,9 +451,10 @@ export function useBookings() {
               context.guestName,
               customTasks
             );
-            console.log('✅ Tasks created:', tasks.length);
+            console.log('✅ Jobs created:', jobs.length);
 
-            // Invalidate task caches
+            // Invalidate job and task caches (jobs also create linked tasks)
+            queryClient.invalidateQueries({ queryKey: jobKeys.all });
             queryClient.invalidateQueries({ queryKey: taskKeys.all });
             queryClient.invalidateQueries({ queryKey: bookingTaskKeys.booking(data.booking_id!) });
           }
@@ -585,61 +587,35 @@ export function useBookings() {
           if (enabledJobs.length > 0) {
             console.log('🔧 Creating jobs for updated booking:', data.booking_id, enabledJobs);
 
-            // Get property for notifications
-            const { data: property } = await supabase
-              .from('properties')
-              .select('property_name')
-              .eq('property_id', data.property_id)
-              .single();
+            const createdJobs = await createJobsFromBooking(
+              data.booking_id!,
+              data.property_id,
+              data.check_in_date,
+              data.check_out_date,
+              enabledJobs,
+              currentUserId,
+              data.guest_name
+            );
 
-            // Create jobs using the same logic as create booking
-            const jobsToCreate = enabledJobs.map((config: BookingJobConfig) => {
-              let dueDate = data.check_out_date; // Default to checkout
-              if (config.jobType === 'check_in') {
-                dueDate = data.check_in_date;
-              } else if (config.jobType === 'check_out') {
-                dueDate = data.check_out_date;
-              }
+            console.log('✅ Jobs created for updated booking:', createdJobs.length);
 
-              return {
-                property_id: data.property_id,
-                booking_id: data.booking_id,
-                job_type: config.jobType,
-                job_title: config.label,
-                job_description: `Auto-generated ${config.label.toLowerCase()} for booking`,
-                job_status: 'pending',
-                priority: config.priority || 'medium',
-                due_date: dueDate,
-                assigned_to: config.assignedTo || null,
-                created_by: currentUserId,
-              };
+            // Invalidate job and task caches
+            queryClient.invalidateQueries({ queryKey: jobKeys.all });
+            queryClient.invalidateQueries({ queryKey: taskKeys.all });
+
+            toast({
+              title: "Success",
+              description: `Booking updated and ${createdJobs.length} job(s) created`,
             });
-
-            const { error: jobsError } = await supabase
-              .from('jobs')
-              .insert(jobsToCreate);
-
-            if (jobsError) {
-              console.error('⚠️ Failed to create jobs:', jobsError);
-              toast({
-                title: "Booking Updated",
-                description: `Booking updated but failed to create some jobs: ${jobsError.message}`,
-                variant: "destructive",
-              });
-            } else {
-              console.log('✅ Jobs created for updated booking:', jobsToCreate.length);
-              // Invalidate jobs cache
-              queryClient.invalidateQueries({ queryKey: ['jobs'] });
-
-              toast({
-                title: "Success",
-                description: `Booking updated and ${jobsToCreate.length} job(s) created`,
-              });
-              return; // Skip regular success toast
-            }
+            return; // Skip regular success toast
           }
         } catch (jobError) {
           console.error('⚠️ Error creating jobs:', jobError);
+          toast({
+            title: "Booking Updated",
+            description: `Booking updated but failed to create jobs`,
+            variant: "destructive",
+          });
         }
       }
 
@@ -651,9 +627,9 @@ export function useBookings() {
         try {
           const validCustomTasks = context.customTasks.filter((task: CustomBookingTask) => task.title.trim() !== '');
           if (validCustomTasks.length > 0) {
-            console.log('📋 Creating custom tasks for updated booking:', data.booking_id, validCustomTasks);
+            console.log('📋 Creating custom jobs for updated booking:', data.booking_id, validCustomTasks);
 
-            const tasks = await createTasksFromBooking(
+            const jobs = await createJobsFromBooking(
               data.booking_id!,
               data.property_id,
               data.check_in_date,
@@ -664,15 +640,16 @@ export function useBookings() {
               validCustomTasks
             );
 
-            console.log('✅ Custom tasks created:', tasks.length);
+            console.log('✅ Custom jobs created:', jobs.length);
 
-            // Invalidate task caches
+            // Invalidate job and task caches
+            queryClient.invalidateQueries({ queryKey: jobKeys.all });
             queryClient.invalidateQueries({ queryKey: taskKeys.all });
             queryClient.invalidateQueries({ queryKey: bookingTaskKeys.booking(data.booking_id!) });
 
             toast({
               title: "Success",
-              description: `Booking updated and ${tasks.length} custom task(s) created`,
+              description: `Booking updated and ${jobs.length} custom job(s) created`,
             });
           }
         } catch (taskError) {

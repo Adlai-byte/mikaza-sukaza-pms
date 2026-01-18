@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Table,
@@ -55,6 +55,9 @@ import {
   Clock,
   FileText,
   Eye,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { Booking } from '@/lib/schemas';
 import { format, differenceInDays, parseISO } from 'date-fns';
@@ -70,6 +73,14 @@ interface BookingsTableProps {
   emptyMessage?: string;
 }
 
+type SortColumn = 'guest' | 'unit' | 'check_in' | 'check_out' | 'nights' | 'guests' | 'amount' | 'status';
+type SortDirection = 'asc' | 'desc';
+
+interface SortConfig {
+  column: SortColumn | null;
+  direction: SortDirection;
+}
+
 export function BookingsTable({
   bookings,
   onEdit,
@@ -81,6 +92,84 @@ export function BookingsTable({
   const [bookingToDelete, setBookingToDelete] = useState<Booking | null>(null);
   const [bookingToCheckout, setBookingToCheckout] = useState<Booking | null>(null);
   const [invoiceDialogBooking, setInvoiceDialogBooking] = useState<Booking | null>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: 'asc' });
+
+  // Handle sort column click
+  const handleSort = (column: SortColumn) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  // Get sort icon for column header
+  const getSortIcon = (column: SortColumn) => {
+    if (sortConfig.column !== column) {
+      return <ArrowUpDown className="ml-1 h-3 w-3 text-muted-foreground/50" />;
+    }
+    return sortConfig.direction === 'asc'
+      ? <ArrowUp className="ml-1 h-3 w-3 text-primary" />
+      : <ArrowDown className="ml-1 h-3 w-3 text-primary" />;
+  };
+
+  // Sortable header component
+  const SortableHeader = ({ column, children, className = '' }: { column: SortColumn; children: React.ReactNode; className?: string }) => (
+    <TableHead
+      className={`cursor-pointer hover:bg-muted/50 select-none ${className}`}
+      onClick={() => handleSort(column)}
+    >
+      <div className="flex items-center">
+        {children}
+        {getSortIcon(column)}
+      </div>
+    </TableHead>
+  );
+
+  // Sort bookings based on current sort config
+  const sortedBookings = useMemo(() => {
+    if (!sortConfig.column) return bookings;
+
+    return [...bookings].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortConfig.column) {
+        case 'guest':
+          comparison = (a.guest_name || '').localeCompare(b.guest_name || '');
+          break;
+        case 'unit':
+          const unitA = a.unit?.property_name || (a.unit_id ? 'Unit' : 'All Units');
+          const unitB = b.unit?.property_name || (b.unit_id ? 'Unit' : 'All Units');
+          comparison = unitA.localeCompare(unitB);
+          break;
+        case 'check_in':
+          comparison = new Date(a.check_in_date).getTime() - new Date(b.check_in_date).getTime();
+          break;
+        case 'check_out':
+          comparison = new Date(a.check_out_date).getTime() - new Date(b.check_out_date).getTime();
+          break;
+        case 'nights':
+          const nightsA = differenceInDays(parseISO(a.check_out_date), parseISO(a.check_in_date));
+          const nightsB = differenceInDays(parseISO(b.check_out_date), parseISO(b.check_in_date));
+          comparison = nightsA - nightsB;
+          break;
+        case 'guests':
+          comparison = (a.number_of_guests || 0) - (b.number_of_guests || 0);
+          break;
+        case 'amount':
+          const amountA = (a as any).invoice_total_amount || a.total_amount || 0;
+          const amountB = (b as any).invoice_total_amount || b.total_amount || 0;
+          comparison = amountA - amountB;
+          break;
+        case 'status':
+          comparison = (a.booking_status || 'pending').localeCompare(b.booking_status || 'pending');
+          break;
+        default:
+          comparison = 0;
+      }
+
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [bookings, sortConfig]);
 
   const getStatusBadge = (status?: string | null) => {
     const statusValue = status || 'pending';
@@ -367,20 +456,20 @@ export function BookingsTable({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Guest</TableHead>
-                  <TableHead>Unit</TableHead>
-                  <TableHead>Check-in</TableHead>
-                  <TableHead>Check-out</TableHead>
-                  <TableHead className="text-center">Nights</TableHead>
-                  <TableHead className="text-center">Guests</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableHeader column="guest">Guest</SortableHeader>
+                  <SortableHeader column="unit">Unit</SortableHeader>
+                  <SortableHeader column="check_in">Check-in</SortableHeader>
+                  <SortableHeader column="check_out">Check-out</SortableHeader>
+                  <SortableHeader column="nights" className="text-center">Nights</SortableHeader>
+                  <SortableHeader column="guests" className="text-center">Guests</SortableHeader>
+                  <SortableHeader column="amount" className="text-right">Amount</SortableHeader>
+                  <SortableHeader column="status">Status</SortableHeader>
                   <TableHead>Invoice</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bookings.map((booking) => {
+                {sortedBookings.map((booking) => {
                   const nights = calculateNights(booking.check_in_date, booking.check_out_date);
                   const additionalOptions = parseAdditionalOptions(booking.special_requests);
 
@@ -609,7 +698,48 @@ export function BookingsTable({
 
           {/* Mobile Card View */}
           <div className="md:hidden space-y-4">
-            {bookings.map((booking) => {
+            {/* Mobile Sort Selector */}
+            <div className="flex items-center justify-between pb-2 border-b">
+              <span className="text-sm text-muted-foreground">Sort by:</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1">
+                    <ArrowUpDown className="h-3 w-3" />
+                    {sortConfig.column
+                      ? `${sortConfig.column.charAt(0).toUpperCase() + sortConfig.column.slice(1).replace('_', ' ')} ${sortConfig.direction === 'asc' ? '↑' : '↓'}`
+                      : 'Default'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Sort By</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleSort('guest')}>
+                    Guest {sortConfig.column === 'guest' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort('check_in')}>
+                    Check-in {sortConfig.column === 'check_in' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort('check_out')}>
+                    Check-out {sortConfig.column === 'check_out' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort('nights')}>
+                    Nights {sortConfig.column === 'nights' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort('amount')}>
+                    Amount {sortConfig.column === 'amount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort('status')}>
+                    Status {sortConfig.column === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setSortConfig({ column: null, direction: 'asc' })}>
+                    Clear Sort
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {sortedBookings.map((booking) => {
               const nights = calculateNights(booking.check_in_date, booking.check_out_date);
               const additionalOptions = parseAdditionalOptions(booking.special_requests);
 

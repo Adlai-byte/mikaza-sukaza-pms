@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Task, TaskInsert, BookingJobConfig, CustomBookingTask } from '@/lib/schemas';
 import { taskKeys } from './useTasks';
+import { jobKeys, JobInsert } from './useJobs';
 import { format, subDays, parseISO } from 'date-fns';
 
 // Query keys for booking tasks
@@ -27,6 +28,23 @@ const jobTypeToTitle: Record<BookingJobConfig['type'], string> = {
   check_out_prep: 'Check-out Preparation',
   inspection: 'Property Inspection',
   maintenance: 'Maintenance',
+};
+
+// Map booking job type to jobs table job_type
+const bookingJobTypeToJobType: Record<BookingJobConfig['type'], string> = {
+  cleaning: 'cleaning',
+  check_in_prep: 'check_in',
+  check_out_prep: 'check_out',
+  inspection: 'inspection',
+  maintenance: 'maintenance',
+};
+
+// Map booking priority to jobs priority (jobs use 'normal' instead of 'medium')
+const bookingPriorityToJobPriority: Record<string, string> = {
+  low: 'low',
+  medium: 'normal',
+  high: 'high',
+  urgent: 'urgent',
 };
 
 /**
@@ -158,6 +176,165 @@ export async function createTasksFromBooking(
   }
 
   return data || [];
+}
+
+/**
+ * Create JOBS from booking job configurations (appears in Active Jobs page)
+ * This also creates linked Tasks for each Job for the assigned user
+ */
+export async function createJobsFromBooking(
+  bookingId: string,
+  propertyId: string,
+  checkInDate: string,
+  checkOutDate: string,
+  jobConfigs: BookingJobConfig[],
+  createdBy: string,
+  guestName?: string,
+  customTasks?: CustomBookingTask[]
+): Promise<any[]> {
+  console.log('🔧 createJobsFromBooking called with:');
+  console.log('  - jobConfigs:', jobConfigs);
+  console.log('  - customTasks:', customTasks);
+
+  // Filter only enabled jobs
+  const enabledJobs = jobConfigs.filter(job => job.enabled);
+  const validCustomTasks = customTasks?.filter(task => task.title.trim() !== '') || [];
+
+  console.log('  - enabledJobs:', enabledJobs.length);
+  console.log('  - validCustomTasks:', validCustomTasks.length, validCustomTasks);
+
+  if (enabledJobs.length === 0 && validCustomTasks.length === 0) {
+    return [];
+  }
+
+  // Prepare job inserts from job configs
+  const jobInserts: Partial<JobInsert>[] = enabledJobs.map(job => ({
+    title: `${jobTypeToTitle[job.type]}${guestName ? ` - ${guestName}` : ''}`,
+    description: job.notes || `Auto-generated job for booking. Guest: ${guestName || 'N/A'}. Check-in: ${checkInDate}, Check-out: ${checkOutDate}`,
+    property_id: propertyId,
+    assigned_to: job.assignedTo || null,
+    created_by: createdBy,
+    status: 'pending',
+    priority: bookingPriorityToJobPriority[job.priority] || 'normal',
+    job_type: bookingJobTypeToJobType[job.type],
+    due_date: job.dueDate || calculateJobDueDate(job.type, checkInDate, checkOutDate),
+    scheduled_date: job.dueDate || calculateJobDueDate(job.type, checkInDate, checkOutDate),
+  }));
+
+  // Prepare job inserts from custom tasks
+  const customJobInserts: Partial<JobInsert>[] = validCustomTasks.map(task => ({
+    title: `${task.title}${guestName ? ` - ${guestName}` : ''}`,
+    description: task.description || `Custom job for booking. Guest: ${guestName || 'N/A'}. Check-in: ${checkInDate}, Check-out: ${checkOutDate}`,
+    property_id: propertyId,
+    assigned_to: task.assignedTo || null,
+    created_by: createdBy,
+    status: 'pending',
+    priority: bookingPriorityToJobPriority[task.priority] || 'normal',
+    job_type: 'general', // Custom tasks become general jobs
+    due_date: task.dueDate || checkOutDate,
+    scheduled_date: task.dueDate || checkOutDate,
+  }));
+
+  // Combine all job inserts
+  const allJobInserts = [...jobInserts, ...customJobInserts];
+
+  console.log('📋 Inserting jobs:', allJobInserts.length);
+
+  // Bulk insert jobs
+  const { data: createdJobs, error: jobError } = await supabase
+    .from('jobs')
+    .insert(allJobInserts)
+    .select(`
+      *,
+      property:properties(property_id, property_name),
+      assigned_user:users!jobs_assigned_to_fkey(user_id, first_name, last_name, email)
+    `);
+
+  if (jobError) {
+    console.error('Failed to create booking jobs:', jobError);
+    throw jobError;
+  }
+
+  console.log('✅ Jobs created:', createdJobs?.length);
+
+  // Create linked Tasks for each Job that has an assigned user
+  // This mirrors the useCreateJob behavior
+  const assignedJobs = (createdJobs || []).filter(job => job.assigned_to);
+
+  if (assignedJobs.length > 0) {
+    console.log('📋 Creating linked tasks for assigned jobs:', assignedJobs.length);
+
+    const taskInserts = assignedJobs.map(job => {
+      // Map job type to task category
+      const taskCategory = (() => {
+        switch (job.job_type) {
+          case 'cleaning': return 'cleaning';
+          case 'maintenance':
+          case 'repair': return 'maintenance';
+          case 'inspection': return 'inspection';
+          case 'check_in': return 'check_in_prep';
+          case 'check_out': return 'check_out_prep';
+          default: return 'other';
+        }
+      })();
+
+      // Map job priority to task priority
+      const taskPriority = (() => {
+        switch (job.priority) {
+          case 'urgent': return 'urgent';
+          case 'high': return 'high';
+          case 'normal': return 'medium';
+          case 'low': return 'low';
+          default: return 'medium';
+        }
+      })();
+
+      return {
+        title: job.title,
+        description: job.description || `Task for job: ${job.title}`,
+        assigned_to: job.assigned_to,
+        created_by: createdBy,
+        property_id: propertyId,
+        booking_id: bookingId,
+        due_date: job.due_date,
+        priority: taskPriority,
+        category: taskCategory,
+        status: 'pending',
+        job_id: job.job_id, // Link task to job for two-way sync
+      };
+    });
+
+    const { error: taskError } = await supabase
+      .from('tasks')
+      .insert(taskInserts);
+
+    if (taskError) {
+      console.error('⚠️ Failed to create linked tasks:', taskError);
+      // Don't fail the job creation for task errors
+    } else {
+      console.log('✅ Linked tasks created successfully');
+    }
+
+    // Create notifications for assigned users
+    const notifications = assignedJobs.map(job => ({
+      user_id: job.assigned_to!,
+      title: 'New Job Assigned',
+      message: `You have been assigned a new job: ${job.title}`,
+      type: 'job_assigned',
+      job_id: job.job_id,
+      is_read: false,
+    }));
+
+    const { error: notificationError } = await supabase.from('notifications').insert(notifications);
+
+    if (notificationError) {
+      console.error('❌ Failed to create notifications:', notificationError);
+    } else {
+      console.log('✅ Notifications created successfully');
+    }
+  }
+
+  return createdJobs || [];
 }
 
 /**
