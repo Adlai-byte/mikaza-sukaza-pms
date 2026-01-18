@@ -906,27 +906,6 @@ export default function Reports() {
             {format(dateRange.end, 'MMM dd, yyyy')}
           </div>
 
-          {/* Export Buttons - Always visible */}
-          <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
-            {!isNewReport && (
-              <Button onClick={handleExportCSV} disabled={isLoading} variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                {t('reports.exportCSV', 'Export CSV')}
-              </Button>
-            )}
-            {isNewReport && (
-              <>
-                <Button onClick={handleExportExcel} disabled={isLoading} variant="outline" size="sm">
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  {t('reports.exportExcel', 'Export Excel')}
-                </Button>
-                <Button onClick={handleExportPDF} disabled={isLoading || isExporting} size="sm">
-                  <FileText className="mr-2 h-4 w-4" />
-                  {isExporting ? t('reports.exporting', 'Exporting...') : t('reports.exportPDF', 'Export PDF')}
-                </Button>
-              </>
-            )}
-          </div>
         </CardContent>
       </Card>
 
