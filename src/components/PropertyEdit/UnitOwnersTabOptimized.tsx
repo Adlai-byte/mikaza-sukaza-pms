@@ -334,13 +334,30 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Sanitize form data - convert empty strings to null for optional fields
+    const sanitizedData = {
+      first_name: formData.first_name.trim(),
+      last_name: formData.last_name.trim(),
+      email: formData.email.trim().toLowerCase(),
+      date_of_birth: formData.date_of_birth?.trim() || null,
+      cellphone_primary: formData.cellphone_primary?.trim() || null,
+      cellphone_usa: formData.cellphone_usa?.trim() || null,
+      whatsapp: formData.whatsapp?.trim() || null,
+      relationship_to_main_owner: formData.relationship_to_main_owner || null,
+    };
+
     if (editingOwner) {
+      // For updates, don't include password field
       updateOwnerMutation.mutate({
         ownerId: editingOwner.user_id,
-        updates: formData,
+        updates: sanitizedData,
       });
     } else {
-      addOwnerMutation.mutate(formData);
+      // For new owners, include password
+      addOwnerMutation.mutate({
+        ...formData,
+        ...sanitizedData,
+      });
     }
   };
 
