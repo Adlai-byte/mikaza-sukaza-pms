@@ -23,6 +23,7 @@ import {
 import {
   useAllPropertiesKeySummary,
   useBorrowingStats,
+  useKeyControlRealtime,
 } from "@/hooks/useKeyControl";
 import {
   PropertyKeySummary,
@@ -40,6 +41,9 @@ import {
 
 export default function KeyControl() {
   const { t } = useTranslation();
+
+  // Enable realtime updates
+  useKeyControlRealtime();
 
   // State
   const [searchQuery, setSearchQuery] = useState("");

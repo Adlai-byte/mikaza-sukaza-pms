@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -32,6 +33,65 @@ export const keyControlKeys = {
   borrowingList: (filters?: KeyBorrowingFilters) => [...keyControlKeys.borrowings(), filters] as const,
   outstandingBorrowings: () => [...keyControlKeys.borrowings(), 'outstanding'] as const,
 };
+
+/**
+ * Realtime subscription for key control automatic updates
+ * Subscribe to changes on key_inventory, key_transactions, and key_borrowings tables
+ */
+export function useKeyControlRealtime() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    console.log('🔑 [KeyControl] Setting up realtime subscriptions...');
+
+    const channel = supabase
+      .channel('key-control-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'key_inventory',
+        },
+        (payload) => {
+          console.log('🔑 [KeyControl] key_inventory change:', payload.eventType);
+          queryClient.invalidateQueries({ queryKey: keyControlKeys.all });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'key_transactions',
+        },
+        (payload) => {
+          console.log('🔑 [KeyControl] key_transactions change:', payload.eventType);
+          queryClient.invalidateQueries({ queryKey: keyControlKeys.all });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'key_borrowings',
+        },
+        (payload) => {
+          console.log('🔑 [KeyControl] key_borrowings change:', payload.eventType);
+          queryClient.invalidateQueries({ queryKey: keyControlKeys.all });
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔑 [KeyControl] Realtime subscription status:', status);
+      });
+
+    return () => {
+      console.log('🔑 [KeyControl] Cleaning up realtime subscriptions...');
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+}
 
 /**
  * Fetch key inventory with optional filters
