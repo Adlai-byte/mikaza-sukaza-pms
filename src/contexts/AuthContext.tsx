@@ -332,6 +332,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
       timestamp: new Date().toISOString()
     });
 
+    // If email is being changed, update Supabase Auth first
+    if (updates.email && updates.email !== user.email) {
+      console.log('📧 [AuthContext] Email change detected, updating Supabase Auth:', {
+        oldEmail: user.email,
+        newEmail: updates.email,
+        timestamp: new Date().toISOString()
+      });
+
+      const { error: authError } = await supabase.auth.updateUser({
+        email: updates.email
+      });
+
+      if (authError) {
+        console.error('❌ [AuthContext] Supabase Auth email update failed:', {
+          error: authError.message,
+          errorCode: authError.code,
+          timestamp: new Date().toISOString()
+        });
+        throw new Error(`Failed to update email: ${authError.message}. Note: Email changes require verification.`);
+      }
+
+      console.log('✅ [AuthContext] Supabase Auth email update initiated - verification email sent');
+    }
+
     // Update the users table (main source of truth)
     // Use .select() to verify the update actually affected rows (RLS might silently filter)
     const { data: updatedData, error: usersError } = await supabase

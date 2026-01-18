@@ -2815,13 +2815,17 @@ export type PropertyKeySummary = {
 
 // ==================== Key Borrowing System ====================
 
-// Borrower type enum - matches DB constraint: only admin/ops can borrow keys
-export const borrowerTypeEnum = z.enum(['admin', 'ops']);
+// Borrower type enum - matches DB constraint for key borrowings
+export const borrowerTypeEnum = z.enum(['admin', 'ops', 'guest', 'housekeeper', 'contractor', 'other']);
 export type BorrowerType = z.infer<typeof borrowerTypeEnum>;
 
 export const BORROWER_TYPE_LABELS: Record<BorrowerType, string> = {
   admin: 'Admin',
   ops: 'Operations',
+  guest: 'Guest',
+  housekeeper: 'Housekeeper',
+  contractor: 'Contractor',
+  other: 'Other',
 };
 
 // Borrowing status enum
