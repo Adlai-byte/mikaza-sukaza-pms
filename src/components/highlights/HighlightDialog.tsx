@@ -147,15 +147,21 @@ export function HighlightDialog({ open, onOpenChange, highlight, propertyId }: H
                     </FormControl>
                     <SelectContent>
                       {properties
-                        .filter((property) =>
-                          typeof property.property_id === 'string' &&
-                          property.property_id.length > 0
-                        ) // Filter out properties without valid non-empty string IDs
-                        .map((property) => (
-                          <SelectItem key={property.property_id} value={property.property_id!}>
-                            {property.property_name || 'Unnamed Property'}
-                          </SelectItem>
-                        ))}
+                        .filter((property) => {
+                          // Robust filter: ensure property_id is a non-empty string
+                          const id = property.property_id;
+                          return typeof id === 'string' && id.trim().length > 0;
+                        })
+                        .map((property) => {
+                          // Extra safety: skip if property_id somehow becomes invalid
+                          const propertyId = property.property_id?.trim();
+                          if (!propertyId) return null;
+                          return (
+                            <SelectItem key={propertyId} value={propertyId}>
+                              {property.property_name || 'Unnamed Property'}
+                            </SelectItem>
+                          );
+                        })}
                     </SelectContent>
                   </Select>
                   <FormDescription>
@@ -254,15 +260,19 @@ export function HighlightDialog({ open, onOpenChange, highlight, propertyId }: H
                       <SelectContent className="max-h-[200px]">
                         <SelectItem value="none">{t('dialogs.highlight.fields.noIcon')}</SelectItem>
                         {Object.entries(HIGHLIGHT_ICONS)
-                          .filter(([key]) => key) // Filter out empty keys
-                          .map(([key, label]) => (
-                            <SelectItem key={key} value={key}>
-                              <div className="flex items-center gap-2">
-                                <Star className="h-4 w-4 text-yellow-500" />
-                                {label}
-                              </div>
-                            </SelectItem>
-                          ))}
+                          .filter(([key]) => typeof key === 'string' && key.trim().length > 0)
+                          .map(([key, label]) => {
+                            const iconKey = key.trim();
+                            if (!iconKey) return null;
+                            return (
+                              <SelectItem key={iconKey} value={iconKey}>
+                                <div className="flex items-center gap-2">
+                                  <Star className="h-4 w-4 text-yellow-500" />
+                                  {label}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                       </SelectContent>
                     </Select>
                     <FormDescription>{t('dialogs.highlight.fields.iconDescription')}</FormDescription>
