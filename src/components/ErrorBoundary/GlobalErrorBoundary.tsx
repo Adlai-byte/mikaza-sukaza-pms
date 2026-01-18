@@ -84,7 +84,16 @@ export class GlobalErrorBoundary extends Component<Props, State> {
   };
 
   handleGoHome = () => {
-    window.location.href = '/';
+    // Clear error state first to re-render children
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      showDetails: false,
+    });
+    // Use soft navigation with History API - React Router listens for popstate
+    window.history.pushState({}, '', '/');
+    window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
   toggleDetails = () => {
