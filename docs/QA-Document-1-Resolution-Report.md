@@ -2,7 +2,7 @@
 
 **Document:** Casa-Concierge-System-QA-1.pdf
 **Analysis Date:** January 18, 2026
-**Commits:** `8cf8a42`, `4bde516`, `9be556a`, `c3319b5`, `cd09ce2`, `f0b28ad`, `pending`
+**Commits:** `8cf8a42`, `4bde516`, `9be556a`, `c3319b5`, `cd09ce2`, `f0b28ad`, `e95436c`, `141c6b8`
 **Latest Update:** January 18, 2026
 
 ---
@@ -11,13 +11,13 @@
 
 | Status | Count |
 |--------|-------|
-| **FIXED** | 54 |
+| **FIXED** | 55 |
 | **PARTIALLY FIXED** | 2 |
 | **NOT FIXED** (Confirmed) | 1 |
 | **BY DESIGN** | 6 |
 | **FEATURE REQUEST** | 8 |
 | **HIDDEN** | 1 |
-| **NEEDS MANUAL TESTING** | 18 |
+| **NEEDS MANUAL TESTING** | 17 |
 
 **Total Issues Analyzed:** 90
 
@@ -357,8 +357,9 @@ This document has been updated after thorough codebase verification. Many issues
 | No refresh button | **FIXED** | Added `staleTime: 0` to all key control queries |
 | Notes not saved on edit | **FIXED** | Cache invalidation fixed |
 | Can't lend key (borrower_type constraint) | **FIXED** | Expanded borrower_type constraint to include: guest, housekeeper, contractor, other |
+| Page not auto-updating | **FIXED** | Added `useKeyControlRealtime()` hook subscribing to key_inventory, key_transactions, key_borrowings tables |
 
-**Files Changed:** `src/hooks/useKeyControl.ts`, `src/lib/schemas.ts`, `supabase/migrations/20260118_expand_borrower_types.sql`
+**Files Changed:** `src/hooks/useKeyControl.ts`, `src/pages/KeyControl.tsx`, `src/lib/schemas.ts`, `supabase/migrations/20260118_expand_borrower_types.sql`
 
 ---
 
@@ -541,7 +542,7 @@ This document has been updated after thorough codebase verification. Many issues
 
 ## Summary by Category
 
-### Confirmed Fixed (54 issues)
+### Confirmed Fixed (55 issues)
 Issues verified as resolved in the current codebase through code analysis.
 
 ### Partially Fixed (2 issues)
@@ -551,7 +552,7 @@ Issues verified as resolved in the current codebase through code analysis.
 ### Not Fixed - Confirmed (1 issue)
 1. Additional manual testing items may reveal new issues
 
-### Needs Manual Testing (18 issues)
+### Needs Manual Testing (17 issues)
 Issues where code appears correct but require browser/runtime verification.
 
 ### By Design (6 issues)
@@ -571,7 +572,7 @@ Commissions page hidden per business request.
 - `src/hooks/useFinancialReports.ts` - Owner Statement credit calculation
 - `src/hooks/useBookingTasks.ts` - Added staleTime: 0
 - `src/hooks/useCheckInOutRecords.ts` - Added staleTime: 0
-- `src/hooks/useKeyControl.ts` - Added staleTime: 0 to 7 queries
+- `src/hooks/useKeyControl.ts` - Added staleTime: 0, `useKeyControlRealtime()` hook for auto-updates
 - `src/hooks/useDocuments.ts` - Bucket handling
 - `src/hooks/useInvoices.ts` - Cache improvements
 - `src/hooks/useServiceScheduling.ts` - Added `useServiceSchedulingRealtime()` hook
@@ -582,6 +583,7 @@ Commissions page hidden per business request.
 - `src/pages/PasswordVault.tsx` - Modal state fix
 - `src/pages/ServiceScheduling.tsx` - **NEW** Dedicated service scheduling page
 - `src/pages/Providers.tsx` - Simplified to vendor directory only (removed scheduling)
+- `src/pages/KeyControl.tsx` - Added realtime subscription hook call
 
 ### Components
 - `src/components/highlights/HighlightDialog.tsx` - Select empty value fix
@@ -643,12 +645,23 @@ Commissions page hidden per business request.
    - **Added** translations for en, pt, es
    - **138 Playwright tests passed** (providers: 40, navigation: 25, vendor-cois: 73)
 
+7. **`e95436c`** - fix: Resolve 4 PARTIALLY FIXED QA issues
+   - **Profile email change**: Added `supabase.auth.updateUser()` call in AuthContext
+   - **Key borrower_type**: Expanded constraint to include guest, housekeeper, contractor, other
+   - **Document buckets**: Verified consolidation to `property-documents` bucket
+   - **Signature handling**: Verified code correctly auto-saves and loads signatures
+   - **Migration**: `20260118_expand_borrower_types.sql`
+
+8. **`141c6b8`** - fix: Add realtime subscription to Key Control page
+   - **Added** `useKeyControlRealtime()` hook subscribing to key_inventory, key_transactions, key_borrowings
+   - **Called** hook in KeyControl.tsx for automatic updates
+
 ---
 
 ## Recommendations for Next Sprint
 
 ### High Priority (Remaining)
-1. Continue manual testing of items marked "NEEDS MANUAL TESTING" (18 items)
+1. Continue manual testing of items marked "NEEDS MANUAL TESTING" (17 items)
 2. Verify the 2 PARTIALLY FIXED items in production environment
 3. Apply database migration `20260118_expand_borrower_types.sql` to production
 
@@ -662,6 +675,7 @@ Commissions page hidden per business request.
 7. Vendor Directory realtime updates
 8. Key lending with new borrower types (guest, housekeeper, contractor)
 9. Email change verification flow
+10. Key Control page realtime updates (now implemented)
 
 ### Completed This Sprint
 - ✅ Vendors UX architectural review - **RESOLVED** with Service Scheduling / Vendor Directory split
@@ -669,6 +683,7 @@ Commissions page hidden per business request.
 - ✅ Key borrower_type constraint - **RESOLVED** with expanded enum (guest, housekeeper, contractor, other)
 - ✅ Document bucket issues - **RESOLVED** with unified `property-documents` bucket and legacy path handling
 - ✅ Signature handling - **VERIFIED** code is correct with auto-save and proper loading
+- ✅ Key Control realtime updates - **RESOLVED** with useKeyControlRealtime() hook
 
 ### Low Priority / Feature Requests
 1. Batch Jobs feature
