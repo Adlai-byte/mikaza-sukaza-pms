@@ -19,7 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Trash2, Search, Download, Filter, Eye, MoreVertical, Star, Phone, Mail } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Pencil, Trash2, Search, Download, Filter, Eye, MoreVertical, Star, Phone, Mail, ChevronDown, ChevronUp, X } from "lucide-react";
 import { LoadingOverlay } from "../PropertyManagement/PropertyTableSkeleton";
 import {
   AlertDialog,
@@ -64,6 +69,20 @@ export function ServiceProviderTable({
   const [partnerTierFilter, setPartnerTierFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Count active filters for badge
+  const activeFilterCount = [
+    categoryFilter !== "all",
+    statusFilter !== "all",
+    partnerTierFilter !== "all",
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setCategoryFilter("all");
+    setStatusFilter("all");
+    setPartnerTierFilter("all");
+  };
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -201,7 +220,8 @@ export function ServiceProviderTable({
       {/* Loading overlay for background fetching */}
       <LoadingOverlay isVisible={isFetching && !isLoading} />
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      {/* Search - always visible */}
+      <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -211,54 +231,131 @@ export function ServiceProviderTable({
             className="pl-10"
           />
         </div>
+        {/* Desktop Export Button */}
+        <Button onClick={exportToCSV} variant="outline" className="hidden md:flex">
+          <Download className="h-4 w-4 mr-2" />
+          Export
+        </Button>
+      </div>
 
-        <div className="flex gap-2">
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-40">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {getServiceCategories().map(category => (
-                <SelectItem key={category} value={category}>{category}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Mobile: Collapsible filters */}
+      <div className="md:hidden">
+        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <div className="flex items-center gap-2">
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="flex-1 justify-between h-10">
+                <span className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-primary text-primary-foreground">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </span>
+                {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={clearFilters}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+            <Button onClick={exportToCSV} variant="outline" size="icon" className="h-10 w-10 shrink-0">
+              <Download className="h-4 w-4" />
+            </Button>
+          </div>
+          <CollapsibleContent className="pt-4 space-y-3">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {getServiceCategories().map(category => (
+                  <SelectItem key={category} value={category}>{category}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="preferred">Preferred</SelectItem>
-            </SelectContent>
-          </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="preferred">Preferred</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Select value={partnerTierFilter} onValueChange={setPartnerTierFilter}>
-            <SelectTrigger className="w-40">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Partner Tier" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tiers</SelectItem>
-              {(Object.keys(PARTNER_TIER_CONFIG) as PartnerTier[]).map((tier) => (
-                <SelectItem key={tier} value={tier}>
-                  {PARTNER_TIER_CONFIG[tier].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select value={partnerTierFilter} onValueChange={setPartnerTierFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Partner Tier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tiers</SelectItem>
+                {(Object.keys(PARTNER_TIER_CONFIG) as PartnerTier[]).map((tier) => (
+                  <SelectItem key={tier} value={tier}>
+                    {PARTNER_TIER_CONFIG[tier].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
 
-          <Button onClick={exportToCSV} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
+      {/* Desktop: Inline filters */}
+      <div className="hidden md:flex gap-2 flex-wrap">
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-40">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {getServiceCategories().map(category => (
+              <SelectItem key={category} value={category}>{category}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-32">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="preferred">Preferred</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={partnerTierFilter} onValueChange={setPartnerTierFilter}>
+          <SelectTrigger className="w-40">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Partner Tier" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tiers</SelectItem>
+            {(Object.keys(PARTNER_TIER_CONFIG) as PartnerTier[]).map((tier) => (
+              <SelectItem key={tier} value={tier}>
+                {PARTNER_TIER_CONFIG[tier].label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {activeFilterCount > 0 && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <X className="h-4 w-4 mr-1" />
+            Clear filters
           </Button>
-        </div>
+        )}
       </div>
 
       {/* Desktop Table View */}
@@ -363,7 +460,7 @@ export function ServiceProviderTable({
 
                       {onEditProvider && (
                         <DropdownMenuItem onClick={() => onEditProvider(provider)}>
-                          <Edit className="mr-2 h-4 w-4" />
+                          <Pencil className="mr-2 h-4 w-4" />
                           Edit Provider
                         </DropdownMenuItem>
                       )}
@@ -505,7 +602,7 @@ export function ServiceProviderTable({
                         onClick={() => onEditProvider(provider)}
                         title="Edit Provider"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Pencil className="h-4 w-4" />
                       </Button>
                     )}
 

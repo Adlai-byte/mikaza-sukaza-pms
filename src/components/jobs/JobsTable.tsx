@@ -98,6 +98,21 @@ export function JobsTable({
     }
   };
 
+  const getPriorityBorderColor = (priority: string) => {
+    switch (priority) {
+      case "urgent":
+        return "border-l-red-500";
+      case "high":
+        return "border-l-orange-500";
+      case "normal":
+        return "border-l-blue-500";
+      case "low":
+        return "border-l-gray-400";
+      default:
+        return "border-l-primary";
+    }
+  };
+
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return t('jobs.noDueDate');
     try {
@@ -140,7 +155,7 @@ export function JobsTable({
         </CardHeader>
         <CardContent>
           {/* Desktop Table View */}
-          <div className="rounded-md border">
+          <div className="hidden md:block rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -228,6 +243,87 @@ export function JobsTable({
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {paginatedJobs.map((job) => (
+              <Card key={job.job_id} className={`border-l-4 ${getPriorityBorderColor(job.priority)}`}>
+                <CardContent className="p-4 space-y-3">
+                  {/* Header: Title and Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base truncate">{job.title}</h3>
+                      {job.job_type && (
+                        <p className="text-sm text-muted-foreground">
+                          {job.job_type.replace(/_/g, ' ').toUpperCase()}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1 items-end shrink-0">
+                      {getStatusBadge(job.status)}
+                      {getPriorityBadge(job.priority)}
+                    </div>
+                  </div>
+
+                  {/* Property and Assignee */}
+                  <div className="grid grid-cols-2 gap-3 py-2 border-t border-b">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">{t('jobs.property')}</div>
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm font-medium truncate">
+                          {job.property?.property_name || t('jobs.noProperty')}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">{t('jobs.assignedTo')}</div>
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm font-medium truncate">
+                          {job.assigned_user
+                            ? `${job.assigned_user.first_name} ${job.assigned_user.last_name}`
+                            : t('jobs.unassigned')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Due Date */}
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{t('jobs.dueDate')}: {formatDate(job.due_date)}</span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 border-t pt-3">
+                    {onView && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => onView(job)}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        {t('jobs.viewDetails')}
+                      </Button>
+                    )}
+                    {onEdit && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => onEdit(job)}
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        {t('jobs.editJob')}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {/* Pagination Controls */}

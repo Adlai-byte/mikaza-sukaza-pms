@@ -104,7 +104,7 @@ const documentMenuItems = [
   { titleKey: "sidebar.serviceDocuments", url: "/service-documents", icon: FolderOpen, permission: PERMISSIONS.DOCUMENTS_SERVICE_VIEW },
   { titleKey: "sidebar.vendorCOIs", url: "/vendor-cois", icon: Shield, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
   { titleKey: "sidebar.accessAuth", url: "/access-authorizations", icon: KeyRound, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
-  { titleKey: "sidebar.messageTemplates", url: "/message-templates", icon: MessageSquare, permission: PERMISSIONS.DOCUMENTS_MESSAGES_VIEW },
+  // { titleKey: "sidebar.messageTemplates", url: "/message-templates", icon: MessageSquare, permission: PERMISSIONS.DOCUMENTS_MESSAGES_VIEW }, // Hidden - not needed for now
   { titleKey: "sidebar.media", url: "/media", icon: Image, permission: PERMISSIONS.MEDIA_VIEW },
 ];
 
