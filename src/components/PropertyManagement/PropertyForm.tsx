@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -52,7 +53,7 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit, amenities
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [images, setImages] = useState<{ url: string; title?: string; is_primary?: boolean; file?: File }[]>([]);
-  const [units, setUnits] = useState<{ property_name?: string; license_number?: string; folio?: string }[]>([]);
+  const [units, setUnits] = useState<{ property_name?: string; license_number?: string; folio?: string; owner_id?: string | null; num_bedrooms?: number | null; num_bathrooms?: number | null }[]>([]);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const { users } = useUsers();
   const { logActivity } = useActivityLogs();
@@ -358,14 +359,14 @@ form.reset({
   };
 
   const addUnit = () => {
-    setUnits(prev => [...prev, { property_name: "", license_number: "", folio: "" }]);
+    setUnits(prev => [...prev, { property_name: "", license_number: "", folio: "", owner_id: null, num_bedrooms: null, num_bathrooms: null }]);
   };
 
   const removeUnit = (index: number) => {
     setUnits(prev => prev.filter((_, i) => i !== index));
   };
 
-  const updateUnit = (index: number, field: string, value: string) => {
+  const updateUnit = (index: number, field: string, value: string | number | null) => {
     setUnits(prev => prev.map((unit, i) => i === index ? { ...unit, [field]: value } : unit));
   };
 
@@ -631,6 +632,105 @@ form.reset({
                       </div>
                     )}
                   </div>
+
+                  {/* Units Section */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <div>
+                      <h4 className="text-md font-semibold mb-2">{t('propertyForm.propertyUnits')}</h4>
+                      <p className="text-sm text-muted-foreground mb-4">{t('propertyForm.propertyUnitsDesc')}</p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-medium">{t('propertyForm.unitsConfigured', { count: units.length })}</p>
+                      <Button type="button" onClick={addUnit} size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        {t('propertyForm.addUnit')}
+                      </Button>
+                    </div>
+
+                    {units.map((unit, index) => (
+                      <div key={index} className="p-4 border rounded-lg space-y-3 bg-purple-50/30">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-purple-700">Unit {index + 1}</span>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeUnit(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="col-span-2">
+                            <Label className="text-xs text-muted-foreground">{t('propertyForm.unitName', 'Unit Name')}</Label>
+                            <Input
+                              placeholder={t('propertyForm.propertyNamePlaceholderUnit')}
+                              value={unit.property_name || ""}
+                              onChange={(e) => updateUnit(index, "property_name", e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">{t('propertyForm.bedrooms', 'Bedrooms')}</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              value={unit.num_bedrooms ?? ""}
+                              onChange={(e) => updateUnit(index, "num_bedrooms", e.target.value ? parseInt(e.target.value) : null)}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">{t('propertyForm.bathrooms', 'Bathrooms')}</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              placeholder="0"
+                              value={unit.num_bathrooms ?? ""}
+                              onChange={(e) => updateUnit(index, "num_bathrooms", e.target.value ? parseFloat(e.target.value) : null)}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">{t('propertyForm.licenseNumber', 'License Number')}</Label>
+                            <Input
+                              placeholder={t('propertyForm.licenseNumberPlaceholder')}
+                              value={unit.license_number || ""}
+                              onChange={(e) => updateUnit(index, "license_number", e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">{t('propertyForm.folio', 'Folio')}</Label>
+                            <Input
+                              placeholder={t('propertyForm.folioPlaceholder')}
+                              value={unit.folio || ""}
+                              onChange={(e) => updateUnit(index, "folio", e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">{t('propertyForm.unitOwner', 'Unit Owner')}</Label>
+                            <Select
+                              value={unit.owner_id || "inherit"}
+                              onValueChange={(value) => updateUnit(index, "owner_id", value === "inherit" ? null : value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={t('propertyForm.unitOwnerPlaceholder', { defaultValue: 'Unit Owner' })} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="inherit">{t('propertyForm.inheritPropertyOwner', { defaultValue: '(Property Owner)' })}</SelectItem>
+                                {users.map((user) => (
+                                  <SelectItem key={user.user_id} value={user.user_id!}>
+                                    {user.first_name} {user.last_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="details" className="space-y-6">
@@ -793,49 +893,6 @@ form.reset({
                         </FormItem>
                       )}
                     />
-                  </div>
-
-                  {/* Units Section */}
-                  <div className="space-y-4 pt-4 border-t">
-                    <div>
-                      <h4 className="text-md font-semibold mb-2">{t('propertyForm.propertyUnits')}</h4>
-                      <p className="text-sm text-muted-foreground mb-4">{t('propertyForm.propertyUnitsDesc')}</p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-sm font-medium">{t('propertyForm.unitsConfigured', { count: units.length })}</p>
-                      <Button type="button" onClick={addUnit} size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t('propertyForm.addUnit')}
-                      </Button>
-                    </div>
-
-                    {units.map((unit, index) => (
-                      <div key={index} className="grid grid-cols-4 gap-4 p-4 border rounded-lg">
-                        <Input
-                          placeholder={t('propertyForm.propertyNamePlaceholderUnit')}
-                          value={unit.property_name || ""}
-                          onChange={(e) => updateUnit(index, "property_name", e.target.value)}
-                        />
-                        <Input
-                          placeholder={t('propertyForm.licenseNumberPlaceholder')}
-                          value={unit.license_number || ""}
-                          onChange={(e) => updateUnit(index, "license_number", e.target.value)}
-                        />
-                        <Input
-                          placeholder={t('propertyForm.folioPlaceholder')}
-                          value={unit.folio || ""}
-                          onChange={(e) => updateUnit(index, "folio", e.target.value)}
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => removeUnit(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
                   </div>
                  </TabsContent>
 

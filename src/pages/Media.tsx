@@ -27,6 +27,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Image as ImageIcon,
   Plus,
   RefreshCw,
@@ -40,6 +47,7 @@ import {
   Loader2,
   HardDrive,
   Image,
+  Eye,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import {
@@ -55,6 +63,7 @@ import { MediaUploadDialog } from "@/components/media/MediaUploadDialog";
 import { PropertyImageWithDetails, MediaFilters } from "@/lib/schemas";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTranslation } from "react-i18next";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 export default function Media() {
   const { t } = useTranslation();
@@ -66,8 +75,21 @@ export default function Media() {
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [imageToDelete, setImageToDelete] =
     useState<PropertyImageWithDetails | null>(null);
+  const [previewImage, setPreviewImage] = useState<PropertyImageWithDetails | null>(null);
 
   const { properties } = usePropertiesOptimized();
+
+  // Open image in preview modal (inline view)
+  const handleViewImage = (image: PropertyImageWithDetails) => {
+    setPreviewImage(image);
+  };
+
+  // Open image in new tab
+  const handleOpenInNewTab = (image: PropertyImageWithDetails) => {
+    if (image.image_url) {
+      window.open(image.image_url, '_blank', 'noopener,noreferrer');
+    }
+  };
   const deleteMutation = useDeleteMedia();
   const bulkDeleteMutation = useBulkDeleteMedia();
   const setPrimaryMutation = useSetPrimaryImage();
@@ -175,83 +197,71 @@ export default function Media() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">
-                  {t("media.stats.totalImages")}
-                </p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                  {stats.total}
-                </h3>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <ImageIcon className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <ImageIcon className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t("media.stats.totalImages")}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.total}</h3>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-yellow-50 to-yellow-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-yellow-700">
-                  {t("media.stats.primaryImages")}
-                </p>
-                <h3 className="text-3xl font-bold text-yellow-900 mt-1">
-                  {stats.primary}
-                </h3>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Star className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
-                <Star className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t("media.stats.primaryImages")}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.primary}</h3>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">
-                  {t("media.stats.properties")}
-                </p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  {stats.properties}
-                </h3>
-                <p className="text-xs text-green-600 mt-1">
-                  {t("media.stats.withMedia")}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <ImageIcon className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <ImageIcon className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t("media.stats.properties")}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.properties}</h3>
+                  <span className="text-xs text-muted-foreground">{t("media.stats.withMedia")}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">
-                  {t("media.stats.storageUsed")}
-                </p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">
-                  {storageLoading
-                    ? "..."
-                    : formatBytes(storageStats?.totalSize || 0)}
-                </h3>
-                <p className="text-xs text-purple-600 mt-1">
-                  {storageLoading
-                    ? "Loading..."
-                    : `${storageStats?.fileCount || 0} files`}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <HardDrive className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <HardDrive className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t("media.stats.storageUsed")}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {storageLoading ? "..." : formatBytes(storageStats?.totalSize || 0)}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    {storageLoading ? "Loading..." : `${storageStats?.fileCount || 0} files`}
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -443,16 +453,24 @@ export default function Media() {
 
                   {/* Image */}
                   {viewMode === "grid" ? (
-                    <img
+                    <OptimizedImage
                       src={image.image_url}
                       alt={image.image_title || t("media.actions.untitled")}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover cursor-pointer"
+                      lazy={true}
+                      placeholder="skeleton"
+                      category="properties"
+                      onClick={() => handleViewImage(image)}
                     />
                   ) : (
-                    <img
+                    <OptimizedImage
                       src={image.image_url}
                       alt={image.image_title || t("media.actions.untitled")}
-                      className="w-24 h-24 object-cover rounded flex-shrink-0"
+                      className="w-24 h-24 object-cover rounded flex-shrink-0 cursor-pointer"
+                      lazy={true}
+                      placeholder="skeleton"
+                      category="thumbnails"
+                      onClick={() => handleViewImage(image)}
                     />
                   )}
 
@@ -485,6 +503,13 @@ export default function Media() {
                         <Button
                           variant="secondary"
                           size="sm"
+                          onClick={() => handleViewImage(image)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
                           onClick={() =>
                             handleDownloadImage(
                               image.image_url,
@@ -496,21 +521,20 @@ export default function Media() {
                           <Download className="h-4 w-4 mr-1" />
                           Download
                         </Button>
-                        {!image.is_primary && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() =>
-                              handleSetPrimary(
-                                image.image_id,
-                                image.property_id,
-                              )
-                            }
-                            disabled={setPrimaryMutation.isPending}
-                          >
-                            <Star className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant={image.is_primary ? "default" : "secondary"}
+                          size="sm"
+                          onClick={() =>
+                            handleSetPrimary(
+                              image.image_id,
+                              image.property_id,
+                            )
+                          }
+                          disabled={setPrimaryMutation.isPending}
+                          title={image.is_primary ? "Remove primary status" : "Set as primary"}
+                        >
+                          <Star className={`h-4 w-4 ${image.is_primary ? "fill-current" : ""}`} />
+                        </Button>
                         <Button
                           variant="destructive"
                           size="sm"
@@ -564,6 +588,61 @@ export default function Media() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-2">
+            <DialogTitle className="flex items-center justify-between">
+              <span className="truncate">{previewImage?.caption || previewImage?.image_url?.split('/').pop() || 'Image Preview'}</span>
+              {previewImage?.is_primary && (
+                <Badge className="ml-2 bg-yellow-100 text-yellow-800">
+                  <Star className="h-3 w-3 mr-1" />
+                  Primary
+                </Badge>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {previewImage?.property?.property_name && (
+                <span>{previewImage.property.property_name}</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="relative flex items-center justify-center bg-black/5 min-h-[300px] max-h-[70vh]">
+            {previewImage?.image_url && (
+              <img
+                src={previewImage.image_url}
+                alt={previewImage.caption || 'Preview'}
+                className="max-w-full max-h-[70vh] object-contain"
+              />
+            )}
+          </div>
+          <div className="p-4 pt-2 flex justify-between items-center border-t">
+            <div className="text-sm text-muted-foreground">
+              {previewImage?.created_at && (
+                <span>Uploaded: {new Date(previewImage.created_at).toLocaleDateString()}</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => previewImage && handleOpenInNewTab(previewImage)}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Open in New Tab
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setPreviewImage(null)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

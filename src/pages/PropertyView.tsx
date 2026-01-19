@@ -14,7 +14,15 @@ import {
   Sparkles,
   CalendarDays,
   DollarSign,
+  ChevronDown,
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { CasaSpinner } from '@/components/ui/casa-loader';
 import { usePropertyDetail } from '@/hooks/usePropertiesOptimized';
 import {
@@ -173,7 +181,7 @@ export default function PropertyView() {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-3 sm:p-6">
         {/* Enhanced Header */}
         <PageHeader
           icon={Home}
@@ -191,78 +199,129 @@ export default function PropertyView() {
         <Card className="shadow-card border-0 bg-card/80 backdrop-blur-sm">
           <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={handleTabChange}>
-              {/* Clean Tab Navigation */}
+              {/* Tab Navigation */}
               <div className="border-b bg-muted/30">
-                <div className="px-6 pt-4 overflow-x-auto">
+                {/* Mobile: Dropdown selector */}
+                <div className="md:hidden px-4 py-3">
+                  <Select value={activeTab} onValueChange={handleTabChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        <span className="flex items-center gap-2">
+                          {activeTab === 'general' && <><Home className="h-4 w-4" /> General</>}
+                          {activeTab === 'features' && <><Sparkles className="h-4 w-4" /> Features</>}
+                          {activeTab === 'highlights' && <><Sparkles className="h-4 w-4" /> Highlights</>}
+                          {activeTab === 'providers' && <><Zap className="h-4 w-4" /> Providers</>}
+                          {activeTab === 'owners' && <><Users className="h-4 w-4" /> Owners</>}
+                          {activeTab === 'vehicles' && <><Car className="h-4 w-4" /> Vehicles</>}
+                          {activeTab === 'notes' && <><FileText className="h-4 w-4" /> Notes</>}
+                          {activeTab === 'bookings' && <><CalendarDays className="h-4 w-4" /> Bookings</>}
+                          {activeTab === 'financial' && <><DollarSign className="h-4 w-4" /> Financial</>}
+                        </span>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">
+                        <span className="flex items-center gap-2"><Home className="h-4 w-4" /> General</span>
+                      </SelectItem>
+                      <SelectItem value="features">
+                        <span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> Features</span>
+                      </SelectItem>
+                      <SelectItem value="highlights">
+                        <span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> Highlights</span>
+                      </SelectItem>
+                      <SelectItem value="providers">
+                        <span className="flex items-center gap-2"><Zap className="h-4 w-4" /> Providers</span>
+                      </SelectItem>
+                      <SelectItem value="owners">
+                        <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Owners</span>
+                      </SelectItem>
+                      <SelectItem value="vehicles">
+                        <span className="flex items-center gap-2"><Car className="h-4 w-4" /> Vehicles</span>
+                      </SelectItem>
+                      <SelectItem value="notes">
+                        <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Notes</span>
+                      </SelectItem>
+                      <SelectItem value="bookings">
+                        <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Bookings</span>
+                      </SelectItem>
+                      <SelectItem value="financial">
+                        <span className="flex items-center gap-2"><DollarSign className="h-4 w-4" /> Financial</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Desktop: Tab list */}
+                <div className="hidden md:block px-6 pt-4 overflow-x-auto">
                   <TabsList className="inline-flex h-auto p-1 bg-muted/50 rounded-lg gap-1">
                     <TabsTrigger
                       value="general"
                       className="px-4 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm font-medium flex items-center gap-2 transition-all"
                     >
                       <Home className="h-4 w-4" />
-                      <span className="hidden sm:inline">General</span>
+                      <span className="hidden lg:inline">General</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="features"
                       className="px-4 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm font-medium flex items-center gap-2 transition-all"
                     >
                       <Sparkles className="h-4 w-4" />
-                      <span className="hidden sm:inline">Features</span>
+                      <span className="hidden lg:inline">Features</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="highlights"
                       className="px-4 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm font-medium flex items-center gap-2 transition-all"
                     >
                       <Sparkles className="h-4 w-4" />
-                      <span className="hidden sm:inline">Highlights</span>
+                      <span className="hidden lg:inline">Highlights</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="providers"
                       className="px-4 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm font-medium flex items-center gap-2 transition-all"
                     >
                       <Zap className="h-4 w-4" />
-                      <span className="hidden sm:inline">Providers</span>
+                      <span className="hidden lg:inline">Providers</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="owners"
                       className="px-4 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm font-medium flex items-center gap-2 transition-all"
                     >
                       <Users className="h-4 w-4" />
-                      <span className="hidden sm:inline">Owners</span>
+                      <span className="hidden lg:inline">Owners</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="vehicles"
                       className="px-4 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm font-medium flex items-center gap-2 transition-all"
                     >
                       <Car className="h-4 w-4" />
-                      <span className="hidden sm:inline">Vehicles</span>
+                      <span className="hidden lg:inline">Vehicles</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="notes"
                       className="px-4 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm font-medium flex items-center gap-2 transition-all"
                     >
                       <FileText className="h-4 w-4" />
-                      <span className="hidden sm:inline">Notes</span>
+                      <span className="hidden lg:inline">Notes</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="bookings"
                       className="px-4 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm font-medium flex items-center gap-2 transition-all"
                     >
                       <CalendarDays className="h-4 w-4" />
-                      <span className="hidden sm:inline">Bookings</span>
+                      <span className="hidden lg:inline">Bookings</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="financial"
                       className="px-4 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm font-medium flex items-center gap-2 transition-all"
                     >
                       <DollarSign className="h-4 w-4" />
-                      <span className="hidden sm:inline">Financial</span>
+                      <span className="hidden lg:inline">Financial</span>
                     </TabsTrigger>
                   </TabsList>
                 </div>
               </div>
 
-              <div className="p-6">
+              <div className="p-3 sm:p-6">
                 <TabsContent value="general" className="mt-0">
                   <GeneralTabOptimized property={property} />
                 </TabsContent>

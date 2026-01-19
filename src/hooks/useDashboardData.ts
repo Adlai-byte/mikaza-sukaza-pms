@@ -1,3 +1,4 @@
+import React from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
@@ -39,7 +40,7 @@ interface RecentActivity {
 }
 
 // Fetch comprehensive dashboard statistics
-const fetchDashboardStats = async (): Promise<DashboardStats> => {
+const fetchDashboardStats = async (userId?: string): Promise<DashboardStats> => {
   const today = format(new Date(), 'yyyy-MM-dd');
   const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
   const monthEnd = format(endOfMonth(new Date()), 'yyyy-MM-dd');
@@ -83,10 +84,18 @@ const fetchDashboardStats = async (): Promise<DashboardStats> => {
     ? Math.round((currentBookings / activeProperties) * 100)
     : 0;
 
-  // Fetch tasks
-  const { data: tasks, error: tasksError } = await supabase
+  // Fetch tasks - filter by current user if userId is provided
+  // This ensures Dashboard KPI matches Todos page which shows only user's tasks
+  let tasksQuery = supabase
     .from('tasks')
-    .select('task_id, status, priority, due_date');
+    .select('task_id, status, priority, due_date, assigned_to');
+
+  // Filter by current user to match Todos page behavior
+  if (userId) {
+    tasksQuery = tasksQuery.eq('assigned_to', userId);
+  }
+
+  const { data: tasks, error: tasksError } = await tasksQuery;
 
   if (tasksError) throw tasksError;
 
@@ -101,10 +110,19 @@ const fetchDashboardStats = async (): Promise<DashboardStats> => {
     t.due_date && t.due_date < today
   ).length || 0;
 
-  // Fetch issues
-  const { data: issues, error: issuesError } = await supabase
+  // Fetch issues - filter by current user if userId is provided
+  // This ensures Dashboard KPI matches Issues page which shows only user's issues
+  // Issues page filters by: assigned_to OR reported_by = current user
+  let issuesQuery = supabase
     .from('issues')
-    .select('issue_id, status, priority');
+    .select('issue_id, status, priority, assigned_to, reported_by');
+
+  // Filter by current user to match Issues page behavior
+  if (userId) {
+    issuesQuery = issuesQuery.or(`assigned_to.eq.${userId},reported_by.eq.${userId}`);
+  }
+
+  const { data: issues, error: issuesError } = await issuesQuery;
 
   if (issuesError) throw issuesError;
 
@@ -230,16 +248,26 @@ const fetchRecentActivities = async (): Promise<RecentActivity[]> => {
 };
 
 export function useDashboardData() {
+  // Get current user session to filter tasks by user
+  const [userId, setUserId] = React.useState<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id);
+    });
+  }, []);
+
   const {
     data: stats,
     isLoading: statsLoading,
     error: statsError,
     refetch: refetchStats,
   } = useQuery({
-    queryKey: dashboardKeys.stats(),
-    queryFn: fetchDashboardStats,
+    queryKey: [...dashboardKeys.stats(), userId],
+    queryFn: () => fetchDashboardStats(userId),
     staleTime: 1000 * 60 * 2, // 2 minutes
     refetchInterval: 1000 * 60 * 5, // Refetch every 5 minutes
+    enabled: !!userId, // Only fetch when we have a user ID
   });
 
   const {

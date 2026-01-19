@@ -8,6 +8,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Property } from './schemas';
 import { supabase } from '@/integrations/supabase/client';
+import { getLogoForPDF, BRANDING, PDF_COLORS } from './logo-utils';
 
 /**
  * Generate PDF for property details
@@ -30,21 +31,49 @@ export async function generatePropertyPDF(property: Property): Promise<string> {
   };
 
   try {
+    // Load logo
+    let logoBase64 = '';
+    try {
+      logoBase64 = await getLogoForPDF('black'); // Black logo for light PDF backgrounds
+    } catch (e) {
+      console.warn('Failed to load logo:', e);
+    }
+
     // ===== HEADER =====
-    doc.setFillColor(30, 58, 138); // Blue background
+    doc.setFillColor(...PDF_COLORS.SECONDARY); // Navy blue background
     doc.rect(0, 0, pageWidth, 40, 'F');
 
-    // Logo/Title
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Casa & Concierge', margin, 20);
-
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Property Management System', margin, 30);
+    // Logo - add image or fallback to text
+    if (logoBase64) {
+      try {
+        // Add white background for logo
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(margin - 2, 8, 62, 24, 3, 3, 'F');
+        doc.addImage(logoBase64, 'PNG', margin, 10, 58, 20);
+      } catch (imgError) {
+        console.warn('Failed to add logo image:', imgError);
+        // Fallback to text
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text(BRANDING.COMPANY_NAME, margin, 20);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(BRANDING.TAGLINE, margin, 30);
+      }
+    } else {
+      // Fallback to text
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text(BRANDING.COMPANY_NAME, margin, 20);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(BRANDING.TAGLINE, margin, 30);
+    }
 
     // Document info
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(10);
     const dateStr = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -491,10 +520,11 @@ export async function generatePropertyPDF(property: Property): Promise<string> {
 
     console.log('PDF uploaded successfully:', uploadData.path);
 
-    // Get signed URL (valid for 1 hour)
+    // Get signed URL (valid for 1 hour session use)
+    // See STORAGE_URL_EXPIRATION.SESSION in app-constants.ts
     const { data: urlData, error: urlError } = await supabase.storage
       .from('property-documents')
-      .createSignedUrl(filePath, 3600);
+      .createSignedUrl(filePath, 3600); // 1 hour (STORAGE_URL_EXPIRATION.SESSION)
 
     if (urlError) {
       console.error('URL generation error:', urlError);

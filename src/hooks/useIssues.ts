@@ -5,6 +5,7 @@ import { Issue, IssueInsert, IssuePhoto, IssuePhotoInsert } from '@/lib/schemas'
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateFile } from '@/lib/file-validation';
+import { dashboardKeys } from '@/hooks/useDashboardData';
 
 // Query keys
 export const issueKeys = {
@@ -105,7 +106,13 @@ const createIssue = async (issueData: IssueInsert, userId: string): Promise<Issu
       ...issueData,
       reported_by: userId
     }])
-    .select()
+    .select(`
+      *,
+      photos:issue_photos(photo_id, photo_url, caption, created_at),
+      property:properties(property_id, property_name),
+      assigned_user:users!issues_assigned_to_fkey(user_id, first_name, last_name, email),
+      reported_user:users!issues_reported_by_fkey(user_id, first_name, last_name, email)
+    `)
     .single();
 
   if (error) throw error;
@@ -255,12 +262,19 @@ const deletePhoto = async (photoId: string, photoUrl: string): Promise<void> => 
   if (error) throw error;
 };
 
+// Hook options interface
+interface UseIssuesOptions {
+  enabled?: boolean;
+}
+
 // Hooks
-export function useIssues(filters?: IssueFilters) {
-  const { data: issues = [], isLoading, error, refetch } = useQuery({
+export function useIssues(filters?: IssueFilters, options?: UseIssuesOptions) {
+  const { data: issues = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: issueKeys.list(filters),
     queryFn: () => fetchIssues(filters),
     staleTime: 30 * 1000, // 30 seconds
+    // Only run query when enabled (default: true for backward compatibility)
+    enabled: options?.enabled ?? true,
   });
 
   // Real-time subscription
@@ -278,6 +292,8 @@ export function useIssues(filters?: IssueFilters) {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
+          // Also invalidate dashboard stats when issues change (for Open Issues KPI)
+          queryClient.invalidateQueries({ queryKey: dashboardKeys.stats() });
         }
       )
       .on(
@@ -289,6 +305,8 @@ export function useIssues(filters?: IssueFilters) {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
+          // Also invalidate detail queries so photos show immediately after upload
+          queryClient.invalidateQueries({ queryKey: issueKeys.details() });
         }
       )
       .subscribe();
@@ -301,6 +319,7 @@ export function useIssues(filters?: IssueFilters) {
   return {
     issues,
     loading: isLoading,
+    isFetching,
     error,
     refetch,
   };
@@ -330,6 +349,8 @@ export function useCreateIssue() {
     mutationFn: (issueData: IssueInsert) => createIssue(issueData, user?.id || ''),
     onSuccess: async (newIssue) => {
       queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
+      // Invalidate dashboard stats when new issue is created
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.stats() });
 
       // Create notification for assigned user
       if (newIssue.assigned_to && newIssue.reported_by && newIssue.assigned_to !== newIssue.reported_by) {
@@ -394,7 +415,7 @@ export function useUpdateIssue() {
       // Update the issue
       const updatedIssue = await updateIssue({ issueId, updates });
 
-      // Create notifications based on changes
+      // Create notifications and auto-debit based on changes
       if (oldIssue && updatedIssue) {
         try {
           // Notification for assignment change
@@ -456,6 +477,55 @@ export function useUpdateIssue() {
                 console.log('✅ Notification created for issue resolution');
               }
             }
+
+            // AUTO-DEBIT CREATION: Create expense entry when issue is resolved or closed
+            if ((updates.status === 'resolved' || updates.status === 'closed') &&
+                oldIssue.status !== 'resolved' && oldIssue.status !== 'closed') {
+              // Use actual_cost if available, otherwise use estimated_cost
+              const cost = updates.actual_cost ?? updatedIssue.actual_cost ?? updatedIssue.estimated_cost;
+
+              // Only create debit entry if there's a cost > 0
+              if (cost && cost > 0 && updatedIssue.property_id) {
+                // Map issue category to expense category
+                const categoryMap: Record<string, string> = {
+                  'maintenance': 'maintenance',
+                  'repair_needed': 'repairs',
+                  'damage': 'repairs',
+                  'cleaning': 'cleaning',
+                  'plumbing': 'repairs',
+                  'electrical': 'repairs',
+                  'appliance': 'repairs',
+                  'hvac': 'repairs',
+                  'other': 'other',
+                };
+                const expenseCategory = categoryMap[updatedIssue.category || 'other'] || 'other';
+
+                const { error: expenseError } = await supabase
+                  .from('expenses')
+                  .insert([{
+                    property_id: updatedIssue.property_id,
+                    description: `Issue Resolution: ${updatedIssue.title}${updatedIssue.resolution_notes ? ` - ${updatedIssue.resolution_notes}` : ''}`,
+                    amount: cost,
+                    expense_date: new Date().toISOString().split('T')[0],
+                    entry_type: 'debit',
+                    category: expenseCategory,
+                    notes: `Auto-generated from issue #${issueId.slice(0, 8)}`,
+                    is_scheduled: false,
+                    is_paid: false,
+                    tax_amount: 0,
+                  }]);
+
+                if (expenseError) {
+                  console.error('❌ Failed to create auto-debit entry for issue:', expenseError);
+                } else {
+                  console.log('✅ Auto-debit entry created for resolved issue:', {
+                    issue: updatedIssue.title,
+                    amount: cost,
+                    category: expenseCategory,
+                  });
+                }
+              }
+            }
           }
         } catch (error) {
           console.error('❌ Failed to create notification:', error);
@@ -464,9 +534,16 @@ export function useUpdateIssue() {
 
       return updatedIssue;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (updatedIssue, variables) => {
       queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
       queryClient.invalidateQueries({ queryKey: issueKeys.detail(variables.issueId) });
+      // Invalidate dashboard stats when issue status changes
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.stats() });
+      // Invalidate expenses when issue is resolved/closed (for auto-debit entries)
+      if (variables.updates.status === 'resolved' || variables.updates.status === 'closed') {
+        queryClient.invalidateQueries({ queryKey: ['expenses'] });
+        queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      }
       toast({
         title: 'Success',
         description: 'Issue updated successfully',
@@ -490,6 +567,8 @@ export function useDeleteIssue() {
     mutationFn: deleteIssue,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
+      // Invalidate dashboard stats when issue is deleted
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.stats() });
       toast({
         title: 'Success',
         description: 'Issue deleted successfully',

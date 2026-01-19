@@ -125,7 +125,7 @@ const fetchFinancialAlerts = async (): Promise<FinancialAlerts> => {
 };
 
 export function useFinancialAlerts() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['financial-alerts'],
     queryFn: fetchFinancialAlerts,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -135,6 +135,8 @@ export function useFinancialAlerts() {
   return {
     ...data,
     isLoading,
+    isFetching,
     error,
+    refetch,
   };
 }

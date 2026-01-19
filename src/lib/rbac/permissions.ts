@@ -29,6 +29,13 @@ export const PERMISSIONS = {
   SERVICE_PROVIDERS_DELETE: 'service_providers.delete',
   SERVICE_PROVIDERS_EXPORT: 'service_providers.export',
 
+  // ========== SERVICE SCHEDULING ==========
+  SERVICE_SCHEDULING_VIEW: 'service_scheduling.view',
+  SERVICE_SCHEDULING_CREATE: 'service_scheduling.create',
+  SERVICE_SCHEDULING_EDIT: 'service_scheduling.edit',
+  SERVICE_SCHEDULING_DELETE: 'service_scheduling.delete',
+  SERVICE_SCHEDULING_COMPLETE: 'service_scheduling.complete',
+
   // ========== UTILITY PROVIDERS ==========
   UTILITY_PROVIDERS_VIEW: 'utility_providers.view',
   UTILITY_PROVIDERS_CREATE: 'utility_providers.create',
@@ -133,10 +140,20 @@ export const PERMISSIONS = {
   REPORTS_EXPORT: 'reports.export',
   REPORTS_CUSTOM: 'reports.custom',
 
+  // ========== AUTOMATION ==========
+  AUTOMATION_VIEW: 'automation.view',
+  AUTOMATION_CREATE: 'automation.create',
+  AUTOMATION_EDIT: 'automation.edit',
+  AUTOMATION_DELETE: 'automation.delete',
+
   // ========== SYSTEM ==========
   SYSTEM_SETTINGS: 'system.settings',
   SYSTEM_LOGS: 'system.logs',
   SYSTEM_AUDIT: 'system.audit',
+
+  // ========== PASSWORD VAULT ==========
+  PASSWORDS_VIEW: 'passwords.view',
+  PASSWORDS_MANAGE: 'passwords.manage',
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -183,6 +200,13 @@ export const ROLES = {
       PERMISSIONS.SERVICE_PROVIDERS_EXPORT,
       // NOT: SERVICE_PROVIDERS_DELETE (admin only)
 
+      // ========== SERVICE SCHEDULING - Full access ==========
+      PERMISSIONS.SERVICE_SCHEDULING_VIEW,
+      PERMISSIONS.SERVICE_SCHEDULING_CREATE,
+      PERMISSIONS.SERVICE_SCHEDULING_EDIT,
+      PERMISSIONS.SERVICE_SCHEDULING_DELETE,
+      PERMISSIONS.SERVICE_SCHEDULING_COMPLETE,
+
       // ========== UTILITY PROVIDERS - Full CRUD except delete ==========
       PERMISSIONS.UTILITY_PROVIDERS_VIEW,
       PERMISSIONS.UTILITY_PROVIDERS_CREATE,
@@ -224,18 +248,19 @@ export const ROLES = {
       PERMISSIONS.PHOTOS_DELETE, // Own uploads only
       // NOT: ISSUES_DELETE (preserve audit trail)
 
-      // ========== DOCUMENTS - Mixed access ==========
-      PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW, // View only
-      // NOT: DOCUMENTS_CONTRACTS_MANAGE
+      // ========== DOCUMENTS - Full access for OPS ==========
+      PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW,
+      PERMISSIONS.DOCUMENTS_CONTRACTS_MANAGE, // OPS manages property contracts
 
-      // NOT: Employee documents at all
+      PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW,
+      PERMISSIONS.DOCUMENTS_EMPLOYEE_MANAGE, // OPS manages HR documents
 
       PERMISSIONS.DOCUMENTS_ACCESS_VIEW,
       PERMISSIONS.DOCUMENTS_ACCESS_CREATE,
       // NOT: DOCUMENTS_ACCESS_APPROVE
 
-      PERMISSIONS.DOCUMENTS_COI_VIEW, // View only
-      // NOT: DOCUMENTS_COI_MANAGE
+      PERMISSIONS.DOCUMENTS_COI_VIEW,
+      PERMISSIONS.DOCUMENTS_COI_MANAGE, // OPS manages vendor COIs
 
       PERMISSIONS.DOCUMENTS_SERVICE_VIEW,
       PERMISSIONS.DOCUMENTS_SERVICE_MANAGE, // Full access
@@ -281,6 +306,12 @@ export const ROLES = {
       PERMISSIONS.REPORTS_VIEW,
       PERMISSIONS.REPORTS_EXPORT,
       // NOT: REPORTS_CUSTOM
+
+      // ========== AUTOMATION - Full access except delete ==========
+      PERMISSIONS.AUTOMATION_VIEW,
+      PERMISSIONS.AUTOMATION_CREATE,
+      PERMISSIONS.AUTOMATION_EDIT,
+      // NOT: AUTOMATION_DELETE (admin only)
 
       // NO SYSTEM ACCESS
       // NOT: SYSTEM_SETTINGS, SYSTEM_LOGS, SYSTEM_AUDIT
@@ -408,5 +439,7 @@ export const PERMISSION_CATEGORIES = {
   HIGHLIGHTS: 'Highlights',
   MESSAGES: 'Internal Messages',
   REPORTS: 'Reports',
+  AUTOMATION: 'Automation',
   SYSTEM: 'System Administration',
+  PASSWORDS: 'Password Vault',
 } as const;

@@ -1,6 +1,23 @@
 import { jsPDF } from 'jspdf';
 import { CheckInOutRecord, ChecklistResponse, Attachment, ChecklistItem } from './schemas';
 import { format } from 'date-fns';
+import { getLogoForPDF, BRANDING, PDF_COLORS } from './logo-utils';
+
+/**
+ * Access information for the PDF
+ */
+export interface AccessInfo {
+  wifi_name?: string | null;
+  wifi_password?: string | null;
+  phone_number?: string | null;
+  gate_code?: string | null;
+  door_lock_password?: string | null;
+  alarm_passcode?: string | null;
+  /** 'unit' if using unit-specific settings, 'property' if inherited from property */
+  source?: 'unit' | 'property';
+  /** Unit name if a specific unit is booked */
+  unit_name?: string | null;
+}
 
 /**
  * PDF generation data interface
@@ -8,6 +25,8 @@ import { format } from 'date-fns';
 export interface PDFData {
   record: CheckInOutRecord;
   checklistItems?: ChecklistItem[];
+  /** Access information (WiFi, door codes) - unit-specific or property-level */
+  accessInfo?: AccessInfo;
 }
 
 /**
@@ -21,8 +40,10 @@ export class CheckInOutPDFGenerator {
   private margin: number = 20;
   private currentY: number = 20;
   private lineHeight: number = 7;
-  private primaryColor: [number, number, number] = [34, 139, 34]; // Green
-  private secondaryColor: [number, number, number] = [128, 128, 128]; // Gray
+  private primaryColor: [number, number, number] = PDF_COLORS.PRIMARY;
+  private secondaryColor: [number, number, number] = PDF_COLORS.MUTED;
+  private logoBase64: string = '';
+  private accessInfo?: AccessInfo;
 
   constructor() {
     this.doc = new jsPDF({
@@ -35,11 +56,29 @@ export class CheckInOutPDFGenerator {
   }
 
   /**
+   * Load logo for PDF embedding
+   */
+  private async loadLogo(): Promise<void> {
+    try {
+      this.logoBase64 = await getLogoForPDF('black'); // Black logo for light PDF backgrounds
+    } catch (error) {
+      console.warn('Failed to load logo for PDF:', error);
+    }
+  }
+
+  /**
    * Main method to generate the complete PDF
    */
-  async generatePDF(record: CheckInOutRecord): Promise<Blob> {
+  async generatePDF(record: CheckInOutRecord, accessInfo?: AccessInfo): Promise<Blob> {
     try {
       console.log('Starting PDF generation for record:', record.record_id);
+
+      // Store access info for use in sections
+      this.accessInfo = accessInfo;
+
+      // Load logo for branding
+      await this.loadLogo();
+      console.log('✓ Logo loaded');
 
       // Header
       this.addHeader(record);
@@ -52,6 +91,12 @@ export class CheckInOutPDFGenerator {
       // Resident Information
       this.addResidentInfo(record);
       console.log('✓ Resident info added');
+
+      // Access Information (WiFi, door codes, etc.)
+      if (this.accessInfo && this.hasAccessInfo()) {
+        this.addAccessInfoSection();
+        console.log('✓ Access info added');
+      }
 
       // Checklist Section
       if (record.checklist_responses && record.checklist_responses.length > 0) {
@@ -106,8 +151,8 @@ export class CheckInOutPDFGenerator {
   /**
    * Download the PDF directly
    */
-  async downloadPDF(record: CheckInOutRecord, filename?: string): Promise<void> {
-    await this.generatePDF(record);
+  async downloadPDF(record: CheckInOutRecord, filename?: string, accessInfo?: AccessInfo): Promise<void> {
+    await this.generatePDF(record, accessInfo);
 
     const defaultFilename = filename ||
       `Check-${record.record_type === 'check_in' ? 'In' : 'Out'}_${record.property?.property_name}_${format(new Date(record.record_date), 'yyyy-MM-dd')}.pdf`;
@@ -120,36 +165,51 @@ export class CheckInOutPDFGenerator {
    */
   private addHeader(record: CheckInOutRecord): void {
     try {
-      // Logo/Branding box
-      this.doc.setFillColor(...this.primaryColor);
-      this.doc.rect(this.margin, this.margin, 50, 15, 'F');
+      // Logo - use actual image if available, otherwise fallback to text
+      if (this.logoBase64) {
+        try {
+          // Add logo image (black version for light PDF background)
+          this.doc.addImage(this.logoBase64, 'PNG', this.margin, this.margin, 55, 18);
+        } catch (imgError) {
+          console.warn('Failed to add logo image, using fallback:', imgError);
+          this.addFallbackLogo();
+        }
+      } else {
+        this.addFallbackLogo();
+      }
 
-      this.doc.setTextColor(255, 255, 255);
-      this.doc.setFontSize(16);
-      this.doc.setFont('helvetica', 'bold');
-      this.doc.text('Casa &', this.margin + 5, this.margin + 7);
-      this.doc.text('Concierge', this.margin + 5, this.margin + 13);
-
-      // Document title - centered
+      // Document title - positioned after logo
       this.doc.setTextColor(0, 0, 0);
       this.doc.setFontSize(18);
       this.doc.setFont('helvetica', 'bold');
       const title = record.record_type === 'check_in' ? 'CHECK-IN REPORT' : 'CHECK-OUT REPORT';
-      this.doc.text(title, this.pageWidth / 2, this.margin + 8, { align: 'center' });
+      this.doc.text(title, this.pageWidth - this.margin, this.margin + 8, { align: 'right' });
 
-      // Date and status on next line
+      // Date and status below title
       this.doc.setFontSize(9);
       this.doc.setFont('helvetica', 'normal');
       const dateStr = record.record_date ? format(new Date(record.record_date), 'MMM dd, yyyy') : 'N/A';
       const statusStr = (record.status || 'draft').toUpperCase();
       this.doc.setTextColor(...this.secondaryColor);
-      this.doc.text(`Date: ${dateStr} | Status: ${statusStr}`, this.pageWidth / 2, this.margin + 16, { align: 'center' });
+      this.doc.text(`Date: ${dateStr} | Status: ${statusStr}`, this.pageWidth - this.margin, this.margin + 16, { align: 'right' });
 
       this.currentY = this.margin + 30;
     } catch (error) {
       console.error('Error in addHeader:', error);
       throw error;
     }
+  }
+
+  /**
+   * Add fallback text-based logo when image is not available
+   */
+  private addFallbackLogo(): void {
+    this.doc.setFillColor(...this.primaryColor);
+    this.doc.rect(this.margin, this.margin, 55, 18, 'F');
+    this.doc.setTextColor(255, 255, 255);
+    this.doc.setFontSize(14);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.text(BRANDING.COMPANY_NAME, this.margin + 27.5, this.margin + 11, { align: 'center' });
   }
 
   /**
@@ -250,6 +310,120 @@ export class CheckInOutPDFGenerator {
       this.currentY += 20;
     } catch (error) {
       console.error('Error in addResidentInfo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if there's any access information to display
+   */
+  private hasAccessInfo(): boolean {
+    if (!this.accessInfo) return false;
+    return !!(
+      this.accessInfo.wifi_name ||
+      this.accessInfo.wifi_password ||
+      this.accessInfo.gate_code ||
+      this.accessInfo.door_lock_password ||
+      this.accessInfo.alarm_passcode ||
+      this.accessInfo.phone_number
+    );
+  }
+
+  /**
+   * Add access information section (WiFi, door codes, etc.)
+   */
+  private addAccessInfoSection(): void {
+    try {
+      if (!this.accessInfo) return;
+
+      this.checkPageBreak(55);
+
+      // Section header with unit indicator if applicable
+      const sectionTitle = this.accessInfo.unit_name
+        ? `Access Information (${this.accessInfo.unit_name})`
+        : 'Access Information';
+      this.addSectionHeader(sectionTitle);
+
+      // Box for access info
+      const boxHeight = 45;
+      this.doc.setFillColor(245, 245, 245);
+      this.doc.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, boxHeight, 'F');
+
+      this.doc.setFontSize(10);
+      this.doc.setTextColor(0, 0, 0);
+
+      let infoY = this.currentY + 7;
+      const colWidth = (this.pageWidth - 2 * this.margin - 10) / 2;
+      const leftCol = this.margin + 5;
+      const rightCol = this.margin + 5 + colWidth + 5;
+
+      // WiFi Section
+      if (this.accessInfo.wifi_name || this.accessInfo.wifi_password) {
+        this.doc.setFont('helvetica', 'bold');
+        this.doc.setTextColor(...this.primaryColor);
+        this.doc.text('WiFi', leftCol, infoY);
+        this.doc.setTextColor(0, 0, 0);
+        infoY += this.lineHeight;
+
+        if (this.accessInfo.wifi_name) {
+          this.doc.setFont('helvetica', 'normal');
+          this.doc.text(`Network: ${String(this.accessInfo.wifi_name)}`, leftCol + 5, infoY);
+          infoY += this.lineHeight - 1;
+        }
+        if (this.accessInfo.wifi_password) {
+          this.doc.text(`Password: ${String(this.accessInfo.wifi_password)}`, leftCol + 5, infoY);
+          infoY += this.lineHeight - 1;
+        }
+        infoY += 3;
+      }
+
+      // Access Codes Section
+      let rightY = this.currentY + 7;
+      const hasAccessCodes = this.accessInfo.gate_code || this.accessInfo.door_lock_password || this.accessInfo.alarm_passcode;
+      if (hasAccessCodes) {
+        this.doc.setFont('helvetica', 'bold');
+        this.doc.setTextColor(...this.primaryColor);
+        this.doc.text('Access Codes', rightCol, rightY);
+        this.doc.setTextColor(0, 0, 0);
+        rightY += this.lineHeight;
+
+        if (this.accessInfo.gate_code) {
+          this.doc.setFont('helvetica', 'normal');
+          this.doc.text(`Gate Code: ${String(this.accessInfo.gate_code)}`, rightCol + 5, rightY);
+          rightY += this.lineHeight - 1;
+        }
+        if (this.accessInfo.door_lock_password) {
+          this.doc.text(`Door Lock: ${String(this.accessInfo.door_lock_password)}`, rightCol + 5, rightY);
+          rightY += this.lineHeight - 1;
+        }
+        if (this.accessInfo.alarm_passcode) {
+          this.doc.text(`Alarm: ${String(this.accessInfo.alarm_passcode)}`, rightCol + 5, rightY);
+          rightY += this.lineHeight - 1;
+        }
+      }
+
+      // Contact phone
+      if (this.accessInfo.phone_number) {
+        const phoneY = Math.max(infoY, rightY) + 2;
+        this.doc.setFont('helvetica', 'bold');
+        this.doc.text('Contact:', leftCol, phoneY);
+        this.doc.setFont('helvetica', 'normal');
+        this.doc.text(String(this.accessInfo.phone_number), leftCol + 20, phoneY);
+      }
+
+      // Source indicator (unit-specific or property-level)
+      if (this.accessInfo.source) {
+        this.doc.setFontSize(8);
+        this.doc.setTextColor(...this.secondaryColor);
+        const sourceText = this.accessInfo.source === 'unit'
+          ? 'Unit-specific credentials'
+          : 'Property-level credentials';
+        this.doc.text(sourceText, this.pageWidth - this.margin - 5, this.currentY + boxHeight - 3, { align: 'right' });
+      }
+
+      this.currentY += boxHeight + 5;
+    } catch (error) {
+      console.error('Error in addAccessInfoSection:', error);
       throw error;
     }
   }
@@ -449,6 +623,42 @@ export class CheckInOutPDFGenerator {
   }
 
   /**
+   * Validate that a signature is a valid data URL with sufficient content
+   */
+  private isValidSignatureDataUrl(data: string | null | undefined): data is string {
+    if (!data || typeof data !== 'string') {
+      console.log('⚠️ Signature validation failed: data is null, undefined, or not a string');
+      return false;
+    }
+    if (!data.startsWith('data:image/')) {
+      console.log('⚠️ Signature validation failed: does not start with data:image/');
+      return false;
+    }
+    if (!data.includes('base64,')) {
+      console.log('⚠️ Signature validation failed: missing base64 marker');
+      return false;
+    }
+    // Minimum reasonable length for a signature image (base64 encoded)
+    if (data.length < 100) {
+      console.log('⚠️ Signature validation failed: data too short (length:', data.length, ')');
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Extract image format from data URL
+   */
+  private getImageFormatFromDataUrl(dataUrl: string): 'PNG' | 'JPEG' | 'GIF' | 'WEBP' {
+    if (dataUrl.includes('data:image/png')) return 'PNG';
+    if (dataUrl.includes('data:image/jpeg') || dataUrl.includes('data:image/jpg')) return 'JPEG';
+    if (dataUrl.includes('data:image/gif')) return 'GIF';
+    if (dataUrl.includes('data:image/webp')) return 'WEBP';
+    // Default to PNG for signatures (most common from canvas)
+    return 'PNG';
+  }
+
+  /**
    * Add signature section
    */
   private async addSignatureSection(record: CheckInOutRecord): Promise<void> {
@@ -465,19 +675,49 @@ export class CheckInOutPDFGenerator {
     this.doc.setFillColor(255, 255, 255);
     this.doc.rect(signatureX, this.currentY, signatureWidth, signatureHeight, 'FD');
 
-    // Try to add signature image
-    if (record.signature_data) {
+    // Try to add signature image with robust validation
+    if (this.isValidSignatureDataUrl(record.signature_data)) {
+      let signatureAdded = false;
       try {
+        console.log('📝 Adding signature to PDF, data length:', record.signature_data.length);
+        console.log('📝 Signature data prefix:', record.signature_data.substring(0, 50));
+
+        // Auto-detect image format from data URL
+        const imageFormat = this.getImageFormatFromDataUrl(record.signature_data);
+        console.log('📝 Detected image format:', imageFormat);
+
         this.doc.addImage(
           record.signature_data,
-          'PNG',
+          imageFormat,
           signatureX + 2,
           this.currentY + 2,
           signatureWidth - 4,
           signatureHeight - 4
         );
-      } catch (error) {
-        console.error('Error adding signature image:', error);
+        signatureAdded = true;
+        console.log('✅ Signature added to PDF successfully');
+      } catch (error: any) {
+        console.error('❌ Error adding signature image:', error?.message || error);
+
+        // Try with different format as fallback
+        try {
+          console.log('🔄 Retrying with JPEG format...');
+          this.doc.addImage(
+            record.signature_data,
+            'JPEG',
+            signatureX + 2,
+            this.currentY + 2,
+            signatureWidth - 4,
+            signatureHeight - 4
+          );
+          signatureAdded = true;
+          console.log('✅ Signature added with JPEG fallback');
+        } catch (fallbackError) {
+          console.error('❌ JPEG fallback also failed:', fallbackError);
+        }
+      }
+
+      if (!signatureAdded) {
         // Fallback: Display text message if image fails
         this.doc.setFontSize(8);
         this.doc.setTextColor(150, 150, 150);
@@ -487,6 +727,8 @@ export class CheckInOutPDFGenerator {
         this.doc.setTextColor(0, 0, 0);
       }
     } else {
+      console.log('⚠️ No valid signature_data in record, signature_data:',
+        record.signature_data ? `${typeof record.signature_data}, length: ${String(record.signature_data).length}` : 'null/undefined');
       // No signature data - show placeholder
       this.doc.setFontSize(8);
       this.doc.setTextColor(150, 150, 150);
@@ -622,7 +864,7 @@ export class CheckInOutPDFGenerator {
  */
 export async function generateCheckInOutPDF(data: PDFData): Promise<Blob> {
   const generator = new CheckInOutPDFGenerator();
-  return generator.generatePDF(data.record);
+  return generator.generatePDF(data.record, data.accessInfo);
 }
 
 /**
@@ -638,7 +880,14 @@ export async function generateAndUploadCheckInOutPDF(
   const fileName = `check-in-out-${data.record.record_id}-${Date.now()}.pdf`;
   const filePath = `check-in-out/reports/${fileName}`;
 
-  const { error: uploadError } = await supabase.storage
+  console.log('📤 Uploading PDF to storage...', {
+    bucket: 'property-documents',
+    filePath,
+    blobSize: blob.size,
+    blobType: blob.type
+  });
+
+  const { data: uploadData, error: uploadError } = await supabase.storage
     .from('property-documents')
     .upload(filePath, blob, {
       contentType: 'application/pdf',
@@ -646,19 +895,41 @@ export async function generateAndUploadCheckInOutPDF(
     });
 
   if (uploadError) {
-    console.error('PDF upload error:', uploadError);
+    console.error('❌ PDF upload error:', uploadError);
     throw new Error(`Failed to upload PDF: ${uploadError.message}`);
   }
 
-  // Generate a signed URL that expires in 10 years (for long-term access)
+  console.log('✅ PDF uploaded successfully:', uploadData);
+
+  // Verify the file exists by listing it
+  const { data: listData, error: listError } = await supabase.storage
+    .from('property-documents')
+    .list('check-in-out/reports', {
+      search: fileName,
+      limit: 1
+    });
+
+  if (listError) {
+    console.warn('⚠️ Could not verify file exists:', listError);
+  } else if (!listData || listData.length === 0) {
+    console.error('❌ File not found after upload! Path:', filePath);
+    throw new Error('PDF upload succeeded but file not found in storage');
+  } else {
+    console.log('✅ File verified in storage:', listData[0]);
+  }
+
+  // Generate a signed URL for long-term access (7 days)
+  // Note: For permanent access, consider using public buckets or refreshing URLs periodically
   const { data: signedUrlData, error: signedUrlError } = await supabase.storage
     .from('property-documents')
-    .createSignedUrl(filePath, 315360000); // 10 years in seconds
+    .createSignedUrl(filePath, 604800); // 7 days (STORAGE_URL_EXPIRATION.PDF_RECORD)
 
   if (signedUrlError) {
-    console.error('Error creating signed URL:', signedUrlError);
+    console.error('❌ Error creating signed URL:', signedUrlError);
     throw new Error(`Failed to create signed URL: ${signedUrlError.message}`);
   }
+
+  console.log('✅ Signed URL created:', signedUrlData.signedUrl.substring(0, 100) + '...');
 
   return signedUrlData.signedUrl;
 }
@@ -666,7 +937,7 @@ export async function generateAndUploadCheckInOutPDF(
 /**
  * Convenience function to generate and download PDF directly
  */
-export async function downloadCheckInOutPDF(record: CheckInOutRecord, filename?: string): Promise<void> {
+export async function downloadCheckInOutPDF(record: CheckInOutRecord, filename?: string, accessInfo?: AccessInfo): Promise<void> {
   const generator = new CheckInOutPDFGenerator();
-  await generator.downloadPDF(record, filename);
+  await generator.downloadPDF(record, filename, accessInfo);
 }

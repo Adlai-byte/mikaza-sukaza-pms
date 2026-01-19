@@ -7,6 +7,17 @@ import { CACHE_CONFIG } from "@/lib/cache-config";
 import { OptimisticUpdates } from "@/lib/cache-manager-simplified";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
+import { jobKeys } from "@/hooks/useJobs";
+import { issueKeys } from "@/hooks/useIssues";
+import type {
+  PropertyLocationInsert,
+  PropertyCommunicationInsert,
+  PropertyAccessInsert,
+  PropertyExtrasInsert,
+  UnitInsert,
+  PropertyAmenityJoin,
+  PropertyRuleJoin,
+} from "@/lib/database-types";
 
 // Query keys for cache management - SINGLE SOURCE OF TRUTH
 export const propertyKeys = {
@@ -19,7 +30,7 @@ export const propertyKeys = {
   rules: () => ['rules'],
 } as const;
 
-// Fetch properties for LIST VIEW - optimized query (includes primary image only)
+// Fetch properties for LIST VIEW - optimized query (includes primary image and units for booking)
 const fetchPropertiesList = async (): Promise<Property[]> => {
   console.log('🔍 Fetching properties list...');
   const { data, error } = await supabase
@@ -51,6 +62,23 @@ const fetchPropertiesList = async (): Promise<Property[]> => {
         image_url,
         image_title,
         is_primary
+      ),
+      units(
+        unit_id,
+        property_name,
+        license_number,
+        folio,
+        owner_id,
+        num_bedrooms,
+        num_bathrooms,
+        capacity,
+        max_capacity,
+        owner:users!units_owner_id_fkey(
+          user_id,
+          first_name,
+          last_name,
+          email
+        )
       )
     `)
     .order('created_at', { ascending: false });
@@ -98,7 +126,11 @@ const fetchPropertyDetail = async (propertyId: string): Promise<Property> => {
       communication:property_communication(*),
       access:property_access(*),
       extras:property_extras(*),
-      units(*),
+      units(
+        *,
+        communication:unit_communication(*),
+        access:unit_access(*)
+      ),
       images:property_images(*),
       amenities:property_amenities(
         amenities(*)
@@ -133,7 +165,7 @@ const fetchPropertyDetail = async (propertyId: string): Promise<Property> => {
   let actualData = data;
   if (data && typeof data === 'object' && 'data' in data && 'error' in data && 'status' in data) {
     console.warn('⚠️ Detected raw Supabase response wrapper, extracting nested data...');
-    actualData = (data as any).data;
+    actualData = (data as { data: typeof data }).data;
   }
 
   if (!actualData) {
@@ -148,8 +180,8 @@ const fetchPropertyDetail = async (propertyId: string): Promise<Property> => {
   // Transform the data to match our Property type
   const transformedData = {
     ...actualData,
-    amenities: actualData.amenities?.map((pa: any) => pa.amenities) || [],
-    rules: actualData.rules?.map((pr: any) => pr.rules) || [],
+    amenities: actualData.amenities?.map((pa: PropertyAmenityJoin) => pa.amenities) || [],
+    rules: actualData.rules?.map((pr: PropertyRuleJoin) => pr.rules) || [],
   } as Property;
 
   console.log('✅ Transformed property detail:', {
@@ -217,7 +249,7 @@ export function usePropertiesOptimized() {
     queryFn: fetchPropertiesList,
     staleTime: 3 * 60 * 1000, // 3 minutes - data considered fresh (increased from 1 min)
     gcTime: 15 * 60 * 1000, // 15 minutes - keep in cache (increased from 10 min)
-    refetchOnMount: false, // Don't refetch if data is fresh (changed from 'always')
+    refetchOnMount: true, // Refetch if data is stale (ensures new data after invalidation)
     refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
@@ -250,11 +282,11 @@ export function usePropertiesOptimized() {
     retry: 2, // Retry failed mutations twice
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
     mutationFn: async (propertyData: PropertyInsert & {
-      location?: any;
-      communication?: any;
-      access?: any;
-      extras?: any;
-      units?: any[];
+      location?: Omit<PropertyLocationInsert, "property_id" | "location_id">;
+      communication?: Omit<PropertyCommunicationInsert, "property_id" | "communication_id">;
+      access?: Omit<PropertyAccessInsert, "property_id" | "access_id">;
+      extras?: Omit<PropertyExtrasInsert, "property_id" | "extras_id">;
+      units?: Omit<UnitInsert, "property_id" | "unit_id">[];
       amenity_ids?: string[];
       rule_ids?: string[];
       images?: { url: string; title?: string; is_primary?: boolean }[];
@@ -402,21 +434,45 @@ export function usePropertiesOptimized() {
       return { rollback };
     },
     onSuccess: async (data) => {
-      console.log('✅ [PROPERTY] Creation succeeded, updating cache and refetching...');
+      console.log('✅ [PROPERTY] Creation succeeded, updating cache...');
 
-      // Immediately fetch the latest data for the list
-      const freshListData = await fetchPropertiesList();
+      // Cancel any outgoing refetches to prevent race conditions
+      await queryClient.cancelQueries({ queryKey: propertyKeys.lists() });
 
-      // Update cache immediately with fresh data
-      queryClient.setQueryData(propertyKeys.lists(), freshListData);
+      // Get current cache data
+      const currentData = queryClient.getQueryData<Property[]>(propertyKeys.lists()) || [];
 
-      // Then invalidate to ensure full consistency
-      await queryClient.invalidateQueries({
+      // Remove any temporary/optimistic entries and add the real property
+      const filteredData = currentData.filter(p => !p.property_id.startsWith('temp-'));
+
+      // Create a complete property object with the returned data
+      const newProperty: Property = {
+        ...data,
+        owner: null, // Will be populated on next fetch
+        location: null,
+        images: [],
+        units: [],
+      };
+
+      // Add the new property at the beginning of the list
+      const updatedData = [newProperty, ...filteredData];
+
+      // Update cache with the new data
+      queryClient.setQueryData(propertyKeys.lists(), updatedData);
+
+      console.log('✅ [PROPERTY] Cache updated with new property, count:', updatedData.length);
+
+      // Mark queries as stale but don't refetch immediately
+      // This allows the optimistic update to persist and avoids race conditions
+      // with database replication lag. React Query will refetch when appropriate.
+      queryClient.invalidateQueries({
         queryKey: propertyKeys.lists(),
-        refetchType: 'all'
+        refetchType: 'none' // Don't refetch - the cache already has the new property
       });
 
-      console.log('✅ [PROPERTY] Cache updated with fresh property list');
+      // Invalidate jobs and issues queries so unit selectors update
+      queryClient.invalidateQueries({ queryKey: jobKeys.all });
+      queryClient.invalidateQueries({ queryKey: issueKeys.all });
 
       toast({
         title: "Success",
@@ -443,11 +499,11 @@ export function usePropertiesOptimized() {
     mutationFn: async ({ propertyId, propertyData }: {
       propertyId: string;
       propertyData: Partial<PropertyInsert> & {
-        location?: any;
-        communication?: any;
-        access?: any;
-        extras?: any;
-        units?: any[];
+        location?: Omit<PropertyLocationInsert, "property_id" | "location_id">;
+        communication?: Omit<PropertyCommunicationInsert, "property_id" | "communication_id">;
+        access?: Omit<PropertyAccessInsert, "property_id" | "access_id">;
+        extras?: Omit<PropertyExtrasInsert, "property_id" | "extras_id">;
+        units?: Omit<UnitInsert, "property_id" | "unit_id">[];
         amenity_ids?: string[];
         rule_ids?: string[];
         images?: { url: string; title?: string; is_primary?: boolean }[];
@@ -516,7 +572,11 @@ export function usePropertiesOptimized() {
           communication:property_communication(*),
           access:property_access(*),
           extras:property_extras(*),
-          units(*),
+          units(
+            *,
+            communication:unit_communication(*),
+            access:unit_access(*)
+          ),
           images:property_images(*),
           amenities:property_amenities(
             amenities(*)
@@ -706,6 +766,10 @@ export function usePropertiesOptimized() {
 
       console.log('✅ [PropertyEdit] Cache invalidated and fresh data fetched for property:', propertyId);
 
+      // Invalidate jobs and issues queries so unit selectors update when units change
+      queryClient.invalidateQueries({ queryKey: jobKeys.all });
+      queryClient.invalidateQueries({ queryKey: issueKeys.all });
+
       toast({
         title: "Success",
         description: "Property updated successfully",
@@ -810,8 +874,16 @@ export function usePropertiesOptimized() {
     amenities,
     rules,
     createProperty: createPropertyMutation.mutateAsync,
-    updateProperty: (propertyId: string, propertyData: any) =>
-      updatePropertyMutation.mutateAsync({ propertyId, propertyData }),
+    updateProperty: (propertyId: string, propertyData: Partial<PropertyInsert> & {
+      location?: Omit<PropertyLocationInsert, "property_id" | "location_id">;
+      communication?: Omit<PropertyCommunicationInsert, "property_id" | "communication_id">;
+      access?: Omit<PropertyAccessInsert, "property_id" | "access_id">;
+      extras?: Omit<PropertyExtrasInsert, "property_id" | "extras_id">;
+      units?: Omit<UnitInsert, "property_id" | "unit_id">[];
+      amenity_ids?: string[];
+      rule_ids?: string[];
+      images?: { url: string; title?: string; is_primary?: boolean }[];
+    }) => updatePropertyMutation.mutateAsync({ propertyId, propertyData }),
     deleteProperty: deletePropertyMutation.mutateAsync,
     refetch,
     // Mutation states for UI feedback

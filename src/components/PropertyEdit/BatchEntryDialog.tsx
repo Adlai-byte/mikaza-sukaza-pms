@@ -158,7 +158,7 @@ export function BatchEntryDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="batchAmount">Value *</Label>
               <div className="relative">
@@ -225,7 +225,7 @@ export function BatchEntryDialog({
             </Label>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="batchDay">Day of Month</Label>
               <Select value={scheduledDay} onValueChange={setScheduledDay}>
@@ -283,7 +283,7 @@ export function BatchEntryDialog({
                 </Button>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {MONTHS.map((month) => (
                 <div
                   key={month.value}
@@ -331,7 +331,7 @@ export function BatchEntryDialog({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || selectedMonths.length === 0}
+              disabled={isSubmitting || selectedMonths.length === 0 || !description.trim() || !amount || parseFloat(amount) <= 0}
             >
               <Upload className="mr-2 h-4 w-4" />
               {isSubmitting

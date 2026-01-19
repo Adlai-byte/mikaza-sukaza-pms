@@ -213,6 +213,7 @@ export function HighlightsTab({ propertyId }: HighlightsTabProps) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         highlight={selectedHighlight}
+        propertyId={propertyId}
       />
 
       {/* Delete Confirmation Dialog */}

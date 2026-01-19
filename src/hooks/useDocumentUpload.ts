@@ -21,19 +21,13 @@ interface UploadProgress {
 }
 
 // Bucket mapping based on document category
+// NOTE: All document types now use 'property-documents' bucket
+// The 'employee-documents' and 'message-templates' buckets were never created
+// Documents are organized by folder paths instead (e.g., employee/{user_id}/, messages/)
 const getBucketForCategory = (category: string): string => {
-  switch (category) {
-    case 'employee':
-      return 'employee-documents';
-    case 'messages':
-      return 'message-templates';
-    case 'contracts':
-    case 'access':
-    case 'coi':
-    case 'service':
-    default:
-      return 'property-documents';
-  }
+  // Consolidate all document types into property-documents bucket
+  // This bucket is known to exist and has proper RLS policies
+  return 'property-documents';
 };
 
 // Get all allowed MIME types
@@ -71,6 +65,7 @@ export const validateFile = (
 };
 
 // Generate file path for storage
+// All paths include category prefix for organization within property-documents bucket
 const generateFilePath = (
   category: string,
   propertyId: string | null | undefined,
@@ -81,11 +76,13 @@ const generateFilePath = (
   const cleanFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
 
   if (category === 'employee') {
-    return `${userId}/${timestamp}_${cleanFileName}`;
+    // Employee docs: employee/{user_id}/{timestamp}_{filename}
+    return `employee/${userId}/${timestamp}_${cleanFileName}`;
   } else if (category === 'messages') {
-    return `${timestamp}_${cleanFileName}`;
+    // Message templates: messages/{timestamp}_{filename}
+    return `messages/${timestamp}_${cleanFileName}`;
   } else {
-    // Property documents
+    // Property documents: {category}/{property_id?}/{timestamp}_{filename}
     const folder = category; // contracts, access, coi, service
     if (propertyId) {
       return `${folder}/${propertyId}/${timestamp}_${cleanFileName}`;
@@ -401,35 +398,29 @@ export function useBulkDocumentUpload() {
 
     const results = [];
 
+    // Process files sequentially using async/await to avoid race conditions
     for (const file of files) {
-      try {
-        setBulkProgress(prev => prev ? { ...prev, current: file.name } : null);
+      setBulkProgress(prev => prev ? { ...prev, current: file.name } : null);
 
+      try {
         const documentData = getDocumentData(file);
-        await new Promise((resolve, reject) => {
-          uploadFile(
-            { file, documentData },
-            {
-              onSuccess: () => {
-                setBulkProgress(prev => prev ? {
-                  ...prev,
-                  completed: prev.completed + 1,
-                } : null);
-                resolve(true);
-              },
-              onError: (error) => {
-                setBulkProgress(prev => prev ? {
-                  ...prev,
-                  failed: prev.failed + 1,
-                } : null);
-                reject(error);
-              },
-            }
-          );
-        });
+        // Use await directly instead of wrapping in Promise with callbacks
+        await uploadFile({ file, documentData });
+
+        // Update progress after successful upload
+        setBulkProgress(prev => prev ? {
+          ...prev,
+          completed: prev.completed + 1,
+        } : null);
 
         results.push({ file: file.name, success: true });
       } catch (error) {
+        // Update progress after failed upload
+        setBulkProgress(prev => prev ? {
+          ...prev,
+          failed: prev.failed + 1,
+        } : null);
+
         results.push({
           file: file.name,
           success: false,

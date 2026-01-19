@@ -194,28 +194,50 @@ const deleteMedia = async (imageId: string): Promise<void> => {
   console.log('✅ [Media] Delete complete');
 };
 
-// Set primary image
-const setPrimaryImage = async (propertyId: string, imageId: string): Promise<void> => {
-  console.log('⭐ [Media] Setting primary image:', imageId, 'for property:', propertyId);
+// Toggle primary image status - returns true if set as primary, false if unset
+const setPrimaryImage = async (propertyId: string, imageId: string): Promise<boolean> => {
+  console.log('⭐ [Media] Toggling primary image:', imageId, 'for property:', propertyId);
 
-  // 1. Unset all current primary images for this property
-  await supabase
+  // First check if this image is already primary
+  const { data: currentImage } = await supabase
     .from('property_images')
-    .update({ is_primary: false })
-    .eq('property_id', propertyId);
+    .select('is_primary')
+    .eq('image_id', imageId)
+    .single();
 
-  // 2. Set new primary image
-  const { error } = await supabase
-    .from('property_images')
-    .update({ is_primary: true })
-    .eq('image_id', imageId);
+  if (currentImage?.is_primary) {
+    // If already primary, just unset it (no primary image for this property)
+    const { error } = await supabase
+      .from('property_images')
+      .update({ is_primary: false })
+      .eq('image_id', imageId);
 
-  if (error) {
-    console.error('❌ [Media] Set primary error:', error);
-    throw error;
+    if (error) {
+      console.error('❌ [Media] Unset primary error:', error);
+      throw error;
+    }
+    console.log('✅ [Media] Primary image unset');
+    return false; // Was unset
+  } else {
+    // 1. Unset all current primary images for this property
+    await supabase
+      .from('property_images')
+      .update({ is_primary: false })
+      .eq('property_id', propertyId);
+
+    // 2. Set new primary image
+    const { error } = await supabase
+      .from('property_images')
+      .update({ is_primary: true })
+      .eq('image_id', imageId);
+
+    if (error) {
+      console.error('❌ [Media] Set primary error:', error);
+      throw error;
+    }
+    console.log('✅ [Media] Primary image set');
+    return true; // Was set
   }
-
-  console.log('✅ [Media] Primary image set');
 };
 
 // Hook: Fetch media list
@@ -296,7 +318,8 @@ export function useDeleteMedia() {
   return useMutation({
     mutationFn: (imageId: string) => deleteMedia(imageId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: mediaKeys.lists() });
+      // Invalidate all media queries to ensure UI updates
+      queryClient.invalidateQueries({ queryKey: mediaKeys.all() });
       toast({
         title: "Success",
         description: "Image deleted successfully",
@@ -321,18 +344,22 @@ export function useSetPrimaryImage() {
   return useMutation({
     mutationFn: ({ propertyId, imageId }: { propertyId: string; imageId: string }) =>
       setPrimaryImage(propertyId, imageId),
-    onSuccess: () => {
+    onSuccess: (wasSet) => {
       queryClient.invalidateQueries({ queryKey: mediaKeys.lists() });
+      // Also invalidate property queries since primary image affects property display
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
       toast({
         title: "Success",
-        description: "Primary image set successfully",
+        description: wasSet
+          ? "Primary image set successfully"
+          : "Primary status removed from image",
       });
     },
     onError: (error) => {
       console.error('Set primary image error:', error);
       toast({
         title: "Error",
-        description: "Failed to set primary image. Please try again.",
+        description: "Failed to update primary image. Please try again.",
         variant: "destructive",
       });
     },

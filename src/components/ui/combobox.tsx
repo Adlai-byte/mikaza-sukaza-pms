@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,12 @@ interface ComboboxProps {
   searchPlaceholder?: string;
   emptyText?: string;
   className?: string;
+  /** When true, keeps search text when reopening the dropdown */
+  preserveSearch?: boolean;
+  /** When true, shows a clear button to reset selection */
+  clearable?: boolean;
+  /** Disabled state */
+  disabled?: boolean;
 }
 
 export function Combobox({
@@ -34,38 +40,82 @@ export function Combobox({
   searchPlaceholder = "Search...",
   emptyText = "No option found.",
   className,
+  preserveSearch = false,
+  clearable = false,
+  disabled = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
+  const [searchValue, setSearchValue] = React.useState("");
+
+  // Clear search when closing if not preserving
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen && !preserveSearch) {
+      setSearchValue("");
+    }
+  };
+
+  // Handle selection
+  const handleSelect = (selectedValue: string) => {
+    const newValue = selectedValue === value ? "" : selectedValue;
+    onValueChange?.(newValue);
+    setOpen(false);
+    // Clear search after selection unless preserving
+    if (!preserveSearch) {
+      setSearchValue("");
+    }
+  };
+
+  // Handle clear button
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onValueChange?.("");
+    setSearchValue("");
+  };
+
+  const selectedLabel = value
+    ? options.find((option) => option.value === value)?.label
+    : null;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          disabled={disabled}
           className={cn("w-full justify-between", className)}
         >
-          {value
-            ? options.find((option) => option.value === value)?.label
-            : placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <span className="truncate">
+            {selectedLabel || placeholder}
+          </span>
+          <div className="flex items-center gap-1 ml-2 shrink-0">
+            {clearable && value && (
+              <X
+                className="h-4 w-4 opacity-50 hover:opacity-100"
+                onClick={handleClear}
+              />
+            )}
+            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+          </div>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+        <Command shouldFilter={true}>
+          <CommandInput
+            placeholder={searchPlaceholder}
+            value={searchValue}
+            onValueChange={setSearchValue}
+          />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={(currentValue) => {
-                    onValueChange?.(currentValue === value ? "" : currentValue);
-                    setOpen(false);
-                  }}
+                  value={option.label}
+                  onSelect={() => handleSelect(option.value)}
                 >
                   <Check
                     className={cn(
@@ -73,7 +123,7 @@ export function Combobox({
                       value === option.value ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {option.label}
+                  <span className="truncate">{option.label}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

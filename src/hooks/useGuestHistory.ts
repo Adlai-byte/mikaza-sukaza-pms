@@ -71,7 +71,7 @@ const fetchGuestInvoices = async (guestId: string): Promise<Invoice[]> => {
       line_items:invoice_line_items(*)
     `)
     .eq('guest_id', guestId)
-    .order('invoice_date', { ascending: false });
+    .order('issue_date', { ascending: false });
 
   if (error) {
     console.error('Error fetching guest invoices:', error);
@@ -107,7 +107,7 @@ const fetchGuestHistory = async (guestId: string): Promise<GuestHistoryTimeline>
   const invoiceItems: GuestHistoryItem[] = invoices.map((invoice) => ({
     id: invoice.invoice_id!,
     type: 'invoice' as const,
-    date: invoice.invoice_date || invoice.created_at || '',
+    date: invoice.issue_date || invoice.created_at || '',
     status: invoice.status || 'unknown',
     property_name: (invoice as any).property?.property_name,
     property_id: invoice.property_id,

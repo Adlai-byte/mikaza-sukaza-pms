@@ -50,13 +50,23 @@ const uploadDocumentToStorage = async (file: File, vehicleId: string): Promise<s
     throw uploadError;
   }
 
-  // Get public URL (signed for private bucket)
-  const { data: { publicUrl } } = supabase.storage
+  // Get signed URL for private bucket (7 days expiry)
+  const { data: signedData, error: signedError } = await supabase.storage
     .from('property-documents')
-    .getPublicUrl(filePath);
+    .createSignedUrl(filePath, 604800); // 7 days
 
-  console.log('✅ [VehicleDocuments] Document uploaded:', publicUrl);
-  return publicUrl;
+  if (signedError || !signedData?.signedUrl) {
+    console.error('❌ [VehicleDocuments] Failed to get signed URL:', signedError);
+    // Fallback to public URL if signed URL fails
+    const { data: { publicUrl } } = supabase.storage
+      .from('property-documents')
+      .getPublicUrl(filePath);
+    console.log('✅ [VehicleDocuments] Document uploaded (public URL fallback):', publicUrl);
+    return publicUrl;
+  }
+
+  console.log('✅ [VehicleDocuments] Document uploaded:', signedData.signedUrl);
+  return signedData.signedUrl;
 };
 
 // Hook for managing vehicle documents
@@ -235,6 +245,44 @@ export function useVehicleDocuments(vehicleId: string) {
     },
   });
 
+  // Get a fresh signed URL for viewing a document
+  const getSignedUrl = async (documentUrl: string): Promise<string> => {
+    try {
+      // Extract file path from URL
+      const url = new URL(documentUrl);
+      const pathParts = url.pathname.split('/');
+      // Find the 'property-documents' segment and get everything after it
+      const bucketIndex = pathParts.indexOf('property-documents');
+      if (bucketIndex === -1) {
+        // If path structure is different, try to extract file path
+        const filePath = pathParts.slice(-2).join('/');
+        const { data, error } = await supabase.storage
+          .from('property-documents')
+          .createSignedUrl(filePath, 300); // 5 minutes
+        if (error || !data?.signedUrl) {
+          console.error('❌ [VehicleDocuments] Failed to get signed URL:', error);
+          return documentUrl; // Return original URL as fallback
+        }
+        return data.signedUrl;
+      }
+
+      const filePath = pathParts.slice(bucketIndex + 1).join('/');
+      const { data, error } = await supabase.storage
+        .from('property-documents')
+        .createSignedUrl(filePath, 300); // 5 minutes
+
+      if (error || !data?.signedUrl) {
+        console.error('❌ [VehicleDocuments] Failed to get signed URL:', error);
+        return documentUrl; // Return original URL as fallback
+      }
+
+      return data.signedUrl;
+    } catch (err) {
+      console.error('❌ [VehicleDocuments] Error getting signed URL:', err);
+      return documentUrl;
+    }
+  };
+
   return {
     documents,
     isLoading,
@@ -244,6 +292,7 @@ export function useVehicleDocuments(vehicleId: string) {
     uploadDocument: uploadDocumentMutation.mutateAsync,
     updateDocument: updateDocumentMutation.mutateAsync,
     deleteDocument: deleteDocumentMutation.mutateAsync,
+    getSignedUrl,
     isUploading: uploadDocumentMutation.isPending,
     isUpdating: updateDocumentMutation.isPending,
     isDeleting: deleteDocumentMutation.isPending,

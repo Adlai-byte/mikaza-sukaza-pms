@@ -432,19 +432,128 @@ export function useMarkEntryAsDone() {
 
   return useMutation({
     mutationFn: markEntryAsDone,
-    onSuccess: (data) => {
+    // Optimistic update for instant UI feedback
+    onMutate: async (expenseId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: expenseKeys.lists() });
+
+      // Snapshot previous values for rollback
+      const previousData = queryClient.getQueriesData({ queryKey: expenseKeys.lists() });
+
+      // Optimistically update all expense lists
+      queryClient.setQueriesData({ queryKey: expenseKeys.lists() }, (old: Expense[] | undefined) => {
+        if (!old) return old;
+        return old.map((expense) =>
+          expense.expense_id === expenseId
+            ? { ...expense, is_paid: true, paid_at: new Date().toISOString() }
+            : expense
+        );
+      });
+
+      return { previousData };
+    },
+    onError: (error: Error, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        context.previousData.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to mark entry as done',
+        variant: 'destructive',
+      });
+    },
+    onSettled: (data) => {
+      // Always refetch after mutation to ensure consistency
       queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: expenseKeys.byProperty(data.property_id) });
+      if (data?.property_id) {
+        queryClient.invalidateQueries({ queryKey: expenseKeys.byProperty(data.property_id) });
+      }
+    },
+    onSuccess: () => {
       toast({
         title: 'Success',
         description: 'Entry marked as done',
       });
     },
-    onError: (error: Error) => {
+  });
+}
+
+// Approve an entry (for reports visibility)
+const approveEntry = async ({
+  expenseId,
+  approvedBy,
+}: {
+  expenseId: string;
+  approvedBy: string;
+}): Promise<Expense> => {
+  const { data, error } = await supabase
+    .from('expenses')
+    .update({
+      is_approved: true,
+      approved_by: approvedBy,
+      approved_at: new Date().toISOString(),
+    })
+    .eq('expense_id', expenseId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Expense;
+};
+
+export function useApproveEntry() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: approveEntry,
+    // Optimistic update for instant UI feedback
+    onMutate: async ({ expenseId, approvedBy }) => {
+      // Cancel any outgoing refetches for all expense queries
+      await queryClient.cancelQueries({ queryKey: expenseKeys.all });
+
+      // Snapshot previous values for rollback (all expense-related queries)
+      const previousData = queryClient.getQueriesData({ queryKey: expenseKeys.all });
+
+      // Helper function to update expense in array
+      const updateExpenseInArray = (old: Expense[] | undefined) => {
+        if (!old) return old;
+        return old.map((expense) =>
+          expense.expense_id === expenseId
+            ? { ...expense, is_approved: true, approved_by: approvedBy, approved_at: new Date().toISOString() }
+            : expense
+        );
+      };
+
+      // Optimistically update ALL expense queries (lists, property-specific, financial entries)
+      queryClient.setQueriesData({ queryKey: expenseKeys.all }, updateExpenseInArray);
+
+      return { previousData };
+    },
+    onError: (error: Error, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        context.previousData.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       toast({
         title: 'Error',
-        description: error.message || 'Failed to mark entry as done',
+        description: error.message || 'Failed to approve entry',
         variant: 'destructive',
+      });
+    },
+    onSettled: (data) => {
+      // Always refetch after mutation to ensure consistency
+      queryClient.invalidateQueries({ queryKey: expenseKeys.all, refetchType: 'all' });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Entry approved for reports',
       });
     },
   });
@@ -461,7 +570,9 @@ const fetchPropertyFinancialEntries = async (
     .select(`
       *,
       property:properties(property_id, property_name),
-      vendor:service_providers(provider_id, company_name)
+      vendor:service_providers(provider_id, company_name),
+      expense_attachments(attachment_id),
+      expense_notes(note_id)
     `)
     .eq('property_id', propertyId)
     .order('expense_date', { ascending: true });
@@ -479,8 +590,8 @@ const fetchPropertyFinancialEntries = async (
 
   if (error) throw error;
 
-  // Calculate running balance
-  const entries = (data || []) as Expense[];
+  // Calculate running balance and compute counts
+  const entries = (data || []) as any[];
   let runningBalance = 0;
 
   return entries.map((entry) => {
@@ -495,6 +606,8 @@ const fetchPropertyFinancialEntries = async (
     return {
       ...entry,
       running_balance: runningBalance,
+      attachment_count: entry.expense_attachments?.length || 0,
+      note_count: entry.expense_notes?.length || 0,
     };
   });
 };

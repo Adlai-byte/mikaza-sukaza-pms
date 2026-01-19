@@ -68,7 +68,7 @@ const fetchFinancialTrends = async (): Promise<FinancialTrends> => {
 };
 
 export function useFinancialTrends() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['financial-trends'],
     queryFn: fetchFinancialTrends,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -78,6 +78,8 @@ export function useFinancialTrends() {
   return {
     ...data,
     isLoading,
+    isFetching,
     error,
+    refetch,
   };
 }

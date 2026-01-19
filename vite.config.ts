@@ -67,4 +67,55 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Increase chunk size warning limit (default is 500kb)
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        // Manual chunks for better code splitting
+        manualChunks: {
+          // Core React ecosystem
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+
+          // UI framework
+          'vendor-ui': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-tooltip',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-checkbox',
+            '@radix-ui/react-switch',
+            '@radix-ui/react-label',
+            '@radix-ui/react-slot',
+          ],
+
+          // Data management
+          'vendor-data': [
+            '@tanstack/react-query',
+            '@supabase/supabase-js',
+            'zod',
+            '@hookform/resolvers',
+            'react-hook-form',
+          ],
+
+          // Charts and visualization
+          'vendor-charts': ['recharts'],
+
+          // PDF and Excel
+          'vendor-documents': ['jspdf', 'jspdf-autotable', 'xlsx'],
+
+          // Date utilities
+          'vendor-dates': ['date-fns'],
+
+          // i18n
+          'vendor-i18n': ['i18next', 'react-i18next'],
+
+          // Maps
+          'vendor-maps': ['leaflet', 'react-leaflet'],
+        },
+      },
+    },
+  },
 }));

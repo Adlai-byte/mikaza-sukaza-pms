@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { sanitizeText } from '@/lib/sanitize';
 
 interface NoteAttachment {
   url: string;
@@ -64,13 +65,22 @@ interface NotesTabOptimizedProps {
   propertyId: string;
 }
 
-const fetchNotes = async (propertyId: string): Promise<Note[]> => {
-  const { data, error } = await supabase
+const NOTES_PER_PAGE = 20;
+
+const fetchNotes = async (propertyId: string, limit?: number): Promise<Note[]> => {
+  let query = supabase
     .from('property_notes')
     .select('*')
     .eq('property_id', propertyId)
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false });
+
+  // Apply limit if specified (for pagination)
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
@@ -85,6 +95,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [isUploading, setIsUploading] = useState(false);
+  const [displayLimit, setDisplayLimit] = useState(NOTES_PER_PAGE);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const emptyNote = {
@@ -102,8 +113,8 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
     queryKey: ['property-notes', propertyId],
     queryFn: () => fetchNotes(propertyId),
     enabled: !!propertyId,
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes - reduce refetch frequency
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
   });
 
   const createNoteMutation = useMutation({
@@ -117,18 +128,46 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['property-notes', propertyId],
-        refetchType: 'active',
-      });
+    onMutate: async (newNoteData) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['property-notes', propertyId] });
+
+      // Snapshot current data
+      const previousNotes = queryClient.getQueryData<Note[]>(['property-notes', propertyId]);
+
+      // Optimistically add new note
+      const optimisticNote: Note = {
+        note_id: `temp-${Date.now()}`,
+        property_id: propertyId,
+        note_title: newNoteData.note_title,
+        note_content: newNoteData.note_content,
+        note_type: newNoteData.note_type,
+        is_pinned: newNoteData.is_pinned,
+        attachments: newNoteData.attachments,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) => [optimisticNote, ...old]);
+
+      return { previousNotes };
+    },
+    onSuccess: (data) => {
+      // Replace optimistic note with real data
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) =>
+        old.map(note => note.note_id.startsWith('temp-') ? data : note)
+      );
       toast({
         title: "Success",
         description: "Note created successfully",
       });
       resetForm();
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousNotes) {
+        queryClient.setQueryData(['property-notes', propertyId], context.previousNotes);
+      }
       toast({
         title: "Error",
         description: error.message || "Failed to create note",
@@ -149,18 +188,32 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['property-notes', propertyId],
-        refetchType: 'active',
-      });
+    onMutate: async ({ noteId, updates }) => {
+      await queryClient.cancelQueries({ queryKey: ['property-notes', propertyId] });
+      const previousNotes = queryClient.getQueryData<Note[]>(['property-notes', propertyId]);
+
+      // Optimistically update the note
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) =>
+        old.map(note => note.note_id === noteId ? { ...note, ...updates, updated_at: new Date().toISOString() } : note)
+      );
+
+      return { previousNotes };
+    },
+    onSuccess: (data) => {
+      // Update with real server data
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) =>
+        old.map(note => note.note_id === data.note_id ? data : note)
+      );
       toast({
         title: "Success",
         description: "Note updated successfully",
       });
       resetForm();
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousNotes) {
+        queryClient.setQueryData(['property-notes', propertyId], context.previousNotes);
+      }
       toast({
         title: "Error",
         description: error.message || "Failed to update note",
@@ -179,17 +232,27 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return noteId;
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['property-notes', propertyId],
-        refetchType: 'active',
-      });
+    onMutate: async (noteId) => {
+      await queryClient.cancelQueries({ queryKey: ['property-notes', propertyId] });
+      const previousNotes = queryClient.getQueryData<Note[]>(['property-notes', propertyId]);
+
+      // Optimistically remove the note
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) =>
+        old.filter(note => note.note_id !== noteId)
+      );
+
+      return { previousNotes };
+    },
+    onSuccess: () => {
       toast({
         title: "Success",
         description: "Note deleted successfully",
       });
     },
-    onError: (error) => {
+    onError: (error, _noteId, context) => {
+      if (context?.previousNotes) {
+        queryClient.setQueryData(['property-notes', propertyId], context.previousNotes);
+      }
       toast({
         title: "Error",
         description: error.message || "Failed to delete note",
@@ -210,17 +273,27 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({
-        queryKey: ['property-notes', propertyId],
-        refetchType: 'active',
-      });
+    onMutate: async ({ noteId, isPinned }) => {
+      await queryClient.cancelQueries({ queryKey: ['property-notes', propertyId] });
+      const previousNotes = queryClient.getQueryData<Note[]>(['property-notes', propertyId]);
+
+      // Optimistically toggle pin state
+      queryClient.setQueryData<Note[]>(['property-notes', propertyId], (old = []) =>
+        old.map(note => note.note_id === noteId ? { ...note, is_pinned: !isPinned } : note)
+      );
+
+      return { previousNotes, newPinnedState: !isPinned };
+    },
+    onSuccess: (_data, _variables, context) => {
       toast({
         title: "Success",
-        description: `Note ${data.is_pinned ? 'pinned' : 'unpinned'} successfully`,
+        description: `Note ${context?.newPinnedState ? 'pinned' : 'unpinned'} successfully`,
       });
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousNotes) {
+        queryClient.setQueryData(['property-notes', propertyId], context.previousNotes);
+      }
       toast({
         title: "Error",
         description: error.message || "Failed to update note",
@@ -400,31 +473,57 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
     }
   };
 
-  const filteredNotes = notes.filter(note => {
-    const matchesSearch = (note.note_title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-                         note.note_content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterType === 'all' || note.note_type === filterType;
-    return matchesSearch && matchesFilter;
-  });
+  // Memoize filtered notes to avoid recalculation on every render
+  const allFilteredNotes = useMemo(() => {
+    return notes.filter(note => {
+      const matchesSearch = (note.note_title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                           note.note_content.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFilter = filterType === 'all' || note.note_type === filterType;
+      return matchesSearch && matchesFilter;
+    });
+  }, [notes, searchQuery, filterType]);
 
-  const pinnedNotes = filteredNotes.filter(note => note.is_pinned);
-  const regularNotes = filteredNotes.filter(note => !note.is_pinned);
+  // Apply display limit for pagination
+  const filteredNotes = useMemo(() => {
+    return allFilteredNotes.slice(0, displayLimit);
+  }, [allFilteredNotes, displayLimit]);
 
-  const getStatistics = () => {
-    const totalNotes = notes.length;
-    const pinnedCount = notes.filter(note => note.is_pinned).length;
-    const importantCount = notes.filter(note => note.note_type === 'important').length;
-    const recentCount = notes.filter(note => {
-      const noteDate = new Date(note.created_at);
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return noteDate > weekAgo;
-    }).length;
+  const hasMoreNotes = allFilteredNotes.length > displayLimit;
+  const remainingNotesCount = allFilteredNotes.length - displayLimit;
 
-    return { totalNotes, pinnedCount, importantCount, recentCount };
-  };
+  const loadMoreNotes = useCallback(() => {
+    setDisplayLimit(prev => prev + NOTES_PER_PAGE);
+  }, []);
 
-  const { totalNotes, pinnedCount, importantCount, recentCount } = getStatistics();
+  // Reset display limit when filters change
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    setDisplayLimit(NOTES_PER_PAGE);
+  }, []);
+
+  const handleFilterChange = useCallback((value: string) => {
+    setFilterType(value);
+    setDisplayLimit(NOTES_PER_PAGE);
+  }, []);
+
+  // Memoize pinned and regular notes separation
+  const { pinnedNotes, regularNotes } = useMemo(() => ({
+    pinnedNotes: filteredNotes.filter(note => note.is_pinned),
+    regularNotes: filteredNotes.filter(note => !note.is_pinned),
+  }), [filteredNotes]);
+
+  // Memoize statistics calculation
+  const { totalNotes, pinnedCount, importantCount, recentCount } = useMemo(() => {
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    return {
+      totalNotes: notes.length,
+      pinnedCount: notes.filter(note => note.is_pinned).length,
+      importantCount: notes.filter(note => note.note_type === 'important').length,
+      recentCount: notes.filter(note => new Date(note.created_at) > weekAgo).length,
+    };
+  }, [notes]);
 
   if (isLoading) {
     return (
@@ -563,13 +662,13 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
               <Input
                 placeholder="Search notes..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
               />
             </div>
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Select value={filterType} onValueChange={setFilterType}>
+              <Select value={filterType} onValueChange={handleFilterChange}>
                 <SelectTrigger className="w-48 pl-10">
                   <SelectValue />
                 </SelectTrigger>
@@ -821,7 +920,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
                               </Badge>
                             </div>
                             <p className="text-sm text-gray-700 mb-3 whitespace-pre-wrap">
-                              {note.note_content}
+                              {sanitizeText(note.note_content)}
                             </p>
                             {/* Attachments Display */}
                             {note.attachments && note.attachments.length > 0 && (
@@ -929,7 +1028,7 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
                               </Badge>
                             </div>
                             <p className="text-sm text-gray-700 mb-3 whitespace-pre-wrap">
-                              {note.note_content}
+                              {sanitizeText(note.note_content)}
                             </p>
                             {/* Attachments Display */}
                             {note.attachments && note.attachments.length > 0 && (
@@ -1010,6 +1109,26 @@ export function NotesTabOptimized({ propertyId }: NotesTabOptimizedProps) {
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Load More Button */}
+          {hasMoreNotes && (
+            <div className="mt-6 text-center">
+              <Button
+                variant="outline"
+                onClick={loadMoreNotes}
+                className="min-w-[200px]"
+              >
+                Load More ({remainingNotesCount} remaining)
+              </Button>
+            </div>
+          )}
+
+          {/* Notes count indicator */}
+          {filteredNotes.length > 0 && (
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              Showing {filteredNotes.length} of {allFilteredNotes.length} notes
             </div>
           )}
         </CardContent>

@@ -203,7 +203,12 @@ async function cacheFirst(request, cacheName, maxAge) {
     if (networkResponse.ok) {
       // Clone the response because it can only be consumed once
       const responseClone = networkResponse.clone();
-      cache.put(request, responseClone);
+      // Use try-catch for cache.put to handle network errors gracefully
+      try {
+        await cache.put(request, responseClone);
+      } catch (cacheError) {
+        console.warn('Failed to cache response:', cacheError.message);
+      }
     }
 
     return networkResponse;
@@ -231,7 +236,12 @@ async function networkFirst(request, cacheName, maxAge) {
     if (networkResponse.ok) {
       const cache = await caches.open(cacheName);
       const responseClone = networkResponse.clone();
-      cache.put(request, responseClone);
+      // Use try-catch for cache.put to handle network errors gracefully
+      try {
+        await cache.put(request, responseClone);
+      } catch (cacheError) {
+        console.warn('Failed to cache response:', cacheError.message);
+      }
     }
 
     return networkResponse;
@@ -256,9 +266,13 @@ async function staleWhileRevalidate(request, cacheName, maxAge) {
 
   // Always try to update cache in background
   const networkPromise = fetch(request)
-    .then((networkResponse) => {
+    .then(async (networkResponse) => {
       if (networkResponse.ok) {
-        cache.put(request, networkResponse.clone());
+        try {
+          await cache.put(request, networkResponse.clone());
+        } catch (cacheError) {
+          console.warn('Failed to cache response:', cacheError.message);
+        }
       }
       return networkResponse;
     })
@@ -482,8 +496,17 @@ self.addEventListener('message', (event) => {
 // Helper functions
 async function cacheUrls(urls) {
   const cache = await caches.open(DYNAMIC_CACHE);
-  await cache.addAll(urls);
-  console.log('📦 Cached URLs:', urls.length);
+  // Cache URLs individually to avoid failure if any single URL fails
+  const results = await Promise.allSettled(
+    urls.map(url =>
+      cache.add(url).catch(err => {
+        console.warn(`Failed to cache ${url}:`, err.message);
+        return null;
+      })
+    )
+  );
+  const successCount = results.filter(r => r.status === 'fulfilled' && r.value !== null).length;
+  console.log(`📦 Cached ${successCount}/${urls.length} URLs`);
 }
 
 async function clearAllCaches() {

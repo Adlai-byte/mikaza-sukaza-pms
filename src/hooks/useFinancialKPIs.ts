@@ -191,7 +191,7 @@ const fetchFinancialKPIs = async (): Promise<FinancialKPIs> => {
 };
 
 export function useFinancialKPIs() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['financial-kpis'],
     queryFn: fetchFinancialKPIs,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -201,6 +201,8 @@ export function useFinancialKPIs() {
   return {
     ...data,
     isLoading,
+    isFetching,
     error,
+    refetch,
   };
 }

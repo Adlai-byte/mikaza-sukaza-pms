@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,11 +11,13 @@ import {
   AlertTriangle,
   Flag,
   CheckCircle2,
+  GripVertical,
 } from 'lucide-react';
 import { Task } from '@/lib/schemas';
 import { format, parseISO, isPast, isToday } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useTranslation } from 'react-i18next';
 
 interface TasksKanbanProps {
   tasks: Task[];
@@ -23,10 +25,51 @@ interface TasksKanbanProps {
   onStatusChange?: (taskId: string, status: string) => void;
 }
 
+type TaskStatus = 'pending' | 'in_progress' | 'completed';
+
 export function TasksKanban({ tasks, onEdit, onStatusChange }: TasksKanbanProps) {
+  const { t } = useTranslation();
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
+
   const pendingTasks = tasks.filter(t => t.status === 'pending');
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress');
   const completedTasks = tasks.filter(t => t.status === 'completed');
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, task: Task) => {
+    setDraggedTask(task);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', task.task_id || '');
+  };
+
+  const handleDragOver = (e: React.DragEvent, status: TaskStatus) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColumn(status);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Only clear if leaving the column, not entering a child element
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+      setDragOverColumn(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, status: TaskStatus) => {
+    e.preventDefault();
+    setDragOverColumn(null);
+    if (draggedTask && draggedTask.status !== status && onStatusChange && draggedTask.task_id) {
+      onStatusChange(draggedTask.task_id, status);
+    }
+    setDraggedTask(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTask(null);
+    setDragOverColumn(null);
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -78,14 +121,23 @@ export function TasksKanban({ tasks, onEdit, onStatusChange }: TasksKanbanProps)
   const TaskCard = ({ task }: { task: Task }) => {
     const overdue = isOverdue(task);
     const dueToday = isDueToday(task);
+    const isDragging = draggedTask?.task_id === task.task_id;
 
     return (
-      <Card className={`mb-3 cursor-pointer hover:shadow-md transition-shadow ${
-        overdue ? 'border-l-4 border-l-red-500' : ''
-      }`}>
+      <Card
+        draggable
+        onDragStart={(e) => handleDragStart(e, task)}
+        onDragEnd={handleDragEnd}
+        className={`mb-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 ${
+          overdue ? 'border-l-4 border-l-red-500' : ''
+        } ${isDragging ? 'opacity-50 scale-95 ring-2 ring-primary' : 'opacity-100'}`}
+      >
         <CardContent className="p-4">
-          {/* Priority indicator */}
-          <div className={`w-full h-1 rounded mb-3 ${getPriorityColor(task.priority)}`} />
+          {/* Drag handle indicator */}
+          <div className="flex items-center justify-between mb-2">
+            <GripVertical className="h-4 w-4 text-muted-foreground/50" />
+            <div className={`flex-1 h-1 rounded ml-2 ${getPriorityColor(task.priority)}`} />
+          </div>
 
           {/* Title */}
           <h4 className="font-medium mb-2 flex items-center justify-between">
@@ -171,7 +223,7 @@ export function TasksKanban({ tasks, onEdit, onStatusChange }: TasksKanbanProps)
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <span className="text-xs text-muted-foreground">Unassigned</span>
+              <span className="text-xs text-muted-foreground">{t('common.unassigned', 'Unassigned')}</span>
             )}
 
             {/* Quick actions */}
@@ -190,7 +242,7 @@ export function TasksKanban({ tasks, onEdit, onStatusChange }: TasksKanbanProps)
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Start Task</p>
+                      <p>{t('common.startTask', 'Start Task')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -209,7 +261,7 @@ export function TasksKanban({ tasks, onEdit, onStatusChange }: TasksKanbanProps)
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Mark Complete</p>
+                      <p>{t('common.markComplete', 'Mark Complete')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -221,49 +273,87 @@ export function TasksKanban({ tasks, onEdit, onStatusChange }: TasksKanbanProps)
     );
   };
 
-  const Column = ({ title, tasks, count, color }: { title: string; tasks: Task[]; count: number; color: string }) => (
-    <div className="flex-1 min-w-[300px]">
-      <Card className={`h-full ${color}`}>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between text-lg">
-            <span>{title}</span>
-            <Badge variant="secondary" className="ml-2">
-              {count}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
-          {tasks.length === 0 ? (
-            <div className="text-center text-muted-foreground text-sm py-8">
-              No tasks
-            </div>
-          ) : (
-            tasks.map(task => <TaskCard key={task.task_id} task={task} />)
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const Column = ({
+    title,
+    tasks,
+    count,
+    color,
+    status
+  }: {
+    title: string;
+    tasks: Task[];
+    count: number;
+    color: string;
+    status: TaskStatus;
+  }) => {
+    const isDropTarget = dragOverColumn === status;
+    const canDrop = draggedTask && draggedTask.status !== status;
+
+    return (
+      <div
+        className="flex-1 min-w-[300px]"
+        onDragOver={(e) => handleDragOver(e, status)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, status)}
+      >
+        <Card className={`h-full transition-all duration-200 ${color} ${
+          isDropTarget && canDrop
+            ? 'ring-2 ring-primary ring-offset-2 shadow-lg scale-[1.02]'
+            : ''
+        } ${isDropTarget && !canDrop ? 'opacity-50' : ''}`}>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between text-lg">
+              <span>{title}</span>
+              <Badge variant="secondary" className="ml-2">
+                {count}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
+            {tasks.length === 0 ? (
+              <div className={`text-center text-muted-foreground text-sm py-8 border-2 border-dashed rounded-lg ${
+                isDropTarget && canDrop ? 'border-primary bg-primary/5' : 'border-transparent'
+              }`}>
+                {isDropTarget && canDrop ? t('todos.dropHere', 'Drop here') : t('todos.noTasks', 'No tasks')}
+              </div>
+            ) : (
+              <>
+                {tasks.map(task => <TaskCard key={task.task_id} task={task} />)}
+                {isDropTarget && canDrop && (
+                  <div className="text-center text-primary text-sm py-4 border-2 border-dashed border-primary rounded-lg bg-primary/5">
+                    {t('todos.dropHere', 'Drop here')}
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <Column
-        title="Pending"
+        title={t('todos.pending', 'Pending')}
         tasks={pendingTasks}
         count={pendingTasks.length}
         color="bg-yellow-50/50"
+        status="pending"
       />
       <Column
-        title="In Progress"
+        title={t('common.inProgress', 'In Progress')}
         tasks={inProgressTasks}
         count={inProgressTasks.length}
         color="bg-blue-50/50"
+        status="in_progress"
       />
       <Column
-        title="Completed"
+        title={t('todos.completed', 'Completed')}
         tasks={completedTasks}
         count={completedTasks.length}
         color="bg-green-50/50"
+        status="completed"
       />
     </div>
   );

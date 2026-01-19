@@ -36,7 +36,7 @@ export default function MessageTemplates() {
         icon={Mail}
         title={t('messageTemplates.title')}
         subtitle={t('messageTemplates.subtitle')}
-        action={
+        actions={
           <div className="flex gap-2 self-start sm:self-auto">
             <Button
               onClick={() => refetch()}
@@ -66,34 +66,34 @@ export default function MessageTemplates() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-violet-700">{t('messageTemplates.stats.totalTemplates')}</p>
-                <h3 className="text-3xl font-bold text-violet-900 mt-1">
-                  {templates.length}
-                </h3>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-violet-500 rounded-lg flex items-center justify-center">
-                <MessageSquare className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('messageTemplates.stats.totalTemplates')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{templates.length}</h3>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-fuchsia-50 to-fuchsia-100">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-fuchsia-700">{t('messageTemplates.stats.templateTypes')}</p>
-                <h3 className="text-3xl font-bold text-fuchsia-900 mt-1">
-                  {new Set(templates.flatMap(d => d.tags || [])).size}
-                </h3>
-                <p className="text-xs text-fuchsia-600 mt-1">{t('messageTemplates.stats.categories')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Mail className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-fuchsia-500 rounded-lg flex items-center justify-center">
-                <Mail className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('messageTemplates.stats.templateTypes')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{new Set(templates.flatMap(d => d.tags || [])).size}</h3>
+                  <span className="text-xs text-muted-foreground">{t('messageTemplates.stats.categories')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -120,13 +120,24 @@ export default function MessageTemplates() {
                 {t('messageTemplates.noTemplatesDescription')}
               </p>
               {canManage && (
-                <Button
-                  className="bg-gradient-primary hover:bg-gradient-secondary"
-                  onClick={() => setUploadDialogOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t('messageTemplates.uploadTemplate')}
-                </Button>
+                <>
+                  <Button
+                    className="bg-gradient-primary hover:bg-gradient-secondary mb-6"
+                    onClick={() => setUploadDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t('messageTemplates.uploadTemplate')}
+                  </Button>
+                  <div className="bg-muted/50 rounded-lg p-4 max-w-lg mx-auto text-left">
+                    <h4 className="font-medium mb-2 text-sm">How Message Templates Work:</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1.5">
+                      <li>1. Upload document templates (Word, PDF, etc.) for common communications</li>
+                      <li>2. Add <strong>tags</strong> to categorize templates (e.g., "Welcome", "Check-out", "Maintenance")</li>
+                      <li>3. Templates can be downloaded and customized before sending to guests</li>
+                      <li>4. Use templates from the <strong>Messages</strong> page when composing new messages</li>
+                    </ul>
+                  </div>
+                </>
               )}
             </div>
           ) : (

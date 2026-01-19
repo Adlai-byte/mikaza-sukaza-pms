@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronRight, ChevronDown, User, Folder, FolderOpen, File, Download, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronDown, User, Folder, FolderOpen, File, Download, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DocumentSummary } from "@/lib/schemas";
@@ -22,6 +22,7 @@ interface User {
 interface EmployeeDocumentTreeProps {
   documents: DocumentSummary[];
   users: User[];
+  onViewDocument: (document: DocumentSummary) => void;
   onDownloadDocument: (document: DocumentSummary) => void;
   onDeleteDocument?: (documentId: string) => void;
   canDelete?: boolean;
@@ -47,6 +48,7 @@ const formatFileSize = (bytes: number): string => {
 export function EmployeeDocumentTree({
   documents,
   users,
+  onViewDocument,
   onDownloadDocument,
   onDeleteDocument,
   canDelete = false,
@@ -223,15 +225,20 @@ export function EmployeeDocumentTree({
         <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="truncate text-sm">{node.name}</span>
             {doc.expiring_soon && (
               <Badge variant="destructive" className="text-xs">
                 Expiring Soon
               </Badge>
             )}
+            {doc.property_name && (
+              <Badge variant="outline" className="text-xs">
+                {doc.property_name}
+              </Badge>
+            )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
             <span>{formatFileSize(doc.file_size)}</span>
             <span>•</span>
             <span>
@@ -243,12 +250,34 @@ export function EmployeeDocumentTree({
                 <span>by {doc.uploaded_by_name}</span>
               </>
             )}
+            {doc.tags && doc.tags.length > 0 && (
+              <>
+                <span>•</span>
+                <span className="text-primary">{doc.tags.join(', ')}</span>
+              </>
+            )}
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => onViewDocument(doc)}
+                >
+                  <Eye className="h-4 w-4 text-green-600" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View</p>
+              </TooltipContent>
+            </Tooltip>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -302,35 +331,35 @@ export function EmployeeDocumentTree({
 
   return (
     <div className="space-y-4">
-      {/* Tree Controls */}
-      <div className="flex items-center justify-between pb-2 border-b">
-        <div className="text-sm text-muted-foreground">
-          {tree.length} {tree.length === 1 ? 'folder' : 'folders'} • {documents.length} {documents.length === 1 ? 'document' : 'documents'}
+        {/* Tree Controls */}
+        <div className="flex items-center justify-between pb-2 border-b">
+          <div className="text-sm text-muted-foreground">
+            {tree.length} {tree.length === 1 ? 'folder' : 'folders'} • {documents.length} {documents.length === 1 ? 'document' : 'documents'}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={expandAll}
+              className="h-8 text-xs"
+            >
+              Expand All
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={collapseAll}
+              className="h-8 text-xs"
+            >
+              Collapse All
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={expandAll}
-            className="h-8 text-xs"
-          >
-            Expand All
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={collapseAll}
-            className="h-8 text-xs"
-          >
-            Collapse All
-          </Button>
-        </div>
-      </div>
 
-      {/* Tree */}
-      <div className="space-y-1">
-        {tree.map(node => renderNode(node))}
+        {/* Tree */}
+        <div className="space-y-1">
+          {tree.map(node => renderNode(node))}
+        </div>
       </div>
-    </div>
   );
 }

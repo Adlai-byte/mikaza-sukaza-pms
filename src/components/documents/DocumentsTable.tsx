@@ -28,7 +28,10 @@ import {
   AlertTriangle,
   FileCheck,
   Archive,
+  Eye,
+  Calendar,
 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { DocumentSummary, CONTRACT_TYPES } from "@/lib/schemas";
 import { useDocumentDownload } from "@/hooks/useDocuments";
 import { format } from "date-fns";
@@ -84,6 +87,13 @@ export function DocumentsTable({
 }: DocumentsTableProps) {
   const { downloadDocument } = useDocumentDownload();
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Open document directly in new tab
+  const openDocumentInNewTab = (doc: DocumentSummary) => {
+    if (doc.file_url) {
+      window.open(doc.file_url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   // Filter documents by search
   const filteredDocuments = documents.filter((doc) =>
@@ -143,8 +153,8 @@ export function DocumentsTable({
         </p>
       )}
 
-      {/* Table */}
-      <div className="rounded-md border">
+      {/* Desktop Table View */}
+      <div className="hidden md:block rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -265,6 +275,11 @@ export function DocumentsTable({
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
 
+                        <DropdownMenuItem onClick={() => openDocumentInNewTab(document)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View
+                        </DropdownMenuItem>
+
                         <DropdownMenuItem onClick={() => downloadDocument(document)}>
                           <Download className="mr-2 h-4 w-4" />
                           Download
@@ -299,6 +314,138 @@ export function DocumentsTable({
         </Table>
       </div>
 
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {filteredDocuments.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No documents match your search
+          </div>
+        ) : (
+          filteredDocuments.map((document) => (
+            <Card key={document.document_id} className="border-l-4 border-l-primary">
+              <CardContent className="p-4 space-y-3">
+                {/* Header: Document name and status */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="font-medium truncate">{document.document_name}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      {document.file_name}
+                    </p>
+                    {document.description && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {document.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1 items-end shrink-0">
+                    {getStatusBadge(document.status)}
+                    {document.expiring_soon && (
+                      <Badge variant="destructive" className="text-xs">
+                        Expiring Soon
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Metadata grid */}
+                <div className="grid grid-cols-2 gap-3 py-2 border-t border-b">
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Property</div>
+                    <span className="text-sm font-medium">
+                      {document.property_name || "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Version</div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-medium">v{document.version_number}</span>
+                      {document.is_current_version && (
+                        <Badge variant="outline" className="text-xs">Current</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Size</div>
+                    <span className="text-sm">{formatFileSize(document.file_size)}</span>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Uploaded</div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm">
+                        {document.created_at
+                          ? format(new Date(document.created_at), "MMM d, yyyy")
+                          : "—"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {showContractType && document.contract_type && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Contract Type:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {CONTRACT_TYPES[document.contract_type as keyof typeof CONTRACT_TYPES]}
+                    </Badge>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2 border-t pt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => openDocumentInNewTab(document)}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    View
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => downloadDocument(document)}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </Button>
+                  {(canShare || canDelete) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {canShare && onShare && (
+                          <DropdownMenuItem onClick={() => onShare(document)}>
+                            <Share2 className="mr-2 h-4 w-4" />
+                            Share
+                          </DropdownMenuItem>
+                        )}
+                        {canDelete && onDelete && (
+                          <DropdownMenuItem
+                            onClick={() => onDelete(document.document_id)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
       {/* Footer info */}
       {filteredDocuments.length > 0 && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -312,6 +459,7 @@ export function DocumentsTable({
           )}
         </div>
       )}
+
     </div>
   );
 }

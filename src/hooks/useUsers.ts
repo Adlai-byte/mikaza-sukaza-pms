@@ -15,9 +15,26 @@ export function useUsers() {
     try {
       setLoading(true);
       console.log('👥 Fetching users...');
+      // Select only commonly needed fields to reduce payload size (~350KB → ~50KB)
+      // This prevents JSON parsing errors from large payloads or malformed data in unused fields
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select(`
+          user_id,
+          email,
+          first_name,
+          last_name,
+          user_type,
+          is_active,
+          photo_url,
+          company,
+          cellphone_primary,
+          cellphone_usa,
+          whatsapp,
+          created_at,
+          updated_at,
+          account_status
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {

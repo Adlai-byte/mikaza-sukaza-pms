@@ -19,6 +19,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Collapsible,
@@ -40,8 +50,13 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
+  Home,
+  AlertTriangle,
 } from 'lucide-react';
-import { Booking, BookingInsert, Guest } from '@/lib/schemas';
+import { Booking, BookingInsert, Guest, BookingJobConfig, defaultBookingJobConfigs, CustomBookingTask, Task } from '@/lib/schemas';
+import { CreateBookingParams } from '@/hooks/useBookings';
+import { useBookingTasks } from '@/hooks/useBookingTasks';
+import { BookingJobsSection } from '@/components/booking/BookingJobsSection';
 import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay, addMonths } from 'date-fns';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useBillTemplates } from '@/hooks/useBillTemplates';
@@ -50,14 +65,15 @@ import { useGuests } from '@/hooks/useGuests';
 import { usePropertyBookings } from '@/hooks/useBookings';
 import { BookingConflictAlert } from '@/components/BookingConflictAlert';
 import { GuestDialog } from '@/components/GuestDialog';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, ListTodo } from 'lucide-react';
 
 interface BookingDialogEnhancedProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: BookingInsert) => void;
+  onSubmit: (data: CreateBookingParams) => void;
   isSubmitting?: boolean;
   propertyId?: string;
+  unitId?: string | null; // Pre-select unit when clicking from unit row in calendar
   booking?: Booking | null;
   defaultCheckIn?: string;
   defaultCheckOut?: string;
@@ -69,16 +85,23 @@ export function BookingDialogEnhanced({
   onSubmit,
   isSubmitting = false,
   propertyId,
+  unitId,
   booking,
   defaultCheckIn,
   defaultCheckOut,
 }: BookingDialogEnhancedProps) {
   const isEditing = !!booking;
   const { properties, loading: loadingProperties } = usePropertiesOptimized();
-  const { data: guests, isLoading: loadingGuests } = useGuests();
+  const { data: guests, isLoading: loadingGuests, refetch: refetchGuests } = useGuests();
+
+  // Fetch existing tasks for the booking (when editing)
+  const { data: existingTasks = [], isLoading: loadingTasks } = useBookingTasks(
+    isEditing && booking?.booking_id ? booking.booking_id : null
+  );
 
   const [formData, setFormData] = useState<BookingInsert>({
     property_id: propertyId || booking?.property_id || '',
+    unit_id: booking ? booking.unit_id : (unitId ?? null), // Use booking's unit when editing, unitId prop when creating
     guest_id: booking?.guest_id || null,
     guest_name: booking?.guest_name || '',
     guest_email: booking?.guest_email || '',
@@ -103,6 +126,16 @@ export function BookingDialogEnhanced({
   const [softConflictAcknowledged, setSoftConflictAcknowledged] = useState(false);
   const [showCreateGuestDialog, setShowCreateGuestDialog] = useState(false);
   const [showAvailabilityCalendar, setShowAvailabilityCalendar] = useState(false);
+
+  // Job configs for auto-generating tasks (only for new bookings)
+  const [jobConfigs, setJobConfigs] = useState<BookingJobConfig[]>([...defaultBookingJobConfigs]);
+  const [autoGenerateJobs, setAutoGenerateJobs] = useState(true);
+  // Custom tasks (always available, independent of auto-generate)
+  const [customTasks, setCustomTasks] = useState<CustomBookingTask[]>([]);
+
+  // Active booking warning state for job generation
+  const [showActiveBookingWarning, setShowActiveBookingWarning] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<CreateBookingParams | null>(null);
 
   // Fetch property bookings for calendar view
   const { bookings: propertyBookings, loading: loadingPropertyBookings } = usePropertyBookings(
@@ -154,11 +187,12 @@ export function BookingDialogEnhanced({
     formData.property_id || undefined
   );
 
-  // Check for booking conflicts
+  // Check for booking conflicts (unit-aware)
   const { conflictStatus, isChecking: isCheckingConflicts } = useBookingConflicts(
     formData.property_id,
     formData.check_in_date,
     formData.check_out_date,
+    formData.unit_id,  // Unit-aware conflict checking
     booking?.booking_id // Exclude current booking when editing
   );
 
@@ -176,6 +210,7 @@ export function BookingDialogEnhanced({
     if (open) {
       setFormData({
         property_id: propertyId || booking?.property_id || '',
+        unit_id: booking ? booking.unit_id : (unitId ?? null), // Use booking's unit when editing, unitId prop when creating
         guest_id: booking?.guest_id || null,
         guest_name: booking?.guest_name || '',
         guest_email: booking?.guest_email || '',
@@ -195,8 +230,10 @@ export function BookingDialogEnhanced({
       setSelectedTemplateId(booking?.bill_template_id || null);
       setSoftConflictAcknowledged(false);
       setErrors({});
+      // Reset custom tasks when opening dialog
+      setCustomTasks([]);
     }
-  }, [open, booking, propertyId, defaultCheckIn, defaultCheckOut, isEditing]);
+  }, [open, booking, propertyId, unitId, defaultCheckIn, defaultCheckOut, isEditing]);
 
   // Handle guest selection
   const handleGuestSelect = (guestId: string) => {
@@ -275,29 +312,75 @@ export function BookingDialogEnhanced({
       newErrors.number_of_guests = 'At least 1 guest required';
     }
 
+    console.log('🔍 validateForm result:', { newErrors, isValid: Object.keys(newErrors).length === 0 });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('📝 handleSubmit called', { formData, errors, conflictStatus, softConflictAcknowledged });
 
     if (!validateForm()) {
+      console.log('❌ Form validation failed', errors);
       return;
     }
 
     // Check for booking conflicts
     if (conflictStatus.type === 'hard') {
+      console.log('❌ Hard conflict detected, cannot proceed');
       // Cannot proceed with hard conflicts
       return;
     }
 
     if (conflictStatus.type === 'soft' && !softConflictAcknowledged) {
+      console.log('⚠️ Soft conflict not acknowledged');
       // User must acknowledge soft conflicts before proceeding
       return;
     }
 
-    onSubmit(formData);
+    // Include job configs when auto-generating jobs (for both create and edit)
+    // Also include custom tasks (always, as they're independent of auto-generate toggle)
+    const validCustomTasks = customTasks.filter(t => t.title.trim() !== '');
+    const submitData: CreateBookingParams = {
+      ...formData,
+      jobConfigs: autoGenerateJobs ? jobConfigs.filter(j => j.enabled) : undefined,
+      customTasks: validCustomTasks.length > 0 ? validCustomTasks : undefined,
+    };
+
+    // Check for active bookings when auto-generating jobs (except check_in/check_out)
+    if (autoGenerateJobs) {
+      const enabledJobTypes = jobConfigs.filter(j => j.enabled).map(j => j.jobType);
+      const skipWarningTypes = ['check_in', 'check_out'];
+      const hasNonSkipJobs = enabledJobTypes.some(t => !skipWarningTypes.includes(t));
+
+      if (hasNonSkipJobs && propertyBookings) {
+        const activeBookings = propertyBookings.filter(b =>
+          ['confirmed', 'checked_in'].includes(b.booking_status) &&
+          b.booking_id !== booking?.booking_id
+        );
+
+        if (activeBookings.length > 0) {
+          console.log('⚠️ Active bookings found, showing warning', activeBookings);
+          setPendingSubmitData(submitData);
+          setShowActiveBookingWarning(true);
+          return;
+        }
+      }
+    }
+
+    console.log('✅ Submitting booking data:', submitData);
+    onSubmit(submitData);
+  };
+
+  // Handler for proceeding with submission despite active booking warning
+  const handleProceedWithActiveBooking = () => {
+    if (pendingSubmitData) {
+      console.log('✅ Proceeding with booking despite active bookings');
+      onSubmit(pendingSubmitData);
+      setShowActiveBookingWarning(false);
+      setPendingSubmitData(null);
+    }
   };
 
   // Handler for acknowledging soft conflicts
@@ -316,7 +399,12 @@ export function BookingDialogEnhanced({
   };
 
   const handleChange = (field: keyof BookingInsert, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Reset unit_id when property changes (new property may have different units)
+    if (field === 'property_id') {
+      setFormData(prev => ({ ...prev, [field]: value, unit_id: null }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
     // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -398,6 +486,46 @@ export function BookingDialogEnhanced({
                     </CardContent>
                   </Card>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Unit Selection - Only show if property has units */}
+          {formData.property_id && selectedProperty?.units && selectedProperty.units.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Home className="h-5 w-5 text-primary" />
+                Select Unit
+              </h3>
+              <div className="space-y-2">
+                <Label htmlFor="unit_id">
+                  Unit
+                </Label>
+                <Select
+                  value={formData.unit_id || "entire_property"}
+                  onValueChange={(value) => handleChange('unit_id', value === "entire_property" ? null : value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a unit or entire property..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="entire_property">
+                      Entire Property (All {selectedProperty.units.length} Units)
+                    </SelectItem>
+                    {selectedProperty.units.map((unit: any) => (
+                      <SelectItem key={unit.unit_id} value={unit.unit_id}>
+                        {unit.property_name || `Unit ${unit.unit_id?.slice(0, 8)}`}
+                        {unit.license_number && ` - ${unit.license_number}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {formData.unit_id
+                    ? "Booking this specific unit only"
+                    : "Booking the entire property will block all units"
+                  }
+                </p>
               </div>
             </div>
           )}
@@ -857,7 +985,27 @@ export function BookingDialogEnhanced({
             </div>
           </div>
 
+          {/* Auto-Generate Jobs Section - Available for both new and existing bookings */}
+          <BookingJobsSection
+            jobConfigs={jobConfigs}
+            onJobConfigsChange={setJobConfigs}
+            autoGenerate={autoGenerateJobs}
+            onAutoGenerateChange={setAutoGenerateJobs}
+            checkInDate={formData.check_in_date}
+            checkOutDate={formData.check_out_date}
+            disabled={isSubmitting}
+            customTasks={customTasks}
+            onCustomTasksChange={setCustomTasks}
+            existingTasks={existingTasks}
+            isLoadingTasks={loadingTasks}
+          />
+
           <DialogFooter className="gap-2">
+            {/* Debug info - remove after fixing */}
+            <div className="text-xs text-gray-400 mr-auto">
+              {conflictStatus.type !== 'none' && `Conflict: ${conflictStatus.type}`}
+              {isSubmitting && ' | Submitting'}
+            </div>
             <Button
               type="button"
               variant="outline"
@@ -875,6 +1023,7 @@ export function BookingDialogEnhanced({
                 (conflictStatus.type === 'soft' && !softConflictAcknowledged)
               }
               className="bg-primary hover:bg-primary/90"
+              onClick={() => console.log('🔘 Submit button clicked', { isSubmitting, conflictStatus, softConflictAcknowledged })}
             >
               <Save className="mr-2 h-4 w-4" />
               {isSubmitting
@@ -894,7 +1043,95 @@ export function BookingDialogEnhanced({
         open={showCreateGuestDialog}
         onClose={() => setShowCreateGuestDialog(false)}
         guestId={null}
+        onSuccess={async (newGuest) => {
+          // Refetch guests list to ensure new guest appears in dropdown
+          await refetchGuests();
+
+          // Auto-select the newly created guest
+          if (newGuest?.guest_id) {
+            setFormData((prev) => ({
+              ...prev,
+              guest_id: newGuest.guest_id,
+              guest_name: `${newGuest.first_name} ${newGuest.last_name}`,
+              guest_email: newGuest.email || '',
+              guest_phone: newGuest.phone_primary || '',
+            }));
+          }
+        }}
       />
+
+      {/* Active Booking Warning Dialog for Job Generation */}
+      <AlertDialog open={showActiveBookingWarning} onOpenChange={setShowActiveBookingWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Active Booking Warning
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  This property has active bookings (confirmed or checked-in). Creating jobs
+                  for this booking may affect guests currently staying at the property.
+                </p>
+                {propertyBookings && (
+                  <div className="bg-amber-50 dark:bg-amber-950 rounded-md p-3 text-sm">
+                    <p className="font-medium text-amber-800 dark:text-amber-200 mb-2">
+                      Active bookings:
+                    </p>
+                    <ul className="list-disc list-inside text-amber-700 dark:text-amber-300 space-y-1">
+                      {propertyBookings
+                        .filter(b =>
+                          ['confirmed', 'checked_in'].includes(b.booking_status) &&
+                          b.booking_id !== booking?.booking_id
+                        )
+                        .slice(0, 3)
+                        .map(b => (
+                          <li key={b.booking_id}>
+                            {b.guest_name} ({b.booking_status === 'checked_in' ? 'Checked In' : 'Confirmed'})
+                            {b.check_in_date && b.check_out_date && (
+                              <span className="text-xs ml-1">
+                                ({format(parseISO(b.check_in_date), 'MMM d')} - {format(parseISO(b.check_out_date), 'MMM d')})
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                    </ul>
+                    {propertyBookings.filter(b =>
+                      ['confirmed', 'checked_in'].includes(b.booking_status) &&
+                      b.booking_id !== booking?.booking_id
+                    ).length > 3 && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                        And {propertyBookings.filter(b =>
+                          ['confirmed', 'checked_in'].includes(b.booking_status) &&
+                          b.booking_id !== booking?.booking_id
+                        ).length - 3} more...
+                      </p>
+                    )}
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Do you want to proceed with creating this booking and its jobs?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowActiveBookingWarning(false);
+              setPendingSubmitData(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleProceedWithActiveBooking}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              Proceed Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

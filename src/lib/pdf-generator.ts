@@ -3,6 +3,47 @@ import autoTable from 'jspdf-autotable';
 import { Invoice, InvoiceLineItem, AccessAuthorization } from './schemas';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
+import { getLogoForPDF, BRANDING, PDF_COLORS } from './logo-utils';
+
+// Helper to add logo to PDF document
+async function addLogoToPDF(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number = 55,
+  height: number = 18
+): Promise<boolean> {
+  try {
+    const logoBase64 = await getLogoForPDF('black'); // Black logo for light PDF backgrounds
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', x, y, width, height);
+      return true;
+    }
+  } catch (error) {
+    console.warn('Failed to add logo to PDF:', error);
+  }
+  return false;
+}
+
+// Fallback text-based logo
+function addFallbackLogo(doc: jsPDF, x: number, y: number, primaryColor: [number, number, number]): void {
+  doc.setFillColor(...primaryColor);
+  doc.rect(x, y, 40, 10, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(BRANDING.SHORT_NAME, x + 5, y + 7);
+
+  doc.setTextColor(...PDF_COLORS.TEXT);
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text(BRANDING.COMPANY_NAME, x + 45, y + 7);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...PDF_COLORS.TEXT_LIGHT);
+  doc.text(BRANDING.TAGLINE, x + 45, y + 12);
+}
 
 interface InvoiceWithDetails extends Invoice {
   property?: {
@@ -16,7 +57,7 @@ interface InvoiceWithDetails extends Invoice {
  * Generate and download a PDF invoice
  * @param invoice - Invoice data with property and line items
  */
-export function generateInvoicePDF(invoice: InvoiceWithDetails) {
+export async function generateInvoicePDF(invoice: InvoiceWithDetails) {
   const doc = new jsPDF();
 
   // Page dimensions
@@ -25,10 +66,11 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
   const margin = 20;
   let yPos = margin;
 
-  // Colors
-  const primaryColor: [number, number, number] = [34, 139, 34]; // Green
-  const textColor: [number, number, number] = [60, 60, 60];
-  const lightGray: [number, number, number] = [240, 240, 240];
+  // Colors - Violet & Lime Green Theme
+  const primaryColor: [number, number, number] = PDF_COLORS.PRIMARY;
+  const accentColor: [number, number, number] = PDF_COLORS.ACCENT;
+  const textColor: [number, number, number] = PDF_COLORS.TEXT;
+  const lightGray: [number, number, number] = PDF_COLORS.BACKGROUND_LIGHT;
 
   // Helper to format currency
   const formatCurrency = (amount: number) => {
@@ -48,24 +90,11 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
   };
 
   // ===== HEADER =====
-  // Company logo/name
-  doc.setFillColor(...primaryColor);
-  doc.rect(margin, yPos, 40, 10, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('C&C', margin + 5, yPos + 7);
-
-  doc.setTextColor(...textColor);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Casa & Concierge', margin + 45, yPos + 7);
-
-  // Company tagline
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(120, 120, 120);
-  doc.text('Property Management Services', margin + 45, yPos + 12);
+  // Try to add logo image, fallback to text
+  const logoAdded = await addLogoToPDF(doc, margin, yPos, 55, 18);
+  if (!logoAdded) {
+    addFallbackLogo(doc, margin, yPos, primaryColor);
+  }
 
   yPos += 25;
 
@@ -142,26 +171,71 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
 
   yPos += 50;
 
-  // ===== LINE ITEMS TABLE =====
+  // ===== LINE ITEMS TABLE (Grouped by Type) =====
   const lineItems = invoice.line_items || [];
 
-  const tableData = lineItems.map((item) => {
-    const subtotal = (item.quantity || 0) * (item.unit_price || 0);
-    const total = subtotal + (item.tax_amount || 0);
+  // Type display names mapping
+  const typeLabels: Record<string, string> = {
+    accommodation: 'Accommodation',
+    cleaning: 'Cleaning Fee',
+    extras: 'Additional Services',
+    tax: 'Taxes',
+    other: 'Other Charges',
+  };
 
-    return [
-      item.line_number?.toString() || '',
-      item.description || '',
-      item.quantity?.toString() || '0',
-      formatCurrency(item.unit_price || 0),
-      formatCurrency(item.tax_amount || 0),
-      formatCurrency(total),
-    ];
+  // Define display order for types
+  const typeOrder = ['accommodation', 'cleaning', 'extras', 'other', 'tax'];
+
+  // Group items by type and calculate totals
+  const groupedItems: Record<string, { total: number; taxTotal: number }> = {};
+
+  lineItems.forEach((item) => {
+    const itemType = item.item_type || 'other';
+    const qty = item.quantity || 1;
+    const price = item.unit_price || 0;
+    const amount = qty * price;
+    const taxAmount = item.tax_amount || 0;
+
+    if (!groupedItems[itemType]) {
+      groupedItems[itemType] = { total: 0, taxTotal: 0 };
+    }
+    groupedItems[itemType].total += amount;
+    groupedItems[itemType].taxTotal += taxAmount;
+  });
+
+  // Build table data from grouped items
+  const tableData: string[][] = [];
+
+  // Add items in defined order
+  typeOrder.forEach((itemType) => {
+    if (groupedItems[itemType] && groupedItems[itemType].total > 0) {
+      const group = groupedItems[itemType];
+      const label = typeLabels[itemType] || itemType;
+      tableData.push([label, formatCurrency(group.total)]);
+
+      // Add tax row if present
+      if (group.taxTotal > 0) {
+        tableData.push(['  Tax', formatCurrency(group.taxTotal)]);
+      }
+    }
+  });
+
+  // Add any types not in predefined order
+  Object.keys(groupedItems).forEach((itemType) => {
+    if (!typeOrder.includes(itemType) && groupedItems[itemType].total > 0) {
+      const group = groupedItems[itemType];
+      const label = typeLabels[itemType] || itemType;
+      tableData.push([label, formatCurrency(group.total)]);
+
+      if (group.taxTotal > 0) {
+        tableData.push(['  Tax', formatCurrency(group.taxTotal)]);
+      }
+    }
   });
 
   autoTable(doc, {
     startY: yPos,
-    head: [['#', 'Description', 'Qty', 'Unit Price', 'Tax', 'Total']],
+    head: [['Description', 'Amount']],
     body: tableData,
     theme: 'striped',
     headStyles: {
@@ -176,12 +250,8 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
       textColor: textColor,
     },
     columnStyles: {
-      0: { cellWidth: 15, halign: 'center' },
-      1: { cellWidth: 'auto' },
-      2: { cellWidth: 20, halign: 'center' },
-      3: { cellWidth: 30, halign: 'right' },
-      4: { cellWidth: 25, halign: 'right' },
-      5: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
+      0: { cellWidth: 'auto', halign: 'left' },
+      1: { cellWidth: 40, halign: 'right', fontStyle: 'bold' },
     },
     margin: { left: margin, right: margin },
   });
@@ -220,7 +290,7 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails) {
   if (invoice.amount_paid && invoice.amount_paid > 0) {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 128, 0);
+    doc.setTextColor(...accentColor); // Lime green
     doc.text('Amount Paid:', totalsX, totalsStartY + 25);
     doc.text(formatCurrency(invoice.amount_paid), pageWidth - margin, totalsStartY + 25, { align: 'right' });
   }
@@ -336,7 +406,7 @@ export interface OwnerStatementData {
  * Generate and download an Owner Statement PDF
  * @param statement - Owner statement data with revenue and expenses
  */
-export function generateOwnerStatementPDF(statement: OwnerStatementData) {
+export async function generateOwnerStatementPDF(statement: OwnerStatementData) {
   const doc = new jsPDF();
 
   // Page dimensions
@@ -345,12 +415,12 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
   const margin = 20;
   let yPos = margin;
 
-  // Colors
-  const primaryColor: [number, number, number] = [34, 139, 34]; // Green
-  const textColor: [number, number, number] = [60, 60, 60];
-  const lightGray: [number, number, number] = [240, 240, 240];
-  const greenColor: [number, number, number] = [0, 128, 0];
-  const redColor: [number, number, number] = [220, 53, 69];
+  // Colors - Violet & Lime Green Theme
+  const primaryColor: [number, number, number] = PDF_COLORS.PRIMARY;
+  const textColor: [number, number, number] = PDF_COLORS.TEXT;
+  const lightGray: [number, number, number] = PDF_COLORS.BACKGROUND_LIGHT;
+  const greenColor: [number, number, number] = PDF_COLORS.ACCENT;
+  const redColor: [number, number, number] = PDF_COLORS.PRIMARY;
 
   // Helper to format currency
   const formatCurrency = (amount: number) => {
@@ -370,24 +440,11 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
   };
 
   // ===== HEADER =====
-  // Company logo/name
-  doc.setFillColor(...primaryColor);
-  doc.rect(margin, yPos, 40, 10, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('C&C', margin + 5, yPos + 7);
-
-  doc.setTextColor(...textColor);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Casa & Concierge', margin + 45, yPos + 7);
-
-  // Company tagline
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(120, 120, 120);
-  doc.text('Property Management Services', margin + 45, yPos + 12);
+  // Try to add logo image, fallback to text
+  const logoAdded = await addLogoToPDF(doc, margin, yPos, 55, 18);
+  if (!logoAdded) {
+    addFallbackLogo(doc, margin, yPos, primaryColor);
+  }
 
   yPos += 25;
 
@@ -425,44 +482,44 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
 
   yPos += 35;
 
-  // ===== SUMMARY BOXES =====
+  // ===== SUMMARY BOXES - Violet & Lime Green Theme =====
   const boxWidth = (pageWidth - 4 * margin) / 3;
 
-  // Revenue box
-  doc.setFillColor(220, 252, 231); // Light green
+  // Revenue box - Lime green theme
+  doc.setFillColor(236, 252, 203); // Light lime (#ecfccb)
   doc.rect(margin, yPos, boxWidth, 25, 'F');
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(22, 101, 52);
+  doc.setTextColor(63, 98, 18); // Lime-900
   doc.text('Total Revenue', margin + boxWidth / 2, yPos + 8, { align: 'center' });
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...greenColor);
   doc.text(formatCurrency(statement.revenue.total), margin + boxWidth / 2, yPos + 18, { align: 'center' });
 
-  // Expenses box
-  doc.setFillColor(254, 226, 226); // Light red
+  // Expenses box - Violet theme
+  doc.setFillColor(245, 243, 255); // Light violet (#f5f3ff)
   doc.rect(margin + boxWidth + 5, yPos, boxWidth, 25, 'F');
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(153, 27, 27);
+  doc.setTextColor(91, 33, 182); // Violet-800
   doc.text('Total Expenses', margin + boxWidth + 5 + boxWidth / 2, yPos + 8, { align: 'center' });
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...redColor);
+  doc.setTextColor(139, 92, 246); // Violet
   doc.text(formatCurrency(statement.expenses.total), margin + boxWidth + 5 + boxWidth / 2, yPos + 18, { align: 'center' });
 
   // Net Income box
   const isProfit = statement.net_income >= 0;
-  doc.setFillColor(...(isProfit ? [236, 253, 245] : [255, 237, 213])); // Light emerald or orange
+  doc.setFillColor(...(isProfit ? [236, 252, 203] : [254, 226, 226])); // Light lime or light red
   doc.rect(margin + 2 * (boxWidth + 5), yPos, boxWidth, 25, 'F');
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...(isProfit ? [6, 78, 59] : [154, 52, 18]));
+  doc.setTextColor(...(isProfit ? [63, 98, 18] : [153, 27, 27])); // Lime-900 or Red-800
   doc.text('Net Income', margin + 2 * (boxWidth + 5) + boxWidth / 2, yPos + 8, { align: 'center' });
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...(isProfit ? [0, 128, 0] : [234, 88, 12]));
+  doc.setTextColor(...(isProfit ? [132, 204, 22] : [220, 53, 69])); // Lime or Red
   doc.text(
     `${isProfit ? '+' : ''}${formatCurrency(statement.net_income)}`,
     margin + 2 * (boxWidth + 5) + boxWidth / 2,
@@ -510,8 +567,8 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
         textColor: textColor,
       },
       footStyles: {
-        fillColor: [220, 252, 231],
-        textColor: greenColor,
+        fillColor: [236, 252, 203], // Light lime
+        textColor: greenColor, // Lime
         fontSize: 9,
         fontStyle: 'bold',
       },
@@ -570,8 +627,8 @@ export function generateOwnerStatementPDF(statement: OwnerStatementData) {
         textColor: textColor,
       },
       footStyles: {
-        fillColor: [254, 226, 226],
-        textColor: redColor,
+        fillColor: [245, 243, 255], // Light violet
+        textColor: [139, 92, 246], // Violet
         fontSize: 9,
         fontStyle: 'bold',
       },
@@ -730,16 +787,16 @@ export async function generateAccessAuthorizationPDF(authorization: AccessAuthor
   const margin = 20;
   let yPos = margin;
 
-  // Colors
-  const primaryColor: [number, number, number] = [34, 139, 34]; // Green
-  const textColor: [number, number, number] = [60, 60, 60];
-  const lightGray: [number, number, number] = [240, 240, 240];
+  // Colors - Violet & Lime Green Theme
+  const primaryColor: [number, number, number] = PDF_COLORS.PRIMARY;
+  const textColor: [number, number, number] = PDF_COLORS.TEXT;
+  const lightGray: [number, number, number] = PDF_COLORS.BACKGROUND_LIGHT;
   const statusColors: Record<string, [number, number, number]> = {
-    requested: [251, 191, 36],
-    approved: [34, 197, 94],
-    in_progress: [59, 130, 246],
-    completed: [107, 114, 128],
-    cancelled: [239, 68, 68],
+    requested: PDF_COLORS.PRIMARY,
+    approved: PDF_COLORS.ACCENT,
+    in_progress: [124, 58, 237], // Violet-600
+    completed: PDF_COLORS.MUTED,
+    cancelled: PDF_COLORS.ERROR,
     expired: [156, 163, 175],
   };
 
@@ -766,24 +823,11 @@ export async function generateAccessAuthorizationPDF(authorization: AccessAuthor
   };
 
   // ===== HEADER =====
-  // Company logo/name
-  doc.setFillColor(...primaryColor);
-  doc.rect(margin, yPos, 40, 10, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('C&C', margin + 5, yPos + 7);
-
-  doc.setTextColor(...textColor);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Casa & Concierge', margin + 45, yPos + 7);
-
-  // Company tagline
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(120, 120, 120);
-  doc.text('Property Management Services', margin + 45, yPos + 12);
+  // Try to add logo image, fallback to text
+  const logoAdded = await addLogoToPDF(doc, margin, yPos, 55, 18);
+  if (!logoAdded) {
+    addFallbackLogo(doc, margin, yPos, primaryColor);
+  }
 
   yPos += 25;
 
@@ -1125,4 +1169,618 @@ export async function generateAccessAuthorizationPDF(authorization: AccessAuthor
   const dateStr = authorization.access_date.replace(/-/g, '');
   const fileName = `Access_Authorization_${vendorName}_${dateStr}.pdf`;
   doc.save(fileName);
+}
+
+// ===== REPORT PDF GENERATION FUNCTIONS =====
+
+/**
+ * Generic Report PDF Options
+ */
+export interface ReportPDFOptions {
+  title: string;
+  subtitle?: string;
+  dateRange?: { from: string; to: string };
+  filters?: Record<string, string>;
+  headers: string[];
+  data: (string | number | null | undefined)[][];
+  summaryRows?: { label: string; value: string | number }[];
+  columnWidths?: number[];
+}
+
+/**
+ * Generate a generic report PDF
+ */
+export async function generateReportPDF(options: ReportPDFOptions): Promise<void> {
+  const doc = new jsPDF();
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  let yPos = margin;
+
+  const primaryColor: [number, number, number] = PDF_COLORS.PRIMARY;
+  const textColor: [number, number, number] = PDF_COLORS.TEXT;
+  const lightGray: [number, number, number] = PDF_COLORS.BACKGROUND_LIGHT;
+
+  // Helper functions
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  // ===== HEADER =====
+  const logoAdded = await addLogoToPDF(doc, margin, yPos, 55, 18);
+  if (!logoAdded) {
+    addFallbackLogo(doc, margin, yPos, primaryColor);
+  }
+
+  yPos += 25;
+
+  // ===== REPORT TITLE =====
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...primaryColor);
+  doc.text(options.title.toUpperCase(), margin, yPos);
+
+  yPos += 8;
+
+  // Subtitle and date range
+  if (options.subtitle) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...PDF_COLORS.TEXT_LIGHT);
+    doc.text(options.subtitle, margin, yPos);
+    yPos += 5;
+  }
+
+  if (options.dateRange) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...PDF_COLORS.TEXT_LIGHT);
+    doc.text(`Period: ${options.dateRange.from} to ${options.dateRange.to}`, margin, yPos);
+    yPos += 5;
+  }
+
+  yPos += 5;
+
+  // ===== FILTERS SECTION =====
+  if (options.filters && Object.keys(options.filters).length > 0) {
+    const filterCount = Object.keys(options.filters).length;
+    doc.setFillColor(...lightGray);
+    doc.rect(margin, yPos, pageWidth - 2 * margin, filterCount * 5 + 8, 'F');
+
+    doc.setFontSize(8);
+    doc.setTextColor(...textColor);
+    yPos += 5;
+
+    Object.entries(options.filters).forEach(([key, value]) => {
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${key}:`, margin + 5, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(value), margin + 45, yPos);
+      yPos += 5;
+    });
+
+    yPos += 5;
+  }
+
+  // ===== DATA TABLE =====
+  autoTable(doc, {
+    startY: yPos,
+    head: [options.headers],
+    body: options.data.map(row => row.map(cell => cell ?? '')),
+    theme: 'striped',
+    headStyles: {
+      fillColor: primaryColor,
+      textColor: 255,
+      fontSize: 9,
+      fontStyle: 'bold',
+    },
+    bodyStyles: {
+      fontSize: 8,
+      textColor: textColor,
+    },
+    alternateRowStyles: {
+      fillColor: [250, 250, 250],
+    },
+    columnStyles: options.columnWidths
+      ? Object.fromEntries(options.columnWidths.map((w, i) => [i, { cellWidth: w }]))
+      : {},
+    margin: { left: margin, right: margin },
+    didDrawPage: (data) => {
+      // Footer on each page
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(150, 150, 150);
+      doc.text(
+        `Page ${data.pageNumber}`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
+    },
+  });
+
+  yPos = (doc as any).lastAutoTable.finalY + 10;
+
+  // ===== SUMMARY SECTION =====
+  if (options.summaryRows && options.summaryRows.length > 0) {
+    // Check if we need a new page
+    if (yPos + 50 > pageHeight - margin) {
+      doc.addPage();
+      yPos = margin;
+    }
+
+    const summaryX = pageWidth - margin - 80;
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...textColor);
+    doc.text('Summary', summaryX, yPos);
+    yPos += 8;
+
+    options.summaryRows.forEach(item => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(item.label, summaryX, yPos);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(item.value), pageWidth - margin, yPos, { align: 'right' });
+      yPos += 6;
+    });
+  }
+
+  // ===== FOOTER =====
+  const footerY = pageHeight - 15;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(150, 150, 150);
+  doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, pageWidth / 2, footerY, { align: 'center' });
+  doc.text(BRANDING.COMPANY_NAME, pageWidth / 2, footerY + 5, { align: 'center' });
+
+  // ===== SAVE =====
+  const safeFilename = options.title.replace(/[^a-zA-Z0-9]/g, '_');
+  doc.save(`${safeFilename}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+}
+
+/**
+ * Generate Current Balance Report PDF
+ */
+export async function generateCurrentBalancePDF(
+  data: {
+    guest_name: string;
+    guest_email: string | null;
+    total_invoiced: number;
+    total_paid: number;
+    balance_due: number;
+  }[],
+  filters: Record<string, string>
+): Promise<void> {
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+
+  const totalInvoiced = data.reduce((sum, d) => sum + d.total_invoiced, 0);
+  const totalPaid = data.reduce((sum, d) => sum + d.total_paid, 0);
+  const totalBalance = data.reduce((sum, d) => sum + d.balance_due, 0);
+
+  await generateReportPDF({
+    title: 'Current Balance Report',
+    subtitle: `${data.length} clients with outstanding balances`,
+    filters,
+    headers: ['Guest Name', 'Email', 'Total Invoiced', 'Total Paid', 'Balance Due'],
+    data: data.map(d => [
+      d.guest_name,
+      d.guest_email || '-',
+      formatCurrency(d.total_invoiced),
+      formatCurrency(d.total_paid),
+      formatCurrency(d.balance_due),
+    ]),
+    summaryRows: [
+      { label: 'Total Invoiced:', value: formatCurrency(totalInvoiced) },
+      { label: 'Total Paid:', value: formatCurrency(totalPaid) },
+      { label: 'Total Balance Due:', value: formatCurrency(totalBalance) },
+    ],
+  });
+}
+
+/**
+ * Generate Financial Entries Report PDF
+ */
+export async function generateFinancialEntriesPDF(
+  data: {
+    date: string;
+    property_name: string;
+    entry_type: string;
+    description: string;
+    amount: number;
+    running_balance: number;
+  }[],
+  filters: Record<string, string>
+): Promise<void> {
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy');
+    } catch {
+      return dateString;
+    }
+  };
+
+  const totalDebits = data.filter(d => d.entry_type === 'debit').reduce((sum, d) => sum + d.amount, 0);
+  const totalCredits = data.filter(d => d.entry_type === 'credit').reduce((sum, d) => sum + d.amount, 0);
+  const finalBalance = data.length > 0 ? data[data.length - 1].running_balance : 0;
+
+  await generateReportPDF({
+    title: 'Financial Entries Report',
+    subtitle: `${data.length} entries`,
+    filters,
+    headers: ['Date', 'Property', 'Type', 'Description', 'Amount', 'Balance'],
+    data: data.map(d => [
+      formatDate(d.date),
+      d.property_name,
+      d.entry_type.charAt(0).toUpperCase() + d.entry_type.slice(1).replace('_', ' '),
+      d.description.length > 40 ? d.description.substring(0, 40) + '...' : d.description,
+      formatCurrency(d.amount),
+      formatCurrency(d.running_balance),
+    ]),
+    summaryRows: [
+      { label: 'Total Debits:', value: formatCurrency(totalDebits) },
+      { label: 'Total Credits:', value: formatCurrency(totalCredits) },
+      { label: 'Final Balance:', value: formatCurrency(finalBalance) },
+    ],
+  });
+}
+
+/**
+ * Generate Active Clients Report PDF
+ */
+export async function generateActiveClientsPDF(
+  data: {
+    guest_name: string;
+    guest_email: string | null;
+    guest_phone: string | null;
+    last_booking: string | null;
+    total_bookings: number;
+    total_spent: number;
+  }[],
+  filters: Record<string, string>
+): Promise<void> {
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy');
+    } catch {
+      return dateString;
+    }
+  };
+
+  const totalBookings = data.reduce((sum, d) => sum + d.total_bookings, 0);
+  const totalSpent = data.reduce((sum, d) => sum + d.total_spent, 0);
+
+  await generateReportPDF({
+    title: 'Active Clients Report',
+    subtitle: `${data.length} active clients`,
+    filters,
+    headers: ['Guest Name', 'Email', 'Phone', 'Last Booking', 'Bookings', 'Total Spent'],
+    data: data.map(d => [
+      d.guest_name,
+      d.guest_email || '-',
+      d.guest_phone || '-',
+      formatDate(d.last_booking),
+      d.total_bookings,
+      formatCurrency(d.total_spent),
+    ]),
+    summaryRows: [
+      { label: 'Total Clients:', value: data.length },
+      { label: 'Total Bookings:', value: totalBookings },
+      { label: 'Total Revenue:', value: formatCurrency(totalSpent) },
+    ],
+  });
+}
+
+/**
+ * Generate Inactive Clients Report PDF
+ */
+export async function generateInactiveClientsPDF(
+  data: {
+    guest_name: string;
+    guest_email: string | null;
+    guest_phone: string | null;
+    last_booking_date: string | null;
+    days_since_last_booking: number;
+  }[],
+  filters: Record<string, string>
+): Promise<void> {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy');
+    } catch {
+      return dateString;
+    }
+  };
+
+  await generateReportPDF({
+    title: 'Inactive Clients Report',
+    subtitle: `${data.length} inactive clients`,
+    filters,
+    headers: ['Guest Name', 'Email', 'Phone', 'Last Booking', 'Days Inactive'],
+    data: data.map(d => [
+      d.guest_name,
+      d.guest_email || '-',
+      d.guest_phone || '-',
+      formatDate(d.last_booking_date),
+      d.days_since_last_booking,
+    ]),
+    summaryRows: [
+      { label: 'Total Inactive:', value: data.length },
+    ],
+  });
+}
+
+/**
+ * Generate Enhanced Bookings Report PDF
+ */
+export async function generateEnhancedBookingsPDF(
+  data: {
+    booking_id: string;
+    guest_name: string;
+    property_name: string;
+    check_in_date: string;
+    check_out_date: string;
+    booking_status: string;
+    total_price: number;
+    tax_amount?: number;
+    invoice_number?: string | null;
+    invoice_paid?: number;
+    invoice_balance?: number;
+  }[],
+  filters: Record<string, string>,
+  showFinancial: boolean,
+  showTax: boolean
+): Promise<void> {
+  const formatCurrency = (amount: number | undefined) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy');
+    } catch {
+      return dateString;
+    }
+  };
+
+  const headers = ['ID', 'Guest', 'Property', 'Check-In', 'Check-Out', 'Status', 'Amount'];
+  if (showFinancial) headers.push('Invoice', 'Paid', 'Balance');
+  if (showTax) headers.push('Tax');
+
+  const totalAmount = data.reduce((sum, d) => sum + (d.total_price || 0), 0);
+  const totalPaid = showFinancial ? data.reduce((sum, d) => sum + (d.invoice_paid || 0), 0) : 0;
+  const totalTax = showTax ? data.reduce((sum, d) => sum + (d.tax_amount || 0), 0) : 0;
+
+  await generateReportPDF({
+    title: 'Bookings Report',
+    subtitle: `${data.length} bookings`,
+    filters,
+    headers,
+    data: data.map(d => {
+      const row: (string | number)[] = [
+        d.booking_id.substring(0, 8),
+        d.guest_name,
+        d.property_name.length > 20 ? d.property_name.substring(0, 20) + '...' : d.property_name,
+        formatDate(d.check_in_date),
+        formatDate(d.check_out_date),
+        d.booking_status,
+        formatCurrency(d.total_price),
+      ];
+      if (showFinancial) {
+        row.push(d.invoice_number || '-', formatCurrency(d.invoice_paid), formatCurrency(d.invoice_balance));
+      }
+      if (showTax) {
+        row.push(formatCurrency(d.tax_amount));
+      }
+      return row;
+    }),
+    summaryRows: [
+      { label: 'Total Bookings:', value: data.length },
+      { label: 'Total Amount:', value: formatCurrency(totalAmount) },
+      ...(showFinancial ? [{ label: 'Total Paid:', value: formatCurrency(totalPaid) }] : []),
+      ...(showTax ? [{ label: 'Total Tax:', value: formatCurrency(totalTax) }] : []),
+    ],
+  });
+}
+
+/**
+ * Generate Rental Revenue Report PDF
+ */
+export async function generateRentalRevenuePDF(
+  data: {
+    byProperty: {
+      property_name: string;
+      base_amount: number;
+      extras: number;
+      cleaning: number;
+      deposits: number;
+      total: number;
+    }[];
+    byChannel: {
+      channel: string;
+      revenue: number;
+    }[];
+    invoiceRevenue: number;
+    totalBookingRevenue: number;
+  },
+  filters: Record<string, string>
+): Promise<void> {
+  const doc = new jsPDF();
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  let yPos = margin;
+
+  const primaryColor: [number, number, number] = PDF_COLORS.PRIMARY;
+  const accentColor: [number, number, number] = PDF_COLORS.ACCENT;
+  const textColor: [number, number, number] = PDF_COLORS.TEXT;
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+
+  // ===== HEADER =====
+  const logoAdded = await addLogoToPDF(doc, margin, yPos, 55, 18);
+  if (!logoAdded) {
+    addFallbackLogo(doc, margin, yPos, primaryColor);
+  }
+
+  yPos += 25;
+
+  // ===== TITLE =====
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...primaryColor);
+  doc.text('RENTAL REVENUE REPORT', margin, yPos);
+
+  yPos += 15;
+
+  // ===== FILTERS =====
+  if (Object.keys(filters).length > 0) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...PDF_COLORS.TEXT_LIGHT);
+    Object.entries(filters).forEach(([key, value]) => {
+      doc.text(`${key}: ${value}`, margin, yPos);
+      yPos += 5;
+    });
+    yPos += 5;
+  }
+
+  // ===== SUMMARY BOXES =====
+  const boxWidth = (pageWidth - 3 * margin) / 2;
+
+  // Booking Revenue Box
+  doc.setFillColor(...primaryColor);
+  doc.rect(margin, yPos, boxWidth, 25, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Booking Revenue', margin + 5, yPos + 8);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(formatCurrency(data.totalBookingRevenue), margin + 5, yPos + 20);
+
+  // Invoice Revenue Box
+  doc.setFillColor(...accentColor);
+  doc.rect(margin + boxWidth + margin, yPos, boxWidth, 25, 'F');
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Invoice Revenue', margin + boxWidth + margin + 5, yPos + 8);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(formatCurrency(data.invoiceRevenue), margin + boxWidth + margin + 5, yPos + 20);
+
+  yPos += 35;
+
+  // ===== REVENUE BY PROPERTY =====
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...textColor);
+  doc.text('Revenue by Property', margin, yPos);
+  yPos += 5;
+
+  autoTable(doc, {
+    startY: yPos,
+    head: [['Property', 'Base', 'Extras', 'Cleaning', 'Deposits', 'Total']],
+    body: data.byProperty.map(p => [
+      p.property_name.length > 25 ? p.property_name.substring(0, 25) + '...' : p.property_name,
+      formatCurrency(p.base_amount),
+      formatCurrency(p.extras),
+      formatCurrency(p.cleaning),
+      formatCurrency(p.deposits),
+      formatCurrency(p.total),
+    ]),
+    theme: 'striped',
+    headStyles: {
+      fillColor: primaryColor,
+      textColor: 255,
+      fontSize: 8,
+      fontStyle: 'bold',
+    },
+    bodyStyles: {
+      fontSize: 7,
+      textColor: textColor,
+    },
+    columnStyles: {
+      0: { cellWidth: 50 },
+      5: { fontStyle: 'bold' },
+    },
+    margin: { left: margin, right: margin },
+  });
+
+  yPos = (doc as any).lastAutoTable.finalY + 15;
+
+  // ===== REVENUE BY CHANNEL =====
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...textColor);
+  doc.text('Revenue by Channel', margin, yPos);
+  yPos += 5;
+
+  autoTable(doc, {
+    startY: yPos,
+    head: [['Channel', 'Revenue']],
+    body: data.byChannel.map(c => [
+      c.channel.charAt(0).toUpperCase() + c.channel.slice(1),
+      formatCurrency(c.revenue),
+    ]),
+    theme: 'striped',
+    headStyles: {
+      fillColor: accentColor,
+      textColor: 0,
+      fontSize: 9,
+      fontStyle: 'bold',
+    },
+    bodyStyles: {
+      fontSize: 8,
+      textColor: textColor,
+    },
+    columnStyles: {
+      1: { fontStyle: 'bold', halign: 'right' },
+    },
+    margin: { left: margin, right: margin },
+    tableWidth: 100,
+  });
+
+  yPos = (doc as any).lastAutoTable.finalY + 15;
+
+  // ===== GRAND TOTAL =====
+  const grandTotal = data.totalBookingRevenue + data.invoiceRevenue;
+
+  doc.setFillColor(245, 243, 255);
+  doc.rect(pageWidth - margin - 80, yPos, 80, 20, 'F');
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...textColor);
+  doc.text('Grand Total:', pageWidth - margin - 75, yPos + 8);
+  doc.setFontSize(14);
+  doc.setTextColor(...primaryColor);
+  doc.text(formatCurrency(grandTotal), pageWidth - margin - 5, yPos + 16, { align: 'right' });
+
+  // ===== FOOTER =====
+  const footerY = pageHeight - 15;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(150, 150, 150);
+  doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, pageWidth / 2, footerY, { align: 'center' });
+  doc.text(BRANDING.COMPANY_NAME, pageWidth / 2, footerY + 5, { align: 'center' });
+
+  // ===== SAVE =====
+  doc.save(`Rental_Revenue_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
 }

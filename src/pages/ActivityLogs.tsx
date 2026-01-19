@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Download, Filter, Calendar, User, Activity } from "lucide-react";
+import { Search, Download, Filter, Calendar, User, Activity, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { format } from "date-fns";
 import { ActivityLog } from "@/lib/schemas";
@@ -122,6 +122,7 @@ export default function ActivityLogs() {
   const {
     data: logs = [],
     isLoading,
+    isFetching,
     error,
     refetch,
   } = useQuery({
@@ -245,6 +246,17 @@ export default function ActivityLogs() {
           icon={Activity}
           title="Activity Logs"
           subtitle="System-wide activity tracking and audit trail"
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          }
         />
 
         {/* Filters Card */}

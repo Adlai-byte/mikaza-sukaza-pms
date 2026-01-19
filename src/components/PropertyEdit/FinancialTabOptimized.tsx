@@ -673,7 +673,7 @@ export function FinancialTabOptimized({ propertyId }: FinancialTabOptimizedProps
     },
   });
 
-  // Update entry mutation
+  // Update entry mutation with optimistic updates for instant feedback
   const updateEntryMutation = useMutation({
     mutationFn: async ({ entryId, updates }: { entryId: string; updates: Partial<FinancialEntry> }) => {
       const { data, error } = await supabase
@@ -686,8 +686,33 @@ export function FinancialTabOptimized({ propertyId }: FinancialTabOptimizedProps
       if (error) throw error;
       return data;
     },
+    onMutate: async ({ entryId, updates }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: financialKeys.monthly(propertyId, selectedMonth) });
+
+      // Snapshot current data
+      const previousData = queryClient.getQueryData<FinancialEntry[]>(financialKeys.monthly(propertyId, selectedMonth));
+
+      // Optimistically update the cache
+      if (previousData) {
+        queryClient.setQueryData<FinancialEntry[]>(
+          financialKeys.monthly(propertyId, selectedMonth),
+          previousData.map(entry =>
+            entry.entry_id === entryId
+              ? { ...entry, ...updates, updated_at: new Date().toISOString() }
+              : entry
+          )
+        );
+      }
+
+      return { previousData };
+    },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: financialKeys.monthly(propertyId, selectedMonth) });
+      // Replace optimistic data with server data
+      queryClient.setQueryData<FinancialEntry[]>(
+        financialKeys.monthly(propertyId, selectedMonth),
+        (old = []) => old.map(entry => entry.entry_id === data.entry_id ? data : entry)
+      );
       toast({
         title: '✅ Entry Updated Successfully',
         description: `Financial entry "${data.description}" has been updated with your changes`,
@@ -695,7 +720,11 @@ export function FinancialTabOptimized({ propertyId }: FinancialTabOptimizedProps
       });
       resetForm();
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(financialKeys.monthly(propertyId, selectedMonth), context.previousData);
+      }
       toast({
         title: 'Error',
         description: error.message || 'Failed to update entry',
@@ -704,7 +733,7 @@ export function FinancialTabOptimized({ propertyId }: FinancialTabOptimizedProps
     },
   });
 
-  // Delete entry mutation
+  // Delete entry mutation with optimistic updates
   const deleteEntryMutation = useMutation({
     mutationFn: async (entryId: string) => {
       const { error } = await supabase
@@ -715,15 +744,35 @@ export function FinancialTabOptimized({ propertyId }: FinancialTabOptimizedProps
       if (error) throw error;
       return entryId;
     },
+    onMutate: async (entryId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: financialKeys.monthly(propertyId, selectedMonth) });
+
+      // Snapshot current data
+      const previousData = queryClient.getQueryData<FinancialEntry[]>(financialKeys.monthly(propertyId, selectedMonth));
+
+      // Optimistically remove the entry
+      if (previousData) {
+        queryClient.setQueryData<FinancialEntry[]>(
+          financialKeys.monthly(propertyId, selectedMonth),
+          previousData.filter(entry => entry.entry_id !== entryId)
+        );
+      }
+
+      return { previousData };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: financialKeys.monthly(propertyId, selectedMonth) });
       toast({
         title: '🗑️ Entry Deleted Successfully',
         description: 'The financial entry has been permanently removed from your records',
         className: 'border-red-200 bg-red-50 text-red-800',
       });
     },
-    onError: (error) => {
+    onError: (error, _entryId, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(financialKeys.monthly(propertyId, selectedMonth), context.previousData);
+      }
       toast({
         title: 'Error',
         description: error.message || 'Failed to delete entry',

@@ -36,6 +36,30 @@ export interface OwnerStatementData {
       amount: number;
     }>;
   };
+  // Unit-level revenue allocation for multi-unit properties
+  unit_allocations?: {
+    has_allocations: boolean;
+    total_allocated: number;
+    by_unit: Array<{
+      unit_id: string | null;
+      unit_name: string;
+      booking_count: number;
+      share_percentage: number;
+      allocated_amount: number;
+    }>;
+    by_booking: Array<{
+      booking_id: string;
+      guest_name: string;
+      check_in_date: string;
+      check_out_date: string;
+      total_amount: number;
+      allocations: Array<{
+        unit_name: string;
+        share_percentage: number;
+        allocated_amount: number;
+      }>;
+    }>;
+  };
   expenses: {
     total: number;
     by_category: Array<{
@@ -44,6 +68,17 @@ export interface OwnerStatementData {
       count: number;
     }>;
     by_expense: Array<{
+      date: string;
+      vendor: string;
+      category: string;
+      description: string;
+      amount: number;
+    }>;
+  };
+  // Credit entries (income/refunds that offset expenses)
+  credits: {
+    total: number;
+    by_credit: Array<{
       date: string;
       vendor: string;
       category: string;
@@ -74,37 +109,51 @@ const fetchOwnerStatement = async (
 
   if (propertyError) throw propertyError;
 
-  // Fetch invoices (revenue)
+  // Fetch invoices (revenue) - use paid_date for accurate revenue reporting
   const { data: invoices, error: invoicesError } = await supabase
     .from('invoices')
-    .select('invoice_number, guest_name, issue_date, total_amount, status')
+    .select('invoice_number, guest_name, issue_date, paid_date, total_amount, status')
     .eq('property_id', propertyId)
     .eq('status', 'paid')
     .gte('paid_date', periodStart)
     .lte('paid_date', periodEnd)
-    .order('issue_date', { ascending: true });
+    .order('paid_date', { ascending: true });
 
   if (invoicesError) throw invoicesError;
 
   const revenueByInvoice = (invoices || []).map(inv => ({
     invoice_number: inv.invoice_number,
     guest_name: inv.guest_name,
-    issue_date: inv.issue_date,
+    issue_date: inv.paid_date || inv.issue_date, // Use paid_date for revenue recognition
     amount: inv.total_amount,
   }));
 
   const totalRevenue = revenueByInvoice.reduce((sum, inv) => sum + inv.amount, 0);
 
-  // Fetch expenses
+  // Fetch expenses - only DEBIT entries count as expenses
+  // Credit entries are income/refunds, owner_payment entries are payouts to owners
   const { data: expenses, error: expensesError } = await supabase
     .from('expenses')
-    .select('expense_date, vendor_name, category, description, amount, tax_amount')
+    .select('expense_date, vendor_name, category, description, amount, tax_amount, entry_type')
     .eq('property_id', propertyId)
+    .eq('entry_type', 'debit') // Only count debit entries as expenses
     .gte('expense_date', periodStart)
     .lte('expense_date', periodEnd)
     .order('expense_date', { ascending: true });
 
   if (expensesError) throw expensesError;
+
+  // Fetch credit entries (income/refunds that offset expenses)
+  const { data: credits, error: creditsError } = await supabase
+    .from('expenses')
+    .select('expense_date, vendor_name, category, description, amount, tax_amount, entry_type')
+    .eq('property_id', propertyId)
+    .eq('entry_type', 'credit') // Credit entries reduce net expenses
+    .gte('expense_date', periodStart)
+    .lte('expense_date', periodEnd)
+    .order('expense_date', { ascending: true });
+
+  if (creditsError) throw creditsError;
 
   // Group expenses by category
   const expensesByCategory: Record<string, { amount: number; count: number }> = {};
@@ -134,6 +183,140 @@ const fetchOwnerStatement = async (
 
   const totalExpenses = expensesList.reduce((sum, exp) => sum + exp.amount, 0);
 
+  // Process credit entries (income/refunds)
+  const creditsList = (credits || []).map(credit => {
+    const totalAmount = credit.amount + (credit.tax_amount || 0);
+    return {
+      date: credit.expense_date,
+      vendor: credit.vendor_name || 'Unknown',
+      category: credit.category,
+      description: credit.description,
+      amount: totalAmount,
+    };
+  });
+
+  const totalCredits = creditsList.reduce((sum, credit) => sum + credit.amount, 0);
+
+  // Fetch unit-level revenue allocations for entire-property bookings
+  let unitAllocations: OwnerStatementData['unit_allocations'] = undefined;
+
+  try {
+    // Get bookings for this property in the period
+    const { data: bookings, error: bookingsError } = await supabase
+      .from('property_bookings')
+      .select(`
+        booking_id,
+        guest_name,
+        check_in_date,
+        check_out_date,
+        total_amount,
+        unit_id
+      `)
+      .eq('property_id', propertyId)
+      .is('unit_id', null) // Only entire-property bookings
+      .neq('booking_status', 'cancelled')
+      .gte('check_in_date', periodStart)
+      .lte('check_in_date', periodEnd);
+
+    if (!bookingsError && bookings && bookings.length > 0) {
+      const bookingIds = bookings.map(b => b.booking_id);
+
+      // Fetch allocations for these bookings
+      const { data: allocations, error: allocError } = await supabase
+        .from('booking_revenue_allocation')
+        .select(`
+          allocation_id,
+          booking_id,
+          unit_id,
+          owner_id,
+          share_percentage,
+          allocated_amount,
+          unit:units!booking_revenue_allocation_unit_id_fkey(
+            unit_id,
+            property_name
+          )
+        `)
+        .in('booking_id', bookingIds);
+
+      if (!allocError && allocations && allocations.length > 0) {
+        // Group allocations by unit
+        const byUnitMap = new Map<string, {
+          unit_id: string | null;
+          unit_name: string;
+          booking_count: number;
+          share_percentage: number;
+          allocated_amount: number;
+        }>();
+
+        allocations.forEach((alloc: any) => {
+          const key = alloc.unit_id || 'entire';
+          const existing = byUnitMap.get(key);
+          const unitName = alloc.unit?.property_name || 'Entire Property';
+
+          if (existing) {
+            existing.allocated_amount += alloc.allocated_amount;
+            existing.booking_count += 1;
+          } else {
+            byUnitMap.set(key, {
+              unit_id: alloc.unit_id,
+              unit_name: unitName,
+              booking_count: 1,
+              share_percentage: alloc.share_percentage,
+              allocated_amount: alloc.allocated_amount,
+            });
+          }
+        });
+
+        // Group allocations by booking
+        const byBookingMap = new Map<string, {
+          booking_id: string;
+          guest_name: string;
+          check_in_date: string;
+          check_out_date: string;
+          total_amount: number;
+          allocations: Array<{
+            unit_name: string;
+            share_percentage: number;
+            allocated_amount: number;
+          }>;
+        }>();
+
+        bookings.forEach(booking => {
+          const bookingAllocations = allocations
+            .filter((a: any) => a.booking_id === booking.booking_id)
+            .map((a: any) => ({
+              unit_name: a.unit?.property_name || 'Entire Property',
+              share_percentage: a.share_percentage,
+              allocated_amount: a.allocated_amount,
+            }));
+
+          if (bookingAllocations.length > 0) {
+            byBookingMap.set(booking.booking_id, {
+              booking_id: booking.booking_id,
+              guest_name: booking.guest_name || 'Unknown',
+              check_in_date: booking.check_in_date,
+              check_out_date: booking.check_out_date,
+              total_amount: booking.total_amount || 0,
+              allocations: bookingAllocations,
+            });
+          }
+        });
+
+        const totalAllocated = allocations.reduce((sum: number, a: any) => sum + a.allocated_amount, 0);
+
+        unitAllocations = {
+          has_allocations: true,
+          total_allocated: totalAllocated,
+          by_unit: Array.from(byUnitMap.values()),
+          by_booking: Array.from(byBookingMap.values()),
+        };
+      }
+    }
+  } catch (allocError) {
+    console.warn('Could not fetch unit allocations:', allocError);
+    // Continue without allocations - they might not exist yet
+  }
+
   return {
     property_id: propertyId,
     property_name: property.property_name || '',
@@ -143,12 +326,18 @@ const fetchOwnerStatement = async (
       total: totalRevenue,
       by_invoice: revenueByInvoice,
     },
+    unit_allocations: unitAllocations,
     expenses: {
       total: totalExpenses,
       by_category: expensesByCategoryArray,
       by_expense: expensesList,
     },
-    net_income: totalRevenue - totalExpenses,
+    credits: {
+      total: totalCredits,
+      by_credit: creditsList,
+    },
+    // Net income = Revenue - Expenses + Credits (credits offset expenses)
+    net_income: totalRevenue - totalExpenses + totalCredits,
   };
 };
 

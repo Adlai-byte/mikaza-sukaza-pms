@@ -45,42 +45,38 @@ describe('useUsersOptimized', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockSupabase.auth.getSession.mockResolvedValue({
+    (mockSupabase.auth.getSession as any).mockResolvedValue({
       data: { session: null },
       error: null,
     });
 
-    mockSupabase.auth.signUp.mockResolvedValue({
+    (mockSupabase.auth.signUp as any).mockResolvedValue({
       data: { user: { id: 'new-user-id' } },
       error: null,
     });
 
-    mockSupabase.from.mockImplementation((table: string) => {
+    (mockSupabase.from as any).mockImplementation((table: string) => {
       if (table === 'users') {
-        return {
-          select: vi.fn().mockReturnValue({
-            order: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue({
-                data: mockUsers,
-                error: null,
-              }),
-            }),
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockReturnValue({
-                then: vi.fn().mockResolvedValue({
-                  data: testUser,
-                  error: null,
-                }),
-              }),
+        const orderResult = {
+          eq: vi.fn().mockReturnThis(),
+          then: (callback: any) => Promise.resolve({ data: mockUsers, error: null }).then(callback),
+        };
+
+        const selectResult = {
+          order: vi.fn().mockReturnValue(orderResult),
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockReturnValue({
+              then: (callback: any) => Promise.resolve({ data: testUser, error: null }).then(callback),
             }),
           }),
+        };
+
+        return {
+          select: vi.fn().mockReturnValue(selectResult),
           insert: vi.fn().mockReturnValue({
             select: vi.fn().mockReturnValue({
               single: vi.fn().mockReturnValue({
-                then: vi.fn().mockResolvedValue({
-                  data: testUser,
-                  error: null,
-                }),
+                then: (callback: any) => Promise.resolve({ data: testUser, error: null }).then(callback),
               }),
             }),
           }),
@@ -88,24 +84,21 @@ describe('useUsersOptimized', () => {
             eq: vi.fn().mockReturnValue({
               select: vi.fn().mockReturnValue({
                 single: vi.fn().mockReturnValue({
-                  then: vi.fn().mockResolvedValue({
-                    data: testUser,
-                    error: null,
-                  }),
+                  then: (callback: any) => Promise.resolve({ data: testUser, error: null }).then(callback),
                 }),
               }),
             }),
           }),
           delete: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue({ error: null }),
+              then: (callback: any) => Promise.resolve({ data: null, error: null }).then(callback),
             }),
           }),
         };
       }
       return {
         select: vi.fn().mockReturnValue({
-          then: vi.fn().mockResolvedValue({ data: [], error: null }),
+          then: (callback: any) => Promise.resolve({ data: [], error: null }).then(callback),
         }),
       };
     });

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertTriangle,
@@ -23,6 +24,7 @@ import {
   Clock,
   DollarSign,
   Image as ImageIcon,
+  RefreshCw,
 } from 'lucide-react';
 import {
   useIssues,
@@ -86,7 +88,9 @@ export default function Issues() {
     return baseFilters;
   }, [statusFilter, priorityFilter, categoryFilter, propertyFilter, assignedFilter, searchQuery, user?.id]);
 
-  const { issues, loading } = useIssues(filters);
+  // Only fetch issues when user is authenticated - prevents race condition
+  // where query runs before user.id is available from AuthContext
+  const { issues, loading, isFetching, refetch } = useIssues(filters, { enabled: !!user?.id });
   const createIssue = useCreateIssue();
   const updateIssue = useUpdateIssue();
   const deleteIssue = useDeleteIssue();
@@ -112,7 +116,8 @@ export default function Issues() {
   // Calculate statistics
   const stats = useMemo(() => {
     const total = issues.length;
-    const open = issues.filter(i => i.status === 'open').length;
+    // Count 'open' + 'in_progress' as "open" issues (consistent with Dashboard KPIs)
+    const open = issues.filter(i => i.status === 'open' || i.status === 'in_progress').length;
     const resolved = issues.filter(i => i.status === 'resolved' || i.status === 'closed').length;
     const totalCost = issues
       .filter(i => i.actual_cost !== null)
@@ -120,6 +125,17 @@ export default function Issues() {
 
     return { total, open, resolved, totalCost };
   }, [issues]);
+
+  // Keep viewingIssue in sync with the latest data from the issues list
+  // This ensures photos are visible after upload without manually refreshing
+  useEffect(() => {
+    if (viewingIssue && issues.length > 0) {
+      const updatedIssue = issues.find(i => i.issue_id === viewingIssue.issue_id);
+      if (updatedIssue && JSON.stringify(updatedIssue) !== JSON.stringify(viewingIssue)) {
+        setViewingIssue(updatedIssue);
+      }
+    }
+  }, [issues, viewingIssue]);
 
   const handleCreateIssue = () => {
     setEditingIssue(null);
@@ -229,70 +245,89 @@ export default function Issues() {
         subtitle={t('issues.subtitle')}
         icon={AlertTriangle}
         actions={
-          <Button onClick={handleCreateIssue} className="bg-primary hover:bg-primary/90">
-            <Plus className="mr-2 h-4 w-4" />
-            {t('issues.reportIssue')}
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
+            <Button onClick={handleCreateIssue} className="bg-primary hover:bg-primary/90">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('issues.reportIssue')}
+            </Button>
+          </>
         }
       />
 
         {/* Statistics Dashboard */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">{t('issues.stats.totalIssues')}</p>
-                  <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
-                  <p className="text-xs text-blue-600 mt-1">{t('issues.stats.totalIssuesDesc')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('issues.stats.totalIssues')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.total}</h3>
+                    <span className="text-xs text-muted-foreground">{t('issues.stats.totalIssuesDesc')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-700">{t('issues.stats.openIssues')}</p>
-                  <h3 className="text-3xl font-bold text-red-900 mt-1">{stats.open}</h3>
-                  <p className="text-xs text-red-600 mt-1">{t('issues.stats.openIssuesDesc')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <XCircle className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                  <XCircle className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('issues.stats.openIssues')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.open}</h3>
+                    <span className="text-xs text-muted-foreground">{t('issues.stats.openIssuesDesc')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">{t('issues.stats.resolved')}</p>
-                  <h3 className="text-3xl font-bold text-green-900 mt-1">{stats.resolved}</h3>
-                  <p className="text-xs text-green-600 mt-1">{t('issues.stats.resolvedDesc')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('issues.stats.resolved')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">{stats.resolved}</h3>
+                    <span className="text-xs text-muted-foreground">{t('issues.stats.resolvedDesc')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <Card className="transition-colors hover:bg-accent/50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-700">{t('issues.stats.totalCost')}</p>
-                  <h3 className="text-3xl font-bold text-purple-900 mt-1">${stats.totalCost.toFixed(2)}</h3>
-                  <p className="text-xs text-purple-600 mt-1">{t('issues.stats.totalCostDesc')}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">{t('issues.stats.totalCost')}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-semibold">${stats.totalCost.toFixed(2)}</h3>
+                    <span className="text-xs text-muted-foreground">{t('issues.stats.totalCostDesc')}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -344,19 +379,22 @@ export default function Issues() {
               {/* Assignee Filter */}
               <div className="space-y-2">
                 <Label htmlFor="assignee">{t('issues.filters.assignedTo')}</Label>
-                <Select value={assignedFilter || "default"} onValueChange={(value) => setAssignedFilter(value === "default" ? '' : value)}>
-                  <SelectTrigger id="assignee">
-                    <SelectValue placeholder={t('issues.filters.myIssues')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">{t('issues.filters.myIssues')}</SelectItem>
-                    {users.map(u => (
-                      <SelectItem key={u.user_id} value={u.user_id}>
-                        {formatUserDisplay(u)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Combobox
+                  options={[
+                    { value: 'default', label: t('issues.filters.myIssues') },
+                    ...users.map(u => ({
+                      value: u.user_id,
+                      label: formatUserDisplay(u),
+                    })),
+                  ]}
+                  value={assignedFilter || 'default'}
+                  onValueChange={(value) => setAssignedFilter(value === 'default' ? '' : value)}
+                  placeholder={t('issues.filters.myIssues')}
+                  searchPlaceholder={t('issues.filters.searchUser', 'Search user...')}
+                  emptyText={t('issues.filters.noUserFound', 'No user found.')}
+                  preserveSearch={true}
+                  clearable
+                />
               </div>
             </div>
 

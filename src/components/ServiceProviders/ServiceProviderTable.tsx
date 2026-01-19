@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Provider } from "@/lib/schemas";
+import { Provider, PARTNER_TIER_CONFIG, PartnerTier } from "@/lib/schemas";
 import {
   Table,
   TableBody,
@@ -19,7 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Trash2, Search, Download, Filter, Eye, MoreVertical, Star, Phone, Mail } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Pencil, Trash2, Search, Download, Filter, Eye, MoreVertical, Star, Phone, Mail, ChevronDown, ChevronUp, X } from "lucide-react";
 import { LoadingOverlay } from "../PropertyManagement/PropertyTableSkeleton";
 import {
   AlertDialog,
@@ -61,13 +66,28 @@ export function ServiceProviderTable({
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [partnerTierFilter, setPartnerTierFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Count active filters for badge
+  const activeFilterCount = [
+    categoryFilter !== "all",
+    statusFilter !== "all",
+    partnerTierFilter !== "all",
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setCategoryFilter("all");
+    setStatusFilter("all");
+    setPartnerTierFilter("all");
+  };
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, categoryFilter, statusFilter]);
+  }, [search, categoryFilter, statusFilter, partnerTierFilter]);
 
   const getCategoryBadge = (category: string) => {
     const colors: Record<string, string> = {
@@ -89,6 +109,18 @@ export function ServiceProviderTable({
       'Other': 'bg-neutral-100 text-neutral-800',
     };
     return colors[category] || colors['Other'];
+  };
+
+  const getPartnerTierBadge = (tier: PartnerTier | undefined) => {
+    const tierKey = tier || 'regular';
+    const config = PARTNER_TIER_CONFIG[tierKey];
+    return {
+      label: config.label,
+      style: {
+        backgroundColor: config.bgColor,
+        color: config.color,
+      },
+    };
   };
 
   // Show empty state if loading
@@ -127,8 +159,11 @@ export function ServiceProviderTable({
       (statusFilter === "active" && provider.is_active) ||
       (statusFilter === "inactive" && !provider.is_active) ||
       (statusFilter === "preferred" && provider.is_preferred);
+    const matchesPartnerTier =
+      partnerTierFilter === "all" ||
+      (provider.partner_tier || 'regular') === partnerTierFilter;
 
-    return matchesSearch && matchesCategory && matchesStatus;
+    return matchesSearch && matchesCategory && matchesStatus && matchesPartnerTier;
   });
 
   // Calculate pagination
@@ -140,7 +175,7 @@ export function ServiceProviderTable({
   const exportToCSV = () => {
     const headers = [
       "Provider Name", "Contact Person", "Email", "Phone", "Category",
-      "Rating", "Reviews", "Status", "Preferred", "City", "State"
+      "Partner Tier", "Rating", "Reviews", "Status", "Preferred", "City", "State"
     ];
     const csvContent = [
       headers.join(","),
@@ -150,6 +185,7 @@ export function ServiceProviderTable({
         `"${provider.email || ''}"`,
         `"${provider.phone_primary || ''}"`,
         `"${provider.provider_type}"`,
+        `"${PARTNER_TIER_CONFIG[provider.partner_tier || 'regular'].label}"`,
         `"${provider.rating || 0}"`,
         `"${provider.total_reviews || 0}"`,
         `"${provider.is_active ? 'Active' : 'Inactive'}"`,
@@ -184,7 +220,8 @@ export function ServiceProviderTable({
       {/* Loading overlay for background fetching */}
       <LoadingOverlay isVisible={isFetching && !isLoading} />
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      {/* Search - always visible */}
+      <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -194,39 +231,131 @@ export function ServiceProviderTable({
             className="pl-10"
           />
         </div>
+        {/* Desktop Export Button */}
+        <Button onClick={exportToCSV} variant="outline" className="hidden md:flex">
+          <Download className="h-4 w-4 mr-2" />
+          Export
+        </Button>
+      </div>
 
-        <div className="flex gap-2">
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-40">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {getServiceCategories().map(category => (
-                <SelectItem key={category} value={category}>{category}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Mobile: Collapsible filters */}
+      <div className="md:hidden">
+        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <div className="flex items-center gap-2">
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="flex-1 justify-between h-10">
+                <span className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-primary text-primary-foreground">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </span>
+                {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={clearFilters}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+            <Button onClick={exportToCSV} variant="outline" size="icon" className="h-10 w-10 shrink-0">
+              <Download className="h-4 w-4" />
+            </Button>
+          </div>
+          <CollapsibleContent className="pt-4 space-y-3">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {getServiceCategories().map(category => (
+                  <SelectItem key={category} value={category}>{category}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="preferred">Preferred</SelectItem>
-            </SelectContent>
-          </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="preferred">Preferred</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Button onClick={exportToCSV} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
+            <Select value={partnerTierFilter} onValueChange={setPartnerTierFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Partner Tier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tiers</SelectItem>
+                {(Object.keys(PARTNER_TIER_CONFIG) as PartnerTier[]).map((tier) => (
+                  <SelectItem key={tier} value={tier}>
+                    {PARTNER_TIER_CONFIG[tier].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+
+      {/* Desktop: Inline filters */}
+      <div className="hidden md:flex gap-2 flex-wrap">
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-40">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {getServiceCategories().map(category => (
+              <SelectItem key={category} value={category}>{category}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-32">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="preferred">Preferred</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={partnerTierFilter} onValueChange={setPartnerTierFilter}>
+          <SelectTrigger className="w-40">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Partner Tier" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tiers</SelectItem>
+            {(Object.keys(PARTNER_TIER_CONFIG) as PartnerTier[]).map((tier) => (
+              <SelectItem key={tier} value={tier}>
+                {PARTNER_TIER_CONFIG[tier].label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {activeFilterCount > 0 && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <X className="h-4 w-4 mr-1" />
+            Clear filters
           </Button>
-        </div>
+        )}
       </div>
 
       {/* Desktop Table View */}
@@ -237,6 +366,7 @@ export function ServiceProviderTable({
               <TableHead>Provider</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Partner Tier</TableHead>
               <TableHead>Rating</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Location</TableHead>
@@ -282,6 +412,16 @@ export function ServiceProviderTable({
                   </Badge>
                 </TableCell>
                 <TableCell>
+                  {(() => {
+                    const tierBadge = getPartnerTierBadge(provider.partner_tier as PartnerTier);
+                    return (
+                      <Badge style={tierBadge.style}>
+                        {tierBadge.label}
+                      </Badge>
+                    );
+                  })()}
+                </TableCell>
+                <TableCell>
                   <div className="flex items-center">
                     <Star className="h-4 w-4 text-yellow-500 mr-1" />
                     <span className="font-medium">
@@ -320,7 +460,7 @@ export function ServiceProviderTable({
 
                       {onEditProvider && (
                         <DropdownMenuItem onClick={() => onEditProvider(provider)}>
-                          <Edit className="mr-2 h-4 w-4" />
+                          <Pencil className="mr-2 h-4 w-4" />
                           Edit Provider
                         </DropdownMenuItem>
                       )}
@@ -412,6 +552,14 @@ export function ServiceProviderTable({
                   <Badge className={getCategoryBadge(provider.provider_type)}>
                     {provider.provider_type}
                   </Badge>
+                  {(() => {
+                    const tierBadge = getPartnerTierBadge(provider.partner_tier as PartnerTier);
+                    return (
+                      <Badge style={tierBadge.style}>
+                        {tierBadge.label}
+                      </Badge>
+                    );
+                  })()}
                   <Badge variant={provider.is_active ? 'default' : 'destructive'}>
                     {provider.is_active ? 'Active' : 'Inactive'}
                   </Badge>
@@ -452,9 +600,9 @@ export function ServiceProviderTable({
                         variant="outline"
                         size="sm"
                         onClick={() => onEditProvider(provider)}
+                        title="Edit Provider"
                       >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
+                        <Pencil className="h-4 w-4" />
                       </Button>
                     )}
 

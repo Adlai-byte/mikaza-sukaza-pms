@@ -2,19 +2,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Plus,
   RefreshCw,
-  Building2,
-  Star,
-  UserCheck,
-  TrendingUp,
   Wrench,
   Zap,
 } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
-import { useProviders } from "@/hooks/useProviders";
+import { useProviders, useProvidersRealtime } from "@/hooks/useProviders";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
@@ -23,13 +17,21 @@ import { UtilityProviderTable } from "@/components/ServiceProviders/UtilityProvi
 import { ServiceProviderForm } from "@/components/ServiceProviders/ServiceProviderForm";
 import { UtilityProviderForm } from "@/components/ServiceProviders/UtilityProviderForm";
 import { ServiceProviderDetailsDialog } from "@/components/ServiceProviders/ServiceProviderDetailsDialog";
-import { Provider, ProviderInsert } from "@/lib/schemas";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  Provider,
+  ProviderInsert,
+} from "@/lib/schemas";
 import { CasaSpinner } from "@/components/ui/casa-loader";
 
 export default function Providers() {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"service" | "utility">("service");
+  const [activeTab, setActiveTab] = useState<"service-contractors" | "utility-companies">("service-contractors");
 
+  // Enable realtime updates
+  useProvidersRealtime();
+
+  // ==================== PROVIDERS STATE ====================
   // Service providers
   const {
     providers: serviceProviders,
@@ -55,15 +57,14 @@ export default function Providers() {
   const { logActivity } = useActivityLogs();
   const { hasPermission } = usePermissions();
 
+  // Provider form states
   const [isServiceFormOpen, setIsServiceFormOpen] = useState(false);
   const [isUtilityFormOpen, setIsUtilityFormOpen] = useState(false);
-  const [editingServiceProvider, setEditingServiceProvider] =
-    useState<Provider | null>(null);
-  const [editingUtilityProvider, setEditingUtilityProvider] =
-    useState<Provider | null>(null);
+  const [editingServiceProvider, setEditingServiceProvider] = useState<Provider | null>(null);
+  const [editingUtilityProvider, setEditingUtilityProvider] = useState<Provider | null>(null);
   const [detailsProvider, setDetailsProvider] = useState<Provider | null>(null);
 
-  // Permissions
+  // ==================== PERMISSIONS ====================
   const canCreateService = hasPermission(PERMISSIONS.SERVICE_PROVIDERS_CREATE);
   const canEditService = hasPermission(PERMISSIONS.SERVICE_PROVIDERS_EDIT);
   const canDeleteService = hasPermission(PERMISSIONS.SERVICE_PROVIDERS_DELETE);
@@ -71,7 +72,7 @@ export default function Providers() {
   const canEditUtility = hasPermission(PERMISSIONS.UTILITY_PROVIDERS_EDIT);
   const canDeleteUtility = hasPermission(PERMISSIONS.UTILITY_PROVIDERS_DELETE);
 
-  // Service provider handlers
+  // ==================== SERVICE PROVIDER HANDLERS ====================
   const handleCreateServiceProvider = async (providerData: ProviderInsert) => {
     await createService(providerData);
     await logActivity("PROVIDER_CREATED", {
@@ -120,7 +121,7 @@ export default function Providers() {
     }
   };
 
-  // Utility provider handlers
+  // ==================== UTILITY PROVIDER HANDLERS ====================
   const handleCreateUtilityProvider = async (providerData: ProviderInsert) => {
     await createUtility(providerData);
     await logActivity("PROVIDER_CREATED", {
@@ -183,28 +184,12 @@ export default function Providers() {
     setEditingUtilityProvider(null);
   };
 
-  // Calculate combined provider stats
-  const allProviders = [...serviceProviders, ...utilityProviders];
-  const totalProviders = allProviders.length;
-  const activeProviders = allProviders.filter((p) => p.is_active).length;
-  const preferredProviders = allProviders.filter((p) => p.is_preferred).length;
-  const averageRating =
-    allProviders.length > 0
-      ? (
-          allProviders.reduce((sum, p) => sum + (p.rating || 0), 0) /
-          allProviders.length
-        ).toFixed(2)
-      : "0.00";
-
+  // ==================== LOADING STATE ====================
   const loading = serviceLoading && utilityLoading;
   const isFetching =
-    activeTab === "service" ? serviceFetching : utilityFetching;
+    activeTab === "service-contractors" ? serviceFetching : utilityFetching;
 
-  if (
-    loading &&
-    serviceProviders.length === 0 &&
-    utilityProviders.length === 0
-  ) {
+  if (loading && serviceProviders.length === 0 && utilityProviders.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-subtle">
         <CasaSpinner />
@@ -214,180 +199,86 @@ export default function Providers() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            {t("providers.title")}
-          </h1>
-          <p className="text-muted-foreground">{t("providers.subtitle")}</p>
-        </div>
-        <div className="flex gap-2 self-start sm:self-auto">
-          <Button
-            onClick={() =>
-              activeTab === "service" ? refetchService() : refetchUtility()
-            }
-            variant="outline"
-            disabled={isFetching}
-          >
-            <RefreshCw
-              className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
-            />
-            {t("common.refresh")}
-          </Button>
-          {((activeTab === "service" && canCreateService) ||
-            (activeTab === "utility" && canCreateUtility)) && (
+      {/* Page Header */}
+      <PageHeader
+        icon={Wrench}
+        title={t("vendorDirectory.title", "Vendor Directory")}
+        subtitle={t("vendorDirectory.subtitle", "Manage service contractors and utility companies")}
+        actions={
+          <div className="flex gap-2 self-start sm:self-auto">
+            {/* Refresh button */}
             <Button
-              onClick={() =>
-                activeTab === "service"
-                  ? setIsServiceFormOpen(true)
-                  : setIsUtilityFormOpen(true)
-              }
+              onClick={() => {
+                if (activeTab === "service-contractors") refetchService();
+                else refetchUtility();
+              }}
+              variant="outline"
+              disabled={isFetching}
             >
-              <Plus className="mr-2 h-4 w-4" />
-              {activeTab === "service"
-                ? t("providers.addServiceProvider")
-                : t("providers.addUtilityProvider")}
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              />
+              {t("common.refresh")}
             </Button>
-          )}
-        </div>
-      </div>
+            {/* Add Provider button */}
+            {activeTab === "service-contractors" && canCreateService && (
+              <Button onClick={() => setIsServiceFormOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("vendorDirectory.addContractor", "Add Contractor")}
+              </Button>
+            )}
+            {activeTab === "utility-companies" && canCreateUtility && (
+              <Button onClick={() => setIsUtilityFormOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("vendorDirectory.addUtility", "Add Utility Company")}
+              </Button>
+            )}
+          </div>
+        }
+      />
 
-      {/* Unified Metrics Cards - Outside Tabs */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">
-                  {t("providers.metrics.totalProviders")}
-                </p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                  {loading ? "..." : totalProviders}
-                </h3>
-                <p className="text-xs text-blue-600 mt-1">
-                  {t("providers.metrics.serviceUtilityBreakdown", {
-                    service: serviceProviders.length,
-                    utility: utilityProviders.length,
-                  })}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">
-                  {t("providers.metrics.activeProviders")}
-                </p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  {loading ? "..." : activeProviders}
-                </h3>
-                <p className="text-xs text-green-600 mt-1">
-                  {totalProviders - activeProviders}{" "}
-                  {t("providers.metrics.inactive")}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <UserCheck className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">
-                  {t("providers.metrics.preferredVendors")}
-                </p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">
-                  {loading ? "..." : preferredProviders}
-                </h3>
-                <p className="text-xs text-purple-600 mt-1">
-                  {t("providers.metrics.topRatedVendors")}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <Star className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-orange-700">
-                  {t("providers.metrics.averageRating")}
-                </p>
-                <h3 className="text-3xl font-bold text-orange-900 mt-1">
-                  {loading ? "..." : averageRating}
-                </h3>
-                <p className="text-xs text-orange-600 mt-1">
-                  {t("providers.metrics.outOfFive")}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Main Tabs */}
       <Tabs
         value={activeTab}
-        onValueChange={(value) => setActiveTab(value as "service" | "utility")}
+        onValueChange={(value) => setActiveTab(value as "service-contractors" | "utility-companies")}
       >
         <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="service" className="flex items-center gap-2">
+          <TabsTrigger value="service-contractors" className="flex items-center gap-2">
             <Wrench className="h-4 w-4" />
-            {t("providers.tabs.serviceProviders")}
+            {t("vendorDirectory.tabs.contractors", "Service Contractors")}
           </TabsTrigger>
-          <TabsTrigger value="utility" className="flex items-center gap-2">
+          <TabsTrigger value="utility-companies" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
-            {t("providers.tabs.utilityProviders")}
+            {t("vendorDirectory.tabs.utilities", "Utility Companies")}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="service" className="space-y-6 mt-6">
+        {/* ==================== SERVICE CONTRACTORS TAB ==================== */}
+        <TabsContent value="service-contractors" className="space-y-6 mt-6">
           <ServiceProviderTable
             providers={serviceProviders}
-            onEditProvider={
-              canEditService ? handleEditServiceProvider : undefined
-            }
-            onDeleteProvider={
-              canDeleteService ? handleDeleteServiceProvider : undefined
-            }
+            onEditProvider={canEditService ? handleEditServiceProvider : undefined}
+            onDeleteProvider={canDeleteService ? handleDeleteServiceProvider : undefined}
             onViewDetails={handleViewDetails}
             isLoading={serviceLoading}
             isFetching={serviceFetching}
           />
         </TabsContent>
 
-        <TabsContent value="utility" className="space-y-6 mt-6">
+        {/* ==================== UTILITY COMPANIES TAB ==================== */}
+        <TabsContent value="utility-companies" className="space-y-6 mt-6">
           <UtilityProviderTable
             providers={utilityProviders}
-            onEditProvider={
-              canEditUtility ? handleEditUtilityProvider : undefined
-            }
-            onDeleteProvider={
-              canDeleteUtility ? handleDeleteUtilityProvider : undefined
-            }
+            onEditProvider={canEditUtility ? handleEditUtilityProvider : undefined}
+            onDeleteProvider={canDeleteUtility ? handleDeleteUtilityProvider : undefined}
             onViewDetails={handleViewDetails}
             isLoading={utilityLoading}
             isFetching={utilityFetching}
           />
         </TabsContent>
       </Tabs>
+
+      {/* ==================== DIALOGS ==================== */}
 
       {/* Service Provider Form Modal */}
       <ServiceProviderForm

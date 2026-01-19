@@ -24,7 +24,8 @@ import { usePropertyBookings, useBookings } from '@/hooks/useBookings';
 import { BookingDialogEnhanced } from '@/components/BookingDialogEnhanced';
 import { BookingsTable } from '@/components/BookingsTable';
 import { Pagination } from '@/components/Pagination';
-import { Booking, BookingInsert } from '@/lib/schemas';
+import { Booking, BookingInsert, BookingJobConfig } from '@/lib/schemas';
+import { CreateBookingParams } from '@/hooks/useBookings';
 import { useTranslation } from 'react-i18next';
 
 interface BookingsTabProps {
@@ -84,10 +85,14 @@ export function BookingsTab({ propertyId, propertyName }: BookingsTabProps) {
     setShowBookingDialog(true);
   };
 
-  const handleBookingSubmit = async (bookingData: BookingInsert) => {
+  const handleBookingSubmit = async (bookingData: CreateBookingParams) => {
     try {
+      // Extract jobConfigs and customTasks from booking data
+      const { jobConfigs, customTasks, ...bookingFields } = bookingData;
+
       if (editingBooking?.booking_id) {
-        await updateBooking(editingBooking.booking_id, bookingData);
+        // Pass jobConfigs and customTasks when updating to create tasks for existing booking
+        await updateBooking(editingBooking.booking_id, bookingFields, jobConfigs, customTasks);
       } else {
         await createBooking({
           ...bookingData,

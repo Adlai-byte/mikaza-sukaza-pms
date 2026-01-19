@@ -1,11 +1,8 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { cacheWarmer } from '@/lib/cache-manager-simplified';
-
-// Session timeout configuration (in milliseconds)
-const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes of inactivity
-const SESSION_WARNING_BEFORE = 5 * 60 * 1000; // Show warning 5 minutes before timeout
+import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 
 interface Profile {
   id: string;
@@ -59,123 +56,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Session timeout state
-  const [sessionTimeoutWarning, setSessionTimeoutWarning] = useState(false);
-  const [remainingTime, setRemainingTime] = useState<number | null>(null);
-  const lastActivityRef = useRef<number>(Date.now());
-  const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
-  const warningTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
-  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
   const isAdmin = profile?.user_type === 'admin';
   const isOps = profile?.user_type === 'ops';
 
-  // Reset activity timestamp
-  const resetActivityTimer = useCallback(() => {
-    lastActivityRef.current = Date.now();
-    setSessionTimeoutWarning(false);
-    setRemainingTime(null);
-
-    // Clear existing timeouts
-    if (timeoutIdRef.current) clearTimeout(timeoutIdRef.current);
-    if (warningTimeoutIdRef.current) clearTimeout(warningTimeoutIdRef.current);
-    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+  // Handle session timeout using the custom hook
+  const handleSessionTimeout = useCallback(async () => {
+    console.log('⏰ [AuthContext] Session timed out due to inactivity');
+    try {
+      await supabase.auth.signOut();
+      // State will be cleared by onAuthStateChange listener
+    } catch (error) {
+      console.error('❌ [AuthContext] Error signing out on timeout:', error);
+      // Force clear state anyway
+      setProfile(null);
+      setUser(null);
+      setSession(null);
+    }
   }, []);
 
-  // Extend session (called when user clicks "Stay signed in")
-  // Note: setupSessionTimeout will be called by the activity tracking effect
-  const extendSession = useCallback(() => {
-    console.log('🔄 [AuthContext] Session extended by user');
-    resetActivityTimer();
-    lastActivityRef.current = Date.now();
-  }, [resetActivityTimer]);
-
-  // Setup session timeout timers
-  const setupSessionTimeout = useCallback(() => {
-    if (!session) return;
-
-    // Clear existing timeouts
-    resetActivityTimer();
-
-    // Set warning timeout (5 minutes before session expires)
-    warningTimeoutIdRef.current = setTimeout(() => {
-      console.log('⚠️ [AuthContext] Session timeout warning triggered');
-      setSessionTimeoutWarning(true);
-
-      // Start countdown
-      let timeLeft = SESSION_WARNING_BEFORE;
-      setRemainingTime(timeLeft);
-
-      countdownIntervalRef.current = setInterval(() => {
-        timeLeft -= 1000;
-        setRemainingTime(timeLeft);
-
-        if (timeLeft <= 0) {
-          if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-        }
-      }, 1000);
-    }, SESSION_TIMEOUT - SESSION_WARNING_BEFORE);
-
-    // Set actual timeout (sign out user)
-    timeoutIdRef.current = setTimeout(async () => {
-      console.log('⏰ [AuthContext] Session timed out due to inactivity');
-      setSessionTimeoutWarning(false);
-      setRemainingTime(null);
-
-      // Sign out the user
-      try {
-        await supabase.auth.signOut();
-        // State will be cleared by onAuthStateChange listener
-      } catch (error) {
-        console.error('❌ [AuthContext] Error signing out on timeout:', error);
-        // Force clear state anyway
-        setProfile(null);
-        setUser(null);
-        setSession(null);
-      }
-    }, SESSION_TIMEOUT);
-  }, [session, resetActivityTimer]);
-
-  // Track user activity
-  useEffect(() => {
-    if (!session) return;
-
-    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
-
-    const handleActivity = () => {
-      const now = Date.now();
-      // Only reset if enough time has passed (debounce)
-      if (now - lastActivityRef.current > 1000) {
-        lastActivityRef.current = now;
-
-        // If warning is showing, reset the timeout
-        if (sessionTimeoutWarning) {
-          console.log('🔄 [AuthContext] Activity detected, resetting session timeout');
-          setupSessionTimeout();
-        }
-      }
-    };
-
-    // Add activity listeners
-    activityEvents.forEach(event => {
-      window.addEventListener(event, handleActivity, { passive: true });
-    });
-
-    // Setup initial timeout
-    setupSessionTimeout();
-
-    return () => {
-      // Cleanup listeners
-      activityEvents.forEach(event => {
-        window.removeEventListener(event, handleActivity);
-      });
-
-      // Clear timeouts
-      if (timeoutIdRef.current) clearTimeout(timeoutIdRef.current);
-      if (warningTimeoutIdRef.current) clearTimeout(warningTimeoutIdRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    };
-  }, [session, sessionTimeoutWarning, setupSessionTimeout]);
+  // Use the session timeout hook
+  const {
+    showWarning: sessionTimeoutWarning,
+    remainingTime,
+    extendSession,
+  } = useSessionTimeout({
+    enabled: !!session,
+    onTimeout: handleSessionTimeout,
+    onWarning: () => console.log('⚠️ [AuthContext] Session timeout warning triggered'),
+  });
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -424,18 +332,77 @@ export function AuthProvider({ children }: AuthProviderProps) {
       timestamp: new Date().toISOString()
     });
 
-    const { error } = await supabase
+    // If email is being changed, update Supabase Auth first
+    if (updates.email && updates.email !== user.email) {
+      console.log('📧 [AuthContext] Email change detected, updating Supabase Auth:', {
+        oldEmail: user.email,
+        newEmail: updates.email,
+        timestamp: new Date().toISOString()
+      });
+
+      const { error: authError } = await supabase.auth.updateUser({
+        email: updates.email
+      });
+
+      if (authError) {
+        console.error('❌ [AuthContext] Supabase Auth email update failed:', {
+          error: authError.message,
+          errorCode: authError.code,
+          timestamp: new Date().toISOString()
+        });
+        throw new Error(`Failed to update email: ${authError.message}. Note: Email changes require verification.`);
+      }
+
+      console.log('✅ [AuthContext] Supabase Auth email update initiated - verification email sent');
+    }
+
+    // Update the users table (main source of truth)
+    // Use .select() to verify the update actually affected rows (RLS might silently filter)
+    const { data: updatedData, error: usersError } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (usersError) {
+      console.error('❌ [AuthContext] Users table update failed:', {
+        userId: user.id,
+        error: usersError.message,
+        timestamp: new Date().toISOString()
+      });
+      throw usersError;
+    }
+
+    // Check if update actually worked (RLS might silently filter out the row)
+    if (!updatedData) {
+      console.error('❌ [AuthContext] Profile update returned no data - RLS may have blocked the update:', {
+        userId: user.id,
+        timestamp: new Date().toISOString()
+      });
+      throw new Error('Profile update failed - you may not have permission to update this profile');
+    }
+
+    console.log('✅ [AuthContext] Users table updated:', {
+      userId: user.id,
+      first_name: updatedData.first_name,
+      last_name: updatedData.last_name,
+      timestamp: new Date().toISOString()
+    });
+
+    // Also update the profiles table for auth sync
+    const { error: profilesError } = await supabase
       .from('profiles')
       .update(updates)
       .eq('id', user.id);
 
-    if (error) {
-      console.error('❌ [AuthContext] Profile update failed:', {
+    if (profilesError) {
+      console.warn('⚠️ [AuthContext] Profiles table update failed (non-critical):', {
         userId: user.id,
-        error: error.message,
+        error: profilesError.message,
         timestamp: new Date().toISOString()
       });
-      throw error;
+      // Don't throw - profiles table update is secondary
     }
 
     console.log('✅ [AuthContext] Profile updated successfully:', {
@@ -443,8 +410,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
       timestamp: new Date().toISOString()
     });
 
-    // Refresh profile data
-    await fetchProfile(user.id);
+    // Update profile state directly with the returned data for immediate UI update
+    // This is more reliable than re-fetching as it avoids race conditions
+    setProfile((prevProfile) => {
+      if (!prevProfile) return prevProfile;
+      return {
+        ...prevProfile,
+        ...updatedData,
+        // Ensure required Profile fields are preserved
+        id: prevProfile.id,
+        user_id: prevProfile.user_id,
+      };
+    });
+
+    console.log('✅ [AuthContext] Profile state updated with new data:', {
+      userId: user.id,
+      first_name: updatedData.first_name,
+      last_name: updatedData.last_name,
+      timestamp: new Date().toISOString()
+    });
   };
 
   const value = {

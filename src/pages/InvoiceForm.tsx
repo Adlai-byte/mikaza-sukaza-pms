@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Download, Calendar, Send, User, DollarSign, MessageSquare, StickyNote, Sparkles, Loader2, UserPlus, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +45,7 @@ import { formatUserDisplay } from '@/lib/user-display';
 import { useTranslation } from 'react-i18next';
 
 const INVOICE_STATUSES = ['draft', 'sent', 'paid', 'overdue', 'cancelled', 'refunded'];
-const LINE_ITEM_TYPES = ['accommodation', 'cleaning', 'extras', 'tax', 'commission', 'other'];
+const LINE_ITEM_TYPES = ['accommodation', 'cleaning', 'extras', 'tax', 'other'];
 
 // Helper function to convert to sentence case
 const toSentenceCase = (str: string) => {
@@ -56,9 +56,19 @@ export default function InvoiceForm() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { invoiceId, bookingId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isEditing = !!invoiceId;
   const isFromBooking = !!bookingId;
   const { toast } = useToast();
+
+  // View mode - read-only display of invoice
+  const [isViewMode, setIsViewMode] = useState(searchParams.get('mode') === 'view');
+
+  const switchToEditMode = () => {
+    setIsViewMode(false);
+    searchParams.delete('mode');
+    setSearchParams(searchParams);
+  };
 
   const queryClient = useQueryClient();
   const { logActivity } = useActivityLogs();
@@ -70,12 +80,25 @@ export default function InvoiceForm() {
   const { invoice, loading } = useInvoice(invoiceId || '');
   const { booking, loading: bookingLoading } = useBookingDetail(bookingId);
 
+  // Default Commission line item for new invoices
+  const defaultCommissionItem: InvoiceLineItemInsert = {
+    invoice_id: '',
+    line_number: 1,
+    description: 'Commission',
+    quantity: 1,
+    unit_price: 0,
+    tax_rate: 0,
+    tax_amount: 0,
+    item_type: 'accommodation',
+  };
+
   const [lineItems, setLineItems] = useState<InvoiceLineItemInsert[]>([]);
   const [nextLineNumber, setNextLineNumber] = useState(1);
   const [linkedBookingId, setLinkedBookingId] = useState<string | undefined>(bookingId);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCreateGuestDialog, setShowCreateGuestDialog] = useState(false);
+  const [initializedCommission, setInitializedCommission] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(invoiceSchema),
@@ -94,6 +117,15 @@ export default function InvoiceForm() {
       payment_method: '',
     },
   });
+
+  // Initialize default Commission line item for new standalone invoices
+  useEffect(() => {
+    if (!isEditing && !isFromBooking && !initializedCommission) {
+      setLineItems([defaultCommissionItem]);
+      setNextLineNumber(2);
+      setInitializedCommission(true);
+    }
+  }, [isEditing, isFromBooking, initializedCommission]);
 
   // Handle guest selection
   const handleGuestSelect = (guestId: string) => {
@@ -200,6 +232,18 @@ export default function InvoiceForm() {
       // Auto-generate line items from booking financial data
       const generatedItems: InvoiceLineItemInsert[] = [];
       let lineNumber = 1;
+
+      // 0. Commission (always first, editable, default values)
+      generatedItems.push({
+        invoice_id: '',
+        line_number: lineNumber++,
+        description: 'Commission',
+        quantity: 1,
+        unit_price: 0,
+        tax_rate: 0,
+        tax_amount: 0,
+        item_type: 'accommodation',
+      });
 
       // 1. Accommodation (base amount)
       if (booking.base_amount && booking.base_amount > 0) {
@@ -407,7 +451,11 @@ export default function InvoiceForm() {
 
   const handleSubmit = form.handleSubmit(async (data) => {
     if (lineItems.length === 0) {
-      alert(t('invoices.pleaseAddLineItem'));
+      toast({
+        title: t('common.error'),
+        description: t('invoices.pleaseAddLineItem'),
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -527,6 +575,15 @@ export default function InvoiceForm() {
         }
       );
     }
+  }, (errors) => {
+    // Handle form validation errors
+    console.error('📋 Form validation errors:', errors);
+    const firstError = Object.values(errors)[0];
+    toast({
+      title: t('common.error'),
+      description: firstError?.message as string || t('errors.validation'),
+      variant: 'destructive',
+    });
   });
 
   const totals = calculateTotals();
@@ -567,8 +624,13 @@ export default function InvoiceForm() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-bold">
-                {isEditing ? t('invoices.editInvoice') : t('invoices.newInvoice')}
+                {isViewMode ? t('invoices.viewInvoice', 'View Invoice') : isEditing ? t('invoices.editInvoice') : t('invoices.newInvoice')}
               </h1>
+              {isViewMode && (
+                <Badge variant="secondary" className="text-sm">
+                  {t('common.readOnly', 'Read Only')}
+                </Badge>
+              )}
               {isFromBooking && booking && (
                 <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
@@ -577,7 +639,7 @@ export default function InvoiceForm() {
               )}
             </div>
             <p className="text-muted-foreground mt-1">
-              {isEditing ? t('invoices.updateInvoiceDetails') : isFromBooking ? t('invoices.reviewAutoGeneratedInvoice') : t('invoices.createNewInvoiceDesc')}
+              {isViewMode ? t('invoices.viewingInvoiceDetails', 'Viewing invoice details') : isEditing ? t('invoices.updateInvoiceDetails') : isFromBooking ? t('invoices.reviewAutoGeneratedInvoice') : t('invoices.createNewInvoiceDesc')}
             </p>
           </div>
         </div>
@@ -605,14 +667,30 @@ export default function InvoiceForm() {
               )}
             </>
           )}
-          <Button onClick={handleSubmit} size="lg" disabled={isSaving || createInvoice.isPending}>
-            {isSaving || createInvoice.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
+          {isViewMode ? (
+            <Button
+              type="button"
+              onClick={switchToEditMode}
+              size="lg"
+            >
               <Save className="h-4 w-4 mr-2" />
-            )}
-            {isEditing ? t('invoices.updateInvoice') : t('invoices.createInvoice')}
-          </Button>
+              {t('common.edit', 'Edit')}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              size="lg"
+              disabled={isEditing ? isSaving : createInvoice.isPending}
+            >
+              {(isEditing ? isSaving : createInvoice.isPending) ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              {isEditing ? t('invoices.updateInvoice') : t('invoices.createInvoice')}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -627,21 +705,29 @@ export default function InvoiceForm() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="property_id">{t('invoices.property')} *</Label>
-                <Select
-                  value={form.watch('property_id')}
-                  onValueChange={(value) => form.setValue('property_id', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('invoices.selectProperty')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {properties.map((property) => (
-                      <SelectItem key={property.property_id} value={property.property_id!}>
-                        {property.property_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isEditing ? (
+                  <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
+                    <span className="text-muted-foreground">
+                      {properties.find(p => p.property_id === form.watch('property_id'))?.property_name || t('invoices.noPropertySelected')}
+                    </span>
+                  </div>
+                ) : (
+                  <Select
+                    value={form.watch('property_id')}
+                    onValueChange={(value) => form.setValue('property_id', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('invoices.selectProperty')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {properties.map((property) => (
+                        <SelectItem key={property.property_id} value={property.property_id!}>
+                          {property.property_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -649,6 +735,7 @@ export default function InvoiceForm() {
                 <Select
                   value={form.watch('status')}
                   onValueChange={(value) => form.setValue('status', value as any)}
+                  disabled={isViewMode}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -669,40 +756,53 @@ export default function InvoiceForm() {
             {/* Guest Selection */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label htmlFor="guest_id">{t('invoices.selectGuest')} *</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCreateGuestDialog(true)}
-                  disabled={loadingGuests}
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  {t('invoices.createNewGuest')}
-                </Button>
+                <Label htmlFor="guest_id">{isEditing ? t('invoices.guest') : t('invoices.selectGuest')} *</Label>
+                {!isEditing && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCreateGuestDialog(true)}
+                    disabled={loadingGuests}
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    {t('invoices.createNewGuest')}
+                  </Button>
+                )}
               </div>
 
-              <Select
-                value={form.watch('guest_id') || ''}
-                onValueChange={handleGuestSelect}
-                disabled={loadingGuests}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('invoices.chooseGuest')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {guests?.map((guest: Guest) => (
-                    <SelectItem key={guest.guest_id} value={guest.guest_id!}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">
-                          {guest.first_name} {guest.last_name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">{guest.email}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isEditing ? (
+                /* Read-only display when editing */
+                <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">
+                    {form.watch('guest_name') || t('invoices.noGuestSelected')}
+                  </span>
+                </div>
+              ) : (
+                <Select
+                  value={form.watch('guest_id') || ''}
+                  onValueChange={handleGuestSelect}
+                  disabled={loadingGuests}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('invoices.chooseGuest')}>
+                      {form.watch('guest_name') || t('invoices.chooseGuest')}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {guests?.map((guest: Guest) => (
+                      <SelectItem key={guest.guest_id} value={guest.guest_id!}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {guest.first_name} {guest.last_name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{guest.email}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
               {/* Display selected guest info */}
               {form.watch('guest_id') && (
@@ -742,10 +842,26 @@ export default function InvoiceForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="payment_method">{t('invoices.paymentMethod')}</Label>
-                <Input
-                  {...form.register('payment_method')}
-                  placeholder={t('invoices.paymentMethodPlaceholder')}
-                />
+                <Select
+                  value={form.watch('payment_method') || ''}
+                  onValueChange={(value) => form.setValue('payment_method', value)}
+                  disabled={isViewMode}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('invoices.paymentMethodPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">{t('invoices.paymentMethods.cash')}</SelectItem>
+                    <SelectItem value="credit_card">{t('invoices.paymentMethods.creditCard')}</SelectItem>
+                    <SelectItem value="debit_card">{t('invoices.paymentMethods.debitCard')}</SelectItem>
+                    <SelectItem value="bank_transfer">{t('invoices.paymentMethods.bankTransfer')}</SelectItem>
+                    <SelectItem value="check">{t('invoices.paymentMethods.check')}</SelectItem>
+                    <SelectItem value="stripe">{t('invoices.paymentMethods.stripe')}</SelectItem>
+                    <SelectItem value="paypal">{t('invoices.paymentMethods.paypal')}</SelectItem>
+                    <SelectItem value="pix">{t('invoices.paymentMethods.pix')}</SelectItem>
+                    <SelectItem value="other">{t('invoices.paymentMethods.other')}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -757,6 +873,7 @@ export default function InvoiceForm() {
                 <Input
                   type="date"
                   {...form.register('issue_date')}
+                  disabled={isViewMode}
                 />
               </div>
 
@@ -765,6 +882,7 @@ export default function InvoiceForm() {
                 <Input
                   type="date"
                   {...form.register('due_date')}
+                  disabled={isViewMode}
                 />
               </div>
             </div>
@@ -775,6 +893,7 @@ export default function InvoiceForm() {
                 {...form.register('terms')}
                 placeholder={t('invoices.paymentTermsPlaceholder')}
                 rows={2}
+                disabled={isViewMode}
               />
             </div>
 
@@ -784,13 +903,14 @@ export default function InvoiceForm() {
                 {...form.register('notes')}
                 placeholder={t('invoices.invoiceNotesPlaceholder')}
                 rows={3}
+                disabled={isViewMode}
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Bill Template Selector - Quick Add */}
-        {form.watch('property_id') && (
+        {/* Bill Template Selector - Quick Add (hidden in view mode) */}
+        {!isViewMode && form.watch('property_id') && (
           <BillTemplateSelector
             propertyId={form.watch('property_id')}
             onTemplatesSelected={handleTemplatesSelected}
@@ -805,7 +925,7 @@ export default function InvoiceForm() {
                 <CardTitle>{t('invoices.lineItems')}</CardTitle>
                 <CardDescription>{t('invoices.lineItemsDesc')}</CardDescription>
               </div>
-              <Button type="button" variant="outline" onClick={addLineItem}>
+              <Button type="button" variant="outline" onClick={addLineItem} disabled={isViewMode}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t('invoices.addLineItem')}
               </Button>
@@ -843,12 +963,14 @@ export default function InvoiceForm() {
                               value={item.description}
                               onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                               placeholder={t('invoices.itemDescriptionPlaceholder')}
+                              disabled={isViewMode}
                             />
                           </TableCell>
                           <TableCell>
                             <Select
                               value={item.item_type}
                               onValueChange={(value) => updateLineItem(index, 'item_type', value)}
+                              disabled={isViewMode}
                             >
                               <SelectTrigger className="w-full">
                                 <SelectValue />
@@ -868,6 +990,7 @@ export default function InvoiceForm() {
                               step="0.01"
                               value={item.quantity}
                               onChange={(e) => updateLineItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                              disabled={isViewMode}
                             />
                           </TableCell>
                           <TableCell>
@@ -876,6 +999,7 @@ export default function InvoiceForm() {
                               step="0.01"
                               value={item.unit_price}
                               onChange={(e) => updateLineItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                              disabled={isViewMode}
                             />
                           </TableCell>
                           <TableCell>
@@ -884,6 +1008,7 @@ export default function InvoiceForm() {
                               step="0.01"
                               value={item.tax_rate}
                               onChange={(e) => updateLineItem(index, 'tax_rate', parseFloat(e.target.value) || 0)}
+                              disabled={isViewMode}
                             />
                           </TableCell>
                           <TableCell className="font-medium">
@@ -898,6 +1023,7 @@ export default function InvoiceForm() {
                               variant="ghost"
                               size="icon"
                               onClick={() => removeLineItem(index)}
+                              disabled={isViewMode}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -917,8 +1043,8 @@ export default function InvoiceForm() {
           <Button type="button" variant="outline" onClick={() => navigate('/invoices')}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={isSaving || createInvoice.isPending}>
-            {isSaving || createInvoice.isPending ? (
+          <Button type="submit" disabled={isEditing ? isSaving : createInvoice.isPending}>
+            {(isEditing ? isSaving : createInvoice.isPending) ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Save className="h-4 w-4 mr-2" />

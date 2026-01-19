@@ -1,19 +1,87 @@
 // Service Worker registration and management
 import { indexedDBCache } from './indexeddb-cache';
 
+// Check if the current hostname is a LAN IP address
+function isLanIP(hostname: string): boolean {
+  // Match private IPv4 ranges:
+  // 10.0.0.0 - 10.255.255.255 (Class A)
+  // 172.16.0.0 - 172.31.255.255 (Class B)
+  // 192.168.0.0 - 192.168.255.255 (Class C)
+  const lanPatterns = [
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}$/,
+    /^192\.168\.\d{1,3}\.\d{1,3}$/,
+  ];
+
+  return lanPatterns.some(pattern => pattern.test(hostname));
+}
+
+// Check if we're in a secure context that supports service workers
+function isSecureContextForServiceWorker(): { isSecure: boolean; reason?: string } {
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+
+  // HTTPS is always secure
+  if (protocol === 'https:') {
+    return { isSecure: true };
+  }
+
+  // localhost and 127.0.0.1 are secure in development
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return { isSecure: true };
+  }
+
+  // LAN IPs are NOT secure contexts
+  if (isLanIP(hostname)) {
+    return {
+      isSecure: false,
+      reason: `LAN IP (${hostname}) is not a secure context. Service workers require HTTPS or localhost. ` +
+              `To enable service workers on LAN, you can: ` +
+              `1) Use localhost instead of the IP, or ` +
+              `2) Set up HTTPS with a local certificate, or ` +
+              `3) In Chrome, add the origin to chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+    };
+  }
+
+  // Other non-secure contexts
+  return {
+    isSecure: false,
+    reason: `Non-secure context (${protocol}//${hostname}). Service workers require HTTPS.`
+  };
+}
+
 export class ServiceWorkerManager {
   private registration: ServiceWorkerRegistration | null = null;
   private isOnline = navigator.onLine;
   private offlineQueue: Array<{ url: string; options: RequestInit; resolve: Function; reject: Function }> = [];
+  private isLanEnvironment: boolean = false;
 
   constructor() {
     this.setupNetworkListeners();
+    this.isLanEnvironment = isLanIP(window.location.hostname);
+  }
+
+  // Check if service worker is available in this context
+  isServiceWorkerAvailable(): boolean {
+    if (!('serviceWorker' in navigator)) {
+      return false;
+    }
+    const { isSecure } = isSecureContextForServiceWorker();
+    return isSecure;
   }
 
   // Register service worker
   async register(): Promise<void> {
     if (!('serviceWorker' in navigator)) {
-      console.warn('Service Worker not supported');
+      console.warn('⚠️ Service Worker not supported in this browser');
+      return;
+    }
+
+    // Check if we're in a secure context
+    const { isSecure, reason } = isSecureContextForServiceWorker();
+    if (!isSecure) {
+      console.warn(`⚠️ Service Worker registration skipped: ${reason}`);
+      console.info('ℹ️ The app will work normally but without offline caching capabilities.');
       return;
     }
 
@@ -211,15 +279,18 @@ export class ServiceWorkerManager {
 
   // Preload critical resources
   async preloadCriticalResources(): Promise<void> {
+    // Note: Vite builds to /assets/ not /static/
+    // Only cache the root HTML - other assets will be cached dynamically
     const criticalUrls = [
-      '/static/js/bundle.js',
-      '/static/css/main.css',
-      '/api/properties',
-      '/api/users',
+      '/',
     ];
 
-    await this.cacheUrls(criticalUrls);
-    console.log('📦 Critical resources preloaded');
+    try {
+      await this.cacheUrls(criticalUrls);
+      console.log('📦 Critical resources preloaded');
+    } catch (error) {
+      console.warn('⚠️ Failed to preload some resources:', error);
+    }
   }
 
   // Background sync

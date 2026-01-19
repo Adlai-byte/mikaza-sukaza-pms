@@ -9,6 +9,9 @@ import {
   Building2,
   Receipt,
   FileBarChart,
+  Layers,
+  Users,
+  PieChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -220,112 +223,99 @@ export default function OwnerStatement() {
           </Card>
 
           {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <div className={cn(
+            "grid gap-4",
+            statement.credits?.total > 0 ? "md:grid-cols-4" : "md:grid-cols-3"
+          )}>
+            <Card className="transition-colors hover:bg-accent/50">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-green-700">
-                      Total Revenue
-                    </p>
-                    <h3 className="text-3xl font-bold text-green-900 mt-1">
-                      $
-                      {statement.revenue.total.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </h3>
-                    <p className="text-xs text-green-600 mt-1">
-                      {statement.revenue.by_invoice.length} invoice(s)
-                    </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-white" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">Total Revenue</p>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-2xl font-semibold">
+                        ${statement.revenue.total.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">{statement.revenue.by_invoice.length} invoice(s)</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <Card className="transition-colors hover:bg-accent/50">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-red-700">
-                      Total Expenses
-                    </p>
-                    <h3 className="text-3xl font-bold text-red-900 mt-1">
-                      $
-                      {statement.expenses.total.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </h3>
-                    <p className="text-xs text-red-600 mt-1">
-                      {statement.expenses.by_expense.length} expense(s)
-                    </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                    <TrendingDown className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                    <TrendingDown className="h-6 w-6 text-white" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">Total Expenses</p>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-2xl font-semibold">
+                        ${statement.expenses.total.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">{statement.expenses.by_expense.length} expense(s)</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card
-              className={cn(
-                "border-0 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]",
-                statement.net_income >= 0
-                  ? "bg-gradient-to-br from-emerald-50 to-emerald-100"
-                  : "bg-gradient-to-br from-orange-50 to-orange-100",
-              )}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p
-                      className={cn(
-                        "text-sm font-medium",
-                        statement.net_income >= 0
-                          ? "text-emerald-700"
-                          : "text-orange-700",
-                      )}
-                    >
-                      Net Income
-                    </p>
-                    <h3
-                      className={cn(
-                        "text-3xl font-bold mt-1",
-                        statement.net_income >= 0
-                          ? "text-emerald-900"
-                          : "text-orange-900",
-                      )}
-                    >
-                      {statement.net_income >= 0 ? "+" : ""}$
-                      {statement.net_income.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </h3>
-                    <p
-                      className={cn(
-                        "text-xs mt-1",
-                        statement.net_income >= 0
-                          ? "text-emerald-600"
-                          : "text-orange-600",
-                      )}
-                    >
-                      {statement.net_income >= 0 ? "Profit" : "Loss"}
-                    </p>
+            {/* Credits Card - only show if there are credits */}
+            {statement.credits?.total > 0 && (
+              <Card className="transition-colors hover:bg-accent/50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-muted-foreground">Credits/Refunds</p>
+                      <div className="flex items-baseline gap-2">
+                        <h3 className="text-2xl font-semibold text-green-600">
+                          +${statement.credits.total.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </h3>
+                        <span className="text-xs text-muted-foreground">{statement.credits.by_credit.length} credit(s)</span>
+                      </div>
+                    </div>
                   </div>
-                  <div
-                    className={cn(
-                      "w-12 h-12 rounded-lg flex items-center justify-center",
-                      statement.net_income >= 0
-                        ? "bg-emerald-500"
-                        : "bg-orange-500",
-                    )}
-                  >
-                    <DollarSign className="h-6 w-6 text-white" />
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="transition-colors hover:bg-accent/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">Net Income</p>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className={cn(
+                        "text-2xl font-semibold",
+                        statement.net_income >= 0 ? "text-green-600" : "text-red-600"
+                      )}>
+                        {statement.net_income >= 0 ? "+" : ""}${statement.net_income.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">{statement.net_income >= 0 ? "Profit" : "Loss"}</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -389,6 +379,122 @@ export default function OwnerStatement() {
               )}
             </CardContent>
           </Card>
+
+          {/* Unit Revenue Allocations (for multi-unit properties) */}
+          {statement.unit_allocations?.has_allocations && (
+            <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-purple-800">
+                  <Layers className="h-5 w-5" />
+                  Unit Revenue Allocations
+                </CardTitle>
+                <CardDescription>
+                  Revenue from entire-property bookings split among unit owners
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Summary by Unit */}
+                <div>
+                  <h4 className="text-sm font-semibold text-purple-700 mb-3 flex items-center gap-2">
+                    <PieChart className="h-4 w-4" />
+                    Allocation by Unit
+                  </h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Unit</TableHead>
+                        <TableHead className="text-center">Bookings</TableHead>
+                        <TableHead className="text-center">Share %</TableHead>
+                        <TableHead className="text-right">Allocated Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {statement.unit_allocations.by_unit.map((unit, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                              {unit.unit_name}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {unit.booking_count}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                              {unit.share_percentage.toFixed(1)}%
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-purple-700">
+                            ${unit.allocated_amount.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                            })}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="bg-purple-100/50 font-medium">
+                        <TableCell colSpan={3} className="text-right">
+                          Total Allocated
+                        </TableCell>
+                        <TableCell className="text-right text-purple-800">
+                          ${statement.unit_allocations.total_allocated.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Breakdown by Booking */}
+                {statement.unit_allocations.by_booking.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-purple-700 mb-3 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Entire-Property Booking Details
+                    </h4>
+                    <div className="space-y-3">
+                      {statement.unit_allocations.by_booking.map((booking, index) => (
+                        <div key={index} className="bg-white border border-purple-100 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <div className="font-medium">{booking.guest_name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {format(new Date(booking.check_in_date), "MMM d")} - {format(new Date(booking.check_out_date), "MMM d, yyyy")}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-muted-foreground">Total</div>
+                              <div className="font-bold">
+                                ${booking.total_amount.toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {booking.allocations.map((alloc, allocIndex) => (
+                              <div key={allocIndex} className="bg-purple-50 rounded px-3 py-2 text-sm">
+                                <div className="text-purple-600 font-medium truncate">{alloc.unit_name}</div>
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-xs text-purple-500">{alloc.share_percentage.toFixed(1)}%</span>
+                                  <span className="font-semibold text-purple-800">
+                                    ${alloc.allocated_amount.toLocaleString(undefined, {
+                                      minimumFractionDigits: 2,
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Expenses by Category */}
           <Card>
@@ -497,6 +603,64 @@ export default function OwnerStatement() {
             </CardContent>
           </Card>
 
+          {/* Credits Details - only show if there are credits */}
+          {statement.credits?.by_credit && statement.credits.by_credit.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Credits / Refunds Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Vendor</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {statement.credits.by_credit.map((credit, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          {format(new Date(credit.date), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell>{credit.vendor}</TableCell>
+                        <TableCell className="capitalize">
+                          {credit.category.replace(/_/g, " ")}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {credit.description}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-green-600">
+                          +$
+                          {credit.amount.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/50 font-medium">
+                      <TableCell colSpan={4} className="text-right">
+                        Total Credits
+                      </TableCell>
+                      <TableCell className="text-right text-green-600">
+                        +$
+                        {statement.credits.total.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Summary Footer */}
           <Card className="border-2">
             <CardContent className="pt-6">
@@ -519,6 +683,18 @@ export default function OwnerStatement() {
                     })}
                   </span>
                 </div>
+                {/* Credits line - only show if there are credits */}
+                {statement.credits?.total > 0 && (
+                  <div className="flex items-center justify-between text-lg">
+                    <span className="font-medium">Credits / Refunds:</span>
+                    <span className="font-bold text-green-600">
+                      +$
+                      {statement.credits.total.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex items-center justify-between text-2xl">
                   <span className="font-bold">Net Income:</span>

@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Booking, BookingInsert } from "@/lib/schemas";
+import { Booking, BookingInsert, BookingJobConfig, CustomBookingTask } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { CACHE_CONFIG } from "@/lib/cache-config";
 import { OptimisticUpdates } from "@/lib/cache-manager-simplified";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -14,6 +13,25 @@ import {
   notifyBookingCancelled,
   notifyBookingStatusChanged,
 } from "@/lib/notifications/booking-notifications";
+import { createInvoiceFromBooking } from "@/hooks/useInvoices";
+import { shouldCreateAllocation } from "@/hooks/useBookingRevenueAllocation";
+import { createJobsFromBooking, bookingTaskKeys } from "@/hooks/useBookingTasks";
+import { jobKeys } from "@/hooks/useJobs";
+import { taskKeys } from "@/hooks/useTasks";
+
+// Extended booking insert with job configs for auto-generation
+export interface CreateBookingParams extends BookingInsert {
+  jobConfigs?: BookingJobConfig[];
+  customTasks?: CustomBookingTask[];
+}
+
+// Extended update params with job configs and custom tasks for generating jobs on existing bookings
+export interface UpdateBookingParams {
+  bookingId: string;
+  bookingData: Partial<BookingInsert>;
+  jobConfigs?: BookingJobConfig[];
+  customTasks?: CustomBookingTask[];
+}
 
 // Query keys for cache management
 export const bookingKeys = {
@@ -26,12 +44,21 @@ export const bookingKeys = {
   calendar: (startDate: string, endDate: string) => ['bookings', 'calendar', startDate, endDate] as const,
 } as const;
 
-// Fetch all bookings
+// Fetch all bookings (with unit data for multi-unit properties)
 const fetchBookings = async (): Promise<Booking[]> => {
   console.log('📅 Fetching all bookings...');
   const { data, error } = await supabase
     .from('property_bookings')
-    .select('*')
+    .select(`
+      *,
+      unit:units!property_bookings_unit_id_fkey(
+        unit_id,
+        property_name,
+        license_number,
+        folio,
+        owner_id
+      )
+    `)
     .order('check_in_date', { ascending: false });
 
   if (error) {
@@ -39,16 +66,40 @@ const fetchBookings = async (): Promise<Booking[]> => {
     throw error;
   }
 
-  console.log('✅ Fetched bookings:', data?.length || 0, 'bookings');
-  return (data || []) as Booking[];
+  // Flatten unit data into booking for easier access
+  const bookingsWithUnitData = (data || []).map((booking: any) => ({
+    ...booking,
+    unit_name: booking.unit?.property_name || null,
+    unit_license_number: booking.unit?.license_number || null,
+    unit_folio: booking.unit?.folio || null,
+    unit_owner_id: booking.unit?.owner_id || null,
+  }));
+
+  console.log('✅ Fetched bookings:', bookingsWithUnitData?.length || 0, 'bookings');
+  return bookingsWithUnitData as Booking[];
 };
 
-// Fetch bookings for a specific property
+// Fetch bookings for a specific property (with invoice and unit data)
 const fetchPropertyBookings = async (propertyId: string): Promise<Booking[]> => {
   console.log('📅 Fetching bookings for property:', propertyId);
   const { data, error } = await supabase
     .from('property_bookings')
-    .select('*')
+    .select(`
+      *,
+      invoice:invoices!property_bookings_invoice_id_fkey(
+        invoice_id,
+        total_amount,
+        amount_paid,
+        status
+      ),
+      unit:units!property_bookings_unit_id_fkey(
+        unit_id,
+        property_name,
+        license_number,
+        folio,
+        owner_id
+      )
+    `)
     .eq('property_id', propertyId)
     .order('check_in_date', { ascending: false });
 
@@ -57,16 +108,37 @@ const fetchPropertyBookings = async (propertyId: string): Promise<Booking[]> => 
     throw error;
   }
 
-  console.log('✅ Fetched property bookings:', data?.length || 0, 'bookings');
-  return (data || []) as Booking[];
+  // Flatten invoice and unit data into booking for easier access
+  const bookingsWithData = (data || []).map((booking: any) => ({
+    ...booking,
+    invoice_total_amount: booking.invoice?.total_amount || null,
+    invoice_amount_paid: booking.invoice?.amount_paid || null,
+    invoice_status: booking.invoice?.status || booking.invoice_status || 'not_generated',
+    unit_name: booking.unit?.property_name || null,
+    unit_license_number: booking.unit?.license_number || null,
+    unit_folio: booking.unit?.folio || null,
+    unit_owner_id: booking.unit?.owner_id || null,
+  }));
+
+  console.log('✅ Fetched property bookings:', bookingsWithData?.length || 0, 'bookings');
+  return bookingsWithData as Booking[];
 };
 
-// Fetch bookings within a date range
+// Fetch bookings within a date range (for calendar view, with unit data)
 const fetchBookingsInRange = async (startDate: string, endDate: string): Promise<Booking[]> => {
   console.log('📅 Fetching bookings from', startDate, 'to', endDate);
   const { data, error } = await supabase
     .from('property_bookings')
-    .select('*')
+    .select(`
+      *,
+      unit:units!property_bookings_unit_id_fkey(
+        unit_id,
+        property_name,
+        license_number,
+        folio,
+        owner_id
+      )
+    `)
     .gte('check_in_date', startDate)
     .lte('check_out_date', endDate)
     .order('check_in_date', { ascending: true });
@@ -76,16 +148,34 @@ const fetchBookingsInRange = async (startDate: string, endDate: string): Promise
     throw error;
   }
 
-  console.log('✅ Fetched calendar bookings:', data?.length || 0, 'bookings');
-  return (data || []) as Booking[];
+  // Flatten unit data into booking for easier access
+  const bookingsWithUnitData = (data || []).map((booking: any) => ({
+    ...booking,
+    unit_name: booking.unit?.property_name || null,
+    unit_license_number: booking.unit?.license_number || null,
+    unit_folio: booking.unit?.folio || null,
+    unit_owner_id: booking.unit?.owner_id || null,
+  }));
+
+  console.log('✅ Fetched calendar bookings:', bookingsWithUnitData?.length || 0, 'bookings');
+  return bookingsWithUnitData as Booking[];
 };
 
-// Fetch single booking
+// Fetch single booking (with unit data)
 const fetchBookingDetail = async (bookingId: string): Promise<Booking> => {
   console.log('📅 Fetching booking detail:', bookingId);
   const { data, error } = await supabase
     .from('property_bookings')
-    .select('*')
+    .select(`
+      *,
+      unit:units!property_bookings_unit_id_fkey(
+        unit_id,
+        property_name,
+        license_number,
+        folio,
+        owner_id
+      )
+    `)
     .eq('booking_id', bookingId)
     .single();
 
@@ -94,20 +184,33 @@ const fetchBookingDetail = async (bookingId: string): Promise<Booking> => {
     throw error;
   }
 
-  console.log('✅ Fetched booking detail:', data);
-  return data as Booking;
+  // Flatten unit data into booking for easier access
+  const bookingWithUnitData = {
+    ...data,
+    unit_name: data.unit?.property_name || null,
+    unit_license_number: data.unit?.license_number || null,
+    unit_folio: data.unit?.folio || null,
+    unit_owner_id: data.unit?.owner_id || null,
+  };
+
+  console.log('✅ Fetched booking detail:', bookingWithUnitData);
+  return bookingWithUnitData as Booking;
 };
 
 // Check for booking conflicts
+// Conflict logic:
+// - If booking a specific unit (unit_id set): conflicts with same unit bookings + whole-property bookings
+// - If booking whole property (unit_id is null): conflicts with ANY booking for that property
 const checkBookingConflict = async (
   propertyId: string,
   checkIn: string,
   checkOut: string,
+  unitId?: string | null,
   excludeBookingId?: string
 ): Promise<boolean> => {
   let query = supabase
     .from('property_bookings')
-    .select('booking_id, check_in_date, check_out_date, guest_name')
+    .select('booking_id, check_in_date, check_out_date, guest_name, unit_id')
     .eq('property_id', propertyId)
     .neq('booking_status', 'cancelled')
     .or(`and(check_in_date.lte.${checkOut},check_out_date.gte.${checkIn})`);
@@ -123,9 +226,24 @@ const checkBookingConflict = async (
     throw error;
   }
 
-  const hasConflict = data && data.length > 0;
+  if (!data || data.length === 0) {
+    return false;
+  }
+
+  // Filter conflicts based on unit logic
+  let conflictingBookings = data;
+
+  if (unitId) {
+    // Booking a specific unit: conflicts with same unit OR whole-property bookings
+    conflictingBookings = data.filter(
+      (booking: any) => booking.unit_id === unitId || booking.unit_id === null
+    );
+  }
+  // If unitId is null (whole property): any booking conflicts (no filtering needed)
+
+  const hasConflict = conflictingBookings.length > 0;
   if (hasConflict) {
-    console.warn('⚠️ Booking conflict detected:', data);
+    console.warn('⚠️ Booking conflict detected:', conflictingBookings);
   }
 
   return hasConflict;
@@ -156,21 +274,26 @@ export function useBookings() {
 
   // Create booking mutation
   const createBookingMutation = useMutation({
-    mutationFn: async (bookingData: BookingInsert) => {
+    mutationFn: async (params: CreateBookingParams) => {
+      // Extract jobConfigs and customTasks from params (not sent to database)
+      const { jobConfigs, customTasks, ...bookingData } = params;
+
       // Check permission
       if (!hasPermission(PERMISSIONS.BOOKINGS_CREATE)) {
         throw new Error("You don't have permission to create bookings");
       }
 
-      // Check for conflicts
+      // Check for conflicts (with unit awareness)
       const hasConflict = await checkBookingConflict(
         bookingData.property_id,
         bookingData.check_in_date,
-        bookingData.check_out_date
+        bookingData.check_out_date,
+        bookingData.unit_id
       );
 
       if (hasConflict) {
-        throw new Error("This property is already booked for the selected dates");
+        const unitText = bookingData.unit_id ? "This unit" : "This property";
+        throw new Error(`${unitText} is already booked for the selected dates`);
       }
 
       // Create booking
@@ -184,7 +307,13 @@ export function useBookings() {
 
       return data as Booking;
     },
-    onMutate: async (bookingData) => {
+    onMutate: async (params: CreateBookingParams) => {
+      // Extract jobConfigs and customTasks to pass through context
+      const { jobConfigs, customTasks, ...bookingData } = params;
+
+      console.log('🔍 onMutate - customTasks received:', customTasks);
+      console.log('🔍 onMutate - jobConfigs received:', jobConfigs);
+
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: bookingKeys.lists() });
 
@@ -204,10 +333,15 @@ export function useBookings() {
         return [tempBooking, ...oldData];
       });
 
-      // Return rollback function
-      return { rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings) };
+      // Return rollback function, jobConfigs and customTasks for onSuccess
+      return {
+        rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings),
+        jobConfigs,
+        customTasks,
+        guestName: bookingData.guest_name,
+      };
     },
-    onSuccess: async (data) => {
+    onSuccess: async (data, variables, context) => {
       // Invalidate booking-related caches with refetchType: 'all'
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists(), refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id), refetchType: 'all' });
@@ -234,10 +368,101 @@ export function useBookings() {
         await notifyBookingCreated(data, property.property_name, currentUserId);
       }
 
-      toast({
-        title: "Success",
-        description: "Booking created successfully",
-      });
+      // Auto-generate invoice for the booking
+      try {
+        console.log('📄 Auto-generating invoice for booking:', data.booking_id);
+        const invoice = await createInvoiceFromBooking(data.booking_id!);
+        console.log('✅ Invoice auto-generated:', invoice.invoice_id);
+
+        // Invalidate invoice caches after creation
+        queryClient.invalidateQueries({ queryKey: ['invoices'], refetchType: 'all' });
+
+        toast({
+          title: "Success",
+          description: "Booking created and invoice generated successfully",
+        });
+      } catch (invoiceError) {
+        console.error('⚠️ Failed to auto-generate invoice:', invoiceError);
+        // Still show success for booking, but warn about invoice
+        toast({
+          title: "Booking Created",
+          description: "Booking created successfully. Invoice generation failed - you can generate it manually.",
+          variant: "default",
+        });
+      }
+
+      // Create revenue allocation for entire-property bookings with units
+      try {
+        const needsAllocation = await shouldCreateAllocation(
+          data.property_id,
+          data.unit_id || null
+        );
+
+        if (needsAllocation && data.total_amount) {
+          console.log('💰 Creating revenue allocation for entire-property booking:', data.booking_id);
+          const { error: allocError } = await supabase.rpc('create_booking_revenue_allocations', {
+            p_booking_id: data.booking_id,
+            p_property_id: data.property_id,
+            p_total_amount: data.total_amount,
+          });
+
+          if (allocError) {
+            console.error('⚠️ Failed to create revenue allocation:', allocError);
+          } else {
+            console.log('✅ Revenue allocation created for booking:', data.booking_id);
+            // Invalidate allocation caches
+            queryClient.invalidateQueries({ queryKey: ['booking-revenue-allocations'] });
+          }
+        }
+      } catch (allocError) {
+        console.error('⚠️ Error during revenue allocation:', allocError);
+        // Don't fail the booking creation for allocation errors
+      }
+
+      // Auto-generate tasks from booking if job configs or custom tasks provided
+      console.log('🔍 onSuccess - context:', context);
+      console.log('🔍 onSuccess - context.customTasks:', context?.customTasks);
+      console.log('🔍 onSuccess - context.jobConfigs:', context?.jobConfigs);
+
+      const hasJobConfigs = context?.jobConfigs && context.jobConfigs.length > 0;
+      const hasCustomTasks = context?.customTasks && context.customTasks.length > 0;
+
+      console.log('🔍 onSuccess - hasJobConfigs:', hasJobConfigs, 'hasCustomTasks:', hasCustomTasks);
+
+      if ((hasJobConfigs || hasCustomTasks) && currentUserId) {
+        try {
+          const enabledJobs = hasJobConfigs
+            ? context.jobConfigs.filter((job: BookingJobConfig) => job.enabled)
+            : [];
+          const customTasks = context?.customTasks || [];
+
+          if (enabledJobs.length > 0 || customTasks.length > 0) {
+            console.log('📋 Creating jobs for booking:', data.booking_id, {
+              enabledJobs: enabledJobs.length,
+              customTasks: customTasks.length
+            });
+            const jobs = await createJobsFromBooking(
+              data.booking_id!,
+              data.property_id,
+              data.check_in_date,
+              data.check_out_date,
+              enabledJobs,
+              currentUserId,
+              context.guestName,
+              customTasks
+            );
+            console.log('✅ Jobs created:', jobs.length);
+
+            // Invalidate job and task caches (jobs also create linked tasks)
+            queryClient.invalidateQueries({ queryKey: jobKeys.all });
+            queryClient.invalidateQueries({ queryKey: taskKeys.all });
+            queryClient.invalidateQueries({ queryKey: bookingTaskKeys.booking(data.booking_id!) });
+          }
+        } catch (taskError) {
+          console.error('⚠️ Failed to create tasks for booking:', taskError);
+          // Don't fail the booking creation for task errors
+        }
+      }
     },
     onError: (error, bookingData, context) => {
       // Rollback optimistic update
@@ -254,48 +479,75 @@ export function useBookings() {
 
   // Update booking mutation
   const updateBookingMutation = useMutation({
-    mutationFn: async ({ bookingId, bookingData }: { bookingId: string; bookingData: Partial<BookingInsert> }) => {
+    mutationFn: async ({ bookingId, bookingData, jobConfigs }: UpdateBookingParams) => {
       // Check permission
       if (!hasPermission(PERMISSIONS.BOOKINGS_EDIT)) {
         throw new Error("You don't have permission to edit bookings");
       }
 
-      // If dates are being changed, check for conflicts
-      if (bookingData.check_in_date || bookingData.check_out_date || bookingData.property_id) {
+      // Valid booking fields that can be updated in the database
+      const validBookingFields = [
+        'property_id', 'unit_id', 'guest_id', 'guest_name', 'guest_email', 'guest_phone',
+        'check_in_date', 'check_out_date', 'number_of_guests', 'total_amount', 'deposit_amount',
+        'payment_method', 'booking_status', 'special_requests', 'booking_channel',
+        'payment_status', 'bill_template_id', 'notes', 'confirmation_code'
+      ];
+
+      // Filter bookingData to only include valid fields
+      const filteredBookingData: Partial<BookingInsert> = {};
+      for (const key of validBookingFields) {
+        if (key in bookingData && bookingData[key as keyof typeof bookingData] !== undefined) {
+          (filteredBookingData as any)[key] = bookingData[key as keyof typeof bookingData];
+        }
+      }
+
+      console.log('📝 Updating booking with filtered data:', { bookingId, filteredBookingData, hasJobConfigs: !!jobConfigs?.length });
+
+      // If dates, property, or unit are being changed, check for conflicts
+      if (filteredBookingData.check_in_date || filteredBookingData.check_out_date || filteredBookingData.property_id || filteredBookingData.unit_id !== undefined) {
         const existingBooking = await fetchBookingDetail(bookingId);
 
-        const checkIn = bookingData.check_in_date || existingBooking.check_in_date;
-        const checkOut = bookingData.check_out_date || existingBooking.check_out_date;
-        const propertyId = bookingData.property_id || existingBooking.property_id;
+        const checkIn = filteredBookingData.check_in_date || existingBooking.check_in_date;
+        const checkOut = filteredBookingData.check_out_date || existingBooking.check_out_date;
+        const propertyId = filteredBookingData.property_id || existingBooking.property_id;
+        const unitId = filteredBookingData.unit_id !== undefined ? filteredBookingData.unit_id : existingBooking.unit_id;
 
         const hasConflict = await checkBookingConflict(
           propertyId,
           checkIn,
           checkOut,
+          unitId,
           bookingId
         );
 
         if (hasConflict) {
-          throw new Error("This property is already booked for the selected dates");
+          const unitText = unitId ? "This unit" : "This property";
+          throw new Error(`${unitText} is already booked for the selected dates`);
         }
       }
 
-      // Update booking
+      // Update booking with only valid fields
       const { data, error } = await supabase
         .from('property_bookings')
         .update({
-          ...bookingData,
+          ...filteredBookingData,
           updated_at: new Date().toISOString(),
         })
         .eq('booking_id', bookingId)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase update error:', error);
+        throw error;
+      }
 
       return data as Booking;
     },
-    onMutate: async ({ bookingId, bookingData }) => {
+    onMutate: async ({ bookingId, bookingData, jobConfigs, customTasks }) => {
+      console.log('🔍 updateBooking onMutate - customTasks:', customTasks);
+      console.log('🔍 updateBooking onMutate - jobConfigs:', jobConfigs);
+
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: bookingKeys.lists() });
 
@@ -313,15 +565,102 @@ export function useBookings() {
         );
       });
 
-      // Return rollback function
-      return { rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings) };
+      // Return rollback function, jobConfigs and customTasks for onSuccess
+      return {
+        rollback: () => queryClient.setQueryData(bookingKeys.lists(), previousBookings),
+        jobConfigs,
+        customTasks,
+        guestName: bookingData.guest_name,
+      };
     },
-    onSuccess: async (data, variables) => {
+    onSuccess: async (data, variables, context) => {
       // Invalidate booking-related caches with refetchType: 'all'
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists(), refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: bookingKeys.property(data.property_id), refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(data.booking_id!), refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['bookings', 'calendar'], refetchType: 'all' });
+
+      // Create jobs if jobConfigs were provided (for generating jobs on existing bookings)
+      if (context?.jobConfigs && context.jobConfigs.length > 0 && currentUserId) {
+        try {
+          const enabledJobs = context.jobConfigs.filter((job: BookingJobConfig) => job.enabled);
+          if (enabledJobs.length > 0) {
+            console.log('🔧 Creating jobs for updated booking:', data.booking_id, enabledJobs);
+
+            const createdJobs = await createJobsFromBooking(
+              data.booking_id!,
+              data.property_id,
+              data.check_in_date,
+              data.check_out_date,
+              enabledJobs,
+              currentUserId,
+              data.guest_name
+            );
+
+            console.log('✅ Jobs created for updated booking:', createdJobs.length);
+
+            // Invalidate job and task caches
+            queryClient.invalidateQueries({ queryKey: jobKeys.all });
+            queryClient.invalidateQueries({ queryKey: taskKeys.all });
+
+            toast({
+              title: "Success",
+              description: `Booking updated and ${createdJobs.length} job(s) created`,
+            });
+            return; // Skip regular success toast
+          }
+        } catch (jobError) {
+          console.error('⚠️ Error creating jobs:', jobError);
+          toast({
+            title: "Booking Updated",
+            description: `Booking updated but failed to create jobs`,
+            variant: "destructive",
+          });
+        }
+      }
+
+      // Create custom tasks if provided
+      const hasCustomTasks = context?.customTasks && context.customTasks.length > 0;
+      console.log('🔍 updateBooking onSuccess - hasCustomTasks:', hasCustomTasks, context?.customTasks);
+
+      if (hasCustomTasks && currentUserId) {
+        try {
+          const validCustomTasks = context.customTasks.filter((task: CustomBookingTask) => task.title.trim() !== '');
+          if (validCustomTasks.length > 0) {
+            console.log('📋 Creating custom jobs for updated booking:', data.booking_id, validCustomTasks);
+
+            const jobs = await createJobsFromBooking(
+              data.booking_id!,
+              data.property_id,
+              data.check_in_date,
+              data.check_out_date,
+              [], // No job configs, just custom tasks
+              currentUserId,
+              context.guestName || data.guest_name,
+              validCustomTasks
+            );
+
+            console.log('✅ Custom jobs created:', jobs.length);
+
+            // Invalidate job and task caches
+            queryClient.invalidateQueries({ queryKey: jobKeys.all });
+            queryClient.invalidateQueries({ queryKey: taskKeys.all });
+            queryClient.invalidateQueries({ queryKey: bookingTaskKeys.booking(data.booking_id!) });
+
+            toast({
+              title: "Success",
+              description: `Booking updated and ${jobs.length} custom job(s) created`,
+            });
+          }
+        } catch (taskError) {
+          console.error('⚠️ Error creating custom tasks:', taskError);
+          toast({
+            title: "Booking Updated",
+            description: "Booking updated but failed to create custom tasks",
+            variant: "destructive",
+          });
+        }
+      }
 
       // Cross-entity invalidation: Property availability changed
       queryClient.invalidateQueries({ queryKey: ['properties', 'detail', data.property_id], refetchType: 'all' });
@@ -350,25 +689,29 @@ export function useBookings() {
           if (variables.bookingData.booking_status === 'confirmed') {
             await notifyBookingConfirmed(data, property.property_name, currentUserId);
 
-            // Show special toast with invoice generation option if no invoice exists
+            // Auto-generate invoice if one doesn't exist
             if (!(data as any).invoice_id) {
-              toast({
-                title: "🎉 Booking Confirmed!",
-                description: "Would you like to generate an invoice for this booking?",
-                action: (
-                  <ToastAction
-                    altText="Generate Invoice"
-                    onClick={() => {
-                      // Navigate to invoice creation with booking context
-                      window.location.href = `/invoices/new/${data.booking_id}`;
-                    }}
-                  >
-                    Generate Invoice
-                  </ToastAction>
-                ),
-                duration: 10000, // Show for 10 seconds
-              });
-              return; // Skip regular success toast
+              try {
+                console.log('📄 Auto-generating invoice for confirmed booking:', data.booking_id);
+                const invoice = await createInvoiceFromBooking(data.booking_id!);
+                console.log('✅ Invoice auto-generated:', invoice.invoice_id);
+
+                // Invalidate invoice caches after creation
+                queryClient.invalidateQueries({ queryKey: ['invoices'], refetchType: 'all' });
+
+                toast({
+                  title: "🎉 Booking Confirmed!",
+                  description: "Invoice has been automatically generated.",
+                });
+                return; // Skip regular success toast
+              } catch (invoiceError) {
+                console.error('⚠️ Failed to auto-generate invoice:', invoiceError);
+                toast({
+                  title: "🎉 Booking Confirmed!",
+                  description: "Booking confirmed. Invoice generation failed - you can generate it manually.",
+                });
+                return; // Skip regular success toast
+              }
             }
           } else {
             await notifyBookingStatusChanged(
@@ -379,6 +722,34 @@ export function useBookings() {
               currentUserId
             );
           }
+        }
+      }
+
+      // Update revenue allocation if total_amount changed for entire-property bookings
+      if (variables.bookingData.total_amount !== undefined) {
+        try {
+          const needsAllocation = await shouldCreateAllocation(
+            data.property_id,
+            data.unit_id || null
+          );
+
+          if (needsAllocation) {
+            console.log('💰 Updating revenue allocation for booking:', data.booking_id);
+            const { error: allocError } = await supabase.rpc('create_booking_revenue_allocations', {
+              p_booking_id: data.booking_id,
+              p_property_id: data.property_id,
+              p_total_amount: data.total_amount || 0,
+            });
+
+            if (allocError) {
+              console.error('⚠️ Failed to update revenue allocation:', allocError);
+            } else {
+              console.log('✅ Revenue allocation updated for booking:', data.booking_id);
+              queryClient.invalidateQueries({ queryKey: ['booking-revenue-allocations'] });
+            }
+          }
+        } catch (allocError) {
+          console.error('⚠️ Error during revenue allocation update:', allocError);
         }
       }
 
@@ -498,8 +869,8 @@ export function useBookings() {
     isFetching,
     error: bookingsError,
     createBooking: createBookingMutation.mutateAsync,
-    updateBooking: (bookingId: string, bookingData: Partial<BookingInsert>) =>
-      updateBookingMutation.mutateAsync({ bookingId, bookingData }),
+    updateBooking: (bookingId: string, bookingData: Partial<BookingInsert>, jobConfigs?: BookingJobConfig[], customTasks?: CustomBookingTask[]) =>
+      updateBookingMutation.mutateAsync({ bookingId, bookingData, jobConfigs, customTasks }),
     deleteBooking: deleteBookingMutation.mutateAsync,
     refetch,
     // Mutation states for UI feedback

@@ -322,6 +322,18 @@ export const ROUTES = {
   users: '/users',
   activityLogs: '/activity-logs',
   reports: '/reports',
+
+  // Automation
+  reportSchedules: '/automation/report-schedules',
+
+  // Additional pages
+  commissions: '/commissions',
+  profile: '/profile',
+  notifications: '/notifications',
+
+  // Security
+  passwordVault: '/password-vault',
+  keyControl: '/key-control',
 };
 
 /**

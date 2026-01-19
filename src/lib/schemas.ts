@@ -147,6 +147,7 @@ export const unitSchema = z.object({
   property_name: z.string().optional(),
   license_number: z.string().optional(),
   folio: z.string().optional(),
+  owner_id: z.string().uuid().optional().nullable(), // Optional unit-specific owner
 });
 
 // Insert types (for creating new records)
@@ -292,6 +293,38 @@ export type Unit = {
   property_name?: string;
   license_number?: string;
   folio?: string;
+  owner_id?: string | null; // Optional unit-specific owner (inherits from property if null)
+  num_bedrooms?: number | null; // Number of bedrooms in this unit
+  num_bathrooms?: number | null; // Number of bathrooms (supports half baths like 1.5)
+  capacity?: number | null; // Guest capacity for this unit (inherits from property if null)
+  max_capacity?: number | null; // Max guest capacity (inherits from property if null)
+  owner?: User; // Joined owner data
+  communication?: UnitCommunication | null; // Per-unit WiFi settings
+  access?: UnitAccess | null; // Per-unit access codes
+  amenities?: Amenity[]; // Per-unit amenities (inherits from property if empty)
+  rules?: Rule[]; // Per-unit rules (inherits from property if empty)
+  created_at?: string;
+  updated_at?: string;
+};
+
+// Per-unit communication settings (WiFi, phone)
+export type UnitCommunication = {
+  comm_id?: string;
+  unit_id: string;
+  phone_number?: string | null;
+  wifi_name?: string | null;
+  wifi_password?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+// Per-unit access settings (door codes, alarm)
+export type UnitAccess = {
+  access_id?: string;
+  unit_id: string;
+  gate_code?: string | null;
+  door_lock_password?: string | null;
+  alarm_passcode?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -308,6 +341,20 @@ export type Rule = {
   created_at?: string;
 };
 
+// Unit-specific amenity assignment
+export type UnitAmenity = {
+  unit_id: string;
+  amenity_id: string;
+  created_at?: string;
+};
+
+// Unit-specific rule assignment
+export type UnitRule = {
+  unit_id: string;
+  rule_id: string;
+  created_at?: string;
+};
+
 export type PropertyImage = {
   image_id?: string;
   property_id: string;
@@ -321,6 +368,7 @@ export type PropertyImage = {
 // Booking schemas
 export const bookingSchema = z.object({
   property_id: z.string().uuid("Property ID is required"),
+  unit_id: z.string().uuid().optional().nullable(), // Specific unit or null for entire property
   guest_name: z.string().min(1, "Guest name is required"),
   guest_email: z.string().email("Valid email is required").optional().or(z.literal("")),
   guest_phone: z.string().optional(),
@@ -405,6 +453,8 @@ export const bookingSchema = z.object({
 export type Booking = {
   booking_id?: string;
   property_id: string;
+  unit_id?: string | null; // Specific unit or null for entire property
+  unit?: Unit; // Joined unit data
   guest_name: string;
   guest_email?: string | null;
   guest_phone?: string | null;
@@ -519,6 +569,7 @@ export const taskSchema = z.object({
   assigned_to: z.string().uuid().optional().nullable(),
   created_by: z.string().uuid().optional(),
   job_id: z.string().uuid().optional().nullable(),
+  booking_id: z.string().uuid().optional().nullable(),
   status: z.enum(["pending", "in_progress", "completed", "cancelled"]).default("pending"),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
   category: z.enum(["cleaning", "maintenance", "check_in_prep", "check_out_prep", "inspection", "repair", "other"]).default("other"),
@@ -561,6 +612,7 @@ export type Task = z.infer<typeof taskSchema> & {
   property?: Property;
   assigned_user?: User;
   created_user?: User;
+  booking?: PropertyBooking;
   checklists?: TaskChecklist[];
   comments?: TaskComment[];
   attachments?: TaskAttachment[];
@@ -579,10 +631,40 @@ export type TaskChecklistInsert = Omit<z.infer<typeof taskChecklistSchema>, 'che
 export type TaskCommentInsert = Omit<z.infer<typeof taskCommentSchema>, 'comment_id' | 'created_at'>;
 export type TaskAttachmentInsert = Omit<z.infer<typeof taskAttachmentSchema>, 'attachment_id' | 'created_at'>;
 
+// Booking Job Configuration (for auto-generating tasks from bookings)
+export interface BookingJobConfig {
+  type: 'cleaning' | 'check_in_prep' | 'check_out_prep' | 'inspection' | 'maintenance';
+  enabled: boolean;
+  assignedTo: string | null;
+  dueDate: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  notes?: string;
+}
+
+export const defaultBookingJobConfigs: BookingJobConfig[] = [
+  { type: 'cleaning', enabled: true, assignedTo: null, dueDate: '', priority: 'medium' },
+  { type: 'check_in_prep', enabled: true, assignedTo: null, dueDate: '', priority: 'medium' },
+  { type: 'check_out_prep', enabled: true, assignedTo: null, dueDate: '', priority: 'medium' },
+  { type: 'inspection', enabled: false, assignedTo: null, dueDate: '', priority: 'low' },
+  { type: 'maintenance', enabled: false, assignedTo: null, dueDate: '', priority: 'low' },
+];
+
+// Custom Booking Task (for adding specified tasks during booking creation)
+export interface CustomBookingTask {
+  id: string;  // Temporary ID for UI tracking
+  title: string;
+  description?: string;
+  assignedTo: string | null;
+  dueDate: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  category: 'cleaning' | 'maintenance' | 'check_in_prep' | 'check_out_prep' | 'inspection' | 'repair' | 'other';
+}
+
 // Issue schemas
 export const issueSchema = z.object({
   issue_id: z.string().uuid().optional(),
   property_id: z.string().uuid("Property is required"),
+  unit_id: z.string().uuid().optional().nullable(),
   title: z.string().min(1, "Issue title is required"),
   description: z.string().optional(),
   category: z.enum(["maintenance", "damage", "repair_needed", "cleaning", "plumbing", "electrical", "appliance", "hvac", "other"]).default("other"),
@@ -612,6 +694,7 @@ export const issuePhotoSchema = z.object({
 // Issue types
 export type Issue = z.infer<typeof issueSchema> & {
   property?: Property;
+  unit?: PropertyUnit;
   reported_user?: User;
   assigned_user?: User;
   photos?: IssuePhoto[];
@@ -698,9 +781,13 @@ export const notificationPreferencesSchema = z.object({
 // Job type forward declaration (will be properly typed when jobs schema is added)
 export type Job = {
   job_id: string;
+  property_id: string;
+  unit_id?: string | null;
   title: string;
   status: string;
   priority: string;
+  property?: Property;
+  unit?: PropertyUnit;
   [key: string]: any;
 };
 
@@ -900,6 +987,7 @@ export const providerSchema = z.object({
   // Status
   is_active: z.boolean().default(true),
   is_preferred: z.boolean().default(false),
+  partner_tier: z.enum(['regular', 'partner', 'gold_partner', 'platinum_partner']).default('regular'),
 
   // General notes
   notes: z.string().optional(),
@@ -1104,7 +1192,12 @@ export const expenseSchema = z.object({
   recurring_frequency: z.enum(["monthly", "quarterly", "yearly"]).optional(),
 
   // Financial entry type (for Credit/Debit ledger system)
-  entry_type: z.enum(["credit", "debit", "owner_payment"]).default("debit"),
+  entry_type: z.enum(["credit", "debit", "owner_payment", "service_cost"]).default("debit"),
+
+  // Approval workflow
+  is_approved: z.boolean().default(false),
+  approved_by: z.string().uuid().optional().nullable(),
+  approved_at: z.string().optional().nullable(),
 
   // Scheduled entry fields
   is_scheduled: z.boolean().default(false),
@@ -1155,6 +1248,57 @@ export type InvoiceLineItem = z.infer<typeof invoiceLineItemSchema> & {
   total_amount?: number; // Computed: subtotal + tax_amount
 };
 
+// =============================================
+// EXPENSE ATTACHMENT SCHEMA
+// =============================================
+export const expenseAttachmentSchema = z.object({
+  attachment_id: z.string().uuid().optional(),
+  expense_id: z.string().uuid("Expense ID is required"),
+  file_url: z.string().url("Invalid file URL"),
+  file_name: z.string().min(1, "File name is required"),
+  file_type: z.string().optional(),
+  file_size: z.number().optional(),
+  caption: z.string().optional(),
+  uploaded_by: z.string().uuid().optional(),
+  uploaded_at: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+export type ExpenseAttachment = z.infer<typeof expenseAttachmentSchema> & {
+  uploader?: User;
+};
+
+export type ExpenseAttachmentInsert = Omit<
+  z.infer<typeof expenseAttachmentSchema>,
+  'attachment_id' | 'created_at' | 'updated_at' | 'uploaded_at'
+>;
+
+// =============================================
+// EXPENSE NOTE SCHEMA
+// =============================================
+export const expenseNoteSchema = z.object({
+  note_id: z.string().uuid().optional(),
+  expense_id: z.string().uuid("Expense ID is required"),
+  note_text: z.string().min(1, "Note text is required"),
+  author_id: z.string().uuid().optional(),
+  author_name: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+export type ExpenseNote = z.infer<typeof expenseNoteSchema> & {
+  author?: User;
+};
+
+export type ExpenseNoteInsert = Omit<
+  z.infer<typeof expenseNoteSchema>,
+  'note_id' | 'created_at' | 'updated_at'
+>;
+
+// =============================================
+// EXPENSE TYPE WITH RELATIONS
+// =============================================
 export type Expense = z.infer<typeof expenseSchema> & {
   property?: Property;
   vendor?: ServiceProvider;
@@ -1163,6 +1307,11 @@ export type Expense = z.infer<typeof expenseSchema> & {
   // For financial entries balance calculation
   running_balance?: number;
   schedule_balance?: number;
+  // Relations for attachments and notes
+  attachments?: ExpenseAttachment[];
+  expense_notes?: ExpenseNote[];
+  attachment_count?: number;
+  note_count?: number;
 };
 
 export type FinancialAuditLog = z.infer<typeof financialAuditLogSchema> & {
@@ -1629,6 +1778,54 @@ export type AccessAuthorization = z.infer<typeof accessAuthorizationSchema> & {
   building_notification_sent_at?: string;
 };
 
+// ============================================
+// ACCESS DOCUMENTS (Simplified Document Storage)
+// ============================================
+
+// Access Document Types
+export const ACCESS_DOCUMENT_TYPES = {
+  access_card: 'Access Card',
+  code: 'Code',
+  key: 'Key',
+  permit: 'Permit',
+  other: 'Other',
+} as const;
+
+export type AccessDocumentType = keyof typeof ACCESS_DOCUMENT_TYPES;
+
+// Access Document Schema
+export const accessDocumentSchema = z.object({
+  access_document_id: z.string().uuid().optional(),
+  property_id: z.string().uuid().optional().nullable(),
+  vendor_id: z.string().uuid().optional().nullable(),
+  document_type: z.enum(['access_card', 'code', 'key', 'permit', 'other']),
+  document_name: z.string().min(1, 'Document name is required'),
+  description: z.string().optional().nullable(),
+  file_url: z.string().url('Invalid file URL'),
+  file_name: z.string().min(1, 'File name is required'),
+  file_type: z.string().optional().nullable(),
+  file_size: z.number().optional().nullable(),
+  expiry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional().nullable(),
+  tags: z.array(z.string()).optional().nullable(),
+});
+
+export type AccessDocumentInsert = z.infer<typeof accessDocumentSchema>;
+
+export type AccessDocument = AccessDocumentInsert & {
+  access_document_id: string;
+  uploaded_by?: string;
+  created_at?: string;
+  updated_at?: string;
+  // Joined fields from view
+  property_name?: string;
+  property_type?: string;
+  vendor_name?: string;
+  vendor_type?: string;
+  uploaded_by_first_name?: string;
+  uploaded_by_last_name?: string;
+  status?: 'active' | 'expiring_soon' | 'expired';
+};
+
 // COI Dashboard Stats
 export type COIDashboardStats = {
   active_cois: number;
@@ -1808,6 +2005,10 @@ export type CheckInOutRecord = CheckInOutRecordInsert & {
   created_by?: string | null;
   created_at: string;
   updated_at: string;
+  /** Soft delete timestamp - null if not deleted */
+  deleted_at?: string | null;
+  /** User who deleted the record */
+  deleted_by?: string | null;
   property?: {
     property_id: string;
     property_name: string;
@@ -1826,6 +2027,12 @@ export type CheckInOutRecord = CheckInOutRecordInsert & {
     user_type: string;
   };
   template?: ChecklistTemplate;
+  /** User who deleted the record (populated when fetching deleted records) */
+  deletedBy?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
 };
 
 // Check-in/Out filters
@@ -1838,6 +2045,8 @@ export type CheckInOutFilters = {
   start_date?: string;
   end_date?: string;
   search?: string;
+  /** When true, include soft-deleted records in results */
+  include_deleted?: boolean;
 };
 
 // ============================================
@@ -2039,5 +2248,718 @@ export type VehicleDocument = VehicleDocumentInsert & {
   uploaded_by?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// ==========================================
+// SERVICE SCHEDULING SCHEMAS
+// ==========================================
+
+// Service Types
+export const serviceTypeEnum = z.enum([
+  'cleaning',
+  'deep_cleaning',
+  'maintenance',
+  'pool_service',
+  'lawn_care',
+  'pest_control',
+  'hvac_service',
+  'plumbing',
+  'electrical',
+  'appliance_repair',
+  'inspection',
+  'other'
+]);
+
+export type ServiceType = z.infer<typeof serviceTypeEnum>;
+
+// Recurrence Frequency
+export const recurrenceFrequencyEnum = z.enum([
+  'daily',
+  'weekly',
+  'biweekly',
+  'monthly',
+  'quarterly',
+  'yearly'
+]);
+
+export type RecurrenceFrequency = z.infer<typeof recurrenceFrequencyEnum>;
+
+// Schedule Status
+export const scheduleStatusEnum = z.enum([
+  'scheduled',
+  'confirmed',
+  'in_progress',
+  'completed',
+  'cancelled',
+  'no_show'
+]);
+
+export type ScheduleStatus = z.infer<typeof scheduleStatusEnum>;
+
+// Priority
+export const schedulePriorityEnum = z.enum(['low', 'normal', 'high', 'urgent']);
+export type SchedulePriority = z.infer<typeof schedulePriorityEnum>;
+
+// Partner Payment Status (Gold Partner Status from legacy)
+export const partnerPaymentStatusEnum = z.enum(['pending', 'waiting', 'paid', 'partial', 'overdue']);
+export type PartnerPaymentStatus = z.infer<typeof partnerPaymentStatusEnum>;
+
+// Allocation Status
+export const allocationStatusEnum = z.enum(['unassigned', 'assigned', 'accepted', 'declined', 'reassigned']);
+export type AllocationStatus = z.infer<typeof allocationStatusEnum>;
+
+// Service Category Schema
+export const serviceCategorySchema = z.object({
+  category_name: z.string().min(1, "Category name is required").max(100),
+  category_code: z.string().max(50).optional(),
+  description: z.string().optional().nullable(),
+  is_active: z.boolean().default(true),
+  sort_order: z.number().int().default(0),
+});
+
+export type ServiceCategoryInsert = z.infer<typeof serviceCategorySchema>;
+
+export type ServiceCategory = ServiceCategoryInsert & {
+  category_id: string;
+  created_at: string;
+  updated_at: string;
+  services?: ServiceTypeCatalog[];
+};
+
+// Service Type Catalog Schema (specific services under categories)
+export const serviceTypeCatalogSchema = z.object({
+  category_id: z.string().uuid("Invalid category ID"),
+  service_name: z.string().min(1, "Service name is required").max(100),
+  service_code: z.string().max(50).optional(),
+  description: z.string().optional().nullable(),
+  default_duration_minutes: z.number().int().positive().default(60),
+  default_cost: z.number().positive().optional().nullable(),
+  is_active: z.boolean().default(true),
+  sort_order: z.number().int().default(0),
+});
+
+export type ServiceTypeCatalogInsert = z.infer<typeof serviceTypeCatalogSchema>;
+
+export type ServiceTypeCatalog = ServiceTypeCatalogInsert & {
+  service_type_id: string;
+  created_at: string;
+  updated_at: string;
+  category?: ServiceCategory;
+};
+
+// Service Recurrence Rule Schema
+export const serviceRecurrenceRuleSchema = z.object({
+  frequency: recurrenceFrequencyEnum,
+  interval_value: z.number().int().positive().default(1),
+  days_of_week: z.array(z.number().int().min(0).max(6)).optional().nullable(), // 0=Sunday, 6=Saturday
+  day_of_month: z.number().int().min(1).max(31).optional().nullable(),
+  week_of_month: z.number().int().min(-1).max(4).refine(v => v !== 0, "Week of month cannot be 0").optional().nullable(),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format"),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format").optional().nullable(),
+  max_occurrences: z.number().int().positive().optional().nullable(),
+  is_active: z.boolean().default(true),
+});
+
+export type ServiceRecurrenceRuleInsert = z.infer<typeof serviceRecurrenceRuleSchema>;
+
+export type ServiceRecurrenceRule = ServiceRecurrenceRuleInsert & {
+  rule_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Scheduled Service Schema
+export const scheduledServiceSchema = z.object({
+  property_id: z.string().uuid("Invalid property ID"),
+  unit_id: z.string().uuid("Invalid unit ID").optional().nullable(),
+  service_type: serviceTypeEnum,
+  custom_service_name: z.string().max(255).optional().nullable(),
+  vendor_id: z.string().uuid("Invalid vendor ID").optional().nullable(),
+
+  // Category/Service hierarchy (legacy fields)
+  service_category_id: z.string().uuid().optional().nullable(),
+  catalog_service_type_id: z.string().uuid().optional().nullable(),
+
+  // Scheduling
+  scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format"),
+  scheduled_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Must be HH:MM or HH:MM:SS format").optional().nullable(),
+  end_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Must be HH:MM or HH:MM:SS format").optional().nullable(),
+  duration_minutes: z.number().int().positive().default(60),
+
+  // Recurrence
+  recurrence_rule_id: z.string().uuid().optional().nullable(),
+  parent_schedule_id: z.string().uuid().optional().nullable(),
+  is_recurring_instance: z.boolean().default(false),
+
+  // Status and details
+  status: scheduleStatusEnum.default('scheduled'),
+  priority: schedulePriorityEnum.default('normal'),
+  estimated_cost: z.number().positive().optional().nullable(),
+  actual_cost: z.number().positive().optional().nullable(),
+
+  // Partner/Vendor tracking (legacy "Gold Partner Status")
+  partner_payment_status: partnerPaymentStatusEnum.default('pending'),
+  allocation_status: allocationStatusEnum.default('unassigned'),
+  payment_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  payment_amount: z.number().positive().optional().nullable(),
+
+  // Notes
+  notes: z.string().optional().nullable(),
+  internal_notes: z.string().optional().nullable(),
+  special_instructions: z.string().optional().nullable(),
+
+  // Completion
+  completed_at: z.string().optional().nullable(),
+  completed_by: z.string().uuid().optional().nullable(),
+  completion_notes: z.string().optional().nullable(),
+
+  // Property owner for filtering
+  property_owner_id: z.string().uuid().optional().nullable(),
+});
+
+export type ScheduledServiceInsert = z.infer<typeof scheduledServiceSchema>;
+
+export type ScheduledService = ScheduledServiceInsert & {
+  schedule_id: string;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  assigned_at?: string | null;
+  assigned_by?: string | null;
+  // Relations (populated by queries)
+  property?: {
+    property_id: string;
+    property_name: string;
+    property_code?: string;
+  };
+  unit?: {
+    unit_id: string;
+    unit_name: string;
+  } | null;
+  vendor?: {
+    provider_id: string;
+    business_name: string;
+    contact_email?: string;
+    contact_phone?: string;
+  } | null;
+  recurrence_rule?: ServiceRecurrenceRule | null;
+  created_by_user?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+  assigned_by_user?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+  service_category?: ServiceCategory | null;
+  catalog_service?: ServiceTypeCatalog | null;
+  property_owner?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+};
+
+// Partner Payment Status display config
+export const PARTNER_PAYMENT_STATUS_CONFIG: Record<PartnerPaymentStatus, { label: string; color: string; bgColor: string }> = {
+  pending: { label: 'Pending', color: '#6B7280', bgColor: '#F3F4F6' },
+  waiting: { label: 'Waiting', color: '#F59E0B', bgColor: '#FEF3C7' },
+  paid: { label: 'Paid', color: '#10B981', bgColor: '#D1FAE5' },
+  partial: { label: 'Partial', color: '#8B5CF6', bgColor: '#EDE9FE' },
+  overdue: { label: 'Overdue', color: '#EF4444', bgColor: '#FEE2E2' },
+};
+
+// Allocation Status display config (tracks vendor assignment status for scheduled services)
+export const ALLOCATION_STATUS_CONFIG: Record<AllocationStatus, { label: string; color: string; bgColor: string }> = {
+  unassigned: { label: 'Unassigned', color: '#6B7280', bgColor: '#F3F4F6' },
+  assigned: { label: 'Pending Response', color: '#F59E0B', bgColor: '#FEF3C7' },
+  accepted: { label: 'Accepted', color: '#10B981', bgColor: '#D1FAE5' },
+  declined: { label: 'Declined', color: '#EF4444', bgColor: '#FEE2E2' },
+  reassigned: { label: 'Reassigned', color: '#8B5CF6', bgColor: '#EDE9FE' },
+};
+
+// Partner Tier enum for vendor classification
+export const partnerTierEnum = z.enum(['regular', 'partner', 'gold_partner', 'platinum_partner']);
+export type PartnerTier = z.infer<typeof partnerTierEnum>;
+
+// Partner Tier display config
+export const PARTNER_TIER_CONFIG: Record<PartnerTier, { label: string; color: string; bgColor: string }> = {
+  regular: { label: 'Regular', color: '#6B7280', bgColor: '#F3F4F6' },
+  partner: { label: 'Partner', color: '#2563EB', bgColor: '#DBEAFE' },
+  gold_partner: { label: 'Gold Partner', color: '#D97706', bgColor: '#FEF3C7' },
+  platinum_partner: { label: 'Platinum Partner', color: '#7C3AED', bgColor: '#EDE9FE' },
+};
+
+// Service Notification Settings Schema
+export const serviceNotificationSettingsSchema = z.object({
+  schedule_id: z.string().uuid("Invalid schedule ID"),
+  notify_vendor_before_hours: z.number().int().min(0).default(24),
+  notify_admin_before_hours: z.number().int().min(0).default(48),
+  notify_owner_before_hours: z.number().int().min(0).optional().nullable(),
+  send_reminder: z.boolean().default(true),
+  send_confirmation: z.boolean().default(true),
+  send_completion: z.boolean().default(true),
+});
+
+export type ServiceNotificationSettingsInsert = z.infer<typeof serviceNotificationSettingsSchema>;
+
+export type ServiceNotificationSettings = ServiceNotificationSettingsInsert & {
+  setting_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Service Notification Schema
+export const serviceNotificationSchema = z.object({
+  schedule_id: z.string().uuid("Invalid schedule ID"),
+  notification_type: z.enum(['reminder', 'confirmation', 'completion', 'cancellation', 'reschedule']),
+  recipient_type: z.enum(['vendor', 'admin', 'owner', 'ops']),
+  recipient_id: z.string().uuid().optional().nullable(),
+  recipient_email: z.string().email().optional().nullable(),
+  scheduled_for: z.string().datetime(),
+  sent_at: z.string().datetime().optional().nullable(),
+  status: z.enum(['pending', 'sent', 'failed', 'cancelled']).default('pending'),
+  error_message: z.string().optional().nullable(),
+  retry_count: z.number().int().min(0).default(0),
+});
+
+export type ServiceNotificationInsert = z.infer<typeof serviceNotificationSchema>;
+
+export type ServiceNotification = ServiceNotificationInsert & {
+  notification_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Filters for querying scheduled services
+export type ScheduledServiceFilters = {
+  property_id?: string;
+  unit_id?: string;
+  vendor_id?: string;
+  service_type?: ServiceType;
+  status?: ScheduleStatus | ScheduleStatus[];
+  priority?: SchedulePriority;
+  date_from?: string;
+  date_to?: string;
+  is_recurring?: boolean;
+  search?: string;
+};
+
+// Calendar view types
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  allDay: boolean;
+  resource: ScheduledService;
+  color?: string;
+};
+
+// Service type display names and colors
+export const SERVICE_TYPE_CONFIG: Record<ServiceType, { label: string; color: string; icon: string }> = {
+  cleaning: { label: 'Cleaning', color: '#10B981', icon: 'Sparkles' },
+  deep_cleaning: { label: 'Deep Cleaning', color: '#059669', icon: 'Sparkles' },
+  maintenance: { label: 'Maintenance', color: '#F59E0B', icon: 'Wrench' },
+  pool_service: { label: 'Pool Service', color: '#3B82F6', icon: 'Droplets' },
+  lawn_care: { label: 'Lawn Care', color: '#22C55E', icon: 'Leaf' },
+  pest_control: { label: 'Pest Control', color: '#EF4444', icon: 'Bug' },
+  hvac_service: { label: 'HVAC Service', color: '#8B5CF6', icon: 'Wind' },
+  plumbing: { label: 'Plumbing', color: '#06B6D4', icon: 'Droplet' },
+  electrical: { label: 'Electrical', color: '#FBBF24', icon: 'Zap' },
+  appliance_repair: { label: 'Appliance Repair', color: '#6366F1', icon: 'Settings' },
+  inspection: { label: 'Inspection', color: '#14B8A6', icon: 'ClipboardCheck' },
+  other: { label: 'Other', color: '#6B7280', icon: 'MoreHorizontal' },
+};
+
+// Schedule status display config
+export const SCHEDULE_STATUS_CONFIG: Record<ScheduleStatus, { label: string; color: string; bgColor: string }> = {
+  scheduled: { label: 'Scheduled', color: '#3B82F6', bgColor: '#DBEAFE' },
+  confirmed: { label: 'Confirmed', color: '#10B981', bgColor: '#D1FAE5' },
+  in_progress: { label: 'In Progress', color: '#F59E0B', bgColor: '#FEF3C7' },
+  completed: { label: 'Completed', color: '#059669', bgColor: '#A7F3D0' },
+  cancelled: { label: 'Cancelled', color: '#EF4444', bgColor: '#FEE2E2' },
+  no_show: { label: 'No Show', color: '#6B7280', bgColor: '#E5E7EB' },
+};
+
+// ==========================================
+// REPORT EMAIL SCHEDULE SCHEMAS
+// ==========================================
+
+// Report Type enum
+export const reportTypeEnum = z.enum([
+  'current_balance',
+  'financial_entries',
+  'active_clients',
+  'inactive_clients',
+  'bookings_enhanced',
+  'rental_revenue'
+]);
+
+export type ReportType = z.infer<typeof reportTypeEnum>;
+
+// Report type display names
+export const REPORT_TYPE_CONFIG: Record<ReportType, { label: string; description: string }> = {
+  current_balance: { label: 'Current Balance Report', description: 'Client/Property balances with positive, negative, and current balance' },
+  financial_entries: { label: 'Financial Entries Report', description: 'All financial entries for a date range' },
+  active_clients: { label: 'Active Clients Report', description: 'List of active clients with their properties' },
+  inactive_clients: { label: 'Inactive Clients Report', description: 'List of inactive clients' },
+  bookings_enhanced: { label: 'Enhanced Bookings Report', description: 'Detailed booking report with revenue breakdown' },
+  rental_revenue: { label: 'Rental Revenue Report', description: 'Revenue analysis by property and period' },
+};
+
+// Days of week display
+export const DAYS_OF_WEEK = [
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+] as const;
+
+// Schedule frequency enum
+export const scheduleFrequencyEnum = z.enum(['weekly', 'monthly', 'annual']);
+export type ScheduleFrequency = z.infer<typeof scheduleFrequencyEnum>;
+
+export const SCHEDULE_FREQUENCIES = {
+  weekly: 'Weekly',
+  monthly: 'Monthly',
+  annual: 'Annual',
+} as const;
+
+export const MONTHS_OF_YEAR = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+] as const;
+
+// Report Schedule Schema
+export const reportScheduleSchema = z.object({
+  schedule_name: z.string().min(1, "Schedule name is required").max(200),
+  report_type: reportTypeEnum,
+  schedule_frequency: scheduleFrequencyEnum.default('weekly'),
+  day_of_week: z.number().int().min(0).max(6).optional().nullable(), // 0=Sunday, 6=Saturday (for weekly)
+  day_of_month: z.number().int().min(1).max(31).optional().nullable(), // 1-31 (for monthly/annual)
+  month_of_year: z.number().int().min(1).max(12).optional().nullable(), // 1-12 (for annual)
+  hour_of_day: z.number().int().min(0).max(23),
+  minute_of_hour: z.number().int().min(0).max(59).default(0),
+  timezone: z.string().default('America/New_York'),
+  recipient_emails: z.array(z.string().email("Invalid email address")), // Validation done in form submit
+  date_range_start: z.string().optional().nullable(), // ISO date string
+  date_range_end: z.string().optional().nullable(), // ISO date string
+  report_filters: z.record(z.any()).optional().default({}),
+  is_enabled: z.boolean().default(true),
+});
+
+export type ReportScheduleInsert = z.infer<typeof reportScheduleSchema>;
+
+export type ReportSchedule = ReportScheduleInsert & {
+  schedule_id: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  last_sent_at?: string | null;
+  next_run_at?: string | null;
+  creator?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
+};
+
+// Report Email History Schema
+export const reportEmailHistorySchema = z.object({
+  schedule_id: z.string().uuid("Invalid schedule ID"),
+  status: z.enum(['pending', 'sending', 'sent', 'failed']).default('pending'),
+  recipient_emails: z.array(z.string().email()),
+  email_provider_id: z.string().optional().nullable(),
+  error_message: z.string().optional().nullable(),
+  report_row_count: z.number().int().optional().nullable(),
+  report_generation_time_ms: z.number().int().optional().nullable(),
+});
+
+export type ReportEmailHistoryInsert = z.infer<typeof reportEmailHistorySchema>;
+
+export type ReportEmailHistory = ReportEmailHistoryInsert & {
+  history_id: string;
+  sent_at: string;
+};
+
+// Report Schedule Filters
+export type ReportScheduleFilters = {
+  is_enabled?: boolean;
+  report_type?: ReportType;
+  search?: string;
+};
+
+// Common timezones for dropdown
+export const COMMON_TIMEZONES = [
+  { value: 'America/New_York', label: 'Eastern Time (US)' },
+  { value: 'America/Chicago', label: 'Central Time (US)' },
+  { value: 'America/Denver', label: 'Mountain Time (US)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (US)' },
+  { value: 'America/Sao_Paulo', label: 'São Paulo (Brazil)' },
+  { value: 'Europe/London', label: 'London (UK)' },
+  { value: 'Europe/Paris', label: 'Paris (France)' },
+  { value: 'Europe/Madrid', label: 'Madrid (Spain)' },
+  { value: 'UTC', label: 'UTC' },
+] as const;
+
+// =============================================================================
+// Booking Revenue Allocation Schema (for multi-unit owner revenue split)
+// =============================================================================
+
+export const bookingRevenueAllocationSchema = z.object({
+  booking_id: z.string().uuid("Invalid booking ID"),
+  unit_id: z.string().uuid("Invalid unit ID").nullable().optional(),
+  owner_id: z.string().uuid("Invalid owner ID"),
+  share_percentage: z.number().min(0).max(100),
+  allocated_amount: z.number().min(0),
+});
+
+export type BookingRevenueAllocationInsert = z.infer<typeof bookingRevenueAllocationSchema>;
+
+export type BookingRevenueAllocation = BookingRevenueAllocationInsert & {
+  allocation_id: string;
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  owner?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  unit?: {
+    unit_id: string;
+    property_name: string;
+  };
+  booking?: {
+    booking_id: string;
+    guest_name: string;
+    check_in_date: string;
+    check_out_date: string;
+    total_amount: number;
+  };
+};
+
+// Owner Revenue Summary (from view)
+export type OwnerRevenueSummary = {
+  owner_id: string;
+  owner_name: string;
+  owner_email: string;
+  revenue_month: string;
+  property_id: string;
+  property_name: string;
+  unit_id: string | null;
+  unit_name: string | null;
+  booking_count: number;
+  total_allocated_revenue: number;
+  avg_share_percentage: number;
+};
+
+// =============================================================================
+// KEY CONTROL SYSTEM SCHEMAS
+// =============================================================================
+
+// Key categories - where keys are stored/assigned
+export const keyCategoryEnum = z.enum(['office', 'operational', 'housekeepers', 'extras']);
+export type KeyCategory = z.infer<typeof keyCategoryEnum>;
+
+// Key types available in the system
+export const keyTypeEnum = z.enum(['house_key', 'mailbox_key', 'storage_key', 'remote_control']);
+export type KeyType = z.infer<typeof keyTypeEnum>;
+
+// Display labels for key types
+export const KEY_TYPE_LABELS: Record<KeyType, string> = {
+  house_key: 'House Key',
+  mailbox_key: 'Mailbox Key',
+  storage_key: 'Storage Key',
+  remote_control: 'Remote Control',
+};
+
+// Display labels for key categories (simplified names for better UX)
+export const KEY_CATEGORY_LABELS: Record<KeyCategory, string> = {
+  office: 'Main Storage',
+  operational: 'Ops Team',
+  housekeepers: 'Cleaning Team',
+  extras: 'Spare Keys',
+};
+
+// Key Inventory Schema
+export const keyInventorySchema = z.object({
+  property_id: z.string().uuid("Invalid property ID"),
+  category: keyCategoryEnum,
+  key_type: keyTypeEnum,
+  quantity: z.number().int().min(0, "Quantity cannot be negative").default(0),
+  notes: z.string().optional().nullable(),
+});
+
+export type KeyInventoryInsert = z.infer<typeof keyInventorySchema>;
+
+export type KeyInventory = KeyInventoryInsert & {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  property?: {
+    property_id: string;
+    property_name: string;
+  };
+};
+
+// Key Transaction Schema (for audit log)
+export const keyTransactionSchema = z.object({
+  property_id: z.string().uuid("Invalid property ID"),
+  key_type: keyTypeEnum,
+  from_category: keyCategoryEnum,
+  to_category: keyCategoryEnum,
+  quantity: z.number().int().min(1, "Transfer quantity must be at least 1"),
+  notes: z.string().optional().nullable(),
+});
+
+export type KeyTransactionInsert = z.infer<typeof keyTransactionSchema>;
+
+export type KeyTransaction = KeyTransactionInsert & {
+  id: string;
+  performed_by: string;
+  created_at: string;
+  property?: {
+    property_id: string;
+    property_name: string;
+  };
+  performer?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
+};
+
+// Key Inventory Filters
+export type KeyInventoryFilters = {
+  property_id?: string;
+  category?: KeyCategory;
+  key_type?: KeyType;
+  search?: string;
+};
+
+// Key Transaction Filters
+export type KeyTransactionFilters = {
+  property_id?: string;
+  key_type?: KeyType;
+  from_category?: KeyCategory;
+  to_category?: KeyCategory;
+  performed_by?: string;
+  start_date?: string;
+  end_date?: string;
+};
+
+// Property Key Summary - aggregated view of all keys for a property
+export type PropertyKeySummary = {
+  property_id: string;
+  property_name: string;
+  inventory: {
+    [category in KeyCategory]: {
+      [keyType in KeyType]: number;
+    };
+  };
+  inventoryNotes: {
+    [category in KeyCategory]: {
+      [keyType in KeyType]: string | null;
+    };
+  };
+  total_keys: number;
+  last_updated: string;
+};
+
+// ==================== Key Borrowing System ====================
+
+// Borrower type enum - matches DB constraint for key borrowings
+export const borrowerTypeEnum = z.enum(['admin', 'ops', 'guest', 'housekeeper', 'contractor', 'other']);
+export type BorrowerType = z.infer<typeof borrowerTypeEnum>;
+
+export const BORROWER_TYPE_LABELS: Record<BorrowerType, string> = {
+  admin: 'Admin',
+  ops: 'Operations',
+  guest: 'Guest',
+  housekeeper: 'Housekeeper',
+  contractor: 'Contractor',
+  other: 'Other',
+};
+
+// Borrowing status enum
+export const borrowingStatusEnum = z.enum(['borrowed', 'returned', 'overdue']);
+export type BorrowingStatus = z.infer<typeof borrowingStatusEnum>;
+
+export const BORROWING_STATUS_LABELS: Record<BorrowingStatus, string> = {
+  borrowed: 'Borrowed',
+  returned: 'Returned',
+  overdue: 'Overdue',
+};
+
+// Key Borrowing schema for check-out
+export const keyBorrowingSchema = z.object({
+  property_id: z.string().uuid('Invalid property ID'),
+  key_type: keyTypeEnum,
+  category: keyCategoryEnum,
+  quantity: z.number().int().positive('Quantity must be at least 1').default(1),
+  borrower_name: z.string().min(1, 'Borrower name is required'),
+  borrower_contact: z.string().optional(),
+  borrower_type: borrowerTypeEnum,
+  expected_return_date: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type KeyBorrowingInsert = z.infer<typeof keyBorrowingSchema>;
+
+export type KeyBorrowing = KeyBorrowingInsert & {
+  id: string;
+  checked_out_at: string;
+  checked_in_at: string | null;
+  checked_out_by: string;
+  checked_in_by: string | null;
+  status: BorrowingStatus;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  property?: {
+    property_id: string;
+    property_name: string;
+  };
+  checked_out_by_user?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
+  checked_in_by_user?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
+};
+
+// Key Borrowing Filters
+export type KeyBorrowingFilters = {
+  property_id?: string;
+  key_type?: KeyType;
+  category?: KeyCategory;
+  borrower_type?: BorrowerType;
+  status?: BorrowingStatus;
+  borrower_name?: string;
+  start_date?: string;
+  end_date?: string;
 };
 

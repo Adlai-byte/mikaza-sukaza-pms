@@ -1,5 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { GlobalSearch } from "@/components/global-search";
+
+// Logo path
+const logoWhite = `${import.meta.env.BASE_URL}logo-white.png`;
+
 import {
   LayoutDashboard,
   Building,
@@ -12,11 +17,9 @@ import {
   DollarSign,
   Star,
   Image,
-  Menu,
   Users,
   UserSquare2,
   Wrench,
-  Zap,
   Activity,
   Receipt,
   FileBarChart,
@@ -27,10 +30,17 @@ import {
   HelpCircle,
   Shield,
   KeyRound,
+  Key,
   MessageSquare,
   LogIn,
   Mail,
   FileSpreadsheet,
+  Percent,
+  FolderOpen,
+  UserCog,
+  Search,
+  Clock,
+  ClipboardList,
 } from "lucide-react";
 
 import {
@@ -73,11 +83,13 @@ const mainMenuItems = [
   { titleKey: "sidebar.messages", url: "/messages", icon: Mail, permission: PERMISSIONS.MESSAGES_VIEW },
   { titleKey: "sidebar.checkInOut", url: "/check-in-out", icon: LogIn, permission: PERMISSIONS.PROPERTIES_VIEW },
   { titleKey: "sidebar.checklistTemplates", url: "/checklist-templates", icon: CheckSquare, permission: PERMISSIONS.PROPERTIES_VIEW },
-  { titleKey: "sidebar.providers", url: "/providers", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+  { titleKey: "sidebar.serviceScheduling", url: "/service-scheduling", icon: ClipboardList, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
+  { titleKey: "sidebar.vendorDirectory", url: "/vendors", icon: Wrench, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
 
   // Admin & System (Low Frequency)
   { titleKey: "sidebar.userManagement", url: "/users", icon: Users, permission: PERMISSIONS.USERS_VIEW },
-  { titleKey: "sidebar.employeeDocs", url: "/employee-documents", icon: FileText, permission: PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW },
+  { titleKey: "sidebar.passwordVault", url: "/password-vault", icon: KeyRound, permission: PERMISSIONS.PASSWORDS_VIEW },
+  { titleKey: "sidebar.keyControl", url: "/key-control", icon: Key, permission: PERMISSIONS.PROPERTIES_VIEW },
   { titleKey: "sidebar.activityLogs", url: "/activity-logs", icon: Activity, permission: PERMISSIONS.SYSTEM_AUDIT },
 ];
 
@@ -85,30 +97,35 @@ const supportMenuItems = [
   { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, permission: null }, // Everyone can access
 ];
 
+// All document-related modules consolidated here
 const documentMenuItems = [
+  { titleKey: "sidebar.contracts", url: "/contracts", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
+  { titleKey: "sidebar.employeeDocs", url: "/employee-documents", icon: UserCog, permission: PERMISSIONS.DOCUMENTS_EMPLOYEE_VIEW },
+  { titleKey: "sidebar.serviceDocuments", url: "/service-documents", icon: FolderOpen, permission: PERMISSIONS.DOCUMENTS_SERVICE_VIEW },
   { titleKey: "sidebar.vendorCOIs", url: "/vendor-cois", icon: Shield, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
   { titleKey: "sidebar.accessAuth", url: "/access-authorizations", icon: KeyRound, permission: PERMISSIONS.SERVICE_PROVIDERS_VIEW },
-  { titleKey: "sidebar.serviceDocuments", url: "/service-documents", icon: Wrench, permission: PERMISSIONS.DOCUMENTS_SERVICE_VIEW },
-  { titleKey: "sidebar.messageTemplates", url: "/message-templates", icon: MessageSquare, permission: PERMISSIONS.DOCUMENTS_MESSAGES_VIEW },
+  // { titleKey: "sidebar.messageTemplates", url: "/message-templates", icon: MessageSquare, permission: PERMISSIONS.DOCUMENTS_MESSAGES_VIEW }, // Hidden - not needed for now
+  { titleKey: "sidebar.media", url: "/media", icon: Image, permission: PERMISSIONS.MEDIA_VIEW },
 ];
 
 const financeMenuItems = [
   // Daily/Weekly Financial Operations
   { titleKey: "sidebar.invoices", url: "/invoices", icon: Receipt, permission: PERMISSIONS.FINANCE_VIEW },
   { titleKey: "sidebar.expenses", url: "/expenses", icon: DollarSign, permission: PERMISSIONS.FINANCE_VIEW },
-  { titleKey: "sidebar.contracts", url: "/contracts", icon: FileText, permission: PERMISSIONS.DOCUMENTS_CONTRACTS_VIEW },
+  // { titleKey: "sidebar.commissions", url: "/commissions", icon: Percent, permission: PERMISSIONS.FINANCE_VIEW }, // Hidden - not needed for now
   { titleKey: "sidebar.billTemplates", url: "/bill-templates", icon: LayoutGrid, permission: PERMISSIONS.FINANCE_VIEW },
 
   // Periodic Reports & Analysis
   { titleKey: "sidebar.highlights", url: "/highlights", icon: Star, permission: PERMISSIONS.FINANCE_VIEW },
   { titleKey: "sidebar.financialDashboard", url: "/financial-dashboard", icon: BarChart3, permission: PERMISSIONS.FINANCE_VIEW },
   { titleKey: "sidebar.ownerStatement", url: "/owner-statement", icon: FileBarChart, permission: PERMISSIONS.FINANCE_VIEW },
-  { titleKey: "sidebar.serviceDocuments", url: "/finance/pipeline", icon: DollarSign, permission: PERMISSIONS.PIPELINE_VIEW },
+  { titleKey: "sidebar.pipeline", url: "/finance/pipeline", icon: DollarSign, permission: PERMISSIONS.PIPELINE_VIEW },
   { titleKey: "sidebar.reports", url: "/reports", icon: FileSpreadsheet, permission: PERMISSIONS.REPORTS_VIEW },
 ];
 
-const mediaMenuItems = [
-  { titleKey: "sidebar.media", url: "/media", icon: Image, permission: PERMISSIONS.MEDIA_VIEW },
+// Automation - Scheduled tasks and reports
+const automationMenuItems = [
+  { titleKey: "sidebar.reportSchedules", url: "/automation/report-schedules", icon: Clock, permission: PERMISSIONS.AUTOMATION_VIEW },
 ];
 
 export function AppSidebar() {
@@ -120,12 +137,18 @@ export function AppSidebar() {
   const { hasPermission, userRole, getPermissions } = usePermissions();
   const { unseenCounts } = useUnseenExpiringCounts(30);
 
+  // State for global search dialog
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // State for logo loading
+  const [logoError, setLogoError] = useState(false);
+
   // State for collapsible sections
   const [expandedSections, setExpandedSections] = useState({
     main: true,
     finance: true,
-    documents: false,
-    media: false,
+    documents: true,
+    automation: true,
     support: true,
   });
 
@@ -153,13 +176,13 @@ export function AppSidebar() {
     [hasPermission]
   );
 
-  const visibleMediaMenuItems = useMemo(
-    () => mediaMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
+  const visibleSupportMenuItems = useMemo(
+    () => supportMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
     [hasPermission]
   );
 
-  const visibleSupportMenuItems = useMemo(
-    () => supportMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
+  const visibleAutomationMenuItems = useMemo(
+    () => automationMenuItems.filter(item => !item.permission || hasPermission(item.permission)),
     [hasPermission]
   );
 
@@ -205,18 +228,48 @@ export function AppSidebar() {
       >
         <SidebarContent className="bg-gradient-primary">
         {/* Brand Header */}
-        <div className={`flex items-center p-6 ${isCollapsed ? "justify-center" : ""}`}>
-          <div className={`flex items-center space-x-3 ${isCollapsed ? "justify-center" : ""}`}>
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-primary font-bold text-lg">C&C</span>
+        <div className="flex justify-center items-center p-4 py-6">
+          {isCollapsed ? (
+            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">C&C</span>
             </div>
-            {!isCollapsed && (
-              <div>
-                <h1 className="text-white font-bold text-lg">Casa & Concierge</h1>
-              </div>
-            )}
-          </div>
+          ) : logoError ? (
+            <div className="text-white font-bold text-xl tracking-tight">
+              Casa & Concierge
+            </div>
+          ) : (
+            <img
+              src={logoWhite}
+              alt="Casa & Concierge"
+              className="h-16 w-auto object-contain"
+              loading="eager"
+              onError={() => setLogoError(true)}
+            />
+          )}
         </div>
+
+        {/* Global Search */}
+        <div className="px-3 pb-4">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white/70 hover:text-white ${
+              isCollapsed ? 'justify-center' : ''
+            }`}
+          >
+            <Search className="h-4 w-4 shrink-0" />
+            {!isCollapsed && (
+              <>
+                <span className="text-sm flex-1 text-left">{t('globalSearch.placeholder', 'Search...')}</span>
+                <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-white/20 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-white/50">
+                  <span className="text-xs">Ctrl</span>K
+                </kbd>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* GlobalSearch Dialog */}
+        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
         {/* Main Navigation */}
         {visibleMainMenuItems.length > 0 && (
@@ -425,51 +478,69 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* Media */}
-        {visibleMediaMenuItems.length > 0 && (
+        {/* Automation */}
+        {visibleAutomationMenuItems.length > 0 && (
           <SidebarGroup>
             {!isCollapsed && (
               <button
-                onClick={() => toggleSection('media')}
+                onClick={() => toggleSection('automation')}
                 className={`w-full flex items-center justify-between text-xs uppercase tracking-wider px-6 mb-2 hover:text-white transition-colors cursor-pointer ${
-                  hasActiveItem(visibleMediaMenuItems) ? 'text-white font-semibold' : 'text-white/70'
+                  hasActiveItem(visibleAutomationMenuItems) ? 'text-white font-semibold' : 'text-white/70'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span>Media</span>
-                  {hasActiveItem(visibleMediaMenuItems) && (
+                  <span>Automation</span>
+                  {hasActiveItem(visibleAutomationMenuItems) && (
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   )}
                 </div>
-                {expandedSections.media ? (
+                {expandedSections.automation ? (
                   <ChevronDown className="h-4 w-4" />
                 ) : (
                   <ChevronRight className="h-4 w-4" />
                 )}
               </button>
             )}
-            {expandedSections.media && (
+            {expandedSections.automation && (
               <SidebarGroupContent className="px-3">
                 <SidebarMenu className="space-y-1">
-                  {visibleMediaMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.url}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <SidebarMenuButton asChild className="h-10">
-                            <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
-                              <item.icon className="h-5 w-5 min-w-5" />
-                              {!isCollapsed && <span className="ml-3">{t(item.titleKey)}</span>}
-                            </NavLink>
-                          </SidebarMenuButton>
-                        </TooltipTrigger>
-                        {isCollapsed && (
-                          <TooltipContent side="right" className="font-medium">
-                            {t(item.titleKey)}
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </SidebarMenuItem>
-                  ))}
+                  {visibleAutomationMenuItems.map((item) => {
+                    const notificationCount = getNotificationCount(item.url);
+                    return (
+                      <SidebarMenuItem key={item.url}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <SidebarMenuButton asChild className="h-10">
+                              <NavLink to={item.url} className={() => getNavCls(isActive(item.url))}>
+                                <item.icon className="h-5 w-5 min-w-5" />
+                                {!isCollapsed && (
+                                  <span className="ml-3 flex items-center gap-2 flex-1">
+                                    {t(item.titleKey)}
+                                    {notificationCount > 0 && (
+                                      <Badge className="ml-auto bg-red-500 hover:bg-red-600 text-white">
+                                        {notificationCount}
+                                      </Badge>
+                                    )}
+                                  </span>
+                                )}
+                                {isCollapsed && notificationCount > 0 && (
+                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                    {notificationCount}
+                                  </div>
+                                )}
+                              </NavLink>
+                            </SidebarMenuButton>
+                          </TooltipTrigger>
+                          {isCollapsed && (
+                            <TooltipContent side="right" className="font-medium">
+                              {t(item.titleKey)}
+                              {notificationCount > 0 && ` (${notificationCount})`}
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </SidebarMenuItem>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             )}

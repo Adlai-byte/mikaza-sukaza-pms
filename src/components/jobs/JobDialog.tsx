@@ -11,6 +11,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Form,
   FormControl,
   FormDescription,
@@ -36,7 +46,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { AlertTriangle, CalendarIcon, Loader2, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePropertiesOptimized } from '@/hooks/usePropertiesOptimized';
 import { useQuery } from '@tanstack/react-query';
@@ -47,6 +57,7 @@ import { useTranslation } from 'react-i18next';
 // Job form schema
 const jobFormSchema = z.object({
   property_id: z.string().min(1, 'Property is required'),
+  unit_id: z.string().optional().nullable(),
   title: z.string().min(1, 'Title is required').max(255, 'Title is too long'),
   description: z.string().optional(),
   job_type: z.enum(['general', 'maintenance', 'cleaning', 'inspection', 'check_in', 'check_out', 'repair', 'emergency', 'preventive']),
@@ -76,6 +87,9 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
   const { properties } = usePropertiesOptimized();
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
+  const [showActiveBookingWarning, setShowActiveBookingWarning] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<any>(null);
+  const [activeBookings, setActiveBookings] = useState<any[]>([]);
 
   // Fetch users for assignment
   const { data: users = [] } = useQuery({
@@ -96,6 +110,7 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
     resolver: zodResolver(jobFormSchema),
     defaultValues: {
       property_id: '',
+      unit_id: null,
       title: '',
       description: '',
       job_type: 'general',
@@ -109,11 +124,23 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
     },
   });
 
+  // Watch property_id to get selected property's units
+  const watchedPropertyId = form.watch('property_id');
+  const selectedProperty = properties.find(p => p.property_id === watchedPropertyId);
+
+  // Clear unit_id when property changes
+  useEffect(() => {
+    if (watchedPropertyId && !job) {
+      form.setValue('unit_id', null);
+    }
+  }, [watchedPropertyId, form, job]);
+
   // Update form when job prop changes
   useEffect(() => {
     if (job) {
       form.reset({
         property_id: job.property_id || '',
+        unit_id: job.unit_id || null,
         title: job.title || '',
         description: job.description || '',
         job_type: job.job_type || 'general',
@@ -135,6 +162,7 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
     } else {
       form.reset({
         property_id: '',
+        unit_id: null,
         title: '',
         description: '',
         job_type: 'general',
@@ -158,13 +186,50 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
       scheduled_date: scheduledDate?.toISOString() || null,
     };
 
+    // Skip warning for check_in/check_out job types (these are expected)
+    const skipWarningTypes = ['check_in', 'check_out'];
+    if (skipWarningTypes.includes(values.job_type)) {
+      await onSubmit(submitData);
+      form.reset();
+      setDueDate(undefined);
+      setScheduledDate(undefined);
+      return;
+    }
+
+    // Check for active bookings (confirmed or checked_in) on this property
+    const { data: bookings } = await supabase
+      .from('property_bookings')
+      .select('booking_id, guest_name, check_in_date, check_out_date, booking_status')
+      .eq('property_id', values.property_id)
+      .in('booking_status', ['confirmed', 'checked_in']);
+
+    if (bookings && bookings.length > 0) {
+      setActiveBookings(bookings);
+      setPendingSubmitData(submitData);
+      setShowActiveBookingWarning(true);
+      return;
+    }
+
     await onSubmit(submitData);
     form.reset();
     setDueDate(undefined);
     setScheduledDate(undefined);
   };
 
+  const handleConfirmSubmit = async () => {
+    if (pendingSubmitData) {
+      await onSubmit(pendingSubmitData);
+      form.reset();
+      setDueDate(undefined);
+      setScheduledDate(undefined);
+      setPendingSubmitData(null);
+    }
+    setShowActiveBookingWarning(false);
+    setActiveBookings([]);
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -233,6 +298,46 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
                 )}
               />
             </div>
+
+            {/* Unit Selection - Only show if property has units */}
+            {selectedProperty && selectedProperty.units && selectedProperty.units.length > 0 && (
+              <FormField
+                control={form.control}
+                name="unit_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Layers className="h-4 w-4" />
+                      {t('jobDialog.unit', 'Unit (Optional)')}
+                    </FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value === 'entire_property' ? null : value)}
+                      value={field.value || 'entire_property'}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('jobDialog.selectUnit', 'Select unit...')} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="entire_property">
+                          {t('jobDialog.entireProperty', 'Entire Property / Common Areas')}
+                        </SelectItem>
+                        {selectedProperty.units.map((unit) => (
+                          <SelectItem key={unit.unit_id} value={unit.unit_id}>
+                            {unit.property_name || `Unit ${unit.license_number || unit.unit_id?.slice(0, 8)}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      {t('jobDialog.unitHint', 'Select a specific unit or leave as "Entire Property" for common areas')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Title */}
             <FormField
@@ -518,5 +623,37 @@ export function JobDialog({ open, onOpenChange, onSubmit, job, isSubmitting = fa
         </Form>
       </DialogContent>
     </Dialog>
+
+    {/* Active Booking Warning Dialog */}
+    <AlertDialog open={showActiveBookingWarning} onOpenChange={setShowActiveBookingWarning}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            {t('jobs.activeBookingWarning.title')}
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div>
+              {activeBookings.map((booking) => (
+                <div key={booking.booking_id} className="mb-2">
+                  {t('jobs.activeBookingWarning.message', {
+                    guestName: booking.guest_name || t('common.unknown'),
+                    checkIn: format(new Date(booking.check_in_date), 'PPP'),
+                    checkOut: format(new Date(booking.check_out_date), 'PPP'),
+                  })}
+                </div>
+              ))}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmSubmit}>
+            {t('jobs.activeBookingWarning.proceed')}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

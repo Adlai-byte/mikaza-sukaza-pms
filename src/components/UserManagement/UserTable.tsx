@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { User } from "@/lib/schemas";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Table,
   TableBody,
@@ -74,10 +75,20 @@ export function UserTable({
   isLoading = false,
   isFetching = false,
 }: UserTableProps) {
+  const { user: currentUser } = useAuth();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Security: Prevent admins from resetting other admins' passwords
+  const canResetPassword = (targetUser: User): boolean => {
+    // Can't reset if no callback provided
+    if (!onResetPassword) return false;
+    // Admins cannot reset other admins' passwords (security measure)
+    if (targetUser.user_type === 'admin') return false;
+    return true;
+  };
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Reset to page 1 when filters change - MUST be before early returns
@@ -311,8 +322,8 @@ export function UserTable({
                         Change Password
                       </DropdownMenuItem>
 
-                      {onResetPassword && (
-                        <DropdownMenuItem onClick={() => onResetPassword(user)}>
+                      {canResetPassword(user) && (
+                        <DropdownMenuItem onClick={() => onResetPassword!(user)}>
                           <Mail className="mr-2 h-4 w-4" />
                           Send Reset Email
                         </DropdownMenuItem>
@@ -483,8 +494,8 @@ export function UserTable({
                           Change Password
                         </DropdownMenuItem>
 
-                        {onResetPassword && (
-                          <DropdownMenuItem onClick={() => onResetPassword(user)}>
+                        {canResetPassword(user) && (
+                          <DropdownMenuItem onClick={() => onResetPassword!(user)}>
                             <Mail className="mr-2 h-4 w-4" />
                             Send Reset Email
                           </DropdownMenuItem>

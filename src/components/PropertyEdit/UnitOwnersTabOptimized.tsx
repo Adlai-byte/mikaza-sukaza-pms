@@ -76,9 +76,12 @@ const unitOwnersKeys = {
   all: (propertyId: string) => ['unitOwners', propertyId] as const,
 };
 
-// Fetch unit owners
+// Fetch unit owners - includes property owner and all unit owners
 const fetchUnitOwners = async (propertyId: string): Promise<UnitOwner[]> => {
-  // Get the property to find the owner
+  const owners: UnitOwner[] = [];
+  const ownerIds = new Set<string>();
+
+  // Get the property to find the main owner
   const { data: property, error: propertyError } = await supabase
     .from('properties')
     .select('owner_id')
@@ -87,17 +90,40 @@ const fetchUnitOwners = async (propertyId: string): Promise<UnitOwner[]> => {
 
   if (propertyError) throw propertyError;
 
-  // Get the owner details
+  // Add property owner if exists
   if (property.owner_id) {
+    ownerIds.add(property.owner_id);
+  }
+
+  // Get all units for this property and their owners
+  const { data: units, error: unitsError } = await supabase
+    .from('units')
+    .select('owner_id')
+    .eq('property_id', propertyId)
+    .not('owner_id', 'is', null);
+
+  if (!unitsError && units) {
+    units.forEach(unit => {
+      if (unit.owner_id) {
+        ownerIds.add(unit.owner_id);
+      }
+    });
+  }
+
+  // Fetch all owner details
+  if (ownerIds.size > 0) {
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('user_id', property.owner_id);
+      .in('user_id', Array.from(ownerIds));
 
     if (userError) throw userError;
 
-    // Mark the main owner as primary
-    return (userData || []).map(user => ({ ...user, is_primary: true }));
+    // Mark the property owner as primary
+    return (userData || []).map(user => ({
+      ...user,
+      is_primary: user.user_id === property.owner_id,
+    }));
   }
 
   return [];
@@ -148,11 +174,37 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
   // Add owner mutation
   const addOwnerMutation = useMutation({
     mutationFn: async (ownerData: typeof emptyOwner) => {
-      // Generate a default password if not provided
+      // Validate required fields
+      if (!ownerData.first_name?.trim()) {
+        throw new Error('First name is required');
+      }
+      if (!ownerData.last_name?.trim()) {
+        throw new Error('Last name is required');
+      }
+      if (!ownerData.email?.trim()) {
+        throw new Error('Email is required');
+      }
+
+      // Explicitly construct the insert object to ensure user_type is set
+      // Note: user_type MUST be 'customer' - ensure DB constraint allows this value
+      // If you get "null value in column user_type" error, run the migration:
+      // supabase/migrations/20260117_ensure_customer_user_type.sql
       const dataToInsert = {
-        ...ownerData,
+        first_name: ownerData.first_name.trim(),
+        last_name: ownerData.last_name.trim(),
+        email: ownerData.email.trim().toLowerCase(),
         password: ownerData.password || `Owner${Date.now()}!`, // Default password
+        user_type: 'customer', // Required - owners are customers (ensure DB allows this!)
+        date_of_birth: ownerData.date_of_birth || null,
+        cellphone_primary: ownerData.cellphone_primary || null,
+        cellphone_usa: ownerData.cellphone_usa || null,
+        whatsapp: ownerData.whatsapp || null,
+        relationship_to_main_owner: ownerData.relationship_to_main_owner || null,
+        is_active: true, // New users should be active
       };
+
+      console.log('[UnitOwners] Creating owner with data:', JSON.stringify(dataToInsert, null, 2));
+      console.log('[UnitOwners] user_type value:', dataToInsert.user_type, 'type:', typeof dataToInsert.user_type);
 
       const { data, error } = await supabase
         .from('users')
@@ -160,14 +212,25 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[UnitOwners] Error creating owner:', error);
+        // Provide more helpful error message for constraint violations
+        if (error.message?.includes('user_type') || error.code === '23502') {
+          throw new Error(
+            'Database constraint error: The "customer" user type may not be allowed. ' +
+            'Please ensure the database migration has been applied.'
+          );
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: unitOwnersKeys.all(propertyId),
-        refetchType: 'active',
-      });
+      // Invalidate all related queries
+      await queryClient.invalidateQueries({ queryKey: unitOwnersKeys.all(propertyId) });
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+      await queryClient.invalidateQueries({ queryKey: ['properties', 'detail', propertyId] });
+      await queryClient.invalidateQueries({ queryKey: ['properties'] });
       toast({
         title: 'Success',
         description: 'Owner added successfully',
@@ -197,10 +260,11 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
       return data;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: unitOwnersKeys.all(propertyId),
-        refetchType: 'active',
-      });
+      // Invalidate all related queries
+      await queryClient.invalidateQueries({ queryKey: unitOwnersKeys.all(propertyId) });
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+      await queryClient.invalidateQueries({ queryKey: ['properties', 'detail', propertyId] });
+      await queryClient.invalidateQueries({ queryKey: ['properties'] });
       toast({
         title: 'Success',
         description: 'Owner updated successfully',
@@ -228,10 +292,12 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
       return ownerId;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: unitOwnersKeys.all(propertyId),
-        refetchType: 'active',
-      });
+      // Invalidate all related queries
+      await queryClient.invalidateQueries({ queryKey: unitOwnersKeys.all(propertyId) });
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+      await queryClient.invalidateQueries({ queryKey: ['properties', 'detail', propertyId] });
+      await queryClient.invalidateQueries({ queryKey: ['properties'] });
+      await queryClient.invalidateQueries({ queryKey: ['units'] });
       toast({
         title: 'Success',
         description: 'Owner removed successfully',
@@ -268,13 +334,30 @@ export function UnitOwnersTabOptimized({ propertyId }: UnitOwnersTabOptimizedPro
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Sanitize form data - convert empty strings to null for optional fields
+    const sanitizedData = {
+      first_name: formData.first_name.trim(),
+      last_name: formData.last_name.trim(),
+      email: formData.email.trim().toLowerCase(),
+      date_of_birth: formData.date_of_birth?.trim() || null,
+      cellphone_primary: formData.cellphone_primary?.trim() || null,
+      cellphone_usa: formData.cellphone_usa?.trim() || null,
+      whatsapp: formData.whatsapp?.trim() || null,
+      relationship_to_main_owner: formData.relationship_to_main_owner || null,
+    };
+
     if (editingOwner) {
+      // For updates, don't include password field
       updateOwnerMutation.mutate({
         ownerId: editingOwner.user_id,
-        updates: formData,
+        updates: sanitizedData,
       });
     } else {
-      addOwnerMutation.mutate(formData);
+      // For new owners, include password
+      addOwnerMutation.mutate({
+        ...formData,
+        ...sanitizedData,
+      });
     }
   };
 

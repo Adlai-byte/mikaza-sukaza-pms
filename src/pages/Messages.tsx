@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { sanitizeText } from '@/lib/sanitize';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,12 +68,15 @@ import {
   MessageInsert,
 } from '@/hooks/useMessages';
 import { useUsersOptimized } from '@/hooks/useUsersOptimized';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 type View = 'inbox' | 'sent' | 'starred' | 'archived';
 
 export default function Messages() {
   const { t } = useTranslation();
+  const { user, profile } = useAuth();
+  const currentUserId = profile?.user_id || user?.id;
   const [currentView, setCurrentView] = useState<View>('inbox');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
@@ -79,10 +84,20 @@ export default function Messages() {
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
 
   // Queries
-  const { data: inboxMessages = [], isLoading: loadingInbox, refetch: refetchInbox } = useInboxMessages();
-  const { data: sentMessages = [], isLoading: loadingSent, refetch: refetchSent } = useSentMessages();
-  const { data: starredMessages = [], isLoading: loadingStarred } = useStarredMessages();
-  const { data: archivedMessages = [], isLoading: loadingArchived } = useArchivedMessages();
+  const { data: inboxMessages = [], isLoading: loadingInbox, refetch: refetchInbox, error: inboxError } = useInboxMessages();
+  const { data: sentMessages = [], isLoading: loadingSent, refetch: refetchSent, error: sentError } = useSentMessages();
+  const { data: starredMessages = [], isLoading: loadingStarred, error: starredError } = useStarredMessages();
+  const { data: archivedMessages = [], isLoading: loadingArchived, error: archivedError } = useArchivedMessages();
+
+  // Log errors for debugging
+  const currentError = currentView === 'inbox' ? inboxError :
+                       currentView === 'sent' ? sentError :
+                       currentView === 'starred' ? starredError :
+                       archivedError;
+
+  if (currentError) {
+    console.error(`[Messages] Error loading ${currentView} messages:`, currentError);
+  }
   const { data: unreadCount = 0 } = useUnreadCount();
   const { data: threadMessages = [] } = useMessageThread(selectedMessage?.thread_id || selectedMessage?.message_id || null);
 
@@ -93,8 +108,13 @@ export default function Messages() {
   const archiveMessage = useArchiveMessage();
   const deleteMessage = useDeleteMessage();
 
-  // Users for recipient selection
-  const { users } = useUsersOptimized();
+  // Users for recipient selection - only active admin and ops users, excluding current user
+  const { users: allUsers, loading: usersLoading } = useUsersOptimized();
+  const users = allUsers.filter(u =>
+    u.is_active !== false &&
+    u.user_id !== currentUserId &&
+    (u.user_type === 'admin' || u.user_type === 'ops')
+  );
 
   // Get current messages based on view
   const getCurrentMessages = (): Message[] => {
@@ -119,7 +139,7 @@ export default function Messages() {
 
   const messages = getCurrentMessages();
 
-  // Filter messages by search
+  // Filter messages by search (subject, body, sender, and recipient)
   const filteredMessages = messages.filter((msg) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -127,7 +147,9 @@ export default function Messages() {
       msg.subject?.toLowerCase().includes(query) ||
       msg.body?.toLowerCase().includes(query) ||
       msg.sender?.first_name?.toLowerCase().includes(query) ||
-      msg.sender?.last_name?.toLowerCase().includes(query)
+      msg.sender?.last_name?.toLowerCase().includes(query) ||
+      msg.recipient?.first_name?.toLowerCase().includes(query) ||
+      msg.recipient?.last_name?.toLowerCase().includes(query)
     );
   });
 
@@ -170,9 +192,9 @@ export default function Messages() {
       {/* Header */}
       <PageHeader
         icon={Mail}
-        title={t('messages.title', 'Messages')}
-        subtitle={t('messages.subtitle', 'Internal messaging system')}
-        action={
+        title={t('internalMessages.title', 'Messages')}
+        subtitle={t('internalMessages.subtitle', 'Internal messaging system')}
+        actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
               <RefreshCw className={cn('mr-2 h-4 w-4', isLoading && 'animate-spin')} />
@@ -180,7 +202,7 @@ export default function Messages() {
             </Button>
             <Button onClick={() => { setReplyToMessage(null); setShowComposeDialog(true); }}>
               <Plus className="mr-2 h-4 w-4" />
-              {t('messages.compose', 'Compose')}
+              {t('internalMessages.compose', 'Compose')}
             </Button>
           </div>
         }
@@ -197,7 +219,7 @@ export default function Messages() {
                 onClick={() => { setCurrentView('inbox'); setSelectedMessage(null); }}
               >
                 <Inbox className="mr-2 h-4 w-4" />
-                {t('messages.inbox', 'Inbox')}
+                {t('internalMessages.inbox', 'Inbox')}
                 {unreadCount > 0 && (
                   <Badge className="ml-auto" variant="destructive">
                     {unreadCount}
@@ -210,7 +232,7 @@ export default function Messages() {
                 onClick={() => { setCurrentView('sent'); setSelectedMessage(null); }}
               >
                 <Send className="mr-2 h-4 w-4" />
-                {t('messages.sent', 'Sent')}
+                {t('internalMessages.sent', 'Sent')}
               </Button>
               <Button
                 variant={currentView === 'starred' ? 'secondary' : 'ghost'}
@@ -218,7 +240,7 @@ export default function Messages() {
                 onClick={() => { setCurrentView('starred'); setSelectedMessage(null); }}
               >
                 <Star className="mr-2 h-4 w-4" />
-                {t('messages.starred', 'Starred')}
+                {t('internalMessages.starred', 'Starred')}
               </Button>
               <Button
                 variant={currentView === 'archived' ? 'secondary' : 'ghost'}
@@ -226,7 +248,7 @@ export default function Messages() {
                 onClick={() => { setCurrentView('archived'); setSelectedMessage(null); }}
               >
                 <Archive className="mr-2 h-4 w-4" />
-                {t('messages.archived', 'Archived')}
+                {t('internalMessages.archived', 'Archived')}
               </Button>
             </nav>
           </CardContent>
@@ -331,7 +353,7 @@ export default function Messages() {
                                 </Badge>
                               )}
                               <div className="mt-4 prose prose-sm max-w-none whitespace-pre-wrap">
-                                {msg.body}
+                                {sanitizeText(msg.body)}
                               </div>
                             </div>
                           </div>
@@ -384,7 +406,7 @@ export default function Messages() {
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder={t('messages.searchPlaceholder', 'Search messages...')}
+                      placeholder={t('internalMessages.searchPlaceholder', 'Search messages...')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9"
@@ -397,10 +419,21 @@ export default function Messages() {
                   <div className="flex justify-center py-12">
                     <CasaSpinner />
                   </div>
+                ) : currentError ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-destructive">
+                    <AlertCircle className="h-12 w-12 mb-4" />
+                    <p className="font-medium">{t('common.error', 'Error loading messages')}</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {currentError instanceof Error ? currentError.message : 'Unknown error'}
+                    </p>
+                    <Button variant="outline" className="mt-4" onClick={handleRefresh}>
+                      {t('common.retry', 'Retry')}
+                    </Button>
+                  </div>
                 ) : filteredMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                     <AlertCircle className="h-12 w-12 mb-4" />
-                    <p>{t('messages.noMessages', 'No messages found')}</p>
+                    <p>{t('internalMessages.noMessages', 'No messages found')}</p>
                   </div>
                 ) : (
                   <ScrollArea className="h-[calc(100vh-380px)]">
@@ -440,10 +473,10 @@ export default function Messages() {
                               'text-sm truncate',
                               !message.is_read && currentView === 'inbox' ? 'font-medium' : 'text-muted-foreground'
                             )}>
-                              {message.subject || t('messages.noSubject', '(No subject)')}
+                              {message.subject || t('internalMessages.noSubject', '(No subject)')}
                             </p>
                             <p className="text-sm text-muted-foreground truncate">
-                              {message.body}
+                              {sanitizeText(message.body)}
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                               {message.priority !== 'normal' && (
@@ -475,12 +508,12 @@ export default function Messages() {
                                 {message.is_starred ? (
                                   <>
                                     <StarOff className="mr-2 h-4 w-4" />
-                                    {t('messages.unstar', 'Remove star')}
+                                    {t('internalMessages.unstar', 'Remove star')}
                                   </>
                                 ) : (
                                   <>
                                     <Star className="mr-2 h-4 w-4" />
-                                    {t('messages.star', 'Star message')}
+                                    {t('internalMessages.star', 'Star message')}
                                   </>
                                 )}
                               </DropdownMenuItem>
@@ -489,7 +522,7 @@ export default function Messages() {
                                 archiveMessage.mutate(message.message_id);
                               }}>
                                 <Archive className="mr-2 h-4 w-4" />
-                                {t('messages.archive', 'Archive')}
+                                {t('internalMessages.archive', 'Archive')}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive"
@@ -520,6 +553,7 @@ export default function Messages() {
         onOpenChange={setShowComposeDialog}
         replyTo={replyToMessage}
         users={users}
+        usersLoading={usersLoading}
         onSend={sendMessage.mutate}
         isSending={sendMessage.isPending}
       />
@@ -533,11 +567,12 @@ interface ComposeDialogProps {
   onOpenChange: (open: boolean) => void;
   replyTo: Message | null;
   users: any[];
+  usersLoading: boolean;
   onSend: (message: MessageInsert) => void;
   isSending: boolean;
 }
 
-function ComposeDialog({ open, onOpenChange, replyTo, users, onSend, isSending }: ComposeDialogProps) {
+function ComposeDialog({ open, onOpenChange, replyTo, users, usersLoading, onSend, isSending }: ComposeDialogProps) {
   const { t } = useTranslation();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -545,7 +580,7 @@ function ComposeDialog({ open, onOpenChange, replyTo, users, onSend, isSending }
   const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
 
   // Reset form when dialog opens
-  useState(() => {
+  useEffect(() => {
     if (open) {
       if (replyTo) {
         setSubject(`Re: ${replyTo.subject || ''}`);
@@ -557,7 +592,7 @@ function ComposeDialog({ open, onOpenChange, replyTo, users, onSend, isSending }
       setBody('');
       setPriority('normal');
     }
-  });
+  }, [open, replyTo]);
 
   const handleSend = () => {
     if (selectedRecipients.length === 0 || !body.trim()) return;
@@ -583,65 +618,73 @@ function ComposeDialog({ open, onOpenChange, replyTo, users, onSend, isSending }
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {replyTo ? t('messages.reply', 'Reply') : t('messages.newMessage', 'New Message')}
+            {replyTo ? t('internalMessages.reply', 'Reply') : t('internalMessages.newMessage', 'New Message')}
           </DialogTitle>
           <DialogDescription>
             {replyTo
-              ? t('messages.replyDescription', 'Reply to this message')
-              : t('messages.composeDescription', 'Send a new message to team members')}
+              ? t('internalMessages.replyDescription', 'Reply to this message')
+              : t('internalMessages.composeDescription', 'Send a new message to team members')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>{t('messages.to', 'To')}</Label>
-            <Select
-              value={selectedRecipients[0] || ''}
-              onValueChange={(value) => setSelectedRecipients([value])}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('messages.selectRecipient', 'Select recipient...')} />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.user_id} value={user.user_id}>
-                    {user.first_name} {user.last_name} ({user.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>{t('internalMessages.to', 'To')}</Label>
+            {usersLoading ? (
+              <div className="py-2 px-2 text-sm text-muted-foreground border rounded-md">
+                {t('common.loading', 'Loading...')}
+              </div>
+            ) : users.length === 0 ? (
+              <div className="py-2 px-2 text-sm text-muted-foreground border rounded-md">
+                {t('internalMessages.noRecipients', 'No other admin/ops users available')}
+              </div>
+            ) : (
+              <Combobox
+                options={users.map((user) => ({
+                  value: user.user_id,
+                  label: `${user.first_name} ${user.last_name} (${user.email})`,
+                }))}
+                value={selectedRecipients[0] || ''}
+                onValueChange={(value) => setSelectedRecipients(value ? [value] : [])}
+                placeholder={t('internalMessages.selectRecipient', 'Select recipient...')}
+                searchPlaceholder={t('internalMessages.searchRecipient', 'Search recipients...')}
+                emptyText={t('internalMessages.noRecipientFound', 'No recipient found.')}
+                clearable
+                preserveSearch={true}
+              />
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label>{t('messages.subject', 'Subject')}</Label>
+            <Label>{t('internalMessages.subject', 'Subject')}</Label>
             <Input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder={t('messages.subjectPlaceholder', 'Message subject...')}
+              placeholder={t('internalMessages.subjectPlaceholder', 'Message subject...')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>{t('messages.priority', 'Priority')}</Label>
+            <Label>{t('internalMessages.priority', 'Priority')}</Label>
             <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="low">{t('messages.priorityLow', 'Low')}</SelectItem>
-                <SelectItem value="normal">{t('messages.priorityNormal', 'Normal')}</SelectItem>
-                <SelectItem value="high">{t('messages.priorityHigh', 'High')}</SelectItem>
-                <SelectItem value="urgent">{t('messages.priorityUrgent', 'Urgent')}</SelectItem>
+                <SelectItem value="low">{t('internalMessages.priorityLow', 'Low')}</SelectItem>
+                <SelectItem value="normal">{t('internalMessages.priorityNormal', 'Normal')}</SelectItem>
+                <SelectItem value="high">{t('internalMessages.priorityHigh', 'High')}</SelectItem>
+                <SelectItem value="urgent">{t('internalMessages.priorityUrgent', 'Urgent')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>{t('messages.message', 'Message')}</Label>
+            <Label>{t('internalMessages.message', 'Message')}</Label>
             <Textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder={t('messages.messagePlaceholder', 'Type your message...')}
+              placeholder={t('internalMessages.messagePlaceholder', 'Type your message...')}
               rows={8}
             />
           </div>
@@ -655,7 +698,7 @@ function ComposeDialog({ open, onOpenChange, replyTo, users, onSend, isSending }
             onClick={handleSend}
             disabled={isSending || selectedRecipients.length === 0 || !body.trim()}
           >
-            {isSending ? t('messages.sending', 'Sending...') : t('messages.send', 'Send')}
+            {isSending ? t('internalMessages.sending', 'Sending...') : t('internalMessages.send', 'Send')}
           </Button>
         </DialogFooter>
       </DialogContent>

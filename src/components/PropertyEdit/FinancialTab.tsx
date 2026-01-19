@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -29,19 +29,28 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Collapsible,
+  CollapsibleContent,
+} from '@/components/ui/collapsible';
+import {
   DollarSign,
   Plus,
   Minus,
   Users,
-  Layers,
   RefreshCw,
   Edit,
   Trash2,
   Check,
+  CheckCircle,
   AlertCircle,
+  HelpCircle,
   Download,
   Paperclip,
   ExternalLink,
+  ChevronRight,
+  ChevronDown,
+  MessageSquare,
+  Wrench,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import {
@@ -51,10 +60,18 @@ import {
   useUpdateExpense,
   useDeleteExpense,
   useMarkEntryAsDone,
+  useApproveEntry,
 } from '@/hooks/useExpenses';
+import { useAuth } from '@/contexts/AuthContext';
+import { useBulkCreateExpenseAttachments } from '@/hooks/useExpenseAttachments';
+import { useBulkCreateExpenseNotes, useExpenseNotes } from '@/hooks/useExpenseNotes';
+import { useExpenseAttachments, useDeleteExpenseAttachment } from '@/hooks/useExpenseAttachments';
+import { useDeleteExpenseNote } from '@/hooks/useExpenseNotes';
 import { Expense, ExpenseInsert } from '@/lib/schemas';
 import { FinancialEntryDialog } from './FinancialEntryDialog';
-import { BatchEntryDialog } from './BatchEntryDialog';
+import { ExpandedEntryContent } from './ExpandedEntryContent';
+import { PendingAttachment } from './AttachmentUploadSection';
+import { PendingNote } from './NotesManagementSection';
 import { useTranslation } from 'react-i18next';
 
 interface FinancialTabProps {
@@ -87,10 +104,15 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
 
   // Dialog states
   const [showEntryDialog, setShowEntryDialog] = useState(false);
-  const [showBatchDialog, setShowBatchDialog] = useState(false);
-  const [entryType, setEntryType] = useState<'credit' | 'debit' | 'owner_payment'>('debit');
+  const [entryType, setEntryType] = useState<'credit' | 'debit' | 'owner_payment' | 'service_cost'>('debit');
   const [editingEntry, setEditingEntry] = useState<Expense | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<Expense | null>(null);
+
+  // Auth for approval
+  const { user } = useAuth();
+
+  // Expandable rows state
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Fetch financial entries
   const { entries, loading, refetch, scheduleBalance } = usePropertyFinancialEntries(
@@ -111,14 +133,37 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
   const markAsDone = useMarkEntryAsDone();
+  const approveEntry = useApproveEntry();
+  const bulkCreateAttachments = useBulkCreateExpenseAttachments();
+  const bulkCreateNotes = useBulkCreateExpenseNotes();
+  const deleteAttachment = useDeleteExpenseAttachment();
+  const deleteNote = useDeleteExpenseNote();
 
-  // Calculate totals
+  // Fetch attachments/notes for editing entry
+  const { data: editingAttachments = [] } = useExpenseAttachments(editingEntry?.expense_id || null);
+  const { data: editingNotes = [] } = useExpenseNotes(editingEntry?.expense_id || null);
+
+  // Toggle row expansion
+  const toggleRowExpansion = useCallback((expenseId: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(expenseId)) {
+        next.delete(expenseId);
+      } else {
+        next.add(expenseId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Calculate totals (service_cost is a deduction like debit)
   const totals = entries.reduce(
     (acc, entry) => {
       const amount = entry.amount || 0;
       if (entry.entry_type === 'credit') {
         acc.totalCredit += amount;
       } else {
+        // debit, owner_payment, and service_cost are all deductions
         acc.totalDebit += amount;
       }
       return acc;
@@ -129,44 +174,67 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
   // Calculate final balance (initial + credits - debits for current month)
   const finalBalance = initialBalance + totals.totalCredit - totals.totalDebit;
 
-  const handleOpenEntryDialog = (type: 'credit' | 'debit' | 'owner_payment', entry?: Expense) => {
+  const handleOpenEntryDialog = (type: 'credit' | 'debit' | 'owner_payment' | 'service_cost', entry?: Expense) => {
     setEntryType(type);
     setEditingEntry(entry || null);
     setShowEntryDialog(true);
   };
 
-  const handleEntrySubmit = async (data: ExpenseInsert) => {
+  const handleApproveEntry = async (entry: Expense) => {
+    if (!entry.expense_id || !user?.id) return;
     try {
-      if (editingEntry?.expense_id) {
-        await updateExpense.mutateAsync({
-          expenseId: editingEntry.expense_id,
-          updates: data,
-        });
-      } else {
-        await createExpense.mutateAsync({
-          ...data,
-          property_id: propertyId,
-          entry_type: entryType,
-        });
-      }
-      setShowEntryDialog(false);
-      setEditingEntry(null);
-      refetch();
+      await approveEntry.mutateAsync({
+        expenseId: entry.expense_id,
+        approvedBy: user.id,
+      });
+      // No need for refetch() - mutation already handles cache invalidation
     } catch (error) {
       // Error handled by mutation
     }
   };
 
-  const handleBatchSubmit = async (entries: ExpenseInsert[]) => {
+  const handleEntrySubmit = async (
+    data: ExpenseInsert,
+    pendingAttachments: PendingAttachment[],
+    pendingNotes: PendingNote[]
+  ) => {
     try {
-      for (const entry of entries) {
-        await createExpense.mutateAsync({
-          ...entry,
+      let expenseId: string;
+
+      if (editingEntry?.expense_id) {
+        await updateExpense.mutateAsync({
+          expenseId: editingEntry.expense_id,
+          updates: data,
+        });
+        expenseId = editingEntry.expense_id;
+      } else {
+        const created = await createExpense.mutateAsync({
+          ...data,
           property_id: propertyId,
+          entry_type: entryType,
+        });
+        expenseId = created.expense_id!;
+      }
+
+      // Upload pending attachments
+      if (pendingAttachments.length > 0) {
+        await bulkCreateAttachments.mutateAsync({
+          expenseId,
+          files: pendingAttachments.map(a => ({ file: a.file, caption: a.caption })),
         });
       }
-      setShowBatchDialog(false);
-      refetch();
+
+      // Create pending notes
+      if (pendingNotes.length > 0) {
+        await bulkCreateNotes.mutateAsync({
+          expenseId,
+          notes: pendingNotes.map(n => ({ text: n.text })),
+        });
+      }
+
+      setShowEntryDialog(false);
+      setEditingEntry(null);
+      // No need for refetch() - mutations already handle cache invalidation
     } catch (error) {
       // Error handled by mutation
     }
@@ -177,7 +245,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
     try {
       await deleteExpense.mutateAsync(entryToDelete.expense_id);
       setEntryToDelete(null);
-      refetch();
+      // No need for refetch() - mutation already handles cache invalidation
     } catch (error) {
       // Error handled by mutation
     }
@@ -187,7 +255,7 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
     if (!entry.expense_id) return;
     try {
       await markAsDone.mutateAsync(entry.expense_id);
-      refetch();
+      // No need for refetch() - mutation already handles cache invalidation
     } catch (error) {
       // Error handled by mutation
     }
@@ -207,6 +275,8 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
         return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Credit</Badge>;
       case 'debit':
         return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Debit</Badge>;
+      case 'service_cost':
+        return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">Service Cost</Badge>;
       case 'owner_payment':
         return <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">Owner Payment</Badge>;
       default:
@@ -251,19 +321,19 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
             </Button>
             <Button
               type="button"
+              onClick={() => handleOpenEntryDialog('service_cost')}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <Wrench className="mr-2 h-4 w-4" />
+              Service Cost
+            </Button>
+            <Button
+              type="button"
               onClick={() => handleOpenEntryDialog('owner_payment')}
               className="bg-purple-600 hover:bg-purple-700"
             >
               <Users className="mr-2 h-4 w-4" />
               Owner Payment
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowBatchDialog(true)}
-            >
-              <Layers className="mr-2 h-4 w-4" />
-              Batch Entry
             </Button>
           </div>
         </CardContent>
@@ -388,21 +458,24 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10"></TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead className="text-right">Credit</TableHead>
                     <TableHead className="text-right">Debit</TableHead>
                     <TableHead className="text-right">Balance</TableHead>
-                    <TableHead className="text-right">Schedule Balance</TableHead>
-                    <TableHead className="text-center">Receipt</TableHead>
+                    <TableHead className="text-center">Files</TableHead>
+                    <TableHead className="text-center">Notes</TableHead>
                     <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Approved</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {/* Initial Balance Row */}
                   <TableRow className="bg-slate-100/70 border-b-2 border-slate-300">
+                    <TableCell></TableCell>
                     <TableCell className="font-semibold text-slate-600">
                       {format(new Date(selectedYear, selectedMonth - 1, 1), 'MMM 01, yyyy')}
                     </TableCell>
@@ -416,7 +489,8 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                         {loadingInitialBalance ? '...' : formatCurrency(initialBalance)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">-</TableCell>
+                    <TableCell className="text-center">-</TableCell>
+                    <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-right">-</TableCell>
@@ -425,109 +499,157 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                   {entries.map((entry, index) => {
                     // Adjust running balance to include initial balance
                     const adjustedRunningBalance = initialBalance + (entry.running_balance || 0);
+                    const isExpanded = expandedRows.has(entry.expense_id!);
+                    const attachmentCount = entry.attachment_count || 0;
+                    const noteCount = entry.note_count || 0;
                     return (
-                    <TableRow
-                      key={entry.expense_id}
-                      className={entry.is_paid ? 'bg-green-50/50' : ''}
-                    >
-                      <TableCell>
-                        {entry.expense_date
-                          ? format(parseISO(entry.expense_date), 'MMM dd, yyyy')
-                          : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{entry.description}</p>
-                          {entry.is_scheduled && (
-                            <Badge variant="outline" className="text-xs mt-1">
-                              Scheduled
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getEntryTypeBadge(entry.entry_type)}</TableCell>
-                      <TableCell className="text-right text-green-600 font-medium">
-                        {entry.entry_type === 'credit' ? formatCurrency(entry.amount) : '-'}
-                      </TableCell>
-                      <TableCell className="text-right text-red-600 font-medium">
-                        {entry.entry_type !== 'credit' ? formatCurrency(entry.amount) : '-'}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        <span className={adjustedRunningBalance >= 0 ? 'text-blue-600' : 'text-red-600'}>
-                          {formatCurrency(adjustedRunningBalance)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {index === entries.length - 1 ? (
-                          <span className={entry.schedule_balance && entry.schedule_balance >= 0 ? 'text-purple-600' : 'text-red-600'}>
-                            {formatCurrency(entry.schedule_balance)}
+                    <React.Fragment key={entry.expense_id}>
+                      <TableRow
+                        className={`${entry.is_paid ? 'bg-green-50/50' : ''} ${isExpanded ? 'border-b-0' : ''} cursor-pointer hover:bg-muted/50`}
+                        onClick={() => entry.expense_id && toggleRowExpansion(entry.expense_id)}
+                      >
+                        <TableCell className="w-10">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              entry.expense_id && toggleRowExpansion(entry.expense_id);
+                            }}
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          {entry.expense_date
+                            ? format(parseISO(entry.expense_date), 'MMM dd, yyyy')
+                            : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{entry.description}</p>
+                            {entry.is_scheduled && (
+                              <Badge variant="outline" className="text-xs mt-1">
+                                Scheduled
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getEntryTypeBadge(entry.entry_type)}</TableCell>
+                        <TableCell className="text-right text-green-600 font-medium">
+                          {entry.entry_type === 'credit' ? formatCurrency(entry.amount) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right text-red-600 font-medium">
+                          {entry.entry_type !== 'credit' ? formatCurrency(entry.amount) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          <span className={adjustedRunningBalance >= 0 ? 'text-blue-600' : 'text-red-600'}>
+                            {formatCurrency(adjustedRunningBalance)}
                           </span>
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {entry.receipt_url ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => window.open(entry.receipt_url!, '_blank')}
-                            title="View receipt"
-                          >
-                            <Paperclip className="h-4 w-4 text-primary" />
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {entry.is_paid ? (
-                          <Badge className="bg-green-100 text-green-700">Paid</Badge>
-                        ) : (
-                          <Badge variant="outline">Pending</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenEntryDialog(entry.entry_type as any, entry)}
-                            title="Edit"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEntryToDelete(entry)}
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                          {!entry.is_paid && (
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {attachmentCount > 0 ? (
+                            <Badge variant="secondary" className="text-xs">
+                              <Paperclip className="h-3 w-3 mr-1" />
+                              {attachmentCount}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {noteCount > 0 ? (
+                            <Badge variant="secondary" className="text-xs">
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              {noteCount}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {entry.is_paid ? (
+                            <Badge className="bg-green-100 text-green-700">Paid</Badge>
+                          ) : (
+                            <Badge variant="outline">Pending</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          {entry.is_approved ? (
+                            <Badge className="bg-blue-100 text-blue-700">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Approved
+                            </Badge>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300"
+                              onClick={() => handleApproveEntry(entry)}
+                              disabled={approveEntry.isPending}
+                              title="Approve entry for reports"
+                            >
+                              <HelpCircle className="h-3 w-3 mr-1" />
+                              Approve
+                            </Button>
+                          )}
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleMarkAsDone(entry)}
-                              title="Mark as Done"
+                              onClick={() => handleOpenEntryDialog(entry.entry_type as any, entry)}
+                              title="Edit"
                             >
-                              <Check className="h-4 w-4 text-green-600" />
+                              <Edit className="h-4 w-4" />
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEntryToDelete(entry)}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                            {!entry.is_paid && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleMarkAsDone(entry)}
+                                title="Mark as Paid"
+                              >
+                                <DollarSign className="h-4 w-4 text-green-600" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {/* Expanded Content */}
+                      {isExpanded && entry.expense_id && (
+                        <TableRow className="bg-slate-50 dark:bg-slate-900/50">
+                          <TableCell colSpan={12} className="p-0">
+                            <ExpandedEntryContent expenseId={entry.expense_id} />
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   );
                   })}
 
                   {/* Final Balance Row */}
                   <TableRow className="bg-emerald-100/70 border-t-2 border-emerald-300">
+                    <TableCell></TableCell>
                     <TableCell className="font-semibold text-emerald-700">
                       {format(new Date(selectedYear, selectedMonth, 0), 'MMM dd, yyyy')}
                     </TableCell>
@@ -545,11 +667,8 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
                         {loadingInitialBalance ? '...' : formatCurrency(finalBalance)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-bold">
-                      <span className={scheduleBalance + initialBalance >= 0 ? 'text-purple-700' : 'text-red-600'}>
-                        {formatCurrency(scheduleBalance + initialBalance)}
-                      </span>
-                    </TableCell>
+                    <TableCell className="text-center">-</TableCell>
+                    <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-center">-</TableCell>
                     <TableCell className="text-right">-</TableCell>
@@ -568,16 +687,11 @@ export function FinancialTab({ propertyId, propertyName }: FinancialTabProps) {
         onSubmit={handleEntrySubmit}
         entryType={entryType}
         editingEntry={editingEntry}
+        existingAttachments={editingAttachments}
+        existingNotes={editingNotes}
+        onDeleteAttachment={(attachmentId) => deleteAttachment.mutate(attachmentId)}
+        onDeleteNote={(noteId) => deleteNote.mutate(noteId)}
         isSubmitting={createExpense.isPending || updateExpense.isPending}
-      />
-
-      {/* Batch Entry Dialog */}
-      <BatchEntryDialog
-        open={showBatchDialog}
-        onOpenChange={setShowBatchDialog}
-        onSubmit={handleBatchSubmit}
-        propertyId={propertyId}
-        isSubmitting={createExpense.isPending}
       />
 
       {/* Delete Confirmation Dialog */}

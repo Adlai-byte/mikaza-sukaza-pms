@@ -217,6 +217,22 @@ const sendInvoiceEmail = async (params: SendInvoiceEmailParams): Promise<void> =
     ccEmailsCount: params.ccEmails?.length || 0,
   });
 
+  // Client-side email validation for better UX
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!params.recipientEmail || !emailRegex.test(params.recipientEmail)) {
+    console.error('❌ [sendInvoiceEmail] Invalid email format:', params.recipientEmail);
+    throw new Error('Please enter a valid email address');
+  }
+
+  // Validate CC emails if provided
+  if (params.ccEmails && params.ccEmails.length > 0) {
+    const invalidCcEmails = params.ccEmails.filter(email => !emailRegex.test(email));
+    if (invalidCcEmails.length > 0) {
+      console.error('❌ [sendInvoiceEmail] Invalid CC email format:', invalidCcEmails);
+      throw new Error(`Invalid CC email address: ${invalidCcEmails.join(', ')}`);
+    }
+  }
+
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
@@ -239,12 +255,30 @@ const sendInvoiceEmail = async (params: SendInvoiceEmailParams): Promise<void> =
 
   if (response.error) {
     console.error('❌ [sendInvoiceEmail] Edge function error:', response.error);
+    // Try to extract detailed error from response data
+    const errorData = response.data;
+    if (errorData?.troubleshooting) {
+      throw new Error(`${errorData.error || 'Failed to send email'}: ${errorData.troubleshooting}`);
+    }
     throw new Error(response.error.message || 'Failed to send email');
   }
 
   if (!response.data?.success) {
     console.error('❌ [sendInvoiceEmail] Email send failed:', response.data);
-    throw new Error(response.data?.error || 'Failed to send email');
+    // Extract detailed error message with troubleshooting info
+    const errorMessage = response.data?.error || 'Failed to send email';
+    const troubleshooting = response.data?.troubleshooting;
+    const details = response.data?.details;
+
+    let fullMessage = errorMessage;
+    if (details && details !== errorMessage) {
+      fullMessage += `. ${details}`;
+    }
+    if (troubleshooting) {
+      fullMessage += ` ${troubleshooting}`;
+    }
+
+    throw new Error(fullMessage);
   }
 
   console.log('✅ [sendInvoiceEmail] Email sent successfully!');
@@ -277,8 +311,8 @@ const markInvoiceAsPaid = async ({ invoiceId, paymentMethod, paidDate }: { invoi
   return data as Invoice;
 };
 
-// Create invoice from booking
-const createInvoiceFromBooking = async (bookingId: string): Promise<Invoice> => {
+// Create invoice from booking (exported for use in booking creation)
+export const createInvoiceFromBooking = async (bookingId: string): Promise<Invoice> => {
   // Fetch booking details
   const { data: booking, error: bookingError } = await supabase
     .from('property_bookings')
@@ -296,6 +330,18 @@ const createInvoiceFromBooking = async (bookingId: string): Promise<Invoice> => 
   // Create line items - check if booking has a bill template
   let lineItems: InvoiceLineItemInsert[] = [];
   let lineNumber = 1;
+
+  // Always add Commission as the first line item (editable, default $0)
+  lineItems.push({
+    invoice_id: '',
+    line_number: lineNumber++,
+    description: 'Commission',
+    quantity: 1,
+    unit_price: 0,
+    tax_rate: 0,
+    tax_amount: 0,
+    item_type: 'accommodation',
+  });
 
   // If booking has a bill template, use it for line items
   if (booking.bill_template_id) {
@@ -341,7 +387,8 @@ const createInvoiceFromBooking = async (bookingId: string): Promise<Invoice> => 
   }
 
   // Fallback: If no template or template failed, use booking fields (existing behavior)
-  if (lineItems.length === 0) {
+  // Check for length === 1 because we always have the commission item
+  if (lineItems.length === 1) {
     console.log('📋 [useInvoices] Using booking fields for line items (no template)');
 
     // Accommodation charges

@@ -26,54 +26,74 @@ export const billTemplateKeys = {
 
 /**
  * Fetch all bill templates for a property
- * If propertyId is provided, fetch templates assigned to that property
- * Otherwise, fetch all global templates
+ * If propertyId is provided, fetch:
+ *   1. Global templates (is_global: true) - available to all properties
+ *   2. Templates specifically assigned to this property
+ * Otherwise, fetch all templates
  */
 const fetchBillTemplates = async (propertyId?: string): Promise<BillTemplateWithItems[]> => {
   console.log('📋 Fetching bill templates for property:', propertyId);
 
   if (propertyId) {
-    // Fetch templates assigned to this property via the view
-    const { data: viewData, error: viewError } = await supabase
-      .from('bill_templates_with_properties')
-      .select('*');
+    // Fetch all templates with their items
+    const { data: allTemplates, error: templatesError } = await supabase
+      .from('bill_templates')
+      .select(`
+        *,
+        items:bill_template_items(*)
+      `)
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: false });
 
-    if (viewError) {
-      console.error('❌ Bill templates view fetch error:', viewError);
-      throw viewError;
+    if (templatesError) {
+      console.error('❌ Bill templates fetch error:', templatesError);
+      throw templatesError;
     }
 
-    // Filter templates that are assigned to this property
-    const templatesForProperty = (viewData || []).filter((template: any) => {
-      const assignedProps = template.assigned_properties || [];
-      return assignedProps.some((p: any) => p.property_id === propertyId);
+    // Fetch property assignments
+    const templateIds = (allTemplates || []).map((t: any) => t.template_id);
+    const { data: assignments } = await supabase
+      .from('bill_template_property_assignments')
+      .select('template_id, property_id')
+      .in('template_id', templateIds);
+
+    // Group assignments by template_id
+    const assignmentsByTemplate = (assignments || []).reduce((acc: any, assignment: any) => {
+      if (!acc[assignment.template_id]) {
+        acc[assignment.template_id] = [];
+      }
+      acc[assignment.template_id].push(assignment.property_id);
+      return acc;
+    }, {});
+
+    // Filter templates: include global templates OR templates assigned to this property
+    const templatesForProperty = (allTemplates || []).filter((template: any) => {
+      // Include if it's a global template
+      if (template.is_global) {
+        return true;
+      }
+      // Include if it's assigned to this property
+      const assignedPropertyIds = assignmentsByTemplate[template.template_id] || [];
+      return assignedPropertyIds.includes(propertyId);
     });
 
-    // Fetch items for these templates
-    const templatesWithItems = await Promise.all(
-      templatesForProperty.map(async (template: any) => {
-        const { data: items } = await supabase
-          .from('bill_template_items')
-          .select('*')
-          .eq('template_id', template.template_id)
-          .order('line_number', { ascending: true });
+    // Calculate totals for each template
+    const templatesWithTotals = templatesForProperty.map((template: any) => {
+      const items = template.items || [];
+      const total_amount = items.reduce((sum: number, item: any) => {
+        const lineTotal = item.quantity * item.unit_price;
+        const taxAmount = item.tax_amount || (lineTotal * (item.tax_rate / 100));
+        return sum + lineTotal + taxAmount;
+      }, 0);
 
-        const total_amount = (items || []).reduce((sum: number, item: any) => {
-          const lineTotal = item.quantity * item.unit_price;
-          const taxAmount = item.tax_amount || (lineTotal * (item.tax_rate / 100));
-          return sum + lineTotal + taxAmount;
-        }, 0);
+      return {
+        ...template,
+        total_amount,
+      };
+    });
 
-        return {
-          ...template,
-          items: items || [],
-          total_amount,
-        };
-      })
-    );
-
-    console.log('✅ Fetched bill templates for property:', templatesWithItems.length);
-    return templatesWithItems as BillTemplateWithItems[];
+    console.log('✅ Fetched bill templates for property:', templatesWithTotals.length, '(global + assigned)');
+    return templatesWithTotals as BillTemplateWithItems[];
   } else {
     // Fetch all templates with items
     let query = supabase

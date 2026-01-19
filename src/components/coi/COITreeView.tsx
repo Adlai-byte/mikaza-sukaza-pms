@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Shield, Building2, CheckCircle2, Clock, XCircle, Download } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Shield, Building2, CheckCircle2, Clock, XCircle, Download, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VendorCOI } from "@/lib/schemas";
@@ -44,6 +44,13 @@ export function COITreeView({
   canDelete = false,
 }: COITreeViewProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  // Open COI directly in new tab
+  const openCOIInNewTab = (coi: VendorCOI) => {
+    if (coi.file_url) {
+      window.open(coi.file_url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   // Build tree structure
   const tree = useMemo(() => {
@@ -249,6 +256,25 @@ export function COITreeView({
 
         {/* Actions */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {coi.file_url && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => openCOIInNewTab(coi)}
+                  >
+                    <Eye className="h-4 w-4 text-green-600" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View COI</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {onDownloadCOI && coi.file_url && (
             <TooltipProvider>
               <Tooltip>
@@ -282,7 +308,7 @@ export function COITreeView({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>View/Edit COI</p>
+                  <p>Edit COI</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -332,6 +358,7 @@ export function COITreeView({
       <div className="space-y-1">
         {tree.map(node => renderNode(node))}
       </div>
+
     </div>
   );
 }

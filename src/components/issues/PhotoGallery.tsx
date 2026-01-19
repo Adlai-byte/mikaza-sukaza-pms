@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { Issue, IssuePhoto } from '@/lib/schemas';
 import { format, parseISO } from 'date-fns';
+import { OptimizedImage } from '@/components/ui/optimized-image';
 
 interface PhotoGalleryProps {
   open: boolean;
@@ -188,10 +189,13 @@ export function PhotoGallery({
                     className="relative group cursor-pointer"
                     onClick={() => openLightbox(index)}
                   >
-                    <img
+                    <OptimizedImage
                       src={photo.photo_url}
                       alt={photo.caption || `Photo ${index + 1}`}
                       className="w-full h-40 object-cover rounded-lg border hover:shadow-lg transition-shadow"
+                      lazy={true}
+                      placeholder="skeleton"
+                      category="properties"
                     />
                     <div className="absolute top-2 left-2">
                       <Badge className={getPhotoTypeColor(photo.photo_type)}>
@@ -274,10 +278,13 @@ export function PhotoGallery({
 
               {/* Image */}
               <div className="flex-1 flex items-center justify-center bg-black/5 p-4 relative">
-                <img
+                <OptimizedImage
                   src={currentPhoto.photo_url}
                   alt={currentPhoto.caption || `Photo ${selectedPhotoIndex! + 1}`}
                   className="max-h-full max-w-full object-contain"
+                  lazy={false}
+                  placeholder="skeleton"
+                  category="properties"
                 />
 
                 {/* Navigation Buttons */}

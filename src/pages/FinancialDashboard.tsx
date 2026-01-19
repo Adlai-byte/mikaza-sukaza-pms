@@ -23,6 +23,7 @@ import {
   Calendar,
   Receipt,
   BarChart3,
+  RefreshCw,
 } from "lucide-react";
 import {
   Card,
@@ -31,6 +32,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,23 +69,30 @@ export default function FinancialDashboard() {
     () => new Date().toISOString().split("T")[0],
   );
 
-  const { summary, loading: summaryLoading } = useDashboardSummary(
+  const { summary, loading: summaryLoading, refetch: refetchSummary } = useDashboardSummary(
     dateFrom,
     dateTo,
   );
-  const { revenueByProperty, loading: revenueLoading } = useRevenueByProperty(
+  const { revenueByProperty, loading: revenueLoading, refetch: refetchRevenue } = useRevenueByProperty(
     dateFrom,
     dateTo,
   );
-  const { expensesByCategory, loading: expensesLoading } =
+  const { expensesByCategory, loading: expensesLoading, refetch: refetchExpenses } =
     useExpensesByCategory(dateFrom, dateTo);
-  const { financialOverTime, loading: overTimeLoading } = useFinancialOverTime(
+  const { financialOverTime, loading: overTimeLoading, refetch: refetchOverTime } = useFinancialOverTime(
     dateFrom,
     dateTo,
   );
 
   const isLoading =
     summaryLoading || revenueLoading || expensesLoading || overTimeLoading;
+
+  const handleRefreshAll = () => {
+    refetchSummary();
+    refetchRevenue();
+    refetchExpenses();
+    refetchOverTime();
+  };
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -132,6 +141,17 @@ export default function FinancialDashboard() {
         title="Financial Dashboard"
         subtitle={t("financialDashboard.subtitle")}
         icon={TrendingUp}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshAll}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            {t('common.refresh')}
+          </Button>
+        }
       />
 
       {/* Date Filters */}
@@ -175,125 +195,94 @@ export default function FinancialDashboard() {
         <>
           {/* Summary Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <Card className="transition-colors hover:bg-accent/50">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-green-700">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">
                       {t("financialDashboard.summaryCards.totalRevenue")}
                     </p>
-                    <h3 className="text-2xl font-bold text-green-900 mt-1">
-                      {formatCurrency(summary?.total_revenue || 0)}
-                    </h3>
-                    <p className="text-xs text-green-600 mt-1">
-                      {summary?.paid_invoices || 0}{" "}
-                      {t("financialDashboard.summaryCards.paidInvoices")}
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-white" />
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-2xl font-semibold">
+                        {formatCurrency(summary?.total_revenue || 0)}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        {summary?.paid_invoices || 0} {t("financialDashboard.summaryCards.paidInvoices")}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <Card className="transition-colors hover:bg-accent/50">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-red-700">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                    <TrendingDown className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">
                       {t("financialDashboard.summaryCards.totalExpenses")}
                     </p>
-                    <h3 className="text-2xl font-bold text-red-900 mt-1">
-                      {formatCurrency(summary?.total_expenses || 0)}
-                    </h3>
-                    <p className="text-xs text-red-600 mt-1">
-                      {t("financialDashboard.summaryCards.allCategories")}
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                    <TrendingDown className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card
-              className={cn(
-                "border-0 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]",
-                (summary?.net_income || 0) >= 0
-                  ? "bg-gradient-to-br from-emerald-50 to-emerald-100"
-                  : "bg-gradient-to-br from-orange-50 to-orange-100",
-              )}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p
-                      className={cn(
-                        "text-sm font-medium",
-                        (summary?.net_income || 0) >= 0
-                          ? "text-emerald-700"
-                          : "text-orange-700",
-                      )}
-                    >
-                      Net Income
-                    </p>
-                    <h3
-                      className={cn(
-                        "text-2xl font-bold mt-1",
-                        (summary?.net_income || 0) >= 0
-                          ? "text-emerald-900"
-                          : "text-orange-900",
-                      )}
-                    >
-                      {(summary?.net_income || 0) >= 0 ? "+" : ""}
-                      {formatCurrency(summary?.net_income || 0)}
-                    </h3>
-                    <p
-                      className={cn(
-                        "text-xs mt-1",
-                        (summary?.net_income || 0) >= 0
-                          ? "text-emerald-600"
-                          : "text-orange-600",
-                      )}
-                    >
-                      {(summary?.net_income || 0) >= 0
-                        ? t("financialDashboard.summaryCards.profit")
-                        : t("financialDashboard.summaryCards.loss")}
-                    </p>
-                  </div>
-                  <div
-                    className={cn(
-                      "w-12 h-12 rounded-lg flex items-center justify-center",
-                      (summary?.net_income || 0) >= 0
-                        ? "bg-emerald-500"
-                        : "bg-orange-500",
-                    )}
-                  >
-                    <DollarSign className="h-6 w-6 text-white" />
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-2xl font-semibold">
+                        {formatCurrency(summary?.total_expenses || 0)}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        {t("financialDashboard.summaryCards.allCategories")}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+            <Card className="transition-colors hover:bg-accent/50">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-blue-700">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">Net Income</p>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-2xl font-semibold">
+                        {(summary?.net_income || 0) >= 0 ? "+" : ""}
+                        {formatCurrency(summary?.net_income || 0)}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        {(summary?.net_income || 0) >= 0
+                          ? t("financialDashboard.summaryCards.profit")
+                          : t("financialDashboard.summaryCards.loss")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="transition-colors hover:bg-accent/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">
                       {t("financialDashboard.summaryCards.activeProperties")}
                     </p>
-                    <h3 className="text-2xl font-bold text-blue-900 mt-1">
-                      {summary?.total_properties || 0}
-                    </h3>
-                    <p className="text-xs text-blue-600 mt-1">
-                      {summary?.active_bookings || 0}{" "}
-                      {t("financialDashboard.summaryCards.activeBookings")}
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                    <Building2 className="h-6 w-6 text-white" />
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-2xl font-semibold">
+                        {summary?.total_properties || 0}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        {summary?.active_bookings || 0} {t("financialDashboard.summaryCards.activeBookings")}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </CardContent>

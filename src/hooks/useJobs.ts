@@ -338,7 +338,7 @@ export function useUpdateJob() {
       // Fetch the current job to compare changes
       const { data: currentJob, error: fetchError } = await supabase
         .from('jobs')
-        .select('job_id, title, status, priority, assigned_to, created_by, property_id, due_date, description')
+        .select('job_id, title, status, priority, assigned_to, created_by, property_id, due_date, description, job_type, estimated_cost, actual_cost')
         .eq('job_id', jobId)
         .single();
 
@@ -500,6 +500,58 @@ export function useUpdateJob() {
         }
       }
 
+      // AUTO-DEBIT: Create expense when job is completed with cost
+      if (updates.status === 'completed' && currentJob.status !== 'completed') {
+        const cost = updates.actual_cost ?? currentJob.actual_cost ??
+                     updates.estimated_cost ?? currentJob.estimated_cost;
+
+        if (cost && cost > 0 && currentJob.property_id) {
+          console.log('💰 [Jobs] Creating auto-expense for completed job:', {
+            jobId,
+            cost,
+            jobType: currentJob.job_type,
+          });
+
+          // Map job_type to expense category
+          const categoryMap: Record<string, string> = {
+            'maintenance': 'maintenance',
+            'cleaning': 'cleaning',
+            'repair': 'repairs',
+            'emergency': 'repairs',
+            'preventive': 'maintenance',
+            'inspection': 'professional_services',
+            'check_in': 'cleaning',
+            'check_out': 'cleaning',
+            'general': 'other',
+          };
+
+          const expenseCategory = categoryMap[currentJob.job_type] || 'other';
+
+          const { error: expenseError } = await supabase
+            .from('expenses')
+            .insert([{
+              property_id: currentJob.property_id,
+              job_id: jobId,
+              description: `Job: ${currentJob.title}`.slice(0, 255),
+              amount: cost,
+              expense_date: new Date().toISOString().split('T')[0],
+              entry_type: 'debit',
+              category: expenseCategory,
+              notes: `Auto-generated from job completion. Job ID: ${jobId}`,
+              is_scheduled: false,
+              is_paid: false,
+              tax_amount: 0,
+            }]);
+
+          if (expenseError) {
+            console.error('❌ [Jobs] Failed to create expense for completed job:', expenseError);
+            // Don't throw - job update succeeded, expense is secondary
+          } else {
+            console.log('✅ [Jobs] Auto-created expense for completed job:', jobId);
+          }
+        }
+      }
+
       return data;
     },
     onSuccess: (data) => {
@@ -513,6 +565,9 @@ export function useUpdateJob() {
       }
       // Cross-entity: notifications were created
       queryClient.invalidateQueries({ queryKey: ['notifications'], refetchType: 'all' });
+      // Cross-entity: expenses may have been created from job completion
+      queryClient.invalidateQueries({ queryKey: ['expenses'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'all' });
       toast({
         title: 'Success',
         description: 'Job updated successfully',

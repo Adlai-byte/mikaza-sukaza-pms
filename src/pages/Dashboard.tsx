@@ -158,22 +158,24 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Properties Card */}
         <Card
-          className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+          className="cursor-pointer transition-colors hover:bg-accent/50"
           onClick={() => navigate('/properties')}
         >
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">{t('dashboard.totalProperties')}</p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                  {isLoading ? '...' : stats.totalProperties}
-                </h3>
-                <p className="text-xs text-blue-600 mt-1">
-                  {stats.activeProperties} {t('dashboard.active')}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Building className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <Building className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('dashboard.totalProperties')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {isLoading ? '...' : stats.totalProperties}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    {stats.activeProperties} {t('dashboard.active')}
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -181,22 +183,24 @@ export default function Dashboard() {
 
         {/* Bookings Card */}
         <Card
-          className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+          className="cursor-pointer transition-colors hover:bg-accent/50"
           onClick={() => navigate('/calendar')}
         >
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">{t('dashboard.todayActivity')}</p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  {isLoading ? '...' : stats.todayCheckIns + stats.todayCheckOuts}
-                </h3>
-                <p className="text-xs text-green-600 mt-1">
-                  {t('dashboard.checkinsCheckouts', { checkins: stats.todayCheckIns, checkouts: stats.todayCheckOuts })}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <CalendarClock className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <CalendarClock className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('dashboard.todayActivity')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {isLoading ? '...' : stats.todayCheckIns + stats.todayCheckOuts}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    {t('dashboard.checkinsCheckouts', { checkins: stats.todayCheckIns, checkouts: stats.todayCheckOuts })}
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -204,22 +208,24 @@ export default function Dashboard() {
 
         {/* Tasks Card */}
         <Card
-          className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+          className="cursor-pointer transition-colors hover:bg-accent/50"
           onClick={() => navigate('/todos')}
         >
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-orange-700">{t('dashboard.activeTasks')}</p>
-                <h3 className="text-3xl font-bold text-orange-900 mt-1">
-                  {isLoading ? '...' : stats.activeTasks}
-                </h3>
-                <p className="text-xs text-orange-600 mt-1">
-                  {stats.overdueTasksCount > 0 ? `${stats.overdueTasksCount} ${t('dashboard.overdue')}` : `${stats.pendingTasks} ${t('dashboard.pending')}`}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <BriefcaseIcon className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                <BriefcaseIcon className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('dashboard.activeTasks')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {isLoading ? '...' : stats.activeTasks}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    {stats.overdueTasksCount > 0 ? `${stats.overdueTasksCount} ${t('dashboard.overdue')}` : `${stats.pendingTasks} ${t('dashboard.pending')}`}
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -227,22 +233,24 @@ export default function Dashboard() {
 
         {/* Issues Card */}
         <Card
-          className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+          className="cursor-pointer transition-colors hover:bg-accent/50"
           onClick={() => navigate('/issues')}
         >
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-red-700">{t('dashboard.openIssues')}</p>
-                <h3 className="text-3xl font-bold text-red-900 mt-1">
-                  {isLoading ? '...' : stats.openIssues}
-                </h3>
-                <p className="text-xs text-red-600 mt-1">
-                  {stats.urgentIssues > 0 ? `${stats.urgentIssues} ${t('dashboard.urgent')}` : t('dashboard.requiresAttention')}
-                </p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('dashboard.openIssues')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {isLoading ? '...' : stats.openIssues}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    {stats.urgentIssues > 0 ? `${stats.urgentIssues} ${t('dashboard.urgent')}` : t('dashboard.requiresAttention')}
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>

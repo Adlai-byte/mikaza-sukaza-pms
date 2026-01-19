@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Upload, X, Star } from 'lucide-react';
 import { useVehiclePhotos } from '@/hooks/useVehiclePhotos';
 import { cn } from '@/lib/utils';
+import { OptimizedImage } from '@/components/ui/optimized-image';
 
 interface VehiclePhotoGalleryProps {
   vehicleId: string;
@@ -74,10 +75,13 @@ export function VehiclePhotoGallery({ vehicleId }: VehiclePhotoGalleryProps) {
                   photo.is_primary && "border-primary"
                 )}
               >
-                <img
+                <OptimizedImage
                   src={photo.photo_url}
                   alt={photo.photo_title || 'Vehicle photo'}
                   className="w-full h-full object-cover"
+                  lazy={true}
+                  placeholder="skeleton"
+                  category="properties"
                 />
 
                 {/* Photo overlay */}

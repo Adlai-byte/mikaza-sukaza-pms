@@ -96,10 +96,35 @@ export default {
             height: "0",
           },
         },
+        // Subtle floating animation for brand icon
+        "float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-6px)" },
+        },
+        // Shake animation for error feedback
+        "shake": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "10%, 30%, 50%, 70%, 90%": { transform: "translateX(-4px)" },
+          "20%, 40%, 60%, 80%": { transform: "translateX(4px)" },
+        },
+        // Slide up with fade for card entrance
+        "slide-up-fade": {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        // Glow pulse for focus states
+        "glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(255, 255, 255, 0.2)" },
+          "50%": { boxShadow: "0 0 20px 4px rgba(255, 255, 255, 0.3)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "float": "float 3s ease-in-out infinite",
+        "shake": "shake 0.5s ease-in-out",
+        "slide-up-fade": "slide-up-fade 0.5s ease-out",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
       },
     },
   },

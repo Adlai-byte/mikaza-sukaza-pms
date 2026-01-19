@@ -29,6 +29,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { propertyKeys, usePropertyDetail } from '@/hooks/usePropertiesOptimized';
+import { useUsers } from '@/hooks/useUsers';
 import {
   Home,
   MapPin,
@@ -53,8 +54,13 @@ import {
   Trash2,
   Save,
   X,
+  ChevronDown,
+  ChevronUp,
+  Settings2,
 } from 'lucide-react';
+import { useUnitSettings, getEffectiveUnitSettings } from '@/hooks/useUnitSettings';
 import { TabLoadingSpinner } from './PropertyEditSkeleton';
+import { UnitAmenitiesRulesSection } from './UnitAmenitiesRulesSection';
 import { LocationMap } from '@/components/ui/location-map-new';
 import { Property, PropertyLocation, PropertyCommunication, PropertyAccess, PropertyExtras } from '@/lib/schemas';
 
@@ -163,6 +169,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { users } = useUsers();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showLocationMap, setShowLocationMap] = useState(false);
@@ -173,6 +180,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     property_name: '',
     license_number: '',
     folio: '',
+    owner_id: null as string | null,
   });
   const [showPasswords, setShowPasswords] = useState({
     wifi_password: false,
@@ -182,6 +190,108 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
     storage_code: false,
     pool_access_code: false,
   });
+
+  // Per-unit settings state
+  const [expandedUnitSettings, setExpandedUnitSettings] = useState<Set<string>>(new Set());
+  const [unitSettingsForm, setUnitSettingsForm] = useState<Record<string, {
+    capacity: string;
+    max_capacity: string;
+    wifi_name: string;
+    wifi_password: string;
+    phone_number: string;
+    gate_code: string;
+    door_lock_password: string;
+    alarm_passcode: string;
+  }>>({});
+  const [unitPasswordVisibility, setUnitPasswordVisibility] = useState<Record<string, Record<string, boolean>>>({});
+
+  // Unit settings mutations
+  const {
+    updateUnitCapacity,
+    upsertUnitCommunication,
+    upsertUnitAccess,
+    isUpdatingCapacity,
+    isUpdatingCommunication,
+    isUpdatingAccess,
+  } = useUnitSettings();
+
+  // Toggle unit settings panel
+  const toggleUnitSettings = (unitId: string) => {
+    setExpandedUnitSettings(prev => {
+      const next = new Set(prev);
+      if (next.has(unitId)) {
+        next.delete(unitId);
+      } else {
+        next.add(unitId);
+        // Initialize form data for this unit if not already set
+        if (!unitSettingsForm[unitId]) {
+          const unit = property.units?.find((u: any) => u.unit_id === unitId);
+          if (unit) {
+            setUnitSettingsForm(prev => ({
+              ...prev,
+              [unitId]: {
+                capacity: unit.capacity?.toString() || '',
+                max_capacity: unit.max_capacity?.toString() || '',
+                wifi_name: unit.communication?.wifi_name || '',
+                wifi_password: unit.communication?.wifi_password || '',
+                phone_number: unit.communication?.phone_number || '',
+                gate_code: unit.access?.gate_code || '',
+                door_lock_password: unit.access?.door_lock_password || '',
+                alarm_passcode: unit.access?.alarm_passcode || '',
+              }
+            }));
+          }
+        }
+      }
+      return next;
+    });
+  };
+
+  // Save unit settings
+  const handleSaveUnitSettings = async (unitId: string) => {
+    const formValues = unitSettingsForm[unitId];
+    if (!formValues) return;
+
+    try {
+      // Update capacity
+      await updateUnitCapacity({
+        unitId,
+        capacity: formValues.capacity ? parseInt(formValues.capacity) : null,
+        maxCapacity: formValues.max_capacity ? parseInt(formValues.max_capacity) : null,
+      });
+
+      // Update communication if any field is set
+      if (formValues.wifi_name || formValues.wifi_password || formValues.phone_number) {
+        await upsertUnitCommunication({
+          unitId,
+          data: {
+            wifi_name: formValues.wifi_name || null,
+            wifi_password: formValues.wifi_password || null,
+            phone_number: formValues.phone_number || null,
+          }
+        });
+      }
+
+      // Update access if any field is set
+      if (formValues.gate_code || formValues.door_lock_password || formValues.alarm_passcode) {
+        await upsertUnitAccess({
+          unitId,
+          data: {
+            gate_code: formValues.gate_code || null,
+            door_lock_password: formValues.door_lock_password || null,
+            alarm_passcode: formValues.alarm_passcode || null,
+          }
+        });
+      }
+
+      toast({
+        title: "Success",
+        description: "Unit settings saved successfully",
+      });
+    } catch (error) {
+      console.error('Error saving unit settings:', error);
+    }
+  };
 
   // Track which property we're currently editing to prevent race conditions
   const currentPropertyIdRef = useRef<string | null>(null);
@@ -573,6 +683,14 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       window.dispatchEvent(new Event('property-updated'));
       console.log('🔔 [GeneralTab] Dispatched property-updated event');
 
+      // CRITICAL FIX: Invalidate all property list queries (including filtered ones)
+      // This ensures any page using useProperties(filters) will refetch fresh data
+      queryClient.invalidateQueries({
+        queryKey: propertyKeys.lists(),
+        exact: false // Match all queries starting with ['properties', 'list']
+      });
+      console.log('🔄 [GeneralTab] Invalidated all property list queries');
+
       // Clear the flag after a tick to allow useEffect to handle future updates
       setTimeout(() => {
         justSavedRef.current = false;
@@ -601,13 +719,20 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       return data;
     },
     onSuccess: () => {
+      // Invalidate all related queries to ensure units propagate everywhere
       queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.all() });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] }); // For job property selector
+      queryClient.invalidateQueries({ queryKey: ['issues'] }); // For issue property selector
+      queryClient.invalidateQueries({ queryKey: ['bookings'] }); // For booking unit selector
       toast({
         title: 'Success',
         description: 'Unit created successfully',
       });
       setShowUnitDialog(false);
-      setUnitFormData({ property_name: '', license_number: '', folio: '' });
+      setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null });
     },
     onError: (error) => {
       toast({
@@ -632,14 +757,21 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       return data;
     },
     onSuccess: () => {
+      // Invalidate all related queries to ensure units propagate everywhere
       queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.all() });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
       toast({
         title: 'Success',
         description: 'Unit updated successfully',
       });
       setShowUnitDialog(false);
       setEditingUnit(null);
-      setUnitFormData({ property_name: '', license_number: '', folio: '' });
+      setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null });
     },
     onError: (error) => {
       toast({
@@ -661,7 +793,14 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate all related queries to ensure units propagate everywhere
       queryClient.invalidateQueries({ queryKey: propertyKeys.detail(property.property_id) });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.all() });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
       toast({
         title: 'Success',
         description: 'Unit deleted successfully',
@@ -680,7 +819,10 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
   // Unit Handlers
   const handleAddUnit = () => {
     setEditingUnit(null);
-    setUnitFormData({ property_name: '', license_number: '', folio: '' });
+    // Auto-suggest next unit name based on existing units count
+    const existingUnitsCount = property.units?.length || 0;
+    const suggestedName = `Unit ${existingUnitsCount + 1}`;
+    setUnitFormData({ property_name: suggestedName, license_number: '', folio: '', owner_id: null });
     setShowUnitDialog(true);
   };
 
@@ -690,6 +832,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
       property_name: unit.property_name || '',
       license_number: unit.license_number || '',
       folio: unit.folio || '',
+      owner_id: unit.owner_id || null,
     });
     setShowUnitDialog(true);
   };
@@ -1496,41 +1639,290 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
           {property.units && property.units.length > 0 ? (
             <div className="space-y-3">
               {property.units.map((unit: any, index: number) => (
-                <div key={unit.unit_id || index} className="p-4 border rounded-lg bg-gradient-to-r from-gray-50 to-white hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                      <div>
-                        <Label className="text-xs text-gray-500 mb-1">Unit Name</Label>
-                        <p className="font-medium text-gray-900">{unit.property_name || 'N/A'}</p>
+                <div key={unit.unit_id || index} className="border rounded-lg bg-gradient-to-r from-gray-50 to-white hover:shadow-md transition-shadow overflow-hidden">
+                  {/* Unit Header */}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
+                        <div>
+                          <Label className="text-xs text-gray-500 mb-1">Unit Name</Label>
+                          <p className="font-medium text-gray-900">{unit.property_name || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500 mb-1">License Number</Label>
+                          <p className="font-medium text-gray-900">{unit.license_number || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500 mb-1">Folio</Label>
+                          <p className="font-medium text-gray-900">{unit.folio || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500 mb-1">Owner</Label>
+                          <p className="font-medium text-gray-900">
+                            {unit.owner_id
+                              ? users.find(u => u.user_id === unit.owner_id)?.first_name + ' ' + users.find(u => u.user_id === unit.owner_id)?.last_name || 'Unknown'
+                              : <span className="text-gray-500 italic">(Property Owner)</span>
+                            }
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <Label className="text-xs text-gray-500 mb-1">License Number</Label>
-                        <p className="font-medium text-gray-900">{unit.license_number || 'N/A'}</p>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Button
+                          onClick={() => toggleUnitSettings(unit.unit_id)}
+                          size="sm"
+                          variant="outline"
+                          className={`h-8 px-2 ${expandedUnitSettings.has(unit.unit_id) ? 'bg-indigo-50 border-indigo-300' : ''}`}
+                          title="Unit Settings (WiFi, Access Codes)"
+                        >
+                          <Settings2 className="h-4 w-4 mr-1" />
+                          {expandedUnitSettings.has(unit.unit_id) ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        </Button>
+                        <Button
+                          onClick={() => handleEditUnit(unit)}
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={() => handleDeleteUnit(unit)}
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div>
-                        <Label className="text-xs text-gray-500 mb-1">Folio</Label>
-                        <p className="font-medium text-gray-900">{unit.folio || 'N/A'}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Button
-                        onClick={() => handleEditUnit(unit)}
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        onClick={() => handleDeleteUnit(unit)}
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
+
+                  {/* Expandable Unit Settings Panel */}
+                  {expandedUnitSettings.has(unit.unit_id) && (
+                    <div className="border-t bg-gray-50 p-4">
+                      <div className="space-y-4">
+                        {/* Capacity Section */}
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            Capacity
+                            {!unit.capacity && !unit.max_capacity && (
+                              <span className="text-xs font-normal text-gray-500">(using property defaults)</span>
+                            )}
+                          </h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs">Capacity</Label>
+                              <Input
+                                type="number"
+                                value={unitSettingsForm[unit.unit_id]?.capacity || ''}
+                                onChange={(e) => setUnitSettingsForm(prev => ({
+                                  ...prev,
+                                  [unit.unit_id]: { ...prev[unit.unit_id], capacity: e.target.value }
+                                }))}
+                                placeholder={property.capacity?.toString() || 'Inherit'}
+                                className="h-8"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Max Capacity</Label>
+                              <Input
+                                type="number"
+                                value={unitSettingsForm[unit.unit_id]?.max_capacity || ''}
+                                onChange={(e) => setUnitSettingsForm(prev => ({
+                                  ...prev,
+                                  [unit.unit_id]: { ...prev[unit.unit_id], max_capacity: e.target.value }
+                                }))}
+                                placeholder={property.max_capacity?.toString() || 'Inherit'}
+                                className="h-8"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* WiFi Section */}
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <Wifi className="h-4 w-4" />
+                            WiFi & Communication
+                            {!unit.communication && (
+                              <span className="text-xs font-normal text-gray-500">(using property defaults)</span>
+                            )}
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <Label className="text-xs">WiFi Name</Label>
+                              <Input
+                                value={unitSettingsForm[unit.unit_id]?.wifi_name || ''}
+                                onChange={(e) => setUnitSettingsForm(prev => ({
+                                  ...prev,
+                                  [unit.unit_id]: { ...prev[unit.unit_id], wifi_name: e.target.value }
+                                }))}
+                                placeholder="Network name"
+                                className="h-8"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">WiFi Password</Label>
+                              <div className="relative">
+                                <Input
+                                  type={unitPasswordVisibility[unit.unit_id]?.wifi ? 'text' : 'password'}
+                                  value={unitSettingsForm[unit.unit_id]?.wifi_password || ''}
+                                  onChange={(e) => setUnitSettingsForm(prev => ({
+                                    ...prev,
+                                    [unit.unit_id]: { ...prev[unit.unit_id], wifi_password: e.target.value }
+                                  }))}
+                                  placeholder="Password"
+                                  className="h-8 pr-8"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setUnitPasswordVisibility(prev => ({
+                                    ...prev,
+                                    [unit.unit_id]: { ...prev[unit.unit_id], wifi: !prev[unit.unit_id]?.wifi }
+                                  }))}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  {unitPasswordVisibility[unit.unit_id]?.wifi ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Phone Number</Label>
+                              <Input
+                                value={unitSettingsForm[unit.unit_id]?.phone_number || ''}
+                                onChange={(e) => setUnitSettingsForm(prev => ({
+                                  ...prev,
+                                  [unit.unit_id]: { ...prev[unit.unit_id], phone_number: e.target.value }
+                                }))}
+                                placeholder="Contact phone"
+                                className="h-8"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Access Codes Section */}
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <Lock className="h-4 w-4" />
+                            Access Codes
+                            {!unit.access && (
+                              <span className="text-xs font-normal text-gray-500">(using property defaults)</span>
+                            )}
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <Label className="text-xs">Gate Code</Label>
+                              <div className="relative">
+                                <Input
+                                  type={unitPasswordVisibility[unit.unit_id]?.gate ? 'text' : 'password'}
+                                  value={unitSettingsForm[unit.unit_id]?.gate_code || ''}
+                                  onChange={(e) => setUnitSettingsForm(prev => ({
+                                    ...prev,
+                                    [unit.unit_id]: { ...prev[unit.unit_id], gate_code: e.target.value }
+                                  }))}
+                                  placeholder="Gate code"
+                                  className="h-8 pr-8"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setUnitPasswordVisibility(prev => ({
+                                    ...prev,
+                                    [unit.unit_id]: { ...prev[unit.unit_id], gate: !prev[unit.unit_id]?.gate }
+                                  }))}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  {unitPasswordVisibility[unit.unit_id]?.gate ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Door Lock Password</Label>
+                              <div className="relative">
+                                <Input
+                                  type={unitPasswordVisibility[unit.unit_id]?.door ? 'text' : 'password'}
+                                  value={unitSettingsForm[unit.unit_id]?.door_lock_password || ''}
+                                  onChange={(e) => setUnitSettingsForm(prev => ({
+                                    ...prev,
+                                    [unit.unit_id]: { ...prev[unit.unit_id], door_lock_password: e.target.value }
+                                  }))}
+                                  placeholder="Door lock code"
+                                  className="h-8 pr-8"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setUnitPasswordVisibility(prev => ({
+                                    ...prev,
+                                    [unit.unit_id]: { ...prev[unit.unit_id], door: !prev[unit.unit_id]?.door }
+                                  }))}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  {unitPasswordVisibility[unit.unit_id]?.door ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Alarm Passcode</Label>
+                              <div className="relative">
+                                <Input
+                                  type={unitPasswordVisibility[unit.unit_id]?.alarm ? 'text' : 'password'}
+                                  value={unitSettingsForm[unit.unit_id]?.alarm_passcode || ''}
+                                  onChange={(e) => setUnitSettingsForm(prev => ({
+                                    ...prev,
+                                    [unit.unit_id]: { ...prev[unit.unit_id], alarm_passcode: e.target.value }
+                                  }))}
+                                  placeholder="Alarm code"
+                                  className="h-8 pr-8"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setUnitPasswordVisibility(prev => ({
+                                    ...prev,
+                                    [unit.unit_id]: { ...prev[unit.unit_id], alarm: !prev[unit.unit_id]?.alarm }
+                                  }))}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  {unitPasswordVisibility[unit.unit_id]?.alarm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Amenities & Rules Section */}
+                        <div className="border-t pt-4">
+                          <UnitAmenitiesRulesSection
+                            unitId={unit.unit_id}
+                            propertyAmenities={property.amenities}
+                            propertyRules={property.rules}
+                          />
+                        </div>
+
+                        {/* Save Button */}
+                        <div className="flex justify-end pt-2">
+                          <Button
+                            onClick={() => handleSaveUnitSettings(unit.unit_id)}
+                            size="sm"
+                            disabled={isUpdatingCapacity || isUpdatingCommunication || isUpdatingAccess}
+                            className="bg-indigo-600 hover:bg-indigo-700"
+                          >
+                            {(isUpdatingCapacity || isUpdatingCommunication || isUpdatingAccess) ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="h-4 w-4 mr-2" />
+                                Save Unit Settings
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
@@ -1596,7 +1988,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
         </div>
       </div>
 
-      {/* Location Map Modal */}
+      {/* Location Map Modal (Property) */}
       <LocationMap
         isOpen={showLocationMap}
         onClose={() => setShowLocationMap(false)}
@@ -1608,41 +2000,71 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
 
       {/* Unit Dialog */}
       <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingUnit ? 'Edit Unit' : 'Add New Unit'}</DialogTitle>
             <DialogDescription>
               {editingUnit ? 'Update the unit details below.' : 'Add a new unit to this property.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="unit_property_name">Unit Name</Label>
+          <div className="space-y-3 py-2">
+            {/* Unit Name */}
+            <div className="space-y-1">
+              <Label htmlFor="unit_property_name" className="text-sm">Unit Name</Label>
               <Input
                 id="unit_property_name"
                 value={unitFormData.property_name}
                 onChange={(e) => setUnitFormData({ ...unitFormData, property_name: e.target.value })}
                 placeholder="e.g., Apartment 101, Unit A"
+                className="h-9"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="unit_license_number">License Number</Label>
-              <Input
-                id="unit_license_number"
-                value={unitFormData.license_number}
-                onChange={(e) => setUnitFormData({ ...unitFormData, license_number: e.target.value })}
-                placeholder="e.g., LIC-12345"
-              />
+
+            {/* License & Folio in one row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="unit_license_number" className="text-sm">License Number</Label>
+                <Input
+                  id="unit_license_number"
+                  value={unitFormData.license_number}
+                  onChange={(e) => setUnitFormData({ ...unitFormData, license_number: e.target.value })}
+                  placeholder="e.g., LIC-12345"
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="unit_folio" className="text-sm">Folio</Label>
+                <Input
+                  id="unit_folio"
+                  value={unitFormData.folio}
+                  onChange={(e) => setUnitFormData({ ...unitFormData, folio: e.target.value })}
+                  placeholder="e.g., FOL-001"
+                  className="h-9"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="unit_folio">Folio</Label>
-              <Input
-                id="unit_folio"
-                value={unitFormData.folio}
-                onChange={(e) => setUnitFormData({ ...unitFormData, folio: e.target.value })}
-                placeholder="e.g., FOL-001"
-              />
+
+            {/* Owner */}
+            <div className="space-y-1">
+              <Label htmlFor="unit_owner" className="text-sm">Unit Owner (Optional)</Label>
+              <Select
+                value={unitFormData.owner_id || "inherit"}
+                onValueChange={(value) => setUnitFormData({ ...unitFormData, owner_id: value === "inherit" ? null : value })}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select unit owner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inherit">(Property Owner - Default)</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.user_id} value={user.user_id!}>
+                      {user.first_name} {user.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
           </div>
           <DialogFooter>
             <Button
@@ -1650,7 +2072,7 @@ export function GeneralTabOptimized({ property }: GeneralTabOptimizedProps) {
               onClick={() => {
                 setShowUnitDialog(false);
                 setEditingUnit(null);
-                setUnitFormData({ property_name: '', license_number: '', folio: '' });
+                setUnitFormData({ property_name: '', license_number: '', folio: '', owner_id: null });
               }}
             >
               Cancel

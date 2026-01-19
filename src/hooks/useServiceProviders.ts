@@ -10,16 +10,16 @@ import { PERMISSIONS } from "@/lib/rbac/permissions";
 export const serviceProviderKeys = {
   all: () => ['service_providers'],
   lists: () => ['service_providers', 'list'],
-  list: (filters?: Record<string, unknown>) => ['service_providers', 'list', ...(filters ? [JSON.stringify(filters)] : [])],
+  list: (filters?: { showInactive?: boolean }) => ['service_providers', 'list', ...(filters ? [JSON.stringify(filters)] : [])],
   details: () => ['service_providers', 'detail'],
   detail: (id: string) => ['service_providers', 'detail', id],
 } as const;
 
-// Fetch service providers list
-const fetchServiceProviders = async (): Promise<ServiceProvider[]> => {
-  console.log('🔍 [ServiceProviders] Fetching service providers list...');
+// Fetch service providers list with optional inactive filter
+const fetchServiceProviders = async (showInactive: boolean = false): Promise<ServiceProvider[]> => {
+  console.log(`🔍 [ServiceProviders] Fetching service providers list${showInactive ? ' (including inactive)' : ''}...`);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('service_providers')
     .select(`
       *,
@@ -29,8 +29,14 @@ const fetchServiceProviders = async (): Promise<ServiceProvider[]> => {
         last_name,
         email
       )
-    `)
-    .order('company_name', { ascending: true });
+    `);
+
+  // By default, only show active providers unless showInactive is true
+  if (!showInactive) {
+    query = query.eq('is_active', true);
+  }
+
+  const { data, error } = await query.order('company_name', { ascending: true });
 
   if (error) {
     console.error('❌ [ServiceProviders] Fetch error:', error);
@@ -77,13 +83,13 @@ const fetchServiceProviderDetail = async (providerId: string): Promise<ServicePr
   return data as ServiceProvider;
 };
 
-export function useServiceProviders() {
+export function useServiceProviders(showInactive: boolean = false) {
   const { toast } = useToast();
   const { logActivity } = useActivityLogs();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
 
-  // Service providers query - NO CACHING
+  // Service providers query
   const {
     data: providers = [],
     isLoading: loading,
@@ -91,8 +97,8 @@ export function useServiceProviders() {
     error: providersError,
     refetch,
   } = useQuery({
-    queryKey: serviceProviderKeys.lists(),
-    queryFn: fetchServiceProviders,
+    queryKey: serviceProviderKeys.list({ showInactive }),
+    queryFn: () => fetchServiceProviders(showInactive),
     // Enable caching - realtime subscriptions will invalidate when data changes
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes

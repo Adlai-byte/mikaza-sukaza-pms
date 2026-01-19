@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { providerSchema, Provider, ProviderInsert } from "@/lib/schemas";
+import { providerSchema, Provider, ProviderInsert, PARTNER_TIER_CONFIG, PartnerTier } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -61,6 +61,7 @@ export function ServiceProviderForm({
       provider_name: "",
       category: "service" as const,
       provider_type: "Other",
+      partner_tier: "regular" as const,
       contact_person: "",
       email: "",
       phone_primary: "",
@@ -89,6 +90,7 @@ export function ServiceProviderForm({
         provider_name: provider?.provider_name || "",
         category: "service" as const,
         provider_type: provider?.provider_type || "Other",
+        partner_tier: (provider?.partner_tier as PartnerTier) || "regular",
         contact_person: provider?.contact_person || "",
         email: provider?.email || "",
         phone_primary: provider?.phone_primary || "",
@@ -358,6 +360,39 @@ export function ServiceProviderForm({
             {/* Business Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Business Information</h3>
+
+              <FormField
+                control={form.control}
+                name="partner_tier"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Partner Tier</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || 'regular'}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select partner tier" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(Object.keys(PARTNER_TIER_CONFIG) as PartnerTier[]).map((tier) => (
+                          <SelectItem key={tier} value={tier}>
+                            <span
+                              className="inline-flex items-center"
+                              style={{ color: PARTNER_TIER_CONFIG[tier].color }}
+                            >
+                              {PARTNER_TIER_CONFIG[tier].label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Classification level for this vendor (Regular, Partner, Gold Partner, Platinum Partner)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField

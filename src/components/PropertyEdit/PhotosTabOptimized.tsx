@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
+import { OptimizedImage } from '@/components/ui/optimized-image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -367,10 +368,13 @@ export function PhotosTabOptimized({ propertyId }: PhotosTabProps) {
             className="group hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden"
           >
             <div className="relative aspect-square">
-              <img
+              <OptimizedImage
                 src={photo.image_url}
                 alt={photo.image_title || 'Property photo'}
                 className="w-full h-full object-cover cursor-pointer"
+                lazy={true}
+                placeholder="skeleton"
+                category="properties"
                 onClick={() => setSelectedPhoto(photo)}
               />
 
@@ -515,10 +519,13 @@ export function PhotosTabOptimized({ propertyId }: PhotosTabProps) {
           </DialogHeader>
           {selectedPhoto && (
             <div className="flex justify-center">
-              <img
+              <OptimizedImage
                 src={selectedPhoto.image_url}
                 alt={selectedPhoto.image_title || 'Property photo'}
                 className="max-w-full max-h-[60vh] object-contain"
+                lazy={false}
+                placeholder="skeleton"
+                category="properties"
               />
             </div>
           )}

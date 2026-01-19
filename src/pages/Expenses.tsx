@@ -12,6 +12,7 @@ import {
   Trash2,
   FileText,
   Edit,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,7 +96,7 @@ export default function Expenses() {
     date_to: dateTo || undefined,
   };
 
-  const { expenses, loading } = useExpenses(filters);
+  const { expenses, loading, isFetching, refetch } = useExpenses(filters);
   const { properties } = usePropertiesOptimized();
   const { providers } = useProviders('service');
   const createExpense = useCreateExpense();
@@ -215,76 +216,95 @@ export default function Expenses() {
         subtitle={t('expenses.subtitle')}
         icon={Receipt}
         actions={
-          <Button onClick={() => handleOpenDialog()} size="lg">
-            <Plus className="h-4 w-4 mr-2" />
-            {t('expenses.newExpense')}
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </Button>
+            <Button onClick={() => handleOpenDialog()} size="lg">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('expenses.newExpense')}
+            </Button>
+          </>
         }
       />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">{t('expenses.totalExpenses')}</p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</h3>
-                <p className="text-xs text-blue-600 mt-1">{t('expenses.allTime')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Receipt className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <Receipt className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('expenses.totalExpenses')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{stats.total}</h3>
+                  <span className="text-xs text-muted-foreground">{t('expenses.allTime')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">{t('expenses.totalAmount')}</p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">
-                  ${stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h3>
-                <p className="text-xs text-purple-600 mt-1">{t('expenses.combinedTotal')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Receipt className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <Receipt className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('expenses.totalAmount')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    ${stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{t('expenses.combinedTotal')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">{t('expenses.paid')}</p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  ${stats.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h3>
-                <p className="text-xs text-green-600 mt-1">{t('expenses.paidExpenses', { count: stats.paid })}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('expenses.paid')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    ${stats.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{t('expenses.paidExpenses', { count: stats.paid })}</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-amber-50 to-amber-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-amber-700">{t('expenses.outstanding')}</p>
-                <h3 className="text-3xl font-bold text-amber-900 mt-1">
-                  ${stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h3>
-                <p className="text-xs text-amber-600 mt-1">{t('expenses.pendingPayment')}</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Clock className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
-                <Clock className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">{t('expenses.outstanding')}</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    ${stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{t('expenses.pendingPayment')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -299,22 +319,22 @@ export default function Expenses() {
             {t('expenses.filters')}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <CardContent className="overflow-x-auto">
+          <div className="flex flex-wrap gap-3 min-w-0">
             {/* Search */}
-            <div className="relative">
+            <div className="relative flex-1 min-w-[180px] max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t('expenses.searchVendorPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+                className="pl-9 w-full"
               />
             </div>
 
             {/* Property Filter */}
             <Select value={selectedProperty} onValueChange={setSelectedProperty}>
-              <SelectTrigger>
+              <SelectTrigger className="w-[160px] flex-shrink-0">
                 <SelectValue placeholder={t('expenses.allProperties')} />
               </SelectTrigger>
               <SelectContent>
@@ -329,7 +349,7 @@ export default function Expenses() {
 
             {/* Category Filter */}
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
+              <SelectTrigger className="w-[160px] flex-shrink-0">
                 <SelectValue placeholder={t('expenses.allCategories')} />
               </SelectTrigger>
               <SelectContent>
@@ -344,7 +364,7 @@ export default function Expenses() {
 
             {/* Status Filter */}
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger>
+              <SelectTrigger className="w-[160px] flex-shrink-0">
                 <SelectValue placeholder={t('expenses.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
@@ -356,21 +376,23 @@ export default function Expenses() {
               </SelectContent>
             </Select>
 
-            {/* Date Range */}
-            <div className="flex gap-2">
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                placeholder="From"
-              />
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                placeholder="To"
-              />
-            </div>
+            {/* Date From */}
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              placeholder="From"
+              className="w-[140px] flex-shrink-0"
+            />
+
+            {/* Date To */}
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              placeholder="To"
+              className="w-[140px] flex-shrink-0"
+            />
           </div>
         </CardContent>
       </Card>
@@ -523,32 +545,53 @@ export default function Expenses() {
 
               <div className="space-y-2">
                 <Label htmlFor="vendor_name">{t('expenses.vendor')}</Label>
-                <Select
-                  value={form.watch('vendor_name')}
-                  onValueChange={(value) => form.setValue('vendor_name', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('expenses.selectVendor')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {providers?.map((provider) => (
-                      <SelectItem
-                        key={provider.provider_id}
-                        value={provider.provider_name}
+                {(() => {
+                  const currentVendor = form.watch('vendor_name');
+                  const providerNames = providers?.map(p => p.provider_name) || [];
+                  const isKnownProvider = providerNames.includes(currentVendor);
+                  const isCustomVendor = currentVendor && currentVendor !== 'other' && !isKnownProvider;
+                  const showCustomInput = currentVendor === 'other' || isCustomVendor;
+
+                  return (
+                    <>
+                      <Select
+                        value={isCustomVendor ? 'other' : (currentVendor || '')}
+                        onValueChange={(value) => {
+                          if (value === 'other') {
+                            // Set to empty string to allow typing fresh custom vendor
+                            form.setValue('vendor_name', '');
+                          } else {
+                            form.setValue('vendor_name', value);
+                          }
+                        }}
                       >
-                        {provider.provider_name}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="other">{t('expenses.otherVendor')}</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.watch('vendor_name') === 'other' && (
-                  <Input
-                    placeholder={t('expenses.enterCustomVendor')}
-                    onChange={(e) => form.setValue('vendor_name', e.target.value)}
-                    className="mt-2"
-                  />
-                )}
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('expenses.selectVendor')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {providers?.map((provider) => (
+                            <SelectItem
+                              key={provider.provider_id}
+                              value={provider.provider_name}
+                            >
+                              {provider.provider_name}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="other">{t('expenses.otherVendor')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {showCustomInput && (
+                        <Input
+                          placeholder={t('expenses.enterCustomVendor')}
+                          value={currentVendor === 'other' ? '' : currentVendor}
+                          onChange={(e) => form.setValue('vendor_name', e.target.value)}
+                          className="mt-2"
+                          autoFocus
+                        />
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
 

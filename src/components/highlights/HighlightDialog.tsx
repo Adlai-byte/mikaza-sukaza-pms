@@ -38,9 +38,10 @@ interface HighlightDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   highlight?: PropertyHighlight | null;
+  propertyId?: string; // Pre-select property when creating from property edit page
 }
 
-export function HighlightDialog({ open, onOpenChange, highlight }: HighlightDialogProps) {
+export function HighlightDialog({ open, onOpenChange, highlight, propertyId }: HighlightDialogProps) {
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { properties = [] } = useProperties();
@@ -70,14 +71,14 @@ export function HighlightDialog({ open, onOpenChange, highlight }: HighlightDial
           title: highlight.title,
           description: highlight.description || '',
           icon_name: highlight.icon_name || '',
-          highlight_type: highlight.highlight_type,
+          highlight_type: highlight.highlight_type || 'feature',
           photos: highlight.photos || [],
-          display_order: highlight.display_order,
-          is_active: highlight.is_active,
+          display_order: highlight.display_order ?? 0,
+          is_active: highlight.is_active ?? true,
         });
       } else {
         form.reset({
-          property_id: '',
+          property_id: propertyId || '', // Pre-select property if provided
           title: '',
           description: '',
           icon_name: '',
@@ -88,7 +89,7 @@ export function HighlightDialog({ open, onOpenChange, highlight }: HighlightDial
         });
       }
     }
-  }, [open, highlight, form]);
+  }, [open, highlight, propertyId, form]);
 
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
@@ -136,8 +137,8 @@ export function HighlightDialog({ open, onOpenChange, highlight }: HighlightDial
                   <FormLabel>{t('dialogs.highlight.fields.property')} *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={!!highlight}
+                    value={field.value || undefined}
+                    disabled={!!highlight || !!propertyId}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -145,11 +146,22 @@ export function HighlightDialog({ open, onOpenChange, highlight }: HighlightDial
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {properties.map((property) => (
-                        <SelectItem key={property.property_id} value={property.property_id}>
-                          {property.property_name}
-                        </SelectItem>
-                      ))}
+                      {properties
+                        .filter((property) => {
+                          // Robust filter: ensure property_id is a non-empty string
+                          const id = property.property_id;
+                          return typeof id === 'string' && id.trim().length > 0;
+                        })
+                        .map((property) => {
+                          // Extra safety: skip if property_id somehow becomes invalid
+                          const propertyId = property.property_id?.trim();
+                          if (!propertyId) return null;
+                          return (
+                            <SelectItem key={propertyId} value={propertyId}>
+                              {property.property_name || 'Unnamed Property'}
+                            </SelectItem>
+                          );
+                        })}
                     </SelectContent>
                   </Select>
                   <FormDescription>
@@ -208,7 +220,7 @@ export function HighlightDialog({ open, onOpenChange, highlight }: HighlightDial
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t('dialogs.highlight.fields.type')} *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || 'feature'}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder={t('dialogs.highlight.fields.selectType')} />
@@ -236,22 +248,31 @@ export function HighlightDialog({ open, onOpenChange, highlight }: HighlightDial
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t('dialogs.highlight.fields.icon')}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select
+                      onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
+                      value={field.value || "none"}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder={t('dialogs.highlight.fields.selectIcon')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="max-h-[200px]">
-                        <SelectItem value="">{t('dialogs.highlight.fields.noIcon')}</SelectItem>
-                        {Object.entries(HIGHLIGHT_ICONS).map(([key, label]) => (
-                          <SelectItem key={key} value={key}>
-                            <div className="flex items-center gap-2">
-                              <Star className="h-4 w-4 text-yellow-500" />
-                              {label}
-                            </div>
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="none">{t('dialogs.highlight.fields.noIcon')}</SelectItem>
+                        {Object.entries(HIGHLIGHT_ICONS)
+                          .filter(([key]) => typeof key === 'string' && key.trim().length > 0)
+                          .map(([key, label]) => {
+                            const iconKey = key.trim();
+                            if (!iconKey) return null;
+                            return (
+                              <SelectItem key={iconKey} value={iconKey}>
+                                <div className="flex items-center gap-2">
+                                  <Star className="h-4 w-4 text-yellow-500" />
+                                  {label}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                       </SelectContent>
                     </Select>
                     <FormDescription>{t('dialogs.highlight.fields.iconDescription')}</FormDescription>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Plus, Search, Filter, UserPlus, UserCheck, DollarSign, Calendar } from 'lucide-react';
+import { Users, Plus, Search, Filter, UserPlus, UserCheck, DollarSign, Calendar, RefreshCw } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +36,7 @@ export default function GuestManagement() {
     min_spent: minSpent !== 'all' ? parseFloat(minSpent) : undefined,
   };
 
-  const { data: guests, isLoading, refetch } = useGuests(filters);
+  const { data: guests, isLoading, isFetching, refetch } = useGuests(filters);
   const { data: stats, isLoading: statsLoading } = useGuestStats();
 
   return (
@@ -48,6 +48,15 @@ export default function GuestManagement() {
         icon={Users}
         actions={
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             <Button
               type="button"
               onClick={() => setShowCreateDialog(true)}
@@ -63,72 +72,72 @@ export default function GuestManagement() {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         {/* Total Guests Card */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">Total Guests</p>
-                <h3 className="text-3xl font-bold text-blue-900 mt-1">
-                  {statsLoading ? '...' : stats?.totalGuests || 0}
-                </h3>
-                <p className="text-xs text-blue-600 mt-1">All registered guests</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <Users className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <Users className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Total Guests</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{statsLoading ? '...' : stats?.totalGuests || 0}</h3>
+                  <span className="text-xs text-muted-foreground">All registered guests</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* New This Month Card */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">New This Month</p>
-                <h3 className="text-3xl font-bold text-green-900 mt-1">
-                  {statsLoading ? '...' : stats?.newThisMonth || 0}
-                </h3>
-                <p className="text-xs text-green-600 mt-1">Recently added</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <UserPlus className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <UserPlus className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">New This Month</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{statsLoading ? '...' : stats?.newThisMonth || 0}</h3>
+                  <span className="text-xs text-muted-foreground">Recently added</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Repeat Guests Card */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">Repeat Guests</p>
-                <h3 className="text-3xl font-bold text-purple-900 mt-1">
-                  {statsLoading ? '...' : stats?.repeatGuests || 0}
-                </h3>
-                <p className="text-xs text-purple-600 mt-1">With 2+ bookings</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <UserCheck className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <UserCheck className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Repeat Guests</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">{statsLoading ? '...' : stats?.repeatGuests || 0}</h3>
+                  <span className="text-xs text-muted-foreground">With 2+ bookings</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Total Revenue Card */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-amber-50 to-amber-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <Card className="transition-colors hover:bg-accent/50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-amber-700">Total Revenue</p>
-                <h3 className="text-3xl font-bold text-amber-900 mt-1">
-                  ${statsLoading ? '...' : (stats?.totalRevenue || 0).toLocaleString()}
-                </h3>
-                <p className="text-xs text-amber-600 mt-1">From all guests</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-white" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-semibold">${statsLoading ? '...' : (stats?.totalRevenue || 0).toLocaleString()}</h3>
+                  <span className="text-xs text-muted-foreground">From all guests</span>
+                </div>
               </div>
             </div>
           </CardContent>

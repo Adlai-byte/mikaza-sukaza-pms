@@ -425,37 +425,127 @@ export function useDocumentStats() {
   };
 }
 
+// Helper to get bucket name from document category
+// NOTE: All document types now use 'property-documents' bucket
+// The 'employee-documents' and 'message-templates' buckets were never created
+// Documents are organized by folder paths instead (e.g., employee/{user_id}/, messages/)
+const getBucketForCategory = (category: string): string => {
+  // Consolidate all document types into property-documents bucket
+  // This bucket is known to exist and has proper RLS policies
+  return 'property-documents';
+};
+
 // Hook for downloading documents
 export function useDocumentDownload() {
   const { toast } = useToast();
   const { logDocumentAccess } = useDocuments();
 
-  const downloadDocument = async (document: Document) => {
+  const downloadDocument = async (doc: DocumentSummary | Document) => {
     try {
-      console.log('📥 [Documents] Downloading:', document.document_name);
+      console.log('📥 [Documents] Downloading:', doc.document_name);
 
-      // Extract bucket and path from file_url
-      const url = new URL(document.file_url);
-      const pathParts = url.pathname.split('/');
-      const bucket = pathParts[pathParts.length - 2];
-      const filePath = pathParts.slice(pathParts.length - 2).join('/').replace(`${bucket}/`, '');
+      // Validate file_url exists
+      if (!doc.file_url) {
+        throw new Error('Document has no file URL');
+      }
 
-      // Get signed URL for download
+      // Determine bucket from document category (most reliable)
+      // This ensures we use the correct bucket even if URL parsing fails
+      const categoryBucket = doc.category ? getBucketForCategory(doc.category) : null;
+
+      // Extract file path from URL
+      let bucket: string;
+      let filePath: string;
+
+      try {
+        // Handle both full URLs and relative paths
+        const isFullUrl = doc.file_url.startsWith('http://') || doc.file_url.startsWith('https://');
+
+        if (isFullUrl) {
+          const url = new URL(doc.file_url);
+          const pathParts = url.pathname.split('/').filter(Boolean);
+
+          // Find 'storage' or 'object' in path to determine bucket location
+          const storageIndex = pathParts.findIndex(p => p === 'storage' || p === 'object');
+          if (storageIndex >= 0 && pathParts.length > storageIndex + 2) {
+            // Skip 'storage/v1/object/public/' or similar patterns
+            const publicIndex = pathParts.indexOf('public');
+            if (publicIndex >= 0 && pathParts.length > publicIndex + 1) {
+              bucket = pathParts[publicIndex + 1];
+              filePath = pathParts.slice(publicIndex + 2).join('/');
+            } else {
+              // Fallback to category-based bucket
+              bucket = categoryBucket || pathParts[pathParts.length - 2] || 'property-documents';
+              filePath = pathParts[pathParts.length - 1];
+            }
+          } else {
+            // Simple case: use category bucket
+            bucket = categoryBucket || pathParts[pathParts.length - 2] || 'property-documents';
+            filePath = pathParts[pathParts.length - 1];
+          }
+        } else {
+          // Relative path - assume it's bucket/path format
+          const parts = doc.file_url.split('/').filter(Boolean);
+          bucket = categoryBucket || parts[0] || 'property-documents';
+          filePath = parts.slice(1).join('/');
+        }
+      } catch (parseError) {
+        console.error('❌ [Documents] URL parsing error:', parseError);
+        // Use category-based bucket as primary fallback
+        bucket = categoryBucket || 'property-documents';
+        filePath = doc.file_url.split('/').pop() || doc.file_name;
+      }
+
+      // Final fallback: if bucket doesn't match expected patterns, use property-documents
+      // NOTE: employee-documents and message-templates buckets don't exist - they were never created
+      // All documents are now stored in property-documents bucket
+      const validBuckets = ['property-documents'];
+      if (!validBuckets.includes(bucket)) {
+        console.log('📥 [Documents] Non-existent bucket detected:', bucket, '- using property-documents');
+        // If the URL was pointing to employee-documents or message-templates,
+        // we need to adjust the path to include the category prefix
+        if (bucket === 'employee-documents') {
+          // Legacy path: {user_id}/{timestamp}_{filename}
+          // New path: employee/{user_id}/{timestamp}_{filename}
+          filePath = `employee/${filePath}`;
+        } else if (bucket === 'message-templates') {
+          // Legacy path: {timestamp}_{filename}
+          // New path: messages/{timestamp}_{filename}
+          filePath = `messages/${filePath}`;
+        }
+        bucket = 'property-documents';
+      }
+
+      console.log('📥 [Documents] Bucket:', bucket, 'Path:', filePath, 'Category:', doc.category);
+
+      // Get signed URL for download with longer expiry (5 minutes)
       const { data, error } = await supabase.storage
         .from(bucket)
-        .createSignedUrl(filePath, 60); // 60 second expiry
+        .createSignedUrl(filePath, 300); // 5 minute expiry
 
-      if (error) throw error;
+      if (error) {
+        // Provide helpful message for missing files (legacy documents)
+        if (error.message?.includes('Object not found') || error.message?.includes('not found')) {
+          throw new Error(
+            'File not found in storage. This document may need to be re-uploaded. ' +
+            'The original upload may have failed due to a missing storage bucket.'
+          );
+        }
+        throw error;
+      }
 
       if (data) {
-        // Create temporary link and trigger download
-        const link = document.createElement('a');
+        // Create temporary link and trigger download using global document object
+        const link = globalThis.document.createElement('a');
         link.href = data.signedUrl;
-        link.download = document.file_name;
+        link.download = doc.file_name;
+        link.style.display = 'none';
+        globalThis.document.body.appendChild(link);
         link.click();
+        globalThis.document.body.removeChild(link);
 
         // Log download
-        await logDocumentAccess(document.document_id, 'downloaded');
+        await logDocumentAccess(doc.document_id, 'downloaded');
 
         toast({
           title: "Success",
@@ -472,5 +562,95 @@ export function useDocumentDownload() {
     }
   };
 
-  return { downloadDocument };
+  // View document in new tab using signed URL
+  const viewDocument = async (doc: DocumentSummary | Document) => {
+    try {
+      console.log('👁️ [Documents] Viewing:', doc.document_name);
+
+      // Validate file_url exists
+      if (!doc.file_url) {
+        throw new Error('Document has no file URL');
+      }
+
+      // Determine bucket from document category
+      const categoryBucket = doc.category ? getBucketForCategory(doc.category) : null;
+
+      // Extract file path from URL
+      let bucket: string;
+      let filePath: string;
+
+      try {
+        const isFullUrl = doc.file_url.startsWith('http://') || doc.file_url.startsWith('https://');
+
+        if (isFullUrl) {
+          const url = new URL(doc.file_url);
+          const pathParts = url.pathname.split('/').filter(Boolean);
+
+          const publicIndex = pathParts.indexOf('public');
+          if (publicIndex >= 0 && pathParts.length > publicIndex + 1) {
+            bucket = pathParts[publicIndex + 1];
+            filePath = pathParts.slice(publicIndex + 2).join('/');
+          } else {
+            bucket = categoryBucket || 'property-documents';
+            filePath = pathParts[pathParts.length - 1];
+          }
+        } else {
+          const parts = doc.file_url.split('/').filter(Boolean);
+          bucket = categoryBucket || parts[0] || 'property-documents';
+          filePath = parts.slice(1).join('/');
+        }
+      } catch (parseError) {
+        console.error('❌ [Documents] URL parsing error:', parseError);
+        bucket = categoryBucket || 'property-documents';
+        filePath = doc.file_url.split('/').pop() || doc.file_name;
+      }
+
+      // Fix legacy bucket paths
+      const validBuckets = ['property-documents'];
+      if (!validBuckets.includes(bucket)) {
+        console.log('👁️ [Documents] Non-existent bucket detected:', bucket, '- using property-documents');
+        if (bucket === 'employee-documents') {
+          filePath = `employee/${filePath}`;
+        } else if (bucket === 'message-templates') {
+          filePath = `messages/${filePath}`;
+        }
+        bucket = 'property-documents';
+      }
+
+      console.log('👁️ [Documents] Bucket:', bucket, 'Path:', filePath);
+
+      // Get signed URL for viewing (5 minutes)
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(filePath, 300);
+
+      if (error) {
+        // Provide helpful message for missing files (legacy documents)
+        if (error.message?.includes('Object not found') || error.message?.includes('not found')) {
+          throw new Error(
+            'File not found in storage. This document may need to be re-uploaded. ' +
+            'The original upload may have failed due to a missing storage bucket.'
+          );
+        }
+        throw error;
+      }
+
+      if (data) {
+        // Open in new tab
+        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+
+        // Log view
+        await logDocumentAccess(doc.document_id, 'viewed');
+      }
+    } catch (error) {
+      console.error('❌ [Documents] View error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to view document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return { downloadDocument, viewDocument };
 }
